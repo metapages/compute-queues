@@ -39,7 +39,9 @@ flowchart LR
 
 **Start the dev stack:**
 
+```
   just dev
+```
 
 You might need to wait a bit to refresh the browser, it incorrectly returns a `200` when there are no browser assets (yet). (This looks like a bug with the hono webserver).
 
