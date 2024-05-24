@@ -54,7 +54,8 @@ You can edit browser code, worker code, and api code, and everything automatical
       - The `browser` is built as part of the `api`
   - git version tag:
     - the `worker` image is built, published
-    - our owned worker providers update the worker version and redeploy
+    - our cloud worker providers update the worker version and redeploy
+      - https://github.com/metapages/compute-queues/issues/3
 
 ## Automation
 
