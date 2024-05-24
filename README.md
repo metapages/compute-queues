@@ -53,7 +53,7 @@ You can edit browser code, worker code, and api code, and everything automatical
     - The `api` server is deployed to deno.deploy https://github.com/metapages/compute-queues/issues/1
       - The `browser` is built as part of the `api`
   - git version tag:
-    - the `worker` image is built, published
+    - the `worker` image is built, published https://github.com/metapages/compute-queues/issues/2
     - our cloud worker providers update the worker version and redeploy
       - https://github.com/metapages/compute-queues/issues/3
 
