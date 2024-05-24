@@ -1,0 +1,17 @@
+{
+	"version": "0.3",
+	"metadata": {
+		"title": "Docker compute",
+		"author": "Dion Whitehead"
+	},
+	"inputs": {
+		"*": {
+			"type": "application/octet-stream:base64"
+		}
+	},
+    "outputs": {
+		"*": {
+			"type": "application/octet-stream:base64"
+		}
+	}
+}

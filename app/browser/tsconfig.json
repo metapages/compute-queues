@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "./src",
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "outDir": "./dist",
+    "target": "ESNext",
+    "typeRoots": ["node_modules/@types", "src/types"],
+    "types": ["vite/client"],
+    "skipLibCheck": true,
+    "paths": {
+      "/@/*": ["./*"],
+    }
+  },
+  "include": ["./src/**/*"],
+  "exclude": [
+    "node_modules",
+    // https://github.com/microsoft/TypeScript/issues/14538#issuecomment-654933955
+    "dist"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "fetch-retry": "npm:fetch-retry@5.0.6",
+    "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3"
+  }
+}

@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"deno.enable": true,
+		"files.exclude": {
+			"**/.cache": true,
+			"**/api/browser": true,
+			"**/app/api/assets": true,
+			"**/dist": true,
+			"**/node_modules": true
+		}
+	}
+}

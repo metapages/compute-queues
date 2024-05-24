@@ -1,0 +1,71 @@
+{
+  "name": "@metapages/metaframe-docker",
+  "version": "0.1.4",
+  "private": true,
+  "repository": {
+    "url": "https://metapages.github.io/metaframe-docker/"
+  },
+  "type": "module",
+  "scripts": {
+    "prebuild": "npm i && ./node_modules/typescript/bin/tsc --build --verbose",
+    "build": "rm -rf dist/* && node_modules/parcel-bundler/bin/cli.js build public/index.html --no-autoinstall"
+  },
+  "dependencies": {
+    "@chakra-ui/icons": "^2.1.1",
+    "@chakra-ui/react": "^2.8.2",
+    "@emotion/react": "^11.10.4",
+    "@emotion/styled": "^11.10.4",
+    "@metapages/hash-query": "^0.4.11",
+    "@metapages/metaframe-hook": "^1.0.12",
+    "@metapages/metapage": "^0.13.12",
+    "@metapages/metapage-embed-react": "^0.0.32",
+    "@popperjs/core": "^2.11.6",
+    "@react-typed-hooks/use-key-press": "^1.0.5",
+    "fetch-retry": "^5.0.6",
+    "formik": "^2.2.9",
+    "formik-chakra-ui": "^1.6.0",
+    "framer-motion": "^6.5.1",
+    "isomorphic-fetch": "^3.0.0",
+    "object-hash": "^3.0.0",
+    "query-string": "^6.14.1",
+    "react": "^18.2.0",
+    "react-icons": "^4.4.0",
+    "react-router-dom": "^6.3.0",
+    "reconnecting-websocket": "^4.4.0",
+    "safe-stable-stringify": "^2.4.3",
+    "unibabel": "^2.1.8",
+    "yup": "^0.32.11"
+  },
+  "browserslist": {
+    "production": [
+      "last 3 and_chr versions",
+      "last 3 chrome versions",
+      "last 3 opera versions",
+      "last 3 ios_saf versions",
+      "last 3 safari versions"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@types/isomorphic-fetch": "^0.0.39",
+    "@types/node": "^20.10.0",
+    "@types/object-hash": "^3.0.6",
+    "@types/react": "^18.0.15",
+    "@types/react-dom": "^18.0.6",
+    "@types/react-router-dom": "^5.3.3",
+    "@types/uuid": "^8.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "http-server": "^14.1.1",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  },
+  "staticFiles": {
+    "staticPath": [
+      "public/metaframe.json"
+    ]
+  }
+}

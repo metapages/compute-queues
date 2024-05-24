@@ -1,0 +1,111 @@
+###############################################################
+# Minimal commands to develop, build, test, and deploy
+###############################################################
+set shell                          := ["bash", "-c"]
+set dotenv-load                    := true
+export APP_FQDN                    := env_var_or_default("APP_FQDN", "worker-metaframe.localhost")
+export APP_PORT                    := env_var_or_default("APP_PORT", "443")
+export APP_PORT_BROWSER            := env_var_or_default("APP_PORT_BROWSER", "4440")
+# Change SERVER_ORIGIN to e.g. point the local browser to any other stack, such as production
+SERVER_ORIGIN                      := env_var_or_default("SERVER_ORIGIN", "")
+# Common commands that require some preamble
+vite                               := "VITE_APP_FQDN=" + APP_FQDN + " VITE_APP_PORT=" + APP_PORT + " NODE_OPTIONS='--max_old_space_size=16384' ./node_modules/vite/bin/vite.js"
+tsc                                := "./node_modules/typescript/bin/tsc"
+# minimal formatting, bold is very useful
+bold                               := '\033[1m'
+normal                             := '\033[0m'
+green                              := "\\e[32m"
+yellow                             := "\\e[33m"
+blue                               := "\\e[34m"
+magenta                            := "\\e[35m"
+grey                               := "\\e[90m"
+
+# If not in docker, get inside
+_help:
+    #!/usr/bin/env bash
+    # exit when any command fails
+    set -euo pipefail
+    echo -e ""
+    just --list --unsorted --list-heading $'🌱 Commands:\n\n'
+    echo -e ""
+    echo -e "    Develop URL 🔗 {{green}}https://{{APP_FQDN}}:{{APP_PORT}}/{{normal}}"
+    echo -e ""
+
+# Browser develop. Points to the local stack by default. Change SERVER_ORIGIN for other stacks.
+dev target="": _mkcert _install
+    #!/usr/bin/env bash
+    set -eo pipefail
+
+    if [ "${VITE_SERVER_ORIGIN}" = "" ]; then
+        export VITE_SERVER_ORIGIN="{{SERVER_ORIGIN}}"
+    fi
+    if [ "{{target}}" = "local" ]; then
+        export VITE_SERVER_ORIGIN="https://{{APP_FQDN}}:{{APP_PORT}}"
+    fi
+    echo "Browser development pointing to: ${VITE_SERVER_ORIGIN}"
+    MAYBE_OPEN_BROWSER=""
+    if [ ! -f /.dockerenv ]; then
+        export MAYBE_OPEN_BROWSER="--open";
+    fi
+    export HOST={{APP_FQDN}}
+    export PORT={{APP_PORT_BROWSER}}
+    export CERT_FILE=../.traefik/certs/local-cert.pem
+    export CERT_KEY_FILE=../.traefik/certs/local-key.pem
+    export BASE=
+    echo "vite PORT=${PORT}"
+    VITE_SERVER_ORIGIN=${VITE_SERVER_ORIGIN} {{vite}} --clearScreen false ${MAYBE_OPEN_BROWSER}
+
+# Build the browser client static assets (in <root/docs>)
+build BASE="": (_tsc "--build")
+    VITE_SERVER_ORIGIN={{SERVER_ORIGIN}} \
+    OUTDIR=dist \
+    BASE={{BASE}} \
+        {{vite}} build
+    
+# Build the browser client static assets on changes
+watch BASE="": (_tsc "--build")
+    # Not many env vars since this is served by the 
+    # api server so it knows the api origin
+    VITE_SERVER_ORIGIN={{SERVER_ORIGIN}} \
+    OUTDIR=dist \
+        {{vite}} build --watch
+
+# Test: currently bare minimum: only building. Need proper test harness.
+@test: (_tsc "--build")
+
+# Deletes: .certs dist
+clean:
+    rm -rf .certs dist
+
+# Build production browser client and serve.
+serve: _mkcert _install
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export HOST={{APP_FQDN}}
+    export PORT={{APP_PORT}}
+    VITE_SERVER_ORIGIN={{SERVER_ORIGIN}} \
+    CERT_FILE=../.cache/traefik/certs/local-cert.pem \
+    CERT_KEY_FILE=../.cache/traefik/certs/local-key.pem \
+        {{vite}} preview
+
+# typescript check 
+@check: (_tsc "--build")
+    echo "✅ browser typescript compilation"
+
+# compile typescript src, may or may not emit artifacts
+@_tsc +args="--build": _ensure_npm_modules
+    {{tsc}} {{args}}
+
+# DEV: generate TLS certs for HTTPS over localhost https://blog.filippo.io/mkcert-valid-https-certificates-for-localhost/
+@_mkcert:
+    just ../_mkcert
+
+@_install:
+    npm i
+
+# vite builder commands
+@_vite +args="":
+    {{vite}} {{args}}
+
+@_ensure_npm_modules:
+    if [ ! -f "{{tsc}}" ]; then npm i; fi

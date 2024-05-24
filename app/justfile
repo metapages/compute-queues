@@ -1,0 +1,45 @@
+set shell                          := ["bash", "-c"]
+set dotenv-load                    := true
+
+APP_FQDN                    := "worker-metaframe.localhost"
+APP_PORT                    := env_var_or_default("APP_PORT", "443")
+
+@_help:
+    just --list --unsorted --list-heading $'Commands: (all services)\n'
+
+# Develop: open the browser and start the dev stack
+dev +args="":  open (up args)
+
+# Start the docker-compose local stack
+@up +args="": _mkcert 
+    docker-compose up --remove-orphans {{args}}
+
+# 'docker-compose down'
+down +args="":
+    docker-compose down {{args}}
+
+# Open the browser to the local frontend
+@open:
+  deno run --allow-all https://deno.land/x/metapages@v0.0.17/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{APP_FQDN}}:{{APP_PORT}}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1'
+
+# Quick compilation checks
+@check:
+  just worker/check
+  just api/check
+  just browser/check
+
+clean:
+    rm -rf .cache
+    just browser/clean
+    docker-compose down -v
+
+# Publish e.g. docker images with whatever versioning scheme is appropriate
+@publish-versioned-artifacts version="":
+    just worker/publish-versioned-artifacts {{version}}
+
+# DEV: generate TLS certs for HTTPS over localhost https://blog.filippo.io/mkcert-valid-https-certificates-for-localhost/
+@_mkcert:
+    if [ ! -f .cache/traefik/certs/local-key.pem ]; then \
+        FQDN={{APP_FQDN}} CERT_NAME=local CERTS_DIR=.cache/traefik/certs deno run --allow-all https://deno.land/x/metapages@v0.0.20/commands/ensure_mkcert.ts ;\
+    fi
+  

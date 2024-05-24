@@ -1,0 +1,18 @@
+# Always use locally installed tools (always pin versions)
+set shell                          := ["bash", "-c"]
+set dotenv-load                    := true
+
+# minimal formatting, bold is very useful
+bold                  := '\033[1m'
+normal                := '\033[0m'
+
+@_help:
+    just --list --unsorted --list-heading $'Api commands:\n'
+    echo -e ""
+
+@dev +args="":
+    deno run --watch --allow-all --unstable-kv --unstable-broadcast-channel src/server.ts {{args}}
+
+@check:
+    deno check src/server.ts
+    echo "✅ api typescript compilation"
