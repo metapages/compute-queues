@@ -37,11 +37,13 @@ flowchart LR
 
 ## Quickstart
 
-**Start the dev stack:**
+**Start the local dev stack:**
 
 ```
   just dev
 ```
+
+Go to this [Test metapage](https://app.metapage.io/dion/d31841d2c46d487b8b2d84795ab0f1b1?view=default) to interact with a running simulation.
 
 You might need to wait a bit to refresh the browser, it incorrectly returns a `200` when there are no browser assets (yet). (This looks like a bug with the hono webserver).
 
@@ -57,9 +59,19 @@ You can edit browser code, worker code, and api code, and everything automatical
     - our cloud worker providers update the worker version and redeploy
       - https://github.com/metapages/compute-queues/issues/3
 
+## Cloud compute providers
+
+E.g. kubernetes, nomad.
+
+1. Run the stack with `just dev`
+2. Workers in the local cluster need to be able to reach (on the host): `https://worker-metaframe.localhost`
+   1. Point the workers to a queue
+3. Go to [this metapage](https://app.metapage.io/dion/d31841d2c46d487b8b2d84795ab0f1b1?view=default)
+   1. You should see the docker runner at the bottom, change the slider to create compute jobs
+
 ## Automation
 
-
+TODO
 
 ## Short description
 
