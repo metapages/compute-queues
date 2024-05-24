@@ -1,6 +1,6 @@
 # Compute queues and the worker to run them all
 
-https://www.notion.so/metapages/Arcadia-Astera-Compute-Cluster-Project-V2-3c7950a02bbe4eaa8389d62fd8439553?pvs=4
+[Notion docs](https://www.notion.so/metapages/Arcadia-Astera-Compute-Cluster-Project-V2-3c7950a02bbe4eaa8389d62fd8439553?pvs=4)
 
 ```mermaid
 flowchart LR
@@ -47,14 +47,17 @@ You might need to wait a bit to refresh the browser, it incorrectly returns a `2
 
 You can edit browser code, worker code, and api code, and everything automatically updates.
 
-## Deployment
+## Deployment (automation)
 
   - push to `main`:
-    - The `api` server is deployed to deno.deploy
+    - The `api` server is deployed to deno.deploy https://github.com/metapages/compute-queues/issues/1
       - The `browser` is built as part of the `api`
   - git version tag:
     - the `worker` image is built, published
     - our owned worker providers update the worker version and redeploy
+
+## Automation
+
 
 
 ## Short description
