@@ -49,6 +49,15 @@ You might need to wait a bit to refresh the browser, it incorrectly returns a `2
 
 You can edit browser code, worker code, and api code, and everything automatically updates.
 
+### Host system prerequisites
+
+ - [docker](https://docs.docker.com/engine/install/)
+ - [just](https://github.com/casey/just?tab=readme-ov-file#installation)
+ - [deno](https://docs.deno.com/runtime/manual/getting_started/installation)
+ - [mkcert](https://github.com/FiloSottile/mkcert?tab=readme-ov-file#installation)
+
+If you want to do browser development outside of docker-compose, I assume you will know how to set up a local browser environment (`npm` etc).
+
 ## Deployment (automation)
 
   - push to `main`:
