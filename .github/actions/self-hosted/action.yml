@@ -1,0 +1,32 @@
+# Generic action that takes a command and executes it on the host
+# General actions syntax: https://docs.github.com/en/free-pro-team@latest/actions/creating-actions/metadata-syntax-for-github-actions
+# Start/stop self-hosted runner: https://docs.github.com/en/actions/hosting-your-own-runners/configuring-the-self-hosted-runner-application-as-a-service#starting-the-service
+name: 'self-hosted-cloud-ops'
+description: 'self-hosted cloud operations'
+inputs:
+  command:
+    description: 'just command'
+    required: true
+    default: 'just'
+  github_token:
+    description: 'https://docs.github.com/en/actions/configuring-and-managing-workflows/authenticating-with-the-github_token#about-the-github_token-secret'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+
+    # - id: validate-host-requirements
+    #   shell: bash
+    #   run: |
+    #     if [ "$(which just 2>/dev/null)" = "" ]; then echo "Missing: https://github.com/casey/just#installation"; exit 1; fi
+    #     if [ "$(which sd 2>/dev/null)" = "" ]; then echo "Missing: https://github.com/chmln/sd"; exit 1; fi
+    #     if [ "$(which docker 2>/dev/null)" = "" ]; then echo "Missing: https://docs.docker.com/get-docker/"; exit 1; fi
+
+    - id: command-executor
+      shell: bash
+      run: |
+        ${{ inputs.command }}
+
+branding:
+  icon: 'aperture'
+  color: 'green'
