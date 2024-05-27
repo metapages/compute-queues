@@ -1,5 +1,11 @@
 # Compute queues and the worker to run them all
 
+**Quick links:**
+
+ - `github repo`: https://github.com/metapages/compute-queues
+ - `api deployment config`: https://dash.deno.com/projects/compute-queue-api
+ - `api production`: https://compute-queue-api.deno.dev
+
 Run scientific workflow anywhere, reliably, via the browser. For compute heavy jobs, use your own computer, or run on a cluster. Share compute. Run scientific workflows no matter how old.
 
 [Notion docs](https://www.notion.so/metapages/Arcadia-Astera-Compute-Cluster-Project-V2-3c7950a02bbe4eaa8389d62fd8439553?pvs=4)
@@ -80,7 +86,7 @@ E.g. kubernetes, nomad.
 **(public) api:**
 
 - push to `main`:
-  - The `api` server is deployed to deno.deploy https://github.com/metapages/compute-queues/issues/1
+  - The `api` server is deployed to [deno.deploy](https://dash.deno.com/projects/compute-queue-api)
     - The `browser` is built as part of the `api`
         
 **worker:**
