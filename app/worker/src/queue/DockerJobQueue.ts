@@ -174,7 +174,7 @@ export class DockerJobQueue {
 
         const executionArgs: DockerJobArgs = {
             id: jobBlob.hash,
-            image: definition.image!,
+            image: definition.image,
             command: convertStringToDockerCommand(definition.command),
             entrypoint: convertStringToDockerCommand(definition.entrypoint),
             workdir: definition.workdir,

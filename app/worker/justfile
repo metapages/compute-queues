@@ -35,6 +35,13 @@ normal                := '\033[0m'
     deno check src/cli.ts
     echo "✅ worker typescript compilation"
 
+@test:
+    deno --allow-net --allow-read --allow-env --allow-write --allow-run test .
+    echo "✅ worker unit tests"
+
+@watch-and-test:
+    deno test --trace-leaks --watch --allow-net --allow-read --allow-write --allow-env --allow-run .
+
 # Build docker image
 docker-image-build version="": 
     #!/usr/bin/env bash

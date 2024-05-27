@@ -17,6 +17,7 @@ import {
   HStack,
   ListItem,
   Spacer,
+  Text,
   UnorderedList,
   VStack,
 } from '@chakra-ui/react';
@@ -24,6 +25,8 @@ import { useHashParam } from '@metapages/hash-query';
 
 import { ButtonCancelOrRetry } from '../ButtonCancelOrRetry';
 import { PanelJobInputFromUrlParams } from './PanelJobInputFromUrlParams';
+
+type ErrorObject = { statusCode: number; json: { message: string } };
 
 export const PanelJob: React.FC<{
   job: DockerJobDefinitionRow | undefined;
@@ -73,7 +76,6 @@ const JobStatusDisplay: React.FC<{
 }> = ({ job }) => {
   const state = job?.state;
   const serverState = useServerState();
-  console.log('serverState', serverState);
 
   if (!job) {
     return (
@@ -119,13 +121,12 @@ const JobStatusDisplay: React.FC<{
             </Alert>
           );
         case DockerJobFinishedReason.Error:
-          const errorBlob:
-            | { statusCode: number; json: { message: string } }
-            | undefined = resultFinished?.result?.error;
+          const errorBlobOrString:
+            | ErrorObject
+            | string  | undefined = resultFinished?.result?.error;
 
-          console.error(errorBlob)
           return (
-            <>
+            <VStack w="100%">
               <Alert status="error">
                 <AlertIcon />
                 <AlertTitle>Failed</AlertTitle>
@@ -133,18 +134,20 @@ const JobStatusDisplay: React.FC<{
 
               <Alert status="error">
                 <AlertDescription>
-                  <UnorderedList>
-                    {errorBlob?.statusCode ? (
-                      <ListItem>{`Exit code: ${errorBlob?.statusCode}`}</ListItem>
+                  
+                    {(errorBlobOrString as ErrorObject)?.statusCode ? (
+                      <UnorderedList>
+                      <ListItem>{`Exit code: ${(errorBlobOrString as ErrorObject)?.statusCode}`}</ListItem>
+                      {(errorBlobOrString as ErrorObject)?.json?.message ? (
+                      <ListItem>{(errorBlobOrString as ErrorObject)?.json?.message}</ListItem>
                     ) : null}
+                    </UnorderedList>
+                    ) : <Text> {errorBlobOrString as string }</Text>}
 
-                    {errorBlob?.json?.message ? (
-                      <ListItem>{errorBlob?.json?.message}</ListItem>
-                    ) : null}
-                  </UnorderedList>
+                    
                 </AlertDescription>
               </Alert>
-            </>
+            </VStack>
           );
         case DockerJobFinishedReason.Success:
           return (

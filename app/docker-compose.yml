@@ -90,6 +90,8 @@ services:
       dockerfile: browser/Dockerfile
     command: just watch
     working_dir: /app/browser
+    environment:
+      - SERVER_ORIGIN=https://worker-metaframe.localhost
     volumes:
       - ../.git:/.git
       - ./browser/dist:/app/browser/dist

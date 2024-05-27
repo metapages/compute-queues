@@ -37,23 +37,21 @@ dev target="": _mkcert _install
     set -eo pipefail
 
     if [ "${VITE_SERVER_ORIGIN}" = "" ]; then
-        export VITE_SERVER_ORIGIN="{{SERVER_ORIGIN}}"
+        export VITE_SERVER_ORIGIN="https://worker-metaframe.localhost"
     fi
     if [ "{{target}}" = "local" ]; then
         export VITE_SERVER_ORIGIN="https://{{APP_FQDN}}:{{APP_PORT}}"
     fi
     echo "Browser development pointing to: ${VITE_SERVER_ORIGIN}"
-    MAYBE_OPEN_BROWSER=""
     if [ ! -f /.dockerenv ]; then
-        export MAYBE_OPEN_BROWSER="--open";
+        just open
     fi
     export HOST={{APP_FQDN}}
     export PORT={{APP_PORT_BROWSER}}
-    export CERT_FILE=../.traefik/certs/local-cert.pem
-    export CERT_KEY_FILE=../.traefik/certs/local-key.pem
+    export CERT_FILE=../.cache/traefik/certs/local-cert.pem
+    export CERT_KEY_FILE=../.cache/traefik/certs/local-key.pem
     export BASE=
-    echo "vite PORT=${PORT}"
-    VITE_SERVER_ORIGIN=${VITE_SERVER_ORIGIN} {{vite}} --clearScreen false ${MAYBE_OPEN_BROWSER}
+    VITE_SERVER_ORIGIN=${VITE_SERVER_ORIGIN} {{vite}} --clearScreen false
 
 # Build the browser client static assets (in <root/docs>)
 build BASE="": (_tsc "--build")
@@ -61,7 +59,12 @@ build BASE="": (_tsc "--build")
     OUTDIR=dist \
     BASE={{BASE}} \
         {{vite}} build
-    
+
+# Open the browser to the local frontend
+@open:
+    echo 'https://metapages.github.io/load-page-when-available/?url=https://{{APP_FQDN}}:{{APP_PORT_BROWSER}}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1'
+    deno run --allow-all https://deno.land/x/metapages@v0.0.17/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{APP_FQDN}}:{{APP_PORT_BROWSER}}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1'
+
 # Build the browser client static assets on changes
 watch BASE="": (_tsc "--build")
     # Not many env vars since this is served by the 

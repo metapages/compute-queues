@@ -20,7 +20,7 @@ down +args="":
 
 # Open the browser to the local frontend
 @open:
-  deno run --allow-all https://deno.land/x/metapages@v0.0.17/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{APP_FQDN}}:{{APP_PORT}}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1'
+    deno run --allow-all https://deno.land/x/metapages@v0.0.17/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{APP_FQDN}}:{{APP_PORT}}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1'
 
 # Quick compilation checks
 @check:

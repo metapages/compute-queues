@@ -1,18 +1,27 @@
-import { useCallback } from "react";
-import { useHashParamJson, useHashParamBoolean } from "@metapages/hash-query";
 import {
-  Input,
-  Switch,
+  ReactNode,
+  useCallback,
+} from 'react';
+
+import { DockerJobDefinitionParamsInUrlHash } from '/@/components/types';
+import { useFormik } from 'formik';
+import * as yup from 'yup';
+
+import {
   Button,
   FormControl,
   FormLabel,
-  InputGroup,
   Heading,
+  Input,
+  InputGroup,
+  Link,
+  Switch,
   VStack,
-} from "@chakra-ui/react";
-import { useFormik } from "formik";
-import * as yup from "yup";
-import { DockerJobDefinitionParamsInUrlHash } from "/@/components/types";
+} from '@chakra-ui/react';
+import {
+  useHashParamBoolean,
+  useHashParamJson,
+} from '@metapages/hash-query';
 
 const validationSchema = yup.object({
   image: yup.string(),
@@ -93,22 +102,41 @@ export const PanelJobInputFromUrlParams: React.FC<{
               Docker container
             </Heading>
 
-            {["image", "command", "entrypoint", "workdir"].map((key) => (
-              <FormControl key={key}>
-                <FormLabel htmlFor={key}>{key}:</FormLabel>
-                <InputGroup>
-                  <Input
-                    width="100%"
-                    id={key}
-                    name={key}
-                    type="text"
-                    variant="filled"
-                    onChange={formik.handleChange}
-                    value={(formik.values as any)[key] || ""}
-                  />
-                </InputGroup>
-              </FormControl>
-            ))}
+            {["image", "command", "entrypoint", "workdir"].map((key) => {
+              
+              let labelJsx :ReactNode;
+              switch(key) {
+                case "image":
+                  labelJsx = <><Link isExternal href="https://hub.docker.com/" >docker image name</Link>{` / `}<Link isExternal href="https://docs.docker.com/build/building/context/#git-repositories" >git repository url</Link></>;
+                  break;
+                case "command":
+                  labelJsx = <Link isExternal href="https://docs.docker.com/reference/dockerfile/#cmd" >command</Link>;
+                  break;
+                case "entrypoint":
+                  labelJsx = <Link isExternal href="https://docs.docker.com/reference/dockerfile/#entrypoint" >entrypoint</Link>;
+                  break;
+                case "workdir":
+                  labelJsx = <Link isExternal href="https://docs.docker.com/reference/dockerfile/#workdir" >workdir</Link>;
+                  break;
+              }
+
+              return (
+                <FormControl key={key}>
+                  <FormLabel htmlFor={key}>{labelJsx}:</FormLabel>
+                  <InputGroup>
+                    <Input
+                      width="100%"
+                      id={key}
+                      name={key}
+                      type="text"
+                      variant="filled"
+                      onChange={formik.handleChange}
+                      value={(formik.values as any)[key] || ""}
+                    />
+                  </InputGroup>
+                </FormControl>
+              );
+            })}
 
             <FormControl>
               <FormLabel htmlFor="gpu">

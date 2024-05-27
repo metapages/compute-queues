@@ -1,14 +1,15 @@
 import { Buffer } from 'https://deno.land/std@0.177.0/node/buffer.ts';
 import { Writable } from 'https://deno.land/std@0.177.0/node/stream.ts';
 import { existsSync } from 'https://deno.land/std@0.224.0/fs/exists.ts';
-import { copy } from 'https://deno.land/std@0.224.0/io/mod.ts';
 // import Docker from 'https://deno.land/x/dockerapi@v0.1.0/mod.ts';
 import Docker from 'npm:dockerode@4.0.2';
 
 import { config } from '../config.ts';
+import { createDockerClient } from '../docker/client.ts';
 // import { Buffer } from "node:buffer";
 // import { args as CliArgs } from '../args.ts';
 import * as StreamTools from '../docker/streamtools.ts';
+import { generateDockerImageTag } from './utils.ts';
 
 // Minimal interface for interacting with docker jobs:
 //  inputs:
@@ -36,6 +37,10 @@ import * as StreamTools from '../docker/streamtools.ts';
 // /* This path refers to a sub path inside a docker container */
 // path?: string;
 // }
+
+const { docker, close } = createDockerClient(8343);
+// Close all docker connections on exit
+globalThis.addEventListener("unload", () => close());
 
 export interface Volume {
   host: string;
@@ -71,80 +76,6 @@ if (!existsSync("/var/run/docker.sock")) {
 }
 
 
-/******************************************************
- * Begin stupid workarounds for this showstopper issue:
- * https://github.com/apocas/dockerode/issues/747
-*/
-
-/**
- * Checks if a command is available to execute as a subprocess.
- * @param cmd - The command to check (e.g., "git", "node", "deno").
- * @returns A promise that resolves to a boolean indicating if the command is available.
- */
-async function isCommandAvailable(cmd: string): Promise<boolean> {
-  try {
-    const process = Deno.run({
-      cmd: [cmd, "-h"],
-      stdout: 'null',
-      stderr: 'null',
-    });
-
-    const status = await process.status();
-    process.close();
-
-    // If the status code is 0, the command is available
-    return status.success;
-  } catch (error) {
-    // If there is an error (e.g., command not found), return false
-    return false;
-  }
-}
-
-// UGH, showstopper getting this in deno:
-// https://github.com/apocas/dockerode/issues/747
-const runStupidProcessUgh = async () :Promise<void> => {
-
-  const isSocatAvailable = await isCommandAvailable("socat");
-  if (!isSocatAvailable) {
-    console.error(
-      'Due to showstopper issue: https://github.com/apocas/dockerode/issues/747\nYou must install "socat" to run the worker'
-    );
-    Deno.exit(1);
-  }
-
-  const socat = Deno.run({
-    cmd: ["socat", "TCP-LISTEN:3000,reuseaddr,fork", "UNIX-CONNECT:/var/run/docker.sock"],
-    stdout: "piped",
-    stderr: "piped",
-  });
-
-  // Function to clean up the subprocess on exit
-  async function killme() {
-    console.log("Shutting down subprocess socat...");
-    socat.kill("SIGTERM");
-    await socat.status(); // Wait for the process to exit
-    socat.close();
-  }
-  // Listen for the exit signal
-  Deno.addSignalListener("SIGINT", killme);
-  Deno.addSignalListener("SIGTERM", killme);
-  
-  copy(socat.stdout, Deno.stdout);
-  copy(socat.stderr, Deno.stderr);
-
-  await socat.status();
-}
-
-(async () => {
-  await runStupidProcessUgh();
-})();
-// and this now needs to be changed because of the above:
-// const docker = new Docker({socketPath: "/var/run/docker.sock"});
-const docker = new Docker({protocol: 'http', host: 'localhost', port: 3000});
-/******************************************************
- * End stupid workarounds for this showstopper issue:
- * https://github.com/apocas/dockerode/issues/747
-*/
 
 
 export interface DockerRunResult {
@@ -242,7 +173,7 @@ export const dockerJobExecute = async (
   const runningContainers :any[] = await docker.listContainers({Labels: {
     "docker.mtfm.io/id": args.id,
   }});
-  console.log('runningContainers', runningContainers.length);
+  // console.log('runningContainers', runningContainers.length);
 
   // console.log('createOptions', createOptions);
 
@@ -251,10 +182,10 @@ export const dockerJobExecute = async (
 
   const finish = async () => {
     try {
-      await ensureDockerImage(image);
+      createOptions.image = await ensureDockerImage({image});
     } catch (err) {
-      console.error(err);
-      result.error = `Failure to pull or build the docker image:\n${err}`;
+      console.error('💥 ensureDockerImage error', err);
+      result.error = `Failure to pull or build the docker image:  ${err?.message}`;
       return result;
     }
 
@@ -320,54 +251,97 @@ const killAndRemove = async (container?: Docker.Container): Promise<any> => {
 // assume that no images are deleted while we are running
 const CACHED_DOCKER_IMAGES: { [key: string]: boolean } = {};
 
-const ensureDockerImage = async (
+
+const ensureDockerImage = async (args:{
   image: string,
   pullOptions?: any
-): Promise<void> => {
-  console.log(`👀 ensureDockerImage: ${image}`)
+}): Promise<string> => {
+  let { image, pullOptions } = args;
+  
   if (!image) {
     throw new Error("ensureDockerImage missing image");
   }
+  
+  let gitRepoUrl: string | undefined;
+  if (image.startsWith("git@") || image.startsWith("https://")) {
+    gitRepoUrl = image;
+    image = generateDockerImageTag(image);
+  }
+
+  // console.log(`👀 ensureDockerImage: image=${image}  gitRepoUrl=${gitRepoUrl}`)
+
   if (CACHED_DOCKER_IMAGES[image]) {
-    console.log(`👀 ensureDockerImage: ${image} FOUND IMAGE IN MY FAKE CACHE`)
+    // console.log(`👀 ensureDockerImage: ${image} FOUND IMAGE IN MY FAKE CACHE`)
     // console.log('FOUND IMAGE IN MY FAKE CACHE')
-    return;
+    return image;
   }
 
   const imageExists = await hasImage(image);
-  console.log(`👀 ensureDockerImage: ${image} imageExists=${imageExists}`)
+  // console.log(`👀 ensureDockerImage: ${image} imageExists=${imageExists}`)
   // console.log('imageExists', imageExists);
   if (imageExists) {
     CACHED_DOCKER_IMAGES[image] = true;
-    return;
+    return image;
   }
 
+  if (gitRepoUrl) {
 
-  const stream = await docker.pull(image);
-  await new Promise<void>((resolve, reject) => {
+    // console.log(`docker.buildImage("", {remote: ${gitRepoUrl}, t:${image}, ...:${pullOptions ? JSON.stringify(pullOptions) : ""}) `)
+    // const buildImageStream = await 
+    const stream = await docker.buildImage("", {remote: gitRepoUrl, t:image, ...pullOptions});
+    
+    await new Promise((resolve, reject) => {
+      docker.modem.followProgress(stream, (err:any, res:any) => err ? reject(err) : resolve(res), (progressEvent:Event) => {
+        console.log(progressEvent);
+      });
+    });
+    // const buildResultString :string[] = await new Promise<string[]>((resolve, reject) => {
+    //   docker.buildImage("", {remote: gitRepoUrl, t:image, ...pullOptions}, (err :any, stream:any) => {
+    //     console.log('stream', stream);
+    //     const output :string[] = [];
+    //     stream.on('data', (data :any) => {
+    //       console.log(`BUILD STREAM: ${data.toString()}`)
+    //       output.push(data.toString());
+    //     });
+        
+    //     stream.on('end', () => {
+    //       resolve(output);
+    //     });
+        
+    //     stream.on('error', (err :any) => {
+    //       reject(err);
+    //     });
+    //   });
+    // });
+    // console.log('buildImageResult', buildImageResult);
+  } else {
+    const stream = await docker.pull(image);
+    await new Promise<void>((resolve, reject) => {
 
-    function onFinished(err:any, output:any) {
-      if (err) {
-        console.error('Error during pull:', err);
-        reject(err);
-        return;
+      function onFinished(err:any, output:any) {
+        if (err) {
+          console.error('Error during pull:', err);
+          reject(err);
+          return;
+        }
+        console.log(`${image} pull complete`);
+        resolve()
       }
-      console.log(`${image} pull complete`);
-      resolve()
-    }
 
-    function onProgress(event:any) {
-      console.log(JSON.stringify(event));
-    }
+      function onProgress(event:any) {
+        console.log(JSON.stringify(event));
+      }
 
-    docker.modem.followProgress(stream, onFinished, onProgress);
-  });
+      docker.modem.followProgress(stream, onFinished, onProgress);
+    });
 
-  console.log(`👀 ensureDockerImage: docker pull ${image} complete`)
+    // console.log(`👀 ensureDockerImage: docker pull ${image} complete`)
+  }
+  return image;
 };
 
 const hasImage = async (imageUrl: string): Promise<boolean> => {
-  console.log("hasImage, imageUrl", imageUrl)
+  // console.log("hasImage, imageUrl", imageUrl)
   const images = await docker.listImages();
   return images.some((e: any) => {
     return (
@@ -409,10 +383,10 @@ const parseDockerUrl = (s: string): DockerUrlBlob => {
   const repository = result[2];
   let tag = result[3];
   if (tag) {
-    tag = tag.substr(1);
+    tag = tag.substring(1);
   }
   registryAndNamespace = registryAndNamespace
-    ? registryAndNamespace.substr(0, registryAndNamespace.length - 1)
+    ? registryAndNamespace.substring(0, registryAndNamespace.length - 1)
     : undefined;
   let namespace: string | undefined;
   let registry: string | undefined;
