@@ -1,0 +1,66 @@
+const sanitizeForDockerTag = (input: string): string => {
+  return input.replace(/[^a-zA-Z0-9_.-]/g, "-").toLowerCase();
+}
+
+const extractOwnerAndRepoName = (url: string): { owner: string, repo: string } => {
+  // Remove the fragment part if it exists
+  const urlWithoutFragment = url.split('#')[0];
+  
+  // Extract the owner and repository name from the URL
+  const urlParts = urlWithoutFragment.replace(/\.git$/, "").split("/");
+  const repo = urlParts.pop()!;
+  const owner = urlParts.pop()!;
+  return { owner, repo };
+}
+
+const extractFragment = (url: string): string | null => {
+  const fragmentIndex = url.indexOf("#");
+  return fragmentIndex !== -1 ? url.substring(fragmentIndex + 1) : null;
+}
+
+export function generateDockerImageTag(url: string): string {
+  const { owner, repo } = extractOwnerAndRepoName(url);
+  const sanitizedOwner = sanitizeForDockerTag(owner);
+  const sanitizedRepo = sanitizeForDockerTag(repo);
+  const fragment = extractFragment(url);
+  
+  if (fragment) {
+    const sanitizedFragment = sanitizeForDockerTag(fragment);
+    return `${sanitizedOwner}/${sanitizedRepo}:${sanitizedFragment}`;
+  } else {
+    return `${sanitizedOwner}/${sanitizedRepo}:latest`;
+  }
+}
+
+
+
+// function sanitizeForDockerTag(input: string): string {
+//   return input.replace(/[^a-zA-Z0-9_.-]/g, "").toLowerCase();
+// }
+
+// function extractRepoName(url: string): string {
+//   // Extract the repository name from the URL
+//   const urlParts = url.split("/");
+//   const repoWithExtension = urlParts[urlParts.length - 1];
+//   const repoName = repoWithExtension.replace(/\.git$/, "");
+//   return repoName;
+// }
+
+// export function generateDockerImageTag(url: string): string {
+//   const sanitizedUrl = sanitizeForDockerTag(url);
+//   const repoName = extractRepoName(url);
+//   const sanitizedRepoName = sanitizeForDockerTag(repoName);
+  
+//   // Example tag format: "repo-name-hash-of-sanitized-url"
+//   const hashOfUrl = sanitizedUrl.split("").reduce((hash, char) => {
+//     hash = ((hash << 5) - hash) + char.charCodeAt(0);
+//     return hash & hash; // Convert to 32bit integer
+//   }, 0).toString(16);
+
+//   return `${sanitizedRepoName}:${hashOfUrl}`;
+// }
+
+// Example usage
+// const gitUrl = "https://github.com/user/repo.git"; // Or "git@github.com:user/repo.git"
+// const dockerTag = generateDockerImageTag(gitUrl);
+// console.log(`Generated Docker image tag: ${dockerTag}`);

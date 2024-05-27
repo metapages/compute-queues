@@ -12,9 +12,10 @@ set dotenv-load                    := true
 @publish-versioned-artifacts version="":
   just app/publish-versioned-artifacts {{version}}
 
-# Run all tests
+# Checks and tests
 @test: check
-  echo "todo: implement tests"
+  deno test --allow-net --allow-read --allow-env --allow-write --allow-run .
+  echo "✅ worker unit tests"
 
 # Quick compilation checks
 @check:

@@ -3,13 +3,8 @@
 #################################################################
 FROM denoland/deno:alpine-1.43.6 as worker
 
-
-RUN apk --no-cache add \
-    openssh \
-    socat
-
-# https://gist.github.com/squarebracket/e719069522436873bc6f13efb359cac9
-RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
+# # https://gist.github.com/squarebracket/e719069522436873bc6f13efb359cac9
+# RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
 
 WORKDIR /app
 COPY ./worker/src ./worker/src
@@ -25,4 +20,4 @@ ENV VERSION=$VERSION
 
 RUN deno cache --unstable src/cli.ts
 
-ENTRYPOINT ["deno", "run", "--allow-net", "--allow-read", "--allow-env", "--allow-run", "src/cli.ts"]
+ENTRYPOINT ["deno", "run", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "--allow-run", "src/cli.ts"]

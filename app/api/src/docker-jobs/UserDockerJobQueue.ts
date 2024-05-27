@@ -295,7 +295,7 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
         let sendBroadcast = false;
         for (const [jobId, job] of Object.entries(this.state.jobs))  {
 
-            if (this.state.jobs[jobId].state === DockerJobState.Finished) {
+            if (this.state.jobs?.[jobId]?.state === DockerJobState.Finished) {
                 
                 const stateChange = this.state.jobs[jobId].value as StateChangeValueWorkerFinished;
                 // console.log('typeof(stateChange.time)', typeof(stateChange.time));

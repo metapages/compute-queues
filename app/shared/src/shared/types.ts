@@ -26,7 +26,8 @@ export type InputsBase64String = { [name in string]: string };
 
 // inputs values are base64 encoded strings
 export type DockerJobDefinitionInputsBase64 = {
-    image?: Image;
+    // the docker image OR git repository URL
+    image: Image;
     command?: Command;
     env?: Env;
     // entrypoint?: string[];
@@ -54,6 +55,9 @@ export interface DockerRunResultWithOutputs {
 }
 
 export enum DockerJobState {
+    CloningRepo = "CloningRepo",
+    DownloadingImage = "DownloadingImage",
+    Building = "Building",
     Queued = "Queued",
     ReQueued = "ReQueued",
     Running = "Running",
