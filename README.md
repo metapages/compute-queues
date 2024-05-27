@@ -77,7 +77,7 @@ E.g. kubernetes, nomad.
 
 ## Deployment (automation)
 
-**api:**
+**(public) api:**
 
 - push to `main`:
   - The `api` server is deployed to deno.deploy https://github.com/metapages/compute-queues/issues/1
