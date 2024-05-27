@@ -37,7 +37,7 @@ flowchart LR
 
 ```
 
-## Quickstart
+## Local development: Quickstart
 
 **Start the local dev stack:**
 
