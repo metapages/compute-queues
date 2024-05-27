@@ -1,6 +1,8 @@
 # Always use locally installed tools (always pin versions)
 set shell                          := ["bash", "-c"]
 set dotenv-load                    := true
+set export                         := true
+DENO_DEPLOY_TOKEN                  := env_var_or_default("DENO_DEPLOY_TOKEN", "")
 
 # minimal formatting, bold is very useful
 bold                  := '\033[1m'
@@ -10,9 +12,43 @@ normal                := '\033[0m'
     just --list --unsorted --list-heading $'Api commands:\n'
     echo -e ""
 
+# Run the server locally
 @dev +args="":
     deno run --watch --allow-all --unstable-kv --unstable-broadcast-channel src/server.ts {{args}}
 
+# Quick compile checks
 @check:
     deno check src/server.ts
     echo "✅ api typescript compilation"
+
+# Perform a deploy to https://dash.deno.com/projects/compute-queue-api
+@build: check
+    rm -rf dist
+    mkdir -p dist
+    cp -rL src dist/
+    # The browser build goes to ../browser/dist
+    # and ../browser/dist is symlinked to ./assets
+    just ../browser/build
+    cp -rL assets dist/
+    cp deno.json dist/
+    cp deno.lock dist/
+
+# Build, then run the server locally. TO skip the build: 'just _serve'
+serve: build _serve
+_serve:
+    PORT=3073 \
+    DENO_DIR=.deno \
+    DENO_INSTALL_ROOT=.deno \
+        deno run --allow-sys --allow-net --allow-read --allow-env --unstable-kv src/server.ts
+
+# Perform a fresh build and deploy to deno-deploy
+deploy: _ensure_deployctl clean build
+    cd dist && \
+        deployctl deploy --project=compute-queue-api --prod src/server.ts
+
+# Delete generate assets and caches
+clean:
+    rm -rf dist
+
+@_ensure_deployctl:
+    if ! command -v deployctl &> /dev/null; then echo '‼️ deployctl is being installed ‼️'; deno install --allow-all --no-check -r -f https://deno.land/x/deploy/deployctl.ts; fi

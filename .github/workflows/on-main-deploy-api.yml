@@ -1,0 +1,42 @@
+# https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
+name: Deno deploy api+browser
+
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+on:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  deno-deploy-api-browser:
+    # Can switch to ubuntu-latest but self-hosted is safer and faster
+    # runs-on: ubuntu-latest
+    name: Deno deploy api+browser
+    runs-on: self-hosted
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+        with:
+          # token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          fetch-depth: '0'
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+
+      - name: Setup just
+        uses: extractions/setup-just@v1
+        with:
+          just-version: '1.25.2'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: "1.43.6"
+
+      - name: deno deploy api+browser
+        env:
+          DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
+        run: just app/api/deploy
+
