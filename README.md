@@ -77,21 +77,21 @@ E.g. kubernetes, nomad.
 
 ## Deployment (automation)
 
-**api:**:
+**api:**
 
-    - push to `main`:
-      - The `api` server is deployed to deno.deploy https://github.com/metapages/compute-queues/issues/1
-        - The `browser` is built as part of the `api`
+- push to `main`:
+  - The `api` server is deployed to deno.deploy https://github.com/metapages/compute-queues/issues/1
+    - The `browser` is built as part of the `api`
         
-**worker:**:
+**worker:**
 
-    - git semver tag:
-      - the `worker` image is built, published
-        - TODO: https://github.com/metapages/compute-queues/issues/2
-      - `worker` host requirements:
-        - just [docker](https://docs.docker.com/engine/install/)
-      - our cloud worker providers update the worker version and redeploy
-        - TODO: https://github.com/metapages/compute-queues/issues/3
+- git semver tag:
+  - the `worker` image is built, published
+    - TODO: https://github.com/metapages/compute-queues/issues/2
+  - `worker` host requirements:
+    - just [docker](https://docs.docker.com/engine/install/)
+  - our cloud worker providers update the worker version and redeploy
+    - TODO: https://github.com/metapages/compute-queues/issues/3
 
 
 ## Background
