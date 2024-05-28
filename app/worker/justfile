@@ -26,9 +26,17 @@ normal                := '\033[0m'
     echo -e "                    run --cores=1 --api-server-address=https://worker-metaframe.localhost local1"
     echo -e ""
 
-# Run the worker locally, using the local API server
-@run +args="":
+# Run the worker locally, pointing to the local API
+@dev +args="":
     deno run --allow-all --unsafely-ignore-certificate-errors src/cli.ts run {{args}}
+
+# Run the worker locally, pointing to production API
+@dev-prod queue="local1":
+    deno run --allow-all src/cli.ts run --cores=1 --api-server-address=https://compute-queue-api.deno.dev {{queue}}
+
+# Run the worker locally, pointing to the previous API
+@dev-docker-mtfm-io queue="local1":
+    deno run --allow-all src/cli.ts run --cores=1 --api-server-address=https://docker.mtfm.io {{queue}}
 
 # Quick type check
 @check:

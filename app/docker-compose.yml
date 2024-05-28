@@ -28,7 +28,6 @@ services:
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
       - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio.worker-metaframe.localhost}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
-      - BROWSER_ASSETS_DIRECTORY=/app/browser/dist/
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
     volumes:
