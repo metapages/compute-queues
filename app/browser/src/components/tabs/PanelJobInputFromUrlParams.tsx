@@ -83,22 +83,21 @@ export const PanelJobInputFromUrlParams: React.FC<{
   });
 
   return (
-    <VStack width="100%" alignItems="stretch">
+    <VStack w="100%" alignItems="stretch" >
       <form onSubmit={formik.handleSubmit}>
         <Heading size="sm">Configure docker batch job </Heading>
 
-        <br />
 
-        <VStack alignItems="stretch" width="100%" spacing="4px">
+        <VStack alignItems="stretch" width="100%" spacing="4px" pt="9px">
           <VStack
             borderWidth="1px"
             p={4}
             borderRadius="lg"
             alignItems="stretch"
             width="100%"
-            spacing="4px"
+            // spacing="4px"
           >
-            <Heading size="xs" textAlign="right">
+            <Heading size="xs" >
               Docker container
             </Heading>
 
@@ -163,7 +162,7 @@ export const PanelJobInputFromUrlParams: React.FC<{
             width="100%"
             spacing="4px"
           >
-            <Heading size="xs" textAlign="right">
+            <Heading size="xs">
               Misc
             </Heading>
             <br />

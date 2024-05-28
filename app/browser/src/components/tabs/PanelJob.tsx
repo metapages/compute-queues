@@ -16,9 +16,9 @@ import {
   Heading,
   HStack,
   ListItem,
-  Spacer,
   Text,
   UnorderedList,
+  useMediaQuery,
   VStack,
 } from '@chakra-ui/react';
 import { useHashParam } from '@metapages/hash-query';
@@ -32,29 +32,30 @@ export const PanelJob: React.FC<{
   job: DockerJobDefinitionRow | undefined;
 }> = ({ job }) => {
   const [queue] = useHashParam("queue");
+  const [isSmallerThan800] = useMediaQuery('(max-width: 800px)')
   return (
-    <Box maxW="100%" p={2}>
-      <HStack spacing="24px" alignItems="flex-start">
+    <Box w="100%" maxW="100%" p={2}>
+      <HStack w="100%" spacing="24px" alignItems="flex-start">
         <PanelJobInputFromUrlParams />
 
-        <VStack width="100%" alignItems="flex-start">
+        <VStack w="50%" alignItems="flex-start">
           <Heading size="sm">Job status and control</Heading>
-          <br />
-          <br />
+          
+          
           <VStack
             borderWidth="1px"
             p={4}
             borderRadius="lg"
-            width="100%"
+            w="100%"
             alignItems="flex-start"
           >
-            <HStack width="100%">
+            <HStack w="100%" justifyContent="space-between">
               <ButtonCancelOrRetry job={job} />
-              <Spacer />
+              {/* <Spacer /> */}
 
-              <Box>{job?.hash ? `id: ${job?.hash}` : null}</Box>
+              <Text maxW="200px" isTruncated>{job?.hash ? `id: ${job?.hash}` : null}</Text>
             </HStack>
-            <HStack width="100%" height="100%">
+            <HStack w="100%" h="100%">
             {!queue || queue === "" ? null : (
 
               <JobStatusDisplay job={job} />

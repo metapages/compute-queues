@@ -18,7 +18,10 @@ import {
   CloseIcon,
   RepeatClockIcon,
 } from '@chakra-ui/icons';
-import { Button } from '@chakra-ui/react';
+import {
+  Button,
+  useMediaQuery,
+} from '@chakra-ui/react';
 import { useHashParam } from '@metapages/hash-query';
 
 import { useServerState } from '../hooks/serverStateHook';
@@ -33,6 +36,7 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
   const [clicked, setClicked] = useState<boolean>(false);
   const serverState = useServerState();
   const [nocacheString, setnocacheString] = useHashParam("nocache");
+  const [isLargerThan800] = useMediaQuery('(min-width: 800px)');
 
   useEffect(() => {
     setClicked(false);
@@ -91,7 +95,7 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
           isActive={!clicked}
           size="lg"
         >
-          Cancel
+          { isLargerThan800 ? "Cancel job" : ""}
         </Button>
       );
     case DockerJobState.Finished:
@@ -111,7 +115,8 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
                 size="lg"
                 onClick={onClickRetry}
               >
-                Re-queue
+                { isLargerThan800 ? "Re-queue" : ""}
+                
               </Button>
             );
           case DockerJobFinishedReason.WorkerLost:
@@ -122,7 +127,8 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
                 isDisabled={true}
                 size="lg"
               >
-                Cancel job
+                { isLargerThan800 ? "Cancel job" : ""}
+                
               </Button>
             );
         }

@@ -59,6 +59,24 @@ You might need to wait a bit to refresh the browser, it incorrectly returns a `2
 
 You can edit browser code, worker code, and api code, and everything automatically updates.
 
+### Start each service separately
+
+You can develop workers locally, pointing to prod or local API
+
+```
+  just app/worker/dev
+
+  just app/worker/dev-prod
+```
+
+You can develop the browser locally, pointing to prod or local API
+
+```
+  just app/browser/dev
+
+  just app/browser/dev-prod
+```
+
 ### Local development: host system prerequisites
 
  - [docker](https://docs.docker.com/engine/install/)

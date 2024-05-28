@@ -41,6 +41,9 @@ dev target="": _mkcert _install
     fi
     if [ "{{target}}" = "local" ]; then
         export VITE_SERVER_ORIGIN="https://{{APP_FQDN}}:{{APP_PORT}}"
+    elif [ "{{target}}" != "" ]; then
+        export VITE_SERVER_ORIGIN="{{target}}"
+
     fi
     echo "Browser development pointing to: ${VITE_SERVER_ORIGIN}"
     if [ ! -f /.dockerenv ]; then
@@ -52,6 +55,9 @@ dev target="": _mkcert _install
     export CERT_KEY_FILE=../.cache/traefik/certs/local-key.pem
     export BASE=
     VITE_SERVER_ORIGIN=${VITE_SERVER_ORIGIN} {{vite}} --clearScreen false
+
+# Browser develop: pointing to production API
+dev-prod: (dev "https://compute-queue-api.deno.dev")
 
 # Build the browser client static assets (in <root/docs>)
 build BASE="": (_tsc "--build")
