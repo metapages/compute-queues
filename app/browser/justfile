@@ -57,7 +57,7 @@ dev target="": _mkcert _install
     VITE_SERVER_ORIGIN=${VITE_SERVER_ORIGIN} {{vite}} --clearScreen false
 
 # Browser develop: pointing to production API
-dev-prod: (dev "https://compute-queue-api.deno.dev")
+dev-prod: (dev "https://container.mtfm.io")
 
 # Build the browser client static assets (in <root/docs>)
 build BASE="": (_tsc "--build")
