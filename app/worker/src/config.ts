@@ -18,10 +18,8 @@ export interface Arguments {
  */
 export const config :Arguments = {
     cpus: 1, //cpus: { type: Number, alias: 'c', description: 'Number of CPUs allowed (default 1)', defaultValue: 1 },
-    server: "https://docker-metapage-io.glitch.me",
-    // server: "https://docker-metapage-io.glitch.me", // { type: String, alias: 's', description: `Custom server (default: https://docker-metapage-io.glitch.me)`, optional: true, defaultValue: "https://docker-metapage-io.glitch.me" },
+    server: "https://container.mtfm.io", // { type: String, alias: 's', description: `Custom server (default: https://container.mtfm.io)`, optional: true, defaultValue: "https://container.mtfm.io" },
     queue: "", //{ type: String, alias: 'q', description: 'Queue id. Browser links to this queue ' },
-    // version: VERSION, //{ type: Boolean, alias: 'v', description: 'Print version', optional: true },
     id: MACHINE_ID, //{ type: String, alias: 'i', description: `Worker Id (default:${MACHINE_ID})`, defaultValue: MACHINE_ID },
     gpus: false, //{ type: Boolean, alias: 'g', description: `Enable "--gpus all" flag if the job requests and the worker supports`, optional: true },
 };

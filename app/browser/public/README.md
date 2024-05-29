@@ -1,6 +1,6 @@
 # Run docker containers as metaframes in the browser
 
-`docker.mtfm.io` runs docker containers on workers. It is currently in beta.
+`container.mtfm.io` runs docker containers on workers. It is currently in beta.
 
  - Run any publicly available docker image: `Python`, `R`, `C++`, `Java`, ... anything.
  - Bring your own workers
@@ -30,9 +30,9 @@ Versioned. Reproducible. No client install requirements, as long as you have at 
    - Best if the `queue` value is a long impossible to guess string e.g. a GUID
    - Workers point to this queue, and run the configured docker jobs
 2. Configure the docker job
-3. Run a worker (or a bunch):
+3. Run a worker (or a bunch) pointing to a queue: `public-queue-01`
    ```
-   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.1.2 --cpus=2 --queue=public1
+   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.13.1 run --cores=2 public-queue-01
    ```
 
 **Coming soon:** GPU support
