@@ -1,29 +1,32 @@
-set shell                          := ["bash", "-c"]
-set dotenv-load                    := true
+set shell        := ["bash", "-c"]
+set dotenv-load  := true
 
-APP_FQDN                    := "worker-metaframe.localhost"
-APP_PORT                    := env_var_or_default("APP_PORT", "443")
+APP_FQDN         := "worker-metaframe.localhost"
+APP_PORT         := env_var_or_default("APP_PORT", "443")
+
+normal           := '\033[0m'
+green            := "\\e[32m"
 
 @_help:
     just --list --unsorted --list-heading $'Commands: (all services)\n'
 
 # Develop: open the browser and start the dev stack
-dev +args="":  open (up args)
+dev +args="": _ensure-all open (up args)
 
 # Start the docker-compose local stack
-@up +args="": _mkcert 
+@up +args="": _ensure-all _mkcert 
     docker-compose up --remove-orphans {{args}}
 
 # 'docker-compose down'
-down +args="":
+down +args="": _ensure-all
     docker-compose down {{args}}
 
 # Open the browser to the local frontend
-@open:
-    deno run --allow-all https://deno.land/x/metapages@v0.0.17/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{APP_FQDN}}:{{APP_PORT}}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1'
+@open: _ensure-all
+    deno run --allow-all https://deno.land/x/metapages@v0.0.25/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{APP_FQDN}}:{{APP_PORT}}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1'
 
 # Quick compilation checks
-@check:
+@check: _ensure-all
   just worker/check
   just api/check
   just browser/check
@@ -38,8 +41,27 @@ clean:
     just worker/publish-versioned-artifacts {{version}}
 
 # DEV: generate TLS certs for HTTPS over localhost https://blog.filippo.io/mkcert-valid-https-certificates-for-localhost/
-@_mkcert:
+@_mkcert: _ensure_mkcert
     if [ ! -f .cache/traefik/certs/local-key.pem ]; then \
-        FQDN={{APP_FQDN}} CERT_NAME=local CERTS_DIR=.cache/traefik/certs deno run --allow-all https://deno.land/x/metapages@v0.0.20/commands/ensure_mkcert.ts ;\
+        FQDN={{APP_FQDN}} CERT_NAME=local CERTS_DIR=.cache/traefik/certs deno run --allow-all https://deno.land/x/metapages@v0.0.25/commands/ensure_mkcert.ts ;\
     fi
-  
+
+@_ensure-all: _ensure_docker _ensure_deno
+
+@_ensure_docker:
+    if ! command -v docker > /dev/null; then \
+        echo -e "\nDocker is not installed. Please install Docker and try again: 👉 {{green}}https://docs.docker.com/engine/install/{{normal}}\n"; \
+        exit 1; \
+    fi
+
+@_ensure_deno:
+    if ! command -v deno > /dev/null; then \
+        echo -e "\nDeno is not installed. Please install Deno and try again: 👉 {{green}}https://docs.deno.com/runtime/manual/getting_started/installation{{normal}}\n"; \
+        exit 1; \
+    fi
+
+@_ensure_mkcert:
+    if ! command -v mkcert > /dev/null; then \
+        echo -e "\nmkcert is not installed. Please install mkcert and try again: 👉 {{green}}https://github.com/FiloSottile/mkcert?tab=readme-ov-file#installation{{normal}}\n"; \
+        exit 1; \
+    fi

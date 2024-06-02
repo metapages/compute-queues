@@ -49,7 +49,7 @@ flowchart LR
 
 ### Quickstart
 
-**Start the local dev stack:**
+**Start the local dev stack (requires [just](https://github.com/casey/just?tab=readme-ov-file#installation)):**
 
 ```
   just dev
