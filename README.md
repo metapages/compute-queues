@@ -1,12 +1,8 @@
 # Compute queues and the worker to run them all
 
-Production: https://container.mtfm.io/
-
 **Quick links:**
-
- - `github repo`: https://github.com/metapages/compute-queues
+ - `production api`: https://container.mtfm.io/
  - `api deployment config`: https://dash.deno.com/projects/compute-queue-api
- - `api production`: https://compute-queue-api.deno.dev
 
 Run scientific workflow anywhere, reliably, via the browser. For compute heavy jobs, use your own computer, or run on a cluster. Share compute. Run scientific workflows no matter how old.
 
