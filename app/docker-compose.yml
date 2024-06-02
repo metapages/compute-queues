@@ -200,10 +200,8 @@ services:
       - "${TRAEFIK_WEB_UI_PORT:-8080}:8080"
     volumes:
       - .cache/traefik/certs:/etc/certs:ro
+      - .traefik/config.yml:/etc/traefik/config.yml
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    configs:
-      - source: config.yml
-        target: /etc/traefik/config.yml
 
 networks:
   default:
@@ -218,11 +216,3 @@ volumes:
     driver: local
   node_modules:
     driver: local
-
-configs:
-  config.yml:
-    content: |
-      tls:
-        certificates:
-          - certFile: "/etc/certs/local-cert.pem"
-            keyFile: "/etc/certs/local-key.pem"

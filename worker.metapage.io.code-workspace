@@ -9,6 +9,7 @@
 		"files.exclude": {
 			"**/.cache": true,
 			"**/.deno": true,
+			"**/.traefik": true,
 			"**/api/browser": true,
 			"**/app/api/assets": true,
 			"**/dist": true,
