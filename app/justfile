@@ -13,13 +13,13 @@ green            := "\\e[32m"
 # Develop: open the browser and start the dev stack
 dev +args="": _ensure-all open (up args)
 
-# Start the docker-compose local stack
+# Start the docker compose local stack
 @up +args="": _ensure-all _mkcert 
-    docker-compose up --remove-orphans {{args}}
+    docker compose up --remove-orphans {{args}}
 
-# 'docker-compose down'
+# 'docker compose down'
 down +args="": _ensure-all
-    docker-compose down {{args}}
+    docker compose down {{args}}
 
 # Open the browser to the local frontend
 @open: _ensure-all
@@ -34,7 +34,7 @@ down +args="": _ensure-all
 clean:
     rm -rf .cache
     just browser/clean
-    docker-compose down -v
+    docker compose down -v
 
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":

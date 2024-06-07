@@ -12,7 +12,7 @@ if (!AWS_ENDPOINT || !AWS_ENDPOINT.includes("minio"))  {
 
 
 const config = {
-  // this is from docker-compose:
+  // this is from docker compose:
   endPoint: "minio",
   useSSL: false,
   port: 9000,

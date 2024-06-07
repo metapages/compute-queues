@@ -82,7 +82,7 @@ You can develop the browser locally, pointing to prod or local API
  - [deno](https://docs.deno.com/runtime/manual/getting_started/installation)
  - [mkcert](https://github.com/FiloSottile/mkcert?tab=readme-ov-file#installation)
 
-If you want to do browser development outside of docker-compose, I assume you will know how to set up a local browser environment (`npm` etc).
+If you want to do browser development outside of docker compose, I assume you will know how to set up a local browser environment (`npm` etc).
 
 
 
