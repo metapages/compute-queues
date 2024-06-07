@@ -1,6 +1,6 @@
 import {
   createHandler,
-} from 'https://deno.land/x/metapages@v0.0.25/worker/routing/handlerDeno.ts';
+} from 'https://deno.land/x/metapages@v0.0.26/worker/routing/handlerDeno.ts';
 
 import { handlerHttp } from './handlerHono.ts';
 import { handleWebsocketConnection } from './handlerWs.ts';
