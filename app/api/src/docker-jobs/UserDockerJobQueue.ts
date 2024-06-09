@@ -75,10 +75,16 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
         this.channel = new BroadcastChannel(address);
 
         // TODO get only for this queue
-        (async () => {
+        const updateAll = async () => {
             const allPersistedJobInTheQueue = await db.queueGetAll(address);
-            allPersistedJobInTheQueue.forEach(j => this.state.jobs[j.hash] = j)
-            this.broadcastStateToChannel();
+            allPersistedJobInTheQueue.forEach(j => this.state.jobs[j.hash] = j);
+            // Why broadcase here? New UserDockerJobQueue instances will get their
+            // own state from the db
+            // this.broadcastStateToChannel();
+
+        }
+        (async () => {
+            await updateAll();
         })();
 
         // When a new message comes in from other instances, add it
@@ -89,8 +95,21 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
             }
             switch (payload.type) {
                 case "job-state":
-                    console.log('🌘job-state from broadcase, got to resolve and merge');
-
+                    console.log('🌘job-state from broadcast, got to resolve and merge...');
+                    // get the updated job
+                    const state = payload.value;
+                    const jobs = state.jobs;
+                    let sendBroadcast = false;
+                    for (const [jobId, job] of Object.entries(jobs)) {
+                        if (!this.state.jobs[jobId] || this.state.jobs[jobId].history.length < job.history.length) {
+                            console.log(`🌘 from merge updating jobId=${jobId}`);
+                            this.state.jobs[jobId] = job;
+                            sendBroadcast = true;
+                        }
+                    }
+                    if (sendBroadcast) {
+                        this.broadcast();
+                    }
                     break;
                 default:
                     break;
@@ -98,11 +117,17 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
         };
     }
 
-    broadcastStateToChannel() {
+    broadcastStateToChannel(jobId:string) {
+
+        const stateWithOneJob :State = {
+            jobs: {
+                [jobId]: this.state.jobs[jobId],
+            }
+        }
         const message :BroadCastMessage = {
             instanceId: SERVER_INSTANCE_ID,
             type: "job-state",
-            value: this.state,
+            value: stateWithOneJob,
         }
         this.channel.postMessage(message);
     }
@@ -141,7 +166,7 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
             } else {
                 await db.queueJobUpdate(this.address, jobRow!);
             }
-            this.broadcastStateToChannel();
+            this.broadcastStateToChannel(jobId);
         }
 
         // console.log(`🌗jobId=${jobId} jobRow=${JSON.stringify(jobRow, null, "  ")}`)
