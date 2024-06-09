@@ -2,12 +2,24 @@
   "version": "3",
   "packages": {
     "specifiers": {
+      "jsr:@metapages/deno-redis-broadcastchannel@^0.2.0": "jsr:@metapages/deno-redis-broadcastchannel@0.2.0",
       "npm:@aws-sdk/client-s3": "npm:@aws-sdk/client-s3@3.582.0_@aws-sdk+client-sts@3.582.0__@aws-sdk+client-sso-oidc@3.582.0___@aws-sdk+client-sts@3.582.0_@aws-sdk+client-sso-oidc@3.582.0__@aws-sdk+client-sts@3.582.0___@aws-sdk+client-sso-oidc@3.582.0",
       "npm:@aws-sdk/client-s3@3.582.0": "npm:@aws-sdk/client-s3@3.582.0_@aws-sdk+client-sts@3.582.0__@aws-sdk+client-sso-oidc@3.582.0___@aws-sdk+client-sts@3.582.0_@aws-sdk+client-sso-oidc@3.582.0__@aws-sdk+client-sts@3.582.0___@aws-sdk+client-sso-oidc@3.582.0",
       "npm:@aws-sdk/s3-request-presigner": "npm:@aws-sdk/s3-request-presigner@3.582.0",
+      "npm:crypto-random-string@5.0.0": "npm:crypto-random-string@5.0.0",
       "npm:fetch-retry@5.0.6": "npm:fetch-retry@5.0.6",
       "npm:minio@8.0.0": "npm:minio@8.0.0",
+      "npm:redis@4.5": "npm:redis@4.5.1_@redis+client@1.4.2",
       "npm:safe-stable-stringify@2.4.3": "npm:safe-stable-stringify@2.4.3"
+    },
+    "jsr": {
+      "@metapages/deno-redis-broadcastchannel@0.2.0": {
+        "integrity": "62d3765bcbd05cc29340a16bf7987e1019324c64b9e5fcf81597a4b52df6b7c6",
+        "dependencies": [
+          "npm:crypto-random-string@5.0.0",
+          "npm:redis@4.5"
+        ]
+      }
     },
     "npm": {
       "@aws-crypto/crc32@3.0.0": {
@@ -815,6 +827,44 @@
           "tslib": "tslib@2.6.2"
         }
       },
+      "@redis/bloom@1.1.0_@redis+client@1.4.2": {
+        "integrity": "sha512-9QovlxmpRtvxVbN0UBcv8WfdSMudNZZTFqCsnBszcQXqaZb/TVe30ScgGEO7u1EAIacTPAo7/oCYjYAxiHLanQ==",
+        "dependencies": {
+          "@redis/client": "@redis/client@1.4.2"
+        }
+      },
+      "@redis/client@1.4.2": {
+        "integrity": "sha512-oUdEjE0I7JS5AyaAjkD3aOXn9NhO7XKyPyXEyrgFDu++VrVBHUPnV6dgEya9TcMuj5nIJRuCzCm8ZP+c9zCHPw==",
+        "dependencies": {
+          "cluster-key-slot": "cluster-key-slot@1.1.1",
+          "generic-pool": "generic-pool@3.9.0",
+          "yallist": "yallist@4.0.0"
+        }
+      },
+      "@redis/graph@1.1.0_@redis+client@1.4.2": {
+        "integrity": "sha512-16yZWngxyXPd+MJxeSr0dqh2AIOi8j9yXKcKCwVaKDbH3HTuETpDVPcLujhFYVPtYrngSco31BUcSa9TH31Gqg==",
+        "dependencies": {
+          "@redis/client": "@redis/client@1.4.2"
+        }
+      },
+      "@redis/json@1.0.4_@redis+client@1.4.2": {
+        "integrity": "sha512-LUZE2Gdrhg0Rx7AN+cZkb1e6HjoSKaeeW8rYnt89Tly13GBI5eP4CwDVr+MY8BAYfCg4/N15OUrtLoona9uSgw==",
+        "dependencies": {
+          "@redis/client": "@redis/client@1.4.2"
+        }
+      },
+      "@redis/search@1.1.0_@redis+client@1.4.2": {
+        "integrity": "sha512-NyFZEVnxIJEybpy+YskjgOJRNsfTYqaPbK/Buv6W2kmFNaRk85JiqjJZA5QkRmWvGbyQYwoO5QfDi2wHskKrQQ==",
+        "dependencies": {
+          "@redis/client": "@redis/client@1.4.2"
+        }
+      },
+      "@redis/time-series@1.0.4_@redis+client@1.4.2": {
+        "integrity": "sha512-ThUIgo2U/g7cCuZavucQTQzA9g9JbDDY2f64u3AbAoz/8vE2lt2U37LamDUVChhaDA3IRT9R6VvJwqnUfTJzng==",
+        "dependencies": {
+          "@redis/client": "@redis/client@1.4.2"
+        }
+      },
       "@smithy/abort-controller@3.0.0": {
         "integrity": "sha512-p6GlFGBt9K4MYLu72YuJ523NVR4A8oHlC5M2JO6OmQqN8kAc/uh1JqLE+FizTokrSJGg0CSvC+BrsmGzKtsZKA==",
         "dependencies": {
@@ -1271,6 +1321,16 @@
           "set-function-length": "set-function-length@1.2.2"
         }
       },
+      "cluster-key-slot@1.1.1": {
+        "integrity": "sha512-rwHwUfXL40Chm1r08yrhU3qpUvdVlgkKNeyeGPOxnW8/SyVDvgRaed/Uz54AqWNaTCAThlj6QAs3TZcKI0xDEw==",
+        "dependencies": {}
+      },
+      "crypto-random-string@5.0.0": {
+        "integrity": "sha512-KWjTXWwxFd6a94m5CdRGW/t82Tr8DoBc9dNnPCAbFI1EBweN6v1tv8y4Y1m7ndkp/nkIBRxUxAzpaBnR2k3bcQ==",
+        "dependencies": {
+          "type-fest": "type-fest@2.19.0"
+        }
+      },
       "decode-uri-component@0.2.2": {
         "integrity": "sha512-FqUYQ+8o158GyGTrMFJms9qh3CqTKvAqgqsTnkLI8sKu0028orqBhxNMFkFen0zGyg6epACD32pjVk58ngIErQ==",
         "dependencies": {}
@@ -1319,6 +1379,10 @@
       },
       "function-bind@1.1.2": {
         "integrity": "sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==",
+        "dependencies": {}
+      },
+      "generic-pool@3.9.0": {
+        "integrity": "sha512-hymDOu5B53XvN4QT9dBmZxPX4CWhBPPLguTZ9MMFeFa/Kg0xWVfylOVNlJji/E7yTZWFd/q9GO5TxDLq156D7g==",
         "dependencies": {}
       },
       "get-intrinsic@1.2.4": {
@@ -1448,6 +1512,17 @@
           "util-deprecate": "util-deprecate@1.0.2"
         }
       },
+      "redis@4.5.1_@redis+client@1.4.2": {
+        "integrity": "sha512-oxXSoIqMJCQVBTfxP6BNTCtDMyh9G6Vi5wjdPdV/sRKkufyZslDqCScSGcOr6XGR/reAWZefz7E4leM31RgdBA==",
+        "dependencies": {
+          "@redis/bloom": "@redis/bloom@1.1.0_@redis+client@1.4.2",
+          "@redis/client": "@redis/client@1.4.2",
+          "@redis/graph": "@redis/graph@1.1.0_@redis+client@1.4.2",
+          "@redis/json": "@redis/json@1.0.4_@redis+client@1.4.2",
+          "@redis/search": "@redis/search@1.1.0_@redis+client@1.4.2",
+          "@redis/time-series": "@redis/time-series@1.0.4_@redis+client@1.4.2"
+        }
+      },
       "safe-buffer@5.2.1": {
         "integrity": "sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==",
         "dependencies": {}
@@ -1513,6 +1588,10 @@
         "integrity": "sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==",
         "dependencies": {}
       },
+      "type-fest@2.19.0": {
+        "integrity": "sha512-RAH822pAdBgcNMAfWnCBU3CFZcfZ/i1eZjwFU/dsLKumyuuP3niueg2UAukXYF0E2AAoc82ZSSf9J0WQBinzHA==",
+        "dependencies": {}
+      },
       "util-deprecate@1.0.2": {
         "integrity": "sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==",
         "dependencies": {}
@@ -1557,6 +1636,10 @@
       },
       "xmlbuilder@11.0.1": {
         "integrity": "sha512-fDlsI/kFEx7gLvbecc0/ohLG50fugQp8ryHzMTuW9vSa1GJ0XYWKnhsUx7oie3G98+r56aTQIUB4kht42R3JvA==",
+        "dependencies": {}
+      },
+      "yallist@4.0.0": {
+        "integrity": "sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==",
         "dependencies": {}
       }
     }
@@ -1993,6 +2076,7 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@metapages/deno-redis-broadcastchannel@^0.2.0",
       "npm:@metapages/hash-query@0.4.8",
       "npm:@metapages/metapage@0.15.0",
       "npm:fast-deep-equal",

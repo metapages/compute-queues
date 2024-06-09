@@ -1,5 +1,6 @@
 {
   "imports": {
+    "@metapages/deno-redis-broadcastchannel": "jsr:@metapages/deno-redis-broadcastchannel@^0.2.0",
     "@metapages/hash-query": "npm:@metapages/hash-query@0.4.8",
     "@metapages/metapage": "npm:@metapages/metapage@0.15.0",
     "/@/kv": "./src/db/kv/getKv.ts",

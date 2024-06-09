@@ -11,10 +11,10 @@
  *
  */
 
-
 // eventually this should be persisted but for now it's just in memory
 // import { EventEmitter } from 'events';
 // import StrictEventEmitter from 'strict-event-emitter-types';
+import { BroadcastChannelRedis } from '@metapages/deno-redis-broadcastchannel';
 
 import { db } from '../db/kv/mod.ts';
 import {
@@ -31,7 +31,6 @@ import {
   WebsocketMessageType,
   WorkerRegistration,
 } from '../shared/mod.ts';
-import { SERVER_INSTANCE_ID } from '../util/id.ts';
 
 // 60 seconds
 const MAX_TIME_FINISHED_JOB_IN_QUEUE = 60 * 1000;
@@ -45,7 +44,7 @@ const MAX_TIME_FINISHED_JOB_IN_QUEUE = 60 * 1000;
 
 type BroadCastMessageType = "job-state";
 type BroadCastMessage = {
-    instanceId: string;
+    // instanceId: string;
     type: BroadCastMessageType;
     value: State;
 };
@@ -73,7 +72,15 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
         this.workers = [];
         this.browsers = [];
         this.state = { jobs: {} };
-        this.channel = new BroadcastChannel(address);
+
+        // For local development, use a redis broadcast channel
+        if (Deno.env.get('REDIS_URL') === 'redis://redis:6379') {
+            console.log('👀 Using redis broadcast channel');
+            this.channel = new BroadcastChannelRedis(address);
+            (this.channel as BroadcastChannelRedis).ready();
+        } else {
+            this.channel = new BroadcastChannel(address);
+        }
 
         // TODO get only for this queue
         const updateAll = async () => {
@@ -92,9 +99,9 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
         // When a new message comes in from other instances, add it
         this.channel.onmessage = (event: MessageEvent) => {
             const payload :BroadCastMessage = event.data;
-            if (payload.instanceId === SERVER_INSTANCE_ID) {
-                return;
-            }
+            // if (payload.instanceId === SERVER_INSTANCE_ID) {
+            //     return;
+            // }
             switch (payload.type) {
                 case "job-state":
                     console.log('🌘job-state from broadcast, got to resolve and merge...');
@@ -104,13 +111,16 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
                     let sendBroadcast = false;
                     for (const [jobId, job] of Object.entries(jobs)) {
                         if (!this.state.jobs[jobId] || this.state.jobs[jobId].history.length < job.history.length) {
-                            console.log(`🌘 from merge updating jobId=${jobId}`);
+                            console.log(`🌘 ...from merge updating jobId=${jobId}`);
                             this.state.jobs[jobId] = job;
                             sendBroadcast = true;
                         }
                     }
                     if (sendBroadcast) {
+                        console.log(`🌘 ...from merge complete, now broadcasting`);
                         this.broadcast();
+                    } else {
+                        console.log(`🌘 ...from merge complete, no changes!`);
                     }
                     break;
                 default:
@@ -127,7 +137,7 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
             }
         }
         const message :BroadCastMessage = {
-            instanceId: SERVER_INSTANCE_ID,
+            // instanceId: SERVER_INSTANCE_ID,
             type: "job-state",
             value: stateWithOneJob,
         }
@@ -349,7 +359,7 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
         let worker: WorkerRegistration;
 
         connection.socket.addEventListener('close', () => {
-            console.log(`⏹️ 🔌 Removing ${worker ? worker.id : "unknown worker"}`);
+            console.log(`⏹️ 🔌 Removing ${worker ? worker.id.substring(0, 8) : "unknown worker"}`);
             var index = this.workers.findIndex(w => w.connection === connection.socket);
             if (index > -1) {
                 if (worker !== this.workers[index].registration) {
@@ -391,7 +401,7 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
                             console.log({ error: 'Missing payload in message', message: messageString.substring(0, 100) });
                             break;
                         }
-                        console.log(`🔌🔗 Worker registered (so broadcasting) ${worker.id}`);
+                        console.log(`🔌🔗 Worker registered (so broadcasting) ${worker.id.substring(0, 8)}`);
                         this.workers.push({ registration: worker, connection: connection.socket });
                         this.broadcast();
                         break;
