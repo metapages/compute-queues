@@ -67,6 +67,7 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
 
     constructor(address:string) {
         // super();
+        console.log(`UserDockerJobQueue ${address}`)
         
         this.address = address;
         this.workers = [];
@@ -81,6 +82,7 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
             // Why broadcase here? New UserDockerJobQueue instances will get their
             // own state from the db
             // this.broadcastStateToChannel();
+            this.broadcast();
 
         }
         (async () => {
