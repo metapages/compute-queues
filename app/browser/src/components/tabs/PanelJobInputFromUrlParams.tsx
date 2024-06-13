@@ -3,7 +3,7 @@ import {
   useCallback,
 } from 'react';
 
-import { DockerJobDefinitionParamsInUrlHash } from '/@/components/types';
+import { DockerJobDefinitionParamsInUrlHash } from '/@/shared';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 

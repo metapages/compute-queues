@@ -22,8 +22,8 @@ import {
   StateChange,
   StateChangeValueQueued,
   StateChangeValueWorkerFinished,
-  WebsocketMessage,
-  WebsocketMessageType,
+  WebsocketMessageClientToServer,
+  WebsocketMessageTypeClientToServer,
 } from '/@/shared';
 import { convertJobOutputDataRefsToExpectedFormat } from '/@/utils/dataref';
 
@@ -53,7 +53,7 @@ export const TabMenu: React.FC = () => {
   // 3. Show the status of the current job, and allow cancelling
   // 4. If the current job is finished, send the outputs (once)
   const dockerJob = useDockerJobDefinition();
-  const serverState = useServerState();
+  const { jobStates, stateChange } = useServerState();
   const [jobHash, setJobHash] = useState<string | undefined>(undefined);
   const [jobHashCurrentOutputs, setJobHashCurrentOutputs] = useState<
     string | undefined
@@ -112,7 +112,7 @@ export const TabMenu: React.FC = () => {
       }
       return;
     }
-    const newJobState = serverState?.state?.state?.jobs[jobHash];
+    const newJobState = jobStates?.state?.jobs?.[jobHash];
     if (!newJobState) {
       // only clear the job IF it's different from our last inputs
       if (jobHash !== jobHashCurrentOutputs) {
@@ -131,7 +131,7 @@ export const TabMenu: React.FC = () => {
         setJob(newJobState);
       }
     }
-  }, [jobHash, serverState, job, setJob]);
+  }, [jobHash, jobStates, job, setJob]);
 
   // only maybe update metaframe outputs if the job updates and is finished (with outputs)
   useEffect(() => {
@@ -168,8 +168,10 @@ export const TabMenu: React.FC = () => {
 
     (async () => {
 
-    
-      if (dockerJob.definitionMeta && serverState && serverState.state) {
+      // console.log('❔ dockerJob', dockerJob);
+      // console.log('❔ jobStates', jobStates);
+      // console.log('❔ stateChange', stateChange);
+      if (dockerJob.definitionMeta && jobStates) {
         const jobHashCurrent = await shaObject(
           dockerJob.definitionMeta.definition
         );
@@ -179,10 +181,10 @@ export const TabMenu: React.FC = () => {
         if (jobHash !== jobHashCurrent) {
           setJobHash(jobHashCurrent);
         }
-        if (serverState.state.state.jobs[jobHashCurrent]) {
+        if (jobStates.state.jobs[jobHashCurrent]) {
           // Do we need to do anything here?
         } else {
-          if (serverState && serverState.stateChange) {
+          if (jobStates && stateChange) {
             // no job found, let's add it
             // BUT only if our last outputs aren't this jobId
             // because the server eventually deletes our job, but we can know we have already computed it
@@ -202,12 +204,13 @@ export const TabMenu: React.FC = () => {
                 tag: "", // document the meaning of this. It's the worker claim. Might be unneccesary due to history
               };
 
-              const message: WebsocketMessage = {
+              
+              const message: WebsocketMessageClientToServer = {
                 payload,
-                type: WebsocketMessageType.StateChange,
+                type: WebsocketMessageTypeClientToServer.StateChange,
               };
-
-              serverState!.stateChange!(message);
+              
+              stateChange(message);
             }
           } else {
             console.error("Why no state change?");
@@ -219,7 +222,7 @@ export const TabMenu: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dockerJob, serverState, jobHashCurrentOutputs]);
+  }, [dockerJob, jobStates, stateChange, jobHashCurrentOutputs]);
 
   return (
     <Tabs index={tabIndex} onChange={setTabIndex}>

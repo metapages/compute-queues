@@ -118,7 +118,9 @@ E.g. kubernetes, nomad.
 
 ## Background
 
-Metapages require running docker containers, as a service. 
+This service provides docker compute functions as metaframes.
+
+, as a metaframed service. 
 
 This service provides an iframe, that allows users to configure running a specific docker container (a **job**) on a specific **queue**. The iframed browser window sends that job configuration to the server, the job is added to the queue, then workers pick up the job, run it, and send the results back.
 

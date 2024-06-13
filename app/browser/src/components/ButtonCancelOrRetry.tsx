@@ -11,7 +11,7 @@ import {
   StateChange,
   StateChangeValueQueued,
   StateChangeValueWorkerFinished,
-  WebsocketMessageType,
+  WebsocketMessageTypeClientToServer,
 } from '/@/shared/types';
 
 import {
@@ -34,21 +34,21 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
   job,
 }) => {
   const [clicked, setClicked] = useState<boolean>(false);
-  const serverState = useServerState();
+  const {stateChange} = useServerState();
   const [nocacheString, setnocacheString] = useHashParam("nocache");
   const [isLargerThan800] = useMediaQuery('(min-width: 800px)');
 
   useEffect(() => {
     setClicked(false);
-  }, [serverState]);
+  }, [stateChange]);
 
   const state = job?.state;
 
   const onClickCancel = useCallback(() => {
-    if (serverState.stateChange && job) {
+    if (stateChange && job) {
       setClicked(true);
-      serverState.stateChange({
-        type: WebsocketMessageType.StateChange,
+      stateChange({
+        type: WebsocketMessageTypeClientToServer.StateChange,
         payload: {
           tag: "",
           state: DockerJobState.Finished,
@@ -60,10 +60,10 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
         } as StateChange,
       });
     }
-  }, [job, serverState.stateChange]);
+  }, [job, stateChange]);
 
   const onClickRetry = useCallback(() => {
-    if (serverState.stateChange && job) {
+    if (stateChange && job) {
       setClicked(true);
 
       const value: StateChangeValueQueued = {
@@ -72,8 +72,8 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
         nocache: nocacheString === "1" || nocacheString === "true",
       };
 
-      serverState.stateChange({
-        type: WebsocketMessageType.StateChange,
+      stateChange({
+        type: WebsocketMessageTypeClientToServer.StateChange,
         payload: {
           tag: "",
           state: DockerJobState.Queued,
@@ -82,7 +82,7 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
         } as StateChange,
       });
     }
-  }, [job, serverState.stateChange]);
+  }, [job, stateChange]);
 
   switch (state) {
     case DockerJobState.Queued:

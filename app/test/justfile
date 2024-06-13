@@ -1,0 +1,18 @@
+set shell        := ["bash", "-c"]
+set dotenv-load  := true
+normal           := '\033[0m'
+green            := "\\e[32m"
+
+@_help:
+    just --list --unsorted --list-heading $'Testing commands:\n'
+
+# Quick type check
+@check:
+    deno check functional_test.ts
+    echo "✅ tests compilation"
+
+@watch:
+    deno test --allow-all --unstable-broadcast-channel --unstable-kv .
+
+@test:
+    deno test --watch --allow-all --unstable-broadcast-channel --unstable-kv .

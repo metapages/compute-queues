@@ -1,6 +1,41 @@
 services:
 
-  # api1 is public facing, while api2 is internal and the worker communicates with it
+  # api1 is public facing, while api2 is internal and the workers communicate with it
+  # This way we are also testing BroadcaseChannel functionality
+  test:
+    container_name: wm-test
+    depends_on:
+      api1: 
+        condition: service_healthy
+      api2: 
+        condition: service_healthy
+      minio:
+        condition: service_started
+      denokv:
+        condition: service_started
+    image: denoland/deno:alpine-1.43.6
+    command: deno test --watch --allow-all --unstable-broadcast-channel --unstable-kv .
+    working_dir: /app/test
+    environment:
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
+      - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio.worker-metaframe.localhost}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
+      - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
+      - DENO_KV_URL=http://denokv:4512
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - deno:/deno
+      - .:/app
+    networks:
+      - default
+    logging:
+      driver: ${LOGGING_TESTS:-json-file}
+
+  # api1 is public facing, while api2 is internal and the workers communicate with it
   # This way we are also testing BroadcaseChannel functionality
   api1:
     container_name: wm-api1
@@ -52,6 +87,8 @@ services:
     logging:
       driver: ${LOGGING_API:-json-file}
 
+  # This api is not connected to the public internet
+  # but workers do communicate with it
   api2:
     container_name: wm-api2
     depends_on:
@@ -104,6 +141,42 @@ services:
 
   worker:
     container_name: wm-worker
+    depends_on:
+      api1: 
+        condition: service_healthy
+      api2: 
+        condition: service_healthy
+      minio: 
+        condition: service_started
+    image: metapage/metaframe-docker-worker:${DOCKER_TAG:-cache}
+    # Add dev useful stuff
+    entrypoint: ["deno", "run", "--watch", "--allow-all", "src/cli.ts"]
+    command: run --cores=1 --api-server-address=http://api2:8082 local1
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+      target: worker
+    environment:
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+    volumes:
+      - ./shared:/app/shared
+      - ./worker:/app/worker
+      # Must match the host path name since used by docker to mount host directories
+      - /tmp:/tmp
+      - /var/run/docker.sock:/var/run/docker.sock
+      - deno:/deno
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
+    networks:
+      - default
+    logging:
+      driver: ${LOGGING_WORKER:-json-file}
+
+
+  worker2:
+    container_name: wm-worker2
     depends_on:
       api1: 
         condition: service_healthy

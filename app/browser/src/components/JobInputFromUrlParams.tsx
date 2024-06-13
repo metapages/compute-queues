@@ -1,26 +1,32 @@
-import { useCallback } from "react";
-import { useHashParamJson, useHashParamBoolean } from "@metapages/hash-query";
+import { useCallback } from 'react';
+
+import { useFormik } from 'formik';
+import * as yup from 'yup';
+
 import {
-  Input,
-  Switch,
   Button,
+  Divider,
   FormControl,
   FormLabel,
+  Heading,
+  Input,
   InputGroup,
   Modal,
   ModalBody,
+  ModalCloseButton,
   ModalContent,
   ModalFooter,
   ModalHeader,
   ModalOverlay,
   Stack,
-  Heading,
-  Divider,
-  ModalCloseButton,
-} from "@chakra-ui/react";
-import { useFormik } from "formik";
-import * as yup from "yup";
-import { DockerJobDefinitionParamsInUrlHash } from "./types";
+  Switch,
+} from '@chakra-ui/react';
+import {
+  useHashParamBoolean,
+  useHashParamJson,
+} from '@metapages/hash-query';
+
+import { DockerJobDefinitionParamsInUrlHash } from '../shared';
 
 const validationSchema = yup.object({
   image: yup.string(),

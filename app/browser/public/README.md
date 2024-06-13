@@ -1,5 +1,22 @@
 # Run docker containers as metaframes in the browser
 
+
+## Quickstart: Run a worker
+
+Run a worker pointing to a queue `public-queue-01` (you can change this queue name to anything you like, just make it long and unguessable):
+
+```
+docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.14.0 run --cores=2 public-queue-01
+```
+
+## Quickstart: Run a job from the browser
+
+Go [this link](https://container.mtfm.io/?command=cHJpbnQgXCggc2Rmc2RmMiBcKQ%3D%3D&image=python3#/queue/1?command=cHl0aG9uIC1jICdwcmludCgiaGVscCIpJw%253D%253D&image=python%253A3.8.8-alpine3.13&job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnB5dGhvbiUyMC1jJTIwJ3ByaW50KCU1QyUyMmhlbHAlNUMlMjIpJyUyMiUyQyUyMmltYWdlJTIyJTNBJTIycHl0aG9uJTNBMy4xMi4xLWFscGluZTMuMTklMjIlN0Q=&queue=public1) to run a simple python job using the worker above:
+
+
+
+## Description
+
 `container.mtfm.io` runs docker containers on workers. It is currently in beta.
 
  - Run any publicly available docker image: `Python`, `R`, `C++`, `Java`, ... anything.
@@ -32,7 +49,7 @@ Versioned. Reproducible. No client install requirements, as long as you have at 
 2. Configure the docker job
 3. Run a worker (or a bunch) pointing to a queue: `public-queue-01`
    ```
-   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.13.1 run --cores=2 public-queue-01
+   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.14.0 run --cores=2 public-queue-01
    ```
 
 **Coming soon:** GPU support
@@ -45,4 +62,4 @@ Versioned. Reproducible. No client install requirements, as long as you have at 
 
 Run the python command in a container:
 
-https://docker.mtfm.io/?command=cHJpbnQgXCggc2Rmc2RmMiBcKQ%3D%3D&image=python3#/queue/1?command=cHl0aG9uIC1jICdwcmludCgiaGVscCIpJw%253D%253D&image=python%253A3.8.8-alpine3.13&job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnB5dGhvbiUyMC1jJTIwJ3ByaW50KCU1QyUyMmhlbHAlNUMlMjIpJyUyMiUyQyUyMmltYWdlJTIyJTNBJTIycHl0aG9uJTNBMy4xMi4xLWFscGluZTMuMTklMjIlN0Q=&queue=public1
+https://container.mtfm.io/?command=cHJpbnQgXCggc2Rmc2RmMiBcKQ%3D%3D&image=python3#/queue/1?command=cHl0aG9uIC1jICdwcmludCgiaGVscCIpJw%253D%253D&image=python%253A3.8.8-alpine3.13&job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnB5dGhvbiUyMC1jJTIwJ3ByaW50KCU1QyUyMmhlbHAlNUMlMjIpJyUyMiUyQyUyMmltYWdlJTIyJTNBJTIycHl0aG9uJTNBMy4xMi4xLWFscGluZTMuMTklMjIlN0Q=&queue=public1

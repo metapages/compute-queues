@@ -32,7 +32,7 @@ export const PanelJob: React.FC<{
   job: DockerJobDefinitionRow | undefined;
 }> = ({ job }) => {
   const [queue] = useHashParam("queue");
-  const [isSmallerThan800] = useMediaQuery('(max-width: 800px)')
+  const [isSmallerThan800] = useMediaQuery("(max-width: 800px)");
   return (
     <Box w="100%" maxW="100%" p={2}>
       <HStack w="100%" spacing="24px" alignItems="flex-start">
@@ -40,8 +40,7 @@ export const PanelJob: React.FC<{
 
         <VStack w="50%" alignItems="flex-start">
           <Heading size="sm">Job status and control</Heading>
-          
-          
+
           <VStack
             borderWidth="1px"
             p={4}
@@ -53,17 +52,13 @@ export const PanelJob: React.FC<{
               <ButtonCancelOrRetry job={job} />
               {/* <Spacer /> */}
 
-              <Text maxW="200px" isTruncated>{job?.hash ? `id: ${job?.hash}` : null}</Text>
+              <Text maxW="200px" isTruncated>
+                {job?.hash ? `id: ${job?.hash}` : null}
+              </Text>
             </HStack>
             <HStack w="100%" h="100%">
-            {!queue || queue === "" ? null : (
-
-              <JobStatusDisplay job={job} />
-
-          )}
+              {!queue || queue === "" ? null : <JobStatusDisplay job={job} />}
             </HStack>
-
-
           </VStack>
         </VStack>
       </HStack>
@@ -76,7 +71,7 @@ const JobStatusDisplay: React.FC<{
   job: DockerJobDefinitionRow | undefined;
 }> = ({ job }) => {
   const state = job?.state;
-  const serverState = useServerState();
+  const { workers } = useServerState();
 
   if (!job) {
     return (
@@ -95,6 +90,8 @@ const JobStatusDisplay: React.FC<{
       </Alert>
     );
   }
+
+  const workersTotal = workers?.workers?.length || 0;
 
   switch (state) {
     case DockerJobState.Finished:
@@ -122,9 +119,8 @@ const JobStatusDisplay: React.FC<{
             </Alert>
           );
         case DockerJobFinishedReason.Error:
-          const errorBlobOrString:
-            | ErrorObject
-            | string  | undefined = resultFinished?.result?.error;
+          const errorBlobOrString: ErrorObject | string | undefined =
+            resultFinished?.result?.error;
 
           return (
             <VStack w="100%">
@@ -135,17 +131,20 @@ const JobStatusDisplay: React.FC<{
 
               <Alert status="error">
                 <AlertDescription>
-                  
-                    {(errorBlobOrString as ErrorObject)?.statusCode ? (
-                      <UnorderedList>
-                      <ListItem>{`Exit code: ${(errorBlobOrString as ErrorObject)?.statusCode}`}</ListItem>
+                  {(errorBlobOrString as ErrorObject)?.statusCode ? (
+                    <UnorderedList>
+                      <ListItem>{`Exit code: ${
+                        (errorBlobOrString as ErrorObject)?.statusCode
+                      }`}</ListItem>
                       {(errorBlobOrString as ErrorObject)?.json?.message ? (
-                      <ListItem>{(errorBlobOrString as ErrorObject)?.json?.message}</ListItem>
-                    ) : null}
+                        <ListItem>
+                          {(errorBlobOrString as ErrorObject)?.json?.message}
+                        </ListItem>
+                      ) : null}
                     </UnorderedList>
-                    ) : <Text> {errorBlobOrString as string }</Text>}
-
-                    
+                  ) : (
+                    <Text> {errorBlobOrString as string}</Text>
+                  )}
                 </AlertDescription>
               </Alert>
             </VStack>
@@ -184,11 +183,7 @@ const JobStatusDisplay: React.FC<{
       return (
         <Alert status="warning">
           <AlertTitle>
-            &nbsp;&nbsp;&nbsp;{state} (total workers:{" "}
-            {serverState?.state?.workers
-              ? serverState?.state?.workers.length
-              : 0}
-            )
+            &nbsp;&nbsp;&nbsp;{state} (total workers: {workersTotal})
           </AlertTitle>
         </Alert>
       );
@@ -197,11 +192,7 @@ const JobStatusDisplay: React.FC<{
         <Alert status="warning">
           <CircularProgress size="20px" isIndeterminate color="grey" />
           <AlertTitle>
-            &nbsp;&nbsp;&nbsp;{state} (total workers:{" "}
-            {serverState?.state?.workers
-              ? serverState?.state?.workers.length
-              : 0}
-            )
+            &nbsp;&nbsp;&nbsp;{state} (total workers: {workersTotal})
           </AlertTitle>
         </Alert>
       );

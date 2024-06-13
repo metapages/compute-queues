@@ -84,9 +84,9 @@ export class DB {
         const entries = kv.list<DockerJobDefinitionRow>({ prefix: ["queue", queue] });
         const results : DockerJobDefinitionRow[] = [];
         for await (const entry of entries) {
-            console.log(entry.key); // ["preferences", "ada"]
-            console.log(entry.value); // { ... }
-            console.log(entry.versionstamp); // "00000000000000010000"
+            // console.log(entry.key); // ["preferences", "ada"]
+            // console.log(entry.value); // { ... }
+            // console.log(entry.versionstamp); // "00000000000000010000"
             results.push(entry.value);
         }
         return results;

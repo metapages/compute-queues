@@ -10,6 +10,7 @@ import objectHash from 'npm:object-hash@3.0.0';
 import { config } from '../config.ts';
 import {
   DataRef,
+  DockerJobDefinitionInputRefs,
   DockerJobDefinitionRow,
   InputsRefs,
 } from '../shared/mod.ts';
@@ -27,9 +28,10 @@ const TMPDIR = "/tmp/asman";
  * @param job Returns input and output docker volumes to mount into the container
  */
 export const convertIOToVolumeMounts = async (
-  job: DockerJobDefinitionRow
+  job: {id:string, definition: DockerJobDefinitionInputRefs}
 ): Promise<{ inputs: Volume; outputs: Volume }> => {
-  const baseDir = join(TMPDIR, job.hash);
+  const { id , definition } = job;
+  const baseDir = join(TMPDIR, id);
   const inputsDir = join(baseDir, "inputs");
   const outputsDir = join(baseDir, "outputs");
 
@@ -45,10 +47,10 @@ export const convertIOToVolumeMounts = async (
   await Deno.chmod(inputsDir, 0o777);
   await Deno.chmod(outputsDir, 0o777);
 
-  console.log(`[${job.hash}] creating\n\t ${inputsDir}\n\t ${outputsDir}`);
+  console.log(`[${id}] creating\n\t ${inputsDir}\n\t ${outputsDir}`);
 
   // copy the inputs (if any)
-  const inputs = job.definition.inputs;
+  const inputs = definition.inputs;
 
   if (inputs) {
     for (const [name, inputRef] of Object.entries(inputs)) {

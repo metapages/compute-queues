@@ -2022,8 +2022,11 @@
     "https://deno.land/x/hono@v4.1.0-rc.1/utils/url.ts": "d9d307a495e7dfc6e916fbcfa74c2d8d23e8e685bddc5e6ebc9c0f784345a01a",
     "https://deno.land/x/hono@v4.1.0-rc.1/validator/index.ts": "6c986e8b91dcf857ecc8164a506ae8eea8665792a4ff7215471df669c632ae7c",
     "https://deno.land/x/hono@v4.1.0-rc.1/validator/validator.ts": "d80db93f84bce6406feac5d157cb97ee69242498d0dbec4568cb5df1a844bf0f",
+    "https://deno.land/x/lru_cache@6.0.0-deno.4/mod.ts": "8fc30300850991ede7539bb2bea456258b0e4189939d4727331c87e912c110b5",
     "https://deno.land/x/metapages@v0.0.27/worker/routing/handlerDeno.ts": "d400ccdc66f5eaa2b82dd153c57906d79116527b93fe27aeba50668ec7c41fbe",
     "https://deno.land/x/ms@v0.1.0/ms.ts": "13014fdf12808df48f6e557cc3be22d24db5b8e29b687d710f9012df3428d2c8",
+    "https://deno.land/x/yallist@4.0.0-deno/mod.ts": "8677e6eefc9998c396bacbf665feb3c2fb10e9aa8b276127c3daa76ce271bc6d",
+    "https://deno.land/x/yallist@4.0.0-deno/yallist.js": "aaf0c2ad98a6e8eafe8e0c08f6627457eab8538bbbd2966aa9378c88c6f41e2d",
     "https://esm.sh/minio@8.0.0?target=deno": "b3e3eeacaa8dee21ed169265611593b79a8efc9c4c1e036542a278c316196923",
     "https://esm.sh/v135/async@3.2.5/deno/async.mjs": "3ef727c3ee3a9364c04c38ba1d910f5de5c090dae92553af938d6029ba2a73db",
     "https://esm.sh/v135/block-stream2@2.1.0/deno/block-stream2.mjs": "6b5521273f7e39e3a04d928d4497b91918fe0f0b5eaaa67cdb1ad821f4bb22c0",
@@ -2072,7 +2075,8 @@
     "https://esm.sh/v135/util-deprecate@1.0.2/deno/util-deprecate.mjs": "50b70be1921f54febfaa6eae171a7131bf7aa3a2b522606e34e2f18eb36ebbc4",
     "https://esm.sh/v135/web-encoding@1.1.5/deno/web-encoding.mjs": "18124bf0750208dcde7bf4fc0f9027469b8a184a4054a25b1c04cde8968e0eb0",
     "https://esm.sh/v135/xml2js@0.5.0/deno/xml2js.mjs": "393bfc0a9eb80c3eb8f3e8260a1063f04dcbe31d64be046db675479536c3480b",
-    "https://esm.sh/v135/xmlbuilder@11.0.1/deno/xmlbuilder.mjs": "315b42aa956e5b05ec2f6b0376ea361fafc169a84c750500510f9323848df40e"
+    "https://esm.sh/v135/xmlbuilder@11.0.1/deno/xmlbuilder.mjs": "315b42aa956e5b05ec2f6b0376ea361fafc169a84c750500510f9323848df40e",
+    "https://raw.githubusercontent.com/denolib/ms/master/ms.ts": "13014fdf12808df48f6e557cc3be22d24db5b8e29b687d710f9012df3428d2c8"
   },
   "workspace": {
     "dependencies": [
