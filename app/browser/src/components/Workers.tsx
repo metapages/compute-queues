@@ -1,5 +1,5 @@
 import {
-  BroadcastState,
+  BroadcastJobStates,
   DockerJobState,
   StateChangeValueRunning,
 } from '/@/shared';
@@ -18,8 +18,7 @@ import {
 import { useServerState } from '../hooks/serverStateHook';
 
 export const Workers: React.FC = () => {
-  const serverState = useServerState();
-  const state = serverState.state;
+  const {workers, jobStates} = useServerState();
 
   return (
     <Box width="100%" p={2}>
@@ -34,12 +33,12 @@ export const Workers: React.FC = () => {
           </Tr>
         </Thead>
         <Tbody>
-          {state?.workers?.map((worker) => (
+          {workers?.workers?.map((worker) => (
             <WorkerComponent
               key={worker.id}
               cpus={worker.cpus}
               workerId={worker.id}
-              state={state}
+              state={jobStates}
             />
           ))}
         </Tbody>
@@ -51,10 +50,10 @@ export const Workers: React.FC = () => {
 const WorkerComponent: React.FC<{
   workerId: string;
   cpus: number;
-  state: BroadcastState;
+  state: BroadcastJobStates;
 }> = ({ workerId, cpus, state }) => {
   // How many jobs is this worker running
-  const jobCount = Object.keys(state.state.jobs)
+  const jobCount = !state?.state?.jobs ? 0 : Object.keys(state.state.jobs)
     .filter((jobId) => state.state.jobs[jobId].state === DockerJobState.Running)
     .reduce<number>((count: number, jobHash: string) => {
       const running = state.state.jobs[jobHash].history.filter(

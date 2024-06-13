@@ -1,6 +1,6 @@
-import { DockerJobDefinitionParamsInUrlHash } from '/@/components/types';
 import { useServerState } from '/@/hooks/serverStateHook';
 import {
+  DockerJobDefinitionParamsInUrlHash,
   DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,

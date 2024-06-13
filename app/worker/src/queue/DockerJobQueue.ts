@@ -3,16 +3,19 @@ import {
   ParseEntry,
 } from 'npm:shell-quote@1.8.1';
 
+import mod from '../../mod.json' with { type: 'json' };
 import {
-  BroadcastState,
+  BroadcastJobStates,
+  DockerJobDefinitionInputRefs,
   DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
   DockerRunResultWithOutputs,
+  StateChangeValueQueued,
   StateChangeValueRunning,
   StateChangeValueWorkerFinished,
-  WebsocketMessageSender,
-  WebsocketMessageType,
+  WebsocketMessageSenderWorker,
+  WebsocketMessageTypeWorkerToServer,
   WorkerRegistration,
 } from '../shared/mod.ts';
 import {
@@ -27,12 +30,15 @@ import {
   getOutputs,
 } from './IO.ts';
 
+const Version :string = mod.version;
+
 export interface DockerJobQueueArgs extends WorkerRegistration {
-    sender: WebsocketMessageSender;
+    sender: WebsocketMessageSenderWorker;
 }
 
 type WorkerJobQueueItem = {
     execution: DockerJobExecution | null;
+    definition: DockerJobDefinitionInputRefs;
     // TODO: put local state
 }
 
@@ -62,7 +68,9 @@ export class DockerJobQueue {
     // server reconnects, we can send the results
     // cachedResults: any = {};
     // Tell the server our state change requests
-    sender: WebsocketMessageSender;
+    sender: WebsocketMessageSenderWorker;
+
+    // jobs: { [hash in string]: DockerJobDefinitionInputRefs } = {};
 
     constructor(args: DockerJobQueueArgs) {
         const { sender, cpus, id } = args;
@@ -73,11 +81,12 @@ export class DockerJobQueue {
 
     register() {
         const registration: WorkerRegistration = {
+            version: Version,
             id: this.workerId,
             cpus: this.cpus,
         };
         this.sender({
-            type: WebsocketMessageType.WorkerRegistration,
+            type: WebsocketMessageTypeWorkerToServer.WorkerRegistration,
             payload: registration,
         });
     }
@@ -85,43 +94,134 @@ export class DockerJobQueue {
 
     // take jobs off the queue
     // kill jobs the server says to kill
-    onState(state: BroadcastState) {
-        // console.log(`workerState ${JSON.stringify(state, null, '  ')}`)
-        this._checkRunningJobs(state);
-        this._claimJobs(state);
+    // onState(state: BroadcastState) {
+    //     // console.log(`workerState ${JSON.stringify(state, null, '  ')}`)
+    //     this._checkRunningJobs(state);
+    //     this._claimJobs(state);
+    // }
+
+    onUpdateUpdateASubsetOfJobs(message: BroadcastJobStates) {
+        message.isSubset = true;
+        this._checkRunningJobs(message);
+        this._claimJobs(message);
     }
 
-    _claimJobs(state: BroadcastState) {
-        const jobs = state.state.jobs;
+    onUpdateSetAllJobStates(message: BroadcastJobStates) {
+        // console.log(`workerState ${JSON.stringify(state, null, '  ')}`)
+        this._checkRunningJobs(message);
+        this._claimJobs(message);
+    }
 
+    _checkRunningJobs(message: BroadcastJobStates) {
+        const jobStates = message.state.jobs;
+        // we get 
+        const isAllJobs = !message.isSubset;
+
+        // make sure our local jobs should be running (according to the server state)
+        for (const [locallyRunningJobId, _] of Object.entries(this.queue)) {
+            // do we have local jobs the server doesn't even know about? This should never happen
+            // Maybe it could be in the case where the browser disconnected and you want the jobs to keep going
+            if (!jobStates[locallyRunningJobId]) {
+                // we can only kill the job if we know it's not running on the server
+                if (isAllJobs) {
+                    console.log(`Cannot find local job ${locallyRunningJobId} in server state, killing and removing`);
+                    this._killJobAndIgnore(locallyRunningJobId);
+                    return;
+                } else {
+                    // this job isn't in this update, but this update is not all jobs, so the server
+                    // hasn't changed our job state. so bail out
+                    return;
+                }
+            }
+
+            const serverJobState = jobStates[locallyRunningJobId];
+
+            switch (serverJobState.state) {
+                case DockerJobState.Finished:
+                    // FINE it finished elsewhere
+                    this._killJobAndIgnore(locallyRunningJobId);
+                    break;
+                case DockerJobState.Queued:
+                    // server says queued, I say running, remind the server
+                    // this can easily happen if I submit Running, but then
+                    // the worker gets another update immediately
+                    // The server will ignore this if it gets multiple times
+                    this.sender({
+                        type: WebsocketMessageTypeWorkerToServer.StateChange,
+                        payload: {
+                            tag: this.workerId,
+                            job: locallyRunningJobId,
+                            state: DockerJobState.Running,
+                            value: {
+                                worker: this.workerId,
+                                time: new Date(),
+                            },
+                        }
+                    });
+                    break;
+                case DockerJobState.Running:
+                    // good!
+                    // except if another worker has taken it, then kill ours (server is dictator)
+                    if ((serverJobState.value as StateChangeValueRunning).worker !== this.workerId) {
+                        this._killJobAndIgnore(locallyRunningJobId);
+                    }
+                    break;
+            }
+
+            // are any jobs running locally actually killed by the server? or running
+            if (serverJobState.state === DockerJobState.Finished) {
+                console.log(`Cannot find local job ${locallyRunningJobId} in server state, killing and removing`);
+                this._killJobAndIgnore(locallyRunningJobId);
+            }
+        }
+
+        // Remove jobs not in the jobState update from our local store
+        // Maybe in the future we keep around
+        // for (const storedJobDefinitionId of Object.keys(this.jobs)) {
+        //     if (!jobStates[storedJobDefinitionId]) {
+        //         delete this.jobs[storedJobDefinitionId];
+        //     }
+        // }
+    }
+
+    _claimJobs(message: BroadcastJobStates) {
+        const jobStates = message.state.jobs;
         // check if the server says I have a job running (that I told it)
         // but I don't have it running now (I restarted?) and didn't reconnect
         // to the running container
 
-        const jobsServerSaysAreRunningOnMe = Object.keys(jobs).filter(key => jobs[key].state === DockerJobState.Running && (jobs[key].value as StateChangeValueRunning).worker === this.workerId);
+        const jobsServerSaysAreRunningOnMe = Object.keys(jobStates).filter(key => jobStates[key].state === DockerJobState.Running && (jobStates[key].value as StateChangeValueRunning).worker === this.workerId);
         jobsServerSaysAreRunningOnMe.forEach(runningJobId => {
             if (!this.queue[runningJobId]) {
-                this._startJob(jobs[runningJobId]);
+                this._startJob(jobStates[runningJobId]);
             }
         });
 
         // only care about queued jobs
-        const queuedJobKeys: string[] = Object.keys(jobs).filter(key => jobs[key].state === DockerJobState.Queued);
+        const queuedJobKeys: string[] = Object.keys(jobStates).filter(key => jobStates[key].state === DockerJobState.Queued);
+        // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
         while (queuedJobKeys.length > 0 && Object.keys(this.queue).length < this.cpus) {
             const jobKey = queuedJobKeys.pop()!;
-            const job = jobs[jobKey]
+            const job = jobStates[jobKey]
             // console.log(`[${job.hash}] about to claim ${JSON.stringify(job)}`)
             this._startJob(job);
             return;
         }
     }
+    
 
     async _startJob(jobBlob: DockerJobDefinitionRow): Promise<void> {
+
+
         console.log(`[${jobBlob.hash}] starting...`)
-        const definition = jobBlob.definition;
+        const definition = (jobBlob.history[0].value as StateChangeValueQueued).definition;
+        if (!definition) {
+            console.log(`💥 _startJob but no this.jobs[${jobBlob.hash.substring(0, 10)}]`);
+            return;
+        }
 
         // add a placeholder on the queue for this job
-        this.queue[jobBlob.hash] = { execution: null };
+        this.queue[jobBlob.hash] = { execution: null, definition };
 
         // tell the server we've started the job
         const valueRunning: StateChangeValueRunning = {
@@ -129,7 +229,7 @@ export class DockerJobQueue {
             time: new Date(),
         };
         this.sender({
-            type: WebsocketMessageType.StateChange,
+            type: WebsocketMessageTypeWorkerToServer.StateChange,
             payload: {
                 job: jobBlob.hash,
                 tag: this.workerId,
@@ -140,7 +240,7 @@ export class DockerJobQueue {
 
         let volumes: { inputs: Volume, outputs: Volume };
         try {
-            volumes = await convertIOToVolumeMounts(jobBlob);
+            volumes = await convertIOToVolumeMounts({id:jobBlob.hash, definition});
         } catch (err) {
             console.error('💥', err);
             // TODO too much code duplication here
@@ -158,7 +258,7 @@ export class DockerJobQueue {
             };
 
             this.sender({
-                type: WebsocketMessageType.StateChange,
+                type: WebsocketMessageTypeWorkerToServer.StateChange,
                 payload: {
                     job: jobBlob.hash,
                     tag: this.workerId,
@@ -237,7 +337,7 @@ export class DockerJobQueue {
             delete this.queue[jobBlob.hash];
 
             this.sender({
-                type: WebsocketMessageType.StateChange,
+                type: WebsocketMessageTypeWorkerToServer.StateChange,
                 payload: {
                     job: jobBlob.hash,
                     tag: this.workerId,
@@ -262,7 +362,7 @@ export class DockerJobQueue {
             };
 
             this.sender({
-                type: WebsocketMessageType.StateChange,
+                type: WebsocketMessageTypeWorkerToServer.StateChange,
                 payload: {
                     job: jobBlob.hash,
                     tag: this.workerId,
@@ -278,64 +378,6 @@ export class DockerJobQueue {
         })
 
 
-    }
-
-    _checkRunningJobs(state: BroadcastState) {
-        const jobs = state.state.jobs;
-
-        // make sure our local jobs should be running (according to the server state)
-        Object.keys(this.queue).forEach(locallyRunningJobId => {
-
-            const localJob = this.queue[locallyRunningJobId];
-
-            // do we have local jobs the server doesn't even know about? This should never happen
-            // Maybe it could be in the case where the browser disconnected and you want the jobs to keep going
-            if (!jobs[locallyRunningJobId]) {
-                console.log(`Cannot find local job ${locallyRunningJobId} in server state, killing and removing`);
-                this._killJobAndIgnore(locallyRunningJobId);
-                return;
-            }
-
-            const serverJobState = jobs[locallyRunningJobId];
-
-            switch (serverJobState.state) {
-                case DockerJobState.Finished:
-                    // FINE it finished elsewhere
-                    this._killJobAndIgnore(locallyRunningJobId);
-                    break;
-                case DockerJobState.Queued:
-                    // server says queued, I say running, remind the server
-                    // this can easily happen if I submit Running, but then
-                    // the worker gets another update immediately
-                    // The server will ignore this if it gets multiple times
-                    this.sender({
-                        type: WebsocketMessageType.StateChange,
-                        payload: {
-                            tag: this.workerId,
-                            job: locallyRunningJobId,
-                            state: DockerJobState.Running,
-                            value: {
-                                worker: this.workerId,
-                                time: new Date(),
-                            },
-                        }
-                    });
-                    break;
-                case DockerJobState.Running:
-                    // good!
-                    // except if another worker has taken it, then kill ours (server is dictator)
-                    if ((serverJobState.value as StateChangeValueRunning).worker !== this.workerId) {
-                        this._killJobAndIgnore(locallyRunningJobId);
-                    }
-                    break;
-            }
-
-            // are any jobs running locally actually killed by the server? or running
-            if (serverJobState.state === DockerJobState.Finished) {
-                console.log(`Cannot find local job ${locallyRunningJobId} in server state, killing and removing`);
-                this._killJobAndIgnore(locallyRunningJobId);
-            }
-        });
     }
 
     _killJobAndIgnore(locallyRunningJobId: string) {

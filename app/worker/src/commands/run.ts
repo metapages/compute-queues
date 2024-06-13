@@ -1,17 +1,21 @@
 import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
 import ReconnectingWebSocket from 'npm:reconnecting-websocket@4.4.0';
 
-import {
-  BroadcastState,
-  WebsocketMessage,
-  WebsocketMessageSender,
-  WebsocketMessageType,
-} from '../../../shared/src/shared/types.ts';
+import mod from '../../mod.json' with { type: 'json' };
 import { config } from '../config.ts';
 import {
   DockerJobQueue,
   DockerJobQueueArgs,
 } from '../queue/DockerJobQueue.ts';
+import {
+  BroadcastJobStates,
+  WebsocketMessageSenderWorker,
+  WebsocketMessageServerBroadcast,
+  WebsocketMessageTypeServerBroadcast,
+  WebsocketMessageWorkerToServer,
+} from '../shared/mod.ts';
+
+const VERSION :string = mod.version;
 
 /**
  * Connect via websocket to the API server, and attach the DockerJobQueue object
@@ -30,14 +34,14 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
   // @ts-ignore: frustrating cannot get compiler "default" import setup working
   const rws = new ReconnectingWebSocket(url, []);
 
-  const sender: WebsocketMessageSender = (message: WebsocketMessage) => {
+  const sender: WebsocketMessageSenderWorker = (message: WebsocketMessageWorkerToServer) => {
     rws.send(JSON.stringify(message));
   }
 
   let timeLastPong = Date.now();
   let timeLastPing = Date.now();
 
-  const dockerJobQueueArgs: DockerJobQueueArgs = { sender, cpus, id: workerId };
+  const dockerJobQueueArgs: DockerJobQueueArgs = { sender, cpus, id: workerId, version: VERSION };
   const dockerJobQueue = new DockerJobQueue(dockerJobQueueArgs);
 
   rws.addEventListener('error', (error: any) => {
@@ -82,16 +86,25 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
         console.log('message not JSON')
         return;
       }
-      const possibleMessage: WebsocketMessage = JSON.parse(messageString);
+      const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(messageString);
       switch (possibleMessage.type) {
-        case WebsocketMessageType.State:
-          const state: BroadcastState = possibleMessage.payload as BroadcastState;
-          if (!state) {
+        // definitive list of jobs
+        case WebsocketMessageTypeServerBroadcast.JobStates:
+          const allJobsStatesPayload = possibleMessage.payload as BroadcastJobStates;
+          if (!allJobsStatesPayload) {
             console.log({ error: 'Missing payload in message', message });
             break;
           }
-          dockerJobQueue.onState(state);
+          dockerJobQueue.onUpdateSetAllJobStates(allJobsStatesPayload);
           break;
+        case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
+            const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
+            if (!someJobsPayload) {
+              console.log({ error: 'Missing payload in message', message });
+              break;
+            }
+            dockerJobQueue.onUpdateUpdateASubsetOfJobs(someJobsPayload);
+            break;
         default:
         //ignored
       }

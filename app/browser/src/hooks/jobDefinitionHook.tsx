@@ -10,12 +10,10 @@ import {
 } from 'react';
 
 import {
-  DockerJobDefinitionMetadata,
-  DockerJobDefinitionParamsInUrlHash,
-} from '/@/components/types';
-import {
   DataRefType,
   DockerJobDefinitionInputRefs,
+  DockerJobDefinitionMetadata,
+  DockerJobDefinitionParamsInUrlHash,
 } from '/@/shared';
 import { copyLargeBlobsToCloud } from '/@/utils/dataref';
 
@@ -82,6 +80,8 @@ export const DockerJobDefinitionProvider = ({ children }: Props) => {
     const definition: DockerJobDefinitionInputRefs = {
       ...definitionParamsInUrl,
     };
+
+    console.log('definition', definition);
     // These are inputs set in the metaframe and stored in the url hash params. They
     // are always type: DataRefType.utf8 because they come from the text editor
     definition.inputs = !jobInputs
@@ -158,7 +158,7 @@ export const DockerJobDefinitionProvider = ({ children }: Props) => {
         definition,
         nocache,
       };
-      // console.log(`🍔 setDefinitionMeta`, newJobDefinition)
+      console.log(`🍔 setDefinitionMeta`, newJobDefinition)
       setDefinitionMeta(newJobDefinition);
 
       return () => {

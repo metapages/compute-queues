@@ -30,6 +30,11 @@ down +args="": _ensure-all
   just worker/check
   just api/check
   just browser/check
+  just test/check
+
+@test:
+    docker compose up --remove-orphans --detach
+    just worker/test
 
 clean:
     rm -rf .cache

@@ -5,13 +5,13 @@ import {
 } from 'react';
 
 import {
-  BroadcastState,
+  BroadcastJobStates,
   DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
   StateChange,
   StateChangeValueQueued,
-  WebsocketMessageType,
+  WebsocketMessageTypeClientToServer,
 } from '/@/shared';
 
 import { CloseIcon } from '@chakra-ui/icons';
@@ -29,17 +29,17 @@ import {
 import { useServerState } from '../hooks/serverStateHook';
 
 export const Jobs: React.FC = () => {
-  const serverState = useServerState();
-  const state = serverState.state;
+  const {jobStates} = useServerState();
+  const jobs = jobStates?.state?.jobs || {};
 
-  const jobIds = state?.state?.jobs ? Object.keys(state?.state?.jobs) : [];
+  const jobIds = jobs ? Object.keys(jobs) : [];
   jobIds.sort((jobA, jobB) => {
     const jobAActive =
-      state?.state?.jobs[jobA].state === DockerJobState.Running ||
-      state?.state?.jobs[jobA].state === DockerJobState.Queued;
+      jobs[jobA].state === DockerJobState.Running ||
+      jobs[jobA].state === DockerJobState.Queued;
     const jobBActive =
-      state?.state?.jobs[jobB].state === DockerJobState.Running ||
-      state?.state?.jobs[jobB].state === DockerJobState.Queued;
+      jobs[jobB].state === DockerJobState.Running ||
+      jobs[jobB].state === DockerJobState.Queued;
     if (jobAActive && !jobBActive) {
       return -1;
     }
@@ -47,8 +47,8 @@ export const Jobs: React.FC = () => {
       return 1;
     }
 
-    const timeA = state!.state!.jobs[jobA].value.time;
-    const timeB = state!.state!.jobs[jobB].value.time;
+    const timeA = jobs[jobA].value.time;
+    const timeB = jobs[jobB].value.time;
     return new Date(timeB).getTime() - new Date(timeA).getTime();
   });
 
@@ -67,7 +67,7 @@ export const Jobs: React.FC = () => {
         </Thead>
         <Tbody>
           {jobIds.map((jobHash) => (
-            <JobComponent key={jobHash} jobId={jobHash} state={state!} />
+            <JobComponent key={jobHash} jobId={jobHash} state={jobStates} />
           ))}
         </Tbody>
       </Table>
@@ -77,7 +77,7 @@ export const Jobs: React.FC = () => {
 
 const JobComponent: React.FC<{
   jobId: string;
-  state: BroadcastState;
+  state: BroadcastJobStates;
 }> = ({ jobId, state }) => {
   // How many jobs is this worker running
   const jobBlob = state.state.jobs[jobId];
@@ -102,19 +102,19 @@ const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({
   job,
 }) => {
   const [clicked, setClicked] = useState<boolean>(false);
-  const serverState = useServerState();
+  const {stateChange} = useServerState();
 
   useEffect(() => {
     setClicked(false);
-  }, [serverState]);
+  }, [stateChange]);
 
   const state = job?.state;
 
   const onClickCancel = useCallback(() => {
-    if (serverState.stateChange && job) {
+    if (stateChange && job) {
       setClicked(true);
-      serverState.stateChange({
-        type: WebsocketMessageType.StateChange,
+      stateChange({
+        type: WebsocketMessageTypeClientToServer.StateChange,
         payload: {
           tag: "",
           state: DockerJobState.Finished,
@@ -126,7 +126,7 @@ const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({
         } as StateChange,
       });
     }
-  }, [job, serverState.stateChange]);
+  }, [job, stateChange]);
 
   switch (state) {
     case DockerJobState.Queued:

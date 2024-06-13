@@ -9,10 +9,12 @@ import {
 } from 'react';
 
 import {
-  BroadcastState,
-  WebsocketMessage,
-  WebsocketMessageSender,
-  WebsocketMessageType,
+  BroadcastJobStates,
+  BroadcastWorkers,
+  WebsocketMessageClientToServer,
+  WebsocketMessageSenderClient,
+  WebsocketMessageServerBroadcast,
+  WebsocketMessageTypeServerBroadcast,
 } from '/@/shared';
 import ReconnectingWebSocket from 'reconnecting-websocket';
 
@@ -26,23 +28,27 @@ type Props = {
 };
 
 interface ServerStateObject {
-  state?: BroadcastState | undefined;
-  stateChange?: WebsocketMessageSender | undefined;
+  jobStates?: BroadcastJobStates;
+  workers?: BroadcastWorkers;
+  stateChange?: WebsocketMessageSenderClient;
   connected: boolean;
 }
 
-const FAKESENDER = (_: WebsocketMessage) => {};
+const FAKESENDER = (_: WebsocketMessageClientToServer) => {};
 
-const serverStateMachine = (): [
-  BroadcastState | undefined,
-  WebsocketMessageSender,
-  boolean
-] => {
+const serverStateMachine = (): {
+  jobStates: BroadcastJobStates;
+  workers: BroadcastWorkers;
+  sender: WebsocketMessageSenderClient;
+  connected: boolean;
+} => {
   const [address] = useHashParam("queue");
   const [connected, setConnected] = useState<boolean>(false);
-  const [state, setState] = useState<BroadcastState | undefined>(undefined);
+  // const [jobs, setJobs] = useState<BroadcastJobs|undefined>(undefined);
+  const [jobStates, setJobStates] = useState<BroadcastJobStates|undefined>(undefined);
+  const [workers, setWorkers] = useState<BroadcastWorkers|undefined>(undefined);
   const [sendMessage, setSendMessage] = useState<{
-    sender: WebsocketMessageSender;
+    sender: WebsocketMessageSenderClient;
   }>({ sender: FAKESENDER });
 
   useEffect(() => {
@@ -87,19 +93,33 @@ const serverStateMachine = (): [
         if (!messageString.startsWith("{")) {
           return;
         }
-        const possibleMessage: WebsocketMessage = JSON.parse(messageString);
+        const possibleMessage: WebsocketMessageServerBroadcast =
+          JSON.parse(messageString);
+        // console.log(`❔ received from server:`, possibleMessage)
+
+        if (!possibleMessage?.payload) {
+          console.log({
+            error: "Missing payload in message",
+            message: messageString,
+          });
+          return;
+        }
+
         switch (possibleMessage.type) {
-          case WebsocketMessageType.State:
-            const state: BroadcastState =
-              possibleMessage.payload as BroadcastState;
-            if (!state) {
-              console.log({
-                error: "Missing payload in message",
-                message: messageString,
-              });
-              break;
-            }
-            setState(state);
+          case WebsocketMessageTypeServerBroadcast.JobStates:
+            const allJobStatesMessage =
+              possibleMessage.payload as BroadcastJobStates;
+            setJobStates(allJobStatesMessage);
+            break;
+          case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
+            const onlySomeJobsMessage = possibleMessage.payload as BroadcastJobStates;
+            onlySomeJobsMessage.isSubset = true;
+            setJobStates(onlySomeJobsMessage);
+            // setJobs(jobsMessage);
+            break;
+          case WebsocketMessageTypeServerBroadcast.Workers:
+            const workersMessage = possibleMessage.payload as BroadcastWorkers;
+            setWorkers(workersMessage);
             break;
           default:
           //ignored
@@ -109,7 +129,8 @@ const serverStateMachine = (): [
       }
     };
 
-    const sender = (m: WebsocketMessage) => {
+    const sender = (m: WebsocketMessageClientToServer) => {
+      // console.log(`❔ sending from browser to server:`, m);
       rws.send(JSON.stringify(m));
     };
 
@@ -141,13 +162,22 @@ const serverStateMachine = (): [
       setConnected(false);
       setSendMessage({ sender: FAKESENDER });
     };
-  }, [address, setState, setSendMessage, setConnected]);
+  }, [address, setSendMessage, setConnected]);
 
-  return [state, sendMessage.sender, connected];
+  return {
+    // jobs,
+    jobStates,
+    workers,
+    sender: sendMessage.sender,
+    connected,
+  };
+  // return [state, sendMessage.sender, connected];
 };
 
 const defaultServerStateObject: ServerStateObject = {
-  state: undefined,
+  // jobs: undefined,
+  jobStates: undefined,
+  workers: undefined,
   stateChange: undefined,
   connected: false,
 };
@@ -157,11 +187,11 @@ const ServerStateContext = createContext<ServerStateObject>(
 );
 
 export const ServerStateProvider = ({ children }: Props) => {
-  const [state, stateChange, connected] = serverStateMachine();
+  const {jobStates, workers, connected, sender} = serverStateMachine();
 
   return (
     <ServerStateContext.Provider
-      value={{ state: state, stateChange: stateChange, connected }}
+      value={{ stateChange:sender, jobStates, workers, connected }}
     >
       {children}
     </ServerStateContext.Provider>
