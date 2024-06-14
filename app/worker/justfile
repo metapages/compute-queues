@@ -44,7 +44,7 @@ normal                := '\033[0m'
     echo "✅ worker typescript compilation"
 
 @test:
-    deno --allow-net --allow-read --allow-env --allow-write --allow-run test .
+    deno test --allow-net --allow-read --allow-env --allow-write --allow-run
     echo "✅ worker unit tests"
 
 @watch-and-test:

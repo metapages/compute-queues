@@ -1,7 +1,11 @@
 set shell        := ["bash", "-c"]
 set dotenv-load  := true
+set export       := true
 normal           := '\033[0m'
 green            := "\\e[32m"
+
+APP_PORT         := env_var_or_default("APP_PORT", "443")
+API_URL          := "https://worker-metaframe.localhost:" + APP_PORT
 
 @_help:
     just --list --unsorted --list-heading $'Testing commands:\n'
@@ -12,7 +16,8 @@ green            := "\\e[32m"
     echo "✅ tests compilation"
 
 @watch:
-    deno test --allow-all --unstable-broadcast-channel --unstable-kv .
+    deno test --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv .
 
 @test:
-    deno test --watch --allow-all --unstable-broadcast-channel --unstable-kv .
+    deno test --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+    echo "✅ functional tests"
