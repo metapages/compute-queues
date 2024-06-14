@@ -17,6 +17,7 @@ services:
     command: deno test --watch --allow-all --unstable-broadcast-channel --unstable-kv .
     working_dir: /app/test
     environment:
+      - API_URL=http://api1:8081
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}

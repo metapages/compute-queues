@@ -35,6 +35,7 @@ down +args="": _ensure-all
 @test:
     docker compose up --remove-orphans --detach
     just worker/test
+    just test/test
 
 clean:
     rm -rf .cache

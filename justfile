@@ -24,8 +24,7 @@ green            := "\\e[32m"
 
 # Checks and tests
 @test: check
-  deno test --allow-net --allow-read --allow-env --allow-write --allow-run .
-  echo "✅ worker unit tests"
+  just app test
 
 # Quick compilation checks
 @check:
