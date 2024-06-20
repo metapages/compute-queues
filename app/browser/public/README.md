@@ -49,7 +49,7 @@ Versioned. Reproducible. No client install requirements, as long as you have at 
 2. Configure the docker job
 3. Run a worker (or a bunch) pointing to a queue: `public-queue-01`
    ```
-   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.14.0 run --cores=2 public-queue-01
+   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.16.0 run --cores=2 public-queue-01
    ```
 
 **Coming soon:** GPU support

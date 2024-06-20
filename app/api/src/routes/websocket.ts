@@ -1,7 +1,7 @@
 import {
   UserDockerJobQueue,
   userJobQueues,
-} from '../docker-jobs/UserDockerJobQueue.ts';
+} from '../docker-jobs/ApiDockerJobQueue.ts';
 import { SERVER_INSTANCE_ID } from '../util/id.ts';
 
 export interface WebsocketUrlParameters {

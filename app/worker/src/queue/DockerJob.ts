@@ -127,7 +127,7 @@ export const dockerJobExecute = async (
     AttachStdout: true,
     AttachStderr: true,
     Labels: {
-      "docker.mtfm.io/id": args.id,
+      "container.mtfm.io/id": args.id,
     }
   };
 
@@ -171,7 +171,7 @@ export const dockerJobExecute = async (
   }
 
   const runningContainers :any[] = await docker.listContainers({Labels: {
-    "docker.mtfm.io/id": args.id,
+    "container.mtfm.io/id": args.id,
   }});
   // console.log('runningContainers', runningContainers.length);
 
@@ -191,9 +191,9 @@ export const dockerJobExecute = async (
 
     // Check for existing job container
     const runningContainers = await docker.listContainers({Labels: {
-      "docker.mtfm.io/id": args.id,
+      "container.mtfm.io/id": args.id,
     }});
-    const existingJobContainer = runningContainers.find((container :any) => container?.Labels["docker.mtfm.io/id"] === args.id);
+    const existingJobContainer = runningContainers.find((container :any) => container?.Labels["container.mtfm.io/id"] === args.id);
 
     if (existingJobContainer) {
       container = docker.getContainer(existingJobContainer.Id);

@@ -1,8 +1,3 @@
-import {
-  parse,
-  ParseEntry,
-} from 'npm:shell-quote@1.8.1';
-
 import mod from '../../mod.json' with { type: 'json' };
 import { config } from '../config.ts';
 import {
@@ -30,6 +25,7 @@ import {
   convertIOToVolumeMounts,
   getOutputs,
 } from './IO.ts';
+import { convertStringToDockerCommand } from './utils.ts';
 
 const Version :string = mod.version;
 
@@ -43,20 +39,7 @@ type WorkerJobQueueItem = {
     // TODO: put local state
 }
 
-const convertStringToDockerCommand = (command?: string): string[] | undefined => {
-    if (!command) {
-        return
-    }
-    if (typeof command !== 'string') {
-        return command;
-    }
-    const parsed = parse(command);
-    const containsOperations = parsed.some((item :ParseEntry) => typeof item === "object");
-    if (containsOperations) {
-        return [command];
-    }
-    return parsed as string[];
-}
+
 
 export class DockerJobQueue {
     workerId: string;
@@ -270,14 +253,14 @@ export class DockerJobQueue {
             return;
         }
 
+
         // TODO hook up the durationMax to a timeout
         // TODO add input mounts
-
         const executionArgs: DockerJobArgs = {
             id: jobBlob.hash,
             image: definition.image,
-            command: convertStringToDockerCommand(definition.command),
-            entrypoint: convertStringToDockerCommand(definition.entrypoint),
+            command: definition.command ? convertStringToDockerCommand(definition.command, definition.env) : undefined,
+            entrypoint: definition.entrypoint ? convertStringToDockerCommand(definition.entrypoint, definition.env) : undefined,
             workdir: definition.workdir,
             env: definition.env,
             volumes: [volumes!.inputs, volumes!.outputs],
