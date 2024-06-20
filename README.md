@@ -98,7 +98,7 @@ To the local stack:
   deno run --unsafely-ignore-certificate-errors --location https://worker-metaframe.localhost --allow-all src/cli.ts job add local1 --file ../../README.md -c 'sh -c "cat /inputs/README.md > /outputs/readme-copied.md"' --wait
 ```
 
-The CLI tool has yet to be versioned and binaries built (#21)
+The CLI tool has yet to be versioned and binaries built https://github.com/metapages/compute-queues/issues/21
 
 ### Local development: cloud compute providers
 
