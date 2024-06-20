@@ -1,3 +1,8 @@
+import {
+  parse,
+  ParseEntry,
+} from 'npm:shell-quote@1.8.1';
+
 const sanitizeForDockerTag = (input: string): string => {
   return input.replace(/[^a-zA-Z0-9_.-]/g, "-").toLowerCase();
 }
@@ -32,6 +37,21 @@ export function generateDockerImageTag(url: string): string {
   }
 }
 
+
+export const convertStringToDockerCommand = (command: string, env?:Record<string, string>): string[] | undefined => {
+  if (!command) {
+      return
+  }
+  if (typeof command !== 'string') {
+      return command;
+  }
+  const parsed = parse(command, env);
+  const containsOperations = parsed.some((item :ParseEntry) => typeof item === "object");
+  if (containsOperations) {
+      return [command];
+  }
+  return parsed as string[];
+}
 
 
 // function sanitizeForDockerTag(input: string): string {
