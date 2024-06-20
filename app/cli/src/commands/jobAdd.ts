@@ -71,7 +71,7 @@ export const jobAdd = new Command()
       // console.log("options", options);
       // console.log("queue", queue);
 
-      const address = apiServerAddress || globalThis.location.origin;
+      const address = apiServerAddress || globalThis?.location?.origin || "https://container.mtfm.io";
       const url = `${address}/client/${queue}`;
       const nocache = options.cache === true ? undefined : true;
 
