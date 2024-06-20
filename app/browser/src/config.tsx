@@ -1,4 +1,4 @@
-let serverOrigin = import.meta.env.VITE_SERVER_ORIGIN || window.location.origin;
+let serverOrigin = import.meta.env.VITE_SERVER_ORIGIN || globalThis.location.origin;
 
 console.log(`SERVER_ORIGIN=${serverOrigin}`);
 

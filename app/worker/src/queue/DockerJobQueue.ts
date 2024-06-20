@@ -4,6 +4,7 @@ import {
 } from 'npm:shell-quote@1.8.1';
 
 import mod from '../../mod.json' with { type: 'json' };
+import { config } from '../config.ts';
 import {
   BroadcastJobStates,
   DockerJobDefinitionInputRefs,
@@ -240,7 +241,7 @@ export class DockerJobQueue {
 
         let volumes: { inputs: Volume, outputs: Volume };
         try {
-            volumes = await convertIOToVolumeMounts({id:jobBlob.hash, definition});
+            volumes = await convertIOToVolumeMounts({id:jobBlob.hash, definition}, config.server);
         } catch (err) {
             console.error('💥', err);
             // TODO too much code duplication here

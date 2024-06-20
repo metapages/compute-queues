@@ -5,7 +5,7 @@ const MACHINE_ID: string = await machineId();
 
 export interface Arguments {
     cpus: number;
-    server?: string;
+    server: string;
     // version?: Boolean;
     queue: string;
     id: string;

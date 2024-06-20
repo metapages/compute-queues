@@ -1,10 +1,14 @@
 # Compute queues and the worker to run them all
 
 **Quick links:**
+
  - `production api`: https://container.mtfm.io/
  - `api deployment config`: https://dash.deno.com/projects/compute-queue-api
 
+
 Run scientific workflow anywhere, reliably, via the browser. For compute heavy jobs, use your own computer, or run on a cluster. Share compute. Run scientific workflows no matter how old.
+
+This repo is the docker compute queue. It reliably, conveniently, and efficiently runs docker container jobs, using our infrastructure, or your own (computers).
 
 [Notion docs](https://www.notion.so/metapages/Arcadia-Astera-Compute-Cluster-Project-V2-3c7950a02bbe4eaa8389d62fd8439553?pvs=4)
 
@@ -55,7 +59,7 @@ Go to this [Test metapage](https://app.metapage.io/dion/d31841d2c46d487b8b2d8479
 
 You might need to wait a bit to refresh the browser, it incorrectly returns a `200` when there are no browser assets (yet). (This looks like a bug with the hono webserver).
 
-You can edit browser code, worker code, and api code, and everything automatically updates.
+You can edit browser code, worker code, api code, and CLI and everything automatically updates.
 
 ### Start each service separately
 
@@ -85,6 +89,16 @@ You can develop the browser locally, pointing to prod or local API
 If you want to do browser development outside of docker compose, I assume you will know how to set up a local browser environment (`npm` etc).
 
 
+### Submit jobs via the CLI
+
+To the local stack:
+
+```typescript
+  cd app/cli
+  deno run --unsafely-ignore-certificate-errors --location https://worker-metaframe.localhost --allow-all src/cli.ts job add local1 --file ../../README.md -c 'sh -c "cat /inputs/README.md > /outputs/readme-copied.md"' --wait
+```
+
+The CLI tool has yet to be versioned and binaries built (#21)
 
 ### Local development: cloud compute providers
 

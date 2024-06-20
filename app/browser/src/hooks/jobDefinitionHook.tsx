@@ -10,12 +10,12 @@ import {
 } from 'react';
 
 import {
+  copyLargeBlobsToCloud,
   DataRefType,
   DockerJobDefinitionInputRefs,
   DockerJobDefinitionMetadata,
   DockerJobDefinitionParamsInUrlHash,
 } from '/@/shared';
-import { copyLargeBlobsToCloud } from '/@/utils/dataref';
 
 import {
   useHashParam,
@@ -148,7 +148,7 @@ export const DockerJobDefinitionProvider = ({ children }: Props) => {
 
       // at this point, these inputs could be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
-      definition.inputs = await copyLargeBlobsToCloud(definition.inputs);
+      definition.inputs = await copyLargeBlobsToCloud(definition.inputs, globalThis.location.origin);
       if (cancelled) {
         return;
       }

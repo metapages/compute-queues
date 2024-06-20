@@ -1,6 +1,9 @@
 {
   "imports": {
+    "/@/shared": "./src/shared/mod.ts",
     "fetch-retry": "npm:fetch-retry@5.0.6",
+    "@metapages/metapage": "npm:@metapages/metapage@0.15.0",
+    "object-hash" : "npm:object-hash@3.0.0",
     "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3"
   }
 }

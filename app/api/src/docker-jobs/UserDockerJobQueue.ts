@@ -65,6 +65,10 @@ type BroadcastChannelMessage<T> = {
 // }
 
 
+// in memory active queue of jobs. they're persisted to the db
+// only to make this in-memory queue durable
+export const userJobQueues: { [id in string]: UserDockerJobQueue } = {};
+
 
 /**
  * servers collate workers from all servers
@@ -116,23 +120,10 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
         if (Deno.env.get('REDIS_URL') === 'redis://redis:6379') {
             console.log('👀 Using redis broadcast channel');
             this.channel = new BroadcastChannelRedis(address);
-            (this.channel as BroadcastChannelRedis).ready();
+            // (this.channel as BroadcastChannelRedis).ready();
         } else {
             this.channel = new BroadcastChannel(address);
         }
-
-        // TODO get only for this queue
-        const updateAll = async () => {
-            const allPersistedJobInTheQueue = await db.queueGetAll(address);
-            allPersistedJobInTheQueue.forEach(j => this.state.jobs[j.hash] = j);
-            // Why broadcase here? New UserDockerJobQueue instances will get their
-            // own state from the db
-            // this.broadcastJobStateToChannel();
-            this.broadcastJobStatesToWebsockets();
-        }
-        (async () => {
-            await updateAll();
-        })();
 
         // When a new message comes in from other instances, add it
         this.channel.onmessage = (event: MessageEvent) => {
@@ -175,6 +166,23 @@ export class UserDockerJobQueue //extends (EventEmitter as { new(): UserDockerJo
                     break;
             }
         };
+
+    }
+
+    async setup() {
+
+        // For local development, use a redis broadcast channel
+        if (Deno.env.get('REDIS_URL') === 'redis://redis:6379') {
+            await (this.channel as BroadcastChannelRedis).ready();
+        }
+
+        // TODO get only for this queue
+        const allPersistedJobInTheQueue = await db.queueGetAll(this.address);
+        allPersistedJobInTheQueue.forEach(j => this.state.jobs[j.hash] = j);
+        // Why broadcase here? New UserDockerJobQueue instances will get their
+        // own state from the db
+        // this.broadcastJobStateToChannel();
+        this.broadcastJobStatesToWebsockets();
     }
 
     broadcastJobStateToChannel(jobId:string) {

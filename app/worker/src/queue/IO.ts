@@ -5,19 +5,16 @@ import {
 } from 'https://deno.land/std@0.224.0/fs/mod.ts';
 import { join } from 'https://deno.land/std@0.224.0/path/mod.ts';
 import klaw from 'npm:klaw@4.1.0';
-import objectHash from 'npm:object-hash@3.0.0';
 
 import { config } from '../config.ts';
 import {
   DataRef,
+  dataRefToFile,
   DockerJobDefinitionInputRefs,
   DockerJobDefinitionRow,
+  fileToDataref,
   InputsRefs,
 } from '../shared/mod.ts';
-import {
-  bufferToBase64Ref,
-  dataRefToFile,
-} from './DataRefUtil.ts';
 import { Volume } from './DockerJob.ts';
 
 // const TMPDIR = process.env.XDG_RUNTIME_DIR || process.env.TMPDIR || '/tmp';
@@ -28,7 +25,8 @@ const TMPDIR = "/tmp/asman";
  * @param job Returns input and output docker volumes to mount into the container
  */
 export const convertIOToVolumeMounts = async (
-  job: {id:string, definition: DockerJobDefinitionInputRefs}
+  job: {id:string, definition: DockerJobDefinitionInputRefs},
+  address: string
 ): Promise<{ inputs: Volume; outputs: Volume }> => {
   const { id , definition } = job;
   const baseDir = join(TMPDIR, id);
@@ -55,7 +53,7 @@ export const convertIOToVolumeMounts = async (
   if (inputs) {
     for (const [name, inputRef] of Object.entries(inputs)) {
       const ref: DataRef = inputs[name];
-      await dataRefToFile(ref, join(inputsDir, name));
+      await dataRefToFile(ref, join(inputsDir, name), address);
     }
   }
 
@@ -89,7 +87,8 @@ export const getOutputs = async (job: DockerJobDefinitionRow
 
   for (const file of files) {
     // TODO: handle BIG blobs
-    const ref = await fileToDataref(file);
+    const ref = await fileToDataref(file, config.server);
+    const fileName = 
     // const fileBuffer: Buffer = await fse.readFile(file);
     // const ref: DataRef = await bufferToBase64Ref(fileBuffer);
     outputs[file.replace(`${outputsDir}/`, "")] = ref;
@@ -104,33 +103,33 @@ export const getOutputs = async (job: DockerJobDefinitionRow
   return outputs;
 };
 
-const ENV_VAR_DATA_ITEM_LENGTH_MAX = 200;
-export const fileToDataref = async (file: string): Promise<DataRef> => {
-  const fileBuffer: Uint8Array = await Deno.readFile(file);
+// const ENV_VAR_DATA_ITEM_LENGTH_MAX = 200;
+// export const fileToDataref = async (file: string): Promise<DataRef> => {
+//   const fileBuffer: Uint8Array = await Deno.readFile(file);
 
-  if (fileBuffer.length > ENV_VAR_DATA_ITEM_LENGTH_MAX) {
-    const hash = objectHash.sha1(fileBuffer);
-    const urlGetUpload = `${config.server}/upload/${hash}`;
-    const resp = await fetch(urlGetUpload);
-    if (!resp.ok) {
-      throw new Error(
-        `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`
-      );
-    }
-    const json: { url: string; ref: DataRef } = await resp.json();
-    const responseUpload = await fetch(json.url, {
-      method: "PUT",
-      redirect: "follow",
-      body: fileBuffer,
-      headers: { "Content-Type": "application/octet-stream" },
-    });
-    await responseUpload.text();
-    return json.ref; // the server gave us this ref to use
-  } else {
-    const ref: DataRef = await bufferToBase64Ref(fileBuffer);
-    return ref;
-  }
-};
+//   if (fileBuffer.length > ENV_VAR_DATA_ITEM_LENGTH_MAX) {
+//     const hash = objectHash.sha1(fileBuffer);
+//     const urlGetUpload = `${config.server}/upload/${hash}`;
+//     const resp = await fetch(urlGetUpload);
+//     if (!resp.ok) {
+//       throw new Error(
+//         `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`
+//       );
+//     }
+//     const json: { url: string; ref: DataRef } = await resp.json();
+//     const responseUpload = await fetch(json.url, {
+//       method: "PUT",
+//       redirect: "follow",
+//       body: fileBuffer,
+//       headers: { "Content-Type": "application/octet-stream" },
+//     });
+//     await responseUpload.text();
+//     return json.ref; // the server gave us this ref to use
+//   } else {
+//     const ref: DataRef = await bufferToBase64Ref(fileBuffer);
+//     return ref;
+//   }
+// };
 
 const getFiles = async (path: string): Promise<string[]> => {
   const pathExists = await exists(path);

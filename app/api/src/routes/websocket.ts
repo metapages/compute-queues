@@ -1,15 +1,15 @@
-import { UserDockerJobQueue } from '../docker-jobs/UserDockerJobQueue.ts';
+import {
+  UserDockerJobQueue,
+  userJobQueues,
+} from '../docker-jobs/UserDockerJobQueue.ts';
 import { SERVER_INSTANCE_ID } from '../util/id.ts';
 
 export interface WebsocketUrlParameters {
   token: string;
 }
 
-// in memory active queue of jobs. they're persisted to the db
-// only to make this in-memory queue durable
-const userJobQueues: { [id in string]: UserDockerJobQueue } = {};
 
-export function wsHandlerClient(token:string, socket: WebSocket, request: Request) {
+export async function wsHandlerClient(token:string, socket: WebSocket, request: Request) {
   // const server:FastifyInstanceWithDB = this as FastifyInstanceWithDB;
 
   try {
@@ -24,7 +24,9 @@ export function wsHandlerClient(token:string, socket: WebSocket, request: Reques
     }
     if (!userJobQueues[token]) {
       // TODO: hydrate queue from some kind of persistence
+      // actually the queue should handle that itself
       userJobQueues[token] = new UserDockerJobQueue({serverId:SERVER_INSTANCE_ID, address:token});
+      await userJobQueues[token].setup();
     }
     userJobQueues[token].connectClient({socket});
   } catch (err) {
@@ -32,7 +34,7 @@ export function wsHandlerClient(token:string, socket: WebSocket, request: Reques
   }
 }
 
-export function wsHandlerWorker(token:string, socket: WebSocket, request: Request) {
+export async function wsHandlerWorker(token:string, socket: WebSocket, request: Request) {
   try {
     // console.log(`/worker/:token wsHandler`)
     // const params = request.params as WebsocketUrlParameters;
@@ -46,6 +48,7 @@ export function wsHandlerWorker(token:string, socket: WebSocket, request: Reques
     if (!userJobQueues[token]) {
       // TODO: hydrate queue from some kind of persistence
       userJobQueues[token] = new UserDockerJobQueue({serverId: SERVER_INSTANCE_ID, address:token});
+      await userJobQueues[token].setup()
     }
     userJobQueues[token].connectWorker({socket});
   } catch (err) {
