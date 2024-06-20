@@ -24,13 +24,6 @@ Deno.test(
     const definition = {
       image: "alpine:3.18.5",
       command: "ls -a",
-      // env?: Env;
-      // entrypoint?: string[];
-      // entrypoint?: string;
-      // workdir?:string;
-      // inputs?: InputsBase64String;
-      // durationMax?: number;
-      // gpu?: boolean;
     };
     const { message, jobId, stageChange } = await createNewContainerJobMessage({
       definition,
@@ -65,12 +58,10 @@ Deno.test(
           }
           break;
         default:
-        //ignored
+          //ignored
       }
-      //
     };
 
-  
     await open(socket);
     socket.send(JSON.stringify(message));
     const result = await jobCompleteDeferred;

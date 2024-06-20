@@ -31,11 +31,19 @@ down +args="": _ensure-all
   just api/check
   just browser/check
   just test/check
+  just shared/check
+  just cli/check
 
 @test:
     docker compose up --remove-orphans --detach
     just worker/test
     just test/test
+    just shared/test
+    just cli/test
+
+# Clean up the project
+@test-cleanup:
+    docker compose down -v
 
 clean:
     rm -rf .cache

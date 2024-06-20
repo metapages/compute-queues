@@ -15,6 +15,7 @@ import { TabLabelQueue } from '/@/components/tabs/queue/TabLabelQueue';
 import { useDockerJobDefinition } from '/@/hooks/jobDefinitionHook';
 import { useServerState } from '/@/hooks/serverStateHook';
 import {
+  convertJobOutputDataRefsToExpectedFormat,
   DockerJobDefinitionInputRefs,
   DockerJobDefinitionRow,
   DockerJobState,
@@ -25,7 +26,6 @@ import {
   WebsocketMessageClientToServer,
   WebsocketMessageTypeClientToServer,
 } from '/@/shared';
-import { convertJobOutputDataRefsToExpectedFormat } from '/@/utils/dataref';
 
 import { QuestionIcon } from '@chakra-ui/icons';
 import {
@@ -144,7 +144,7 @@ export const TabMenu: React.FC = () => {
         const {outputs, ...theRest} = stateFinished!.result!;
         (async () => {
           const metaframeOutputs: MetaframeInputMap | undefined =
-            await convertJobOutputDataRefsToExpectedFormat(outputs);
+            await convertJobOutputDataRefsToExpectedFormat(outputs, globalThis.location.origin);
           // if (metaframeOutputs) {
             try {
               metaframeObj.setOutputs!({...metaframeOutputs, ...theRest});
@@ -274,7 +274,7 @@ export const TabMenu: React.FC = () => {
         <TabPanel>
           <iframe
             style={{ width: "100%", height: "90vh" }}
-            src={`https://markdown.mtfm.io/#?url=${window.location.origin}${window.location.pathname.endsWith("/") ? window.location.pathname.substring(0, window.location.pathname.length - 2) : window.location.pathname}/README.md`}
+            src={`https://markdown.mtfm.io/#?url=${globalThis.location.origin}${globalThis.location.pathname.endsWith("/") ? globalThis.location.pathname.substring(0, globalThis.location.pathname.length - 2) : globalThis.location.pathname}/README.md`}
           />
         </TabPanel>
       </TabPanels>

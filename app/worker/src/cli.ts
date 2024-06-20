@@ -29,7 +29,6 @@ await new Command()
     .action(function () {
       this.showHelp();
     })
-  
     // Put all the sub-commands here
     .command("run", runCommand)
     // end sub-commands

@@ -1,0 +1,20 @@
+# Always use locally installed tools (always pin versions)
+set shell                          := ["bash", "-c"]
+set dotenv-load                    := true
+set export                         := true
+
+# minimal formatting, bold is very useful
+bold                  := '\033[1m'
+normal                := '\033[0m'
+
+@_help:
+  just --list --unsorted --list-heading $'Commands:\n'
+  echo -e ""
+
+# Quick compile checks
+@check:
+  deno check src/mod.ts
+  echo "✅ shared typescript compilation"
+
+@test:
+  deno test --allow-all src
