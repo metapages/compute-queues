@@ -7,7 +7,7 @@ import {
 
 const Bucket :string = Deno.env.get("AWS_S3_BUCKET") || "metaframe-asman-test";
 const AWS_DEFAULT_REGION :string = Deno.env.get("AWS_DEFAULT_REGION") || "us-west-2";
-const AWS_ENDPOINT :string = Deno.env.get("AWS_ENDPOINT") || "https://s3.us-west-2.api.aws";
+const AWS_ENDPOINT :string | undefined = Deno.env.get("AWS_ENDPOINT");
 const AWS_ACCESS_KEY_ID = Deno.env.get("AWS_ACCESS_KEY_ID")!
 const AWS_SECRET_ACCESS_KEY = Deno.env.get("AWS_SECRET_ACCESS_KEY")!
 
@@ -24,14 +24,14 @@ export const bucketParams = {
 
 
 const config = {
-  sslEnabled: AWS_ENDPOINT?.startsWith("http:") ? false : undefined,
+  sslEnabled: AWS_ENDPOINT ? false : undefined,
     credentials:{
       accessKeyId:AWS_ACCESS_KEY_ID,
       secretAccessKey:AWS_SECRET_ACCESS_KEY
   },
   region: AWS_DEFAULT_REGION,
   endpoint: AWS_ENDPOINT,
-  forcePathStyle: AWS_ENDPOINT?.startsWith("http:") ? true : undefined,
+  forcePathStyle: AWS_ENDPOINT ? true : undefined,
   signatureVersion: 'v4',
 };
 
