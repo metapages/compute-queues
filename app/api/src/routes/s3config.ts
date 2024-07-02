@@ -31,7 +31,7 @@ const config = {
   },
   region: AWS_DEFAULT_REGION,
   endpoint: AWS_ENDPOINT,
-  forcePathStyle: AWS_ENDPOINT ? true : undefined,
+  forcePathStyle: AWS_ENDPOINT?.startsWith("http:") ? true : undefined,
   signatureVersion: 'v4',
 };
 
