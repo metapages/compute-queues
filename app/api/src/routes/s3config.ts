@@ -35,8 +35,6 @@ const config = {
   signatureVersion: 'v4',
 };
 
-console.log('config', config);
-
 export const s3Client = new S3Client(config);
 const data = await s3Client.send(new ListBucketsCommand({...bucketParams}));
 // console.log('data', data);
