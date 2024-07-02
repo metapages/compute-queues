@@ -546,11 +546,11 @@ export class ApiDockerJobQueue {
     // as sending all jobs is declaring what jobs are in the queue
   }
 
-  disposeCheck() {
-    if (this.clients.length === 0 && this.workers.myWorkers.length === 0) {
-      this.dispose();
-    }
-  }
+  // disposeCheck() {
+  //   if (this.clients.length === 0 && this.workers.myWorkers.length === 0) {
+  //     this.dispose();
+  //   }
+  // }
 
   dispose() {
     this.channel.onmessage = null;
@@ -1033,7 +1033,7 @@ export class ApiDockerJobQueue {
           `[${this.address.substring(0, 15)}] ➖ c ⏹️ Removing client`
         );
         this.clients.splice(index, 1);
-        this.disposeCheck();
+        // this.disposeCheck();
       }
     });
 
@@ -1257,7 +1257,7 @@ export class ApiDockerJobQueue {
     this.broadcastWorkersToChannel();
     // update the other workers and (browser) clients
     this.broadcastWorkersToClientsAndWorkers();
-    this.disposeCheck();
+    // this.disposeCheck();
   }
 
   async requeueJobsFromMissingWorkers() {
