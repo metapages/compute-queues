@@ -6,7 +6,7 @@
 Run a worker pointing to a queue `public-queue-01` (you can change this queue name to anything you like, just make it long and unguessable):
 
 ```
-docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.15.0 run --cores=2 public-queue-01
+docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.17.0 run --cores=2 public-queue-01
 ```
 
 ## Quickstart: Run a job from the browser
