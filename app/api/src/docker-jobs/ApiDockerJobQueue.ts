@@ -12,8 +12,28 @@
  */
 
 import {
+  BroadcastJobStates,
+  BroadcastWorkers,
+  DockerJobDefinitionRow,
+  DockerJobFinishedReason,
+  DockerJobState,
+  isJobCacheAllowedToBeDeleted,
+  JobsStateMap,
+  JobStates,
   PayloadClearJobCache,
   resolvePreferredWorker,
+  StateChange,
+  StateChangeValueQueued,
+  StateChangeValueReQueued,
+  StateChangeValueRunning,
+  StateChangeValueWorkerFinished,
+  WebsocketMessageClientToServer,
+  WebsocketMessageServerBroadcast,
+  WebsocketMessageTypeClientToServer,
+  WebsocketMessageTypeServerBroadcast,
+  WebsocketMessageTypeWorkerToServer,
+  WebsocketMessageWorkerToServer,
+  WorkerRegistration,
   WorkerStatusResponse,
 } from '/@/shared';
 import equal from 'fast-deep-equal/es6';
@@ -28,28 +48,6 @@ import {
 import { BroadcastChannelRedis } from '@metapages/deno-redis-broadcastchannel';
 
 import { db } from '../db/kv/mod.ts';
-import {
-  BroadcastJobStates,
-  BroadcastWorkers,
-  DockerJobDefinitionRow,
-  DockerJobFinishedReason,
-  DockerJobState,
-  isJobCacheAllowedToBeDeleted,
-  JobsStateMap,
-  JobStates,
-  StateChange,
-  StateChangeValueQueued,
-  StateChangeValueReQueued,
-  StateChangeValueRunning,
-  StateChangeValueWorkerFinished,
-  WebsocketMessageClientToServer,
-  WebsocketMessageServerBroadcast,
-  WebsocketMessageTypeClientToServer,
-  WebsocketMessageTypeServerBroadcast,
-  WebsocketMessageTypeWorkerToServer,
-  WebsocketMessageWorkerToServer,
-  WorkerRegistration,
-} from '../shared/mod.ts';
 
 // 60 seconds
 const MAX_TIME_FINISHED_JOB_IN_QUEUE = ms("60 seconds") as number;

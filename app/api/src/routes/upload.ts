@@ -1,8 +1,8 @@
+import { DataRefType } from '/@/shared';
 import { Context } from 'https://deno.land/x/hono@v4.1.0-rc.1/mod.ts';
 import { PutObjectCommand } from 'npm:@aws-sdk/client-s3';
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner';
 
-import { DataRefType } from '../shared/mod.ts';
 import {
   bucketParams,
   s3Client,
