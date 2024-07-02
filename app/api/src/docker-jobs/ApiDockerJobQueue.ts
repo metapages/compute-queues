@@ -11,6 +11,11 @@
  *
  */
 
+import {
+  PayloadClearJobCache,
+  resolvePreferredWorker,
+  WorkerStatusResponse,
+} from '/@/shared';
 import equal from 'fast-deep-equal/es6';
 import { delay } from 'https://deno.land/std@0.224.0/async/delay.ts';
 // import LRU from 'https://deno.land/x/lru_cache@6.0.0-deno.4/mod.ts';
@@ -22,11 +27,6 @@ import {
 
 import { BroadcastChannelRedis } from '@metapages/deno-redis-broadcastchannel';
 
-import {
-  PayloadClearJobCache,
-  resolvePreferredWorker,
-  WorkerStatusResponse,
-} from '../../../shared/src/mod.ts';
 import { db } from '../db/kv/mod.ts';
 import {
   BroadcastJobStates,

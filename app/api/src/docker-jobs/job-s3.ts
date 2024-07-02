@@ -1,4 +1,8 @@
 import {
+  DataRef,
+  DataRefType,
+} from '/@/shared';
+import {
   GetObjectCommand,
   PutObjectCommand,
 } from 'npm:@aws-sdk/client-s3@3.600.0';
@@ -7,10 +11,6 @@ import {
   bucketParams,
   s3Client as client,
 } from '../routes/s3config.ts';
-import {
-  DataRef,
-  DataRefType,
-} from '../shared/mod.ts';
 
 export const putJsonToS3 = async (
   key: string,
