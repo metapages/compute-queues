@@ -60,7 +60,7 @@ dev target="": _mkcert _install
 dev-prod: (dev "https://container.mtfm.io")
 
 # Build the browser client static assets (in <root/docs>)
-build BASE="": (_tsc "--build")
+build BASE="": _install (_tsc "--build")
     VITE_SERVER_ORIGIN={{SERVER_ORIGIN}} \
     OUTDIR=dist \
     BASE={{BASE}} \
@@ -72,7 +72,7 @@ build BASE="": (_tsc "--build")
     deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{APP_FQDN}}:{{APP_PORT_BROWSER}}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1'
 
 # Build the browser client static assets on changes
-watch BASE="": (_tsc "--build")
+watch BASE="": _install (_tsc "--build")
     # Not many env vars since this is served by the 
     # api server so it knows the api origin
     VITE_SERVER_ORIGIN={{SERVER_ORIGIN}} \

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 
-import { useServerState } from '/@/hooks/serverStateHook';
+import { useStore } from '/@/store';
 import { useFormik } from 'formik';
 import {
   RiSignalWifiErrorLine,
@@ -37,7 +37,7 @@ interface FormType extends yup.InferType<typeof validationSchema> {}
 export const QueueButtonAndLabel: React.FC = () => {
   const { isOpen, onClose, onToggle } = useDisclosure();
   const [queue, setQueue] = useHashParam("queue", "");
-  const serverState = useServerState();
+  const isServerConnected = useStore((state) => state.isServerConnected);
 
   const onSubmit = useCallback(
     (values: FormType) => {
@@ -69,7 +69,7 @@ export const QueueButtonAndLabel: React.FC = () => {
         colorScheme="blue"
         aria-label="edit docker job queue"
         icon={
-          queue && serverState.connected ? (
+          queue && isServerConnected ? (
             <RiSignalWifiFill />
           ) : (
             <RiSignalWifiErrorLine />

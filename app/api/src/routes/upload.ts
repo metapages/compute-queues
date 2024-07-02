@@ -9,13 +9,12 @@ import {
 } from './s3config.ts';
 
 export const uploadHandler = async (c: Context) => {
-    const hash: string | undefined = c.req.param("hash");
+    const key: string | undefined = c.req.param("key");
 
-    if (!hash) {
+    if (!key) {
         c.status(400)
-        return c.text('Missing hash');
+        return c.text('Missing key');
     }
-    // console.log('params', params);
 
     // Add headers for
     // https://www.reddit.com/r/aws/comments/j5lhhn/limiting_the_s3_put_file_size_using_presigned_urls/
@@ -24,16 +23,15 @@ export const uploadHandler = async (c: Context) => {
     //  ContentLength: 4
     // ContentMD5?: string;
     // ContentType?: string;
-    const command = new PutObjectCommand({ ...bucketParams, Key: hash, });
+    const command = new PutObjectCommand({ ...bucketParams, Key: key, });
     try {
 
         const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
         // console.log('url', url);
         return c.json({
             url, ref: {
-                // value: hash, // no http means we know it's an internal address, workers will know how to reach
-                type: DataRefType.hash,
-                hash,
+                value: key, // no http means we know it's an internal address, workers will know how to reach
+                type: DataRefType.key,
             }
         });
     } catch (err) {

@@ -41,7 +41,7 @@ export const jobAdd = new Command()
       default: "./outputs",
     }
   )
-  .option("--no-cache", "Disable cache")
+  .option("--debug", "Debug flag for slower running but more logging")
 
   // .option("-g, --gpu [gpu:boolean]", "Enable GPU access", { default: false })
   .action(
@@ -50,7 +50,7 @@ export const jobAdd = new Command()
         image?: string | undefined | boolean;
         command?: string | undefined | boolean;
         git?: string | undefined | boolean;
-        cache?: string | undefined | boolean;
+        debug?: string | undefined | boolean;
         wait?: string | undefined | boolean;
         outputs?: string | undefined | boolean;
         file?: (string | boolean)[] | undefined;
@@ -63,6 +63,7 @@ export const jobAdd = new Command()
         image,
         command,
         git,
+        debug,
         apiServerAddress,
         file: files,
         wait,
@@ -73,7 +74,6 @@ export const jobAdd = new Command()
 
       const address = apiServerAddress || globalThis?.location?.origin || "https://container.mtfm.io";
       const url = `${address}/client/${queue}`;
-      const nocache = options.cache === true ? undefined : true;
 
       const imageOrGit: string =
         (git as string) || (image as string) || "alpine:latest";
@@ -112,7 +112,7 @@ export const jobAdd = new Command()
       const { message, jobId, stageChange } =
         await createNewContainerJobMessage({
           definition,
-          nocache,
+          debug : !!debug,
         });
 
       let {

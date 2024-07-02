@@ -10,6 +10,7 @@ import {
 } from 'https://deno.land/x/hono@v4.1.0-rc.1/mod.ts';
 
 import { downloadHandler } from './routes/download.ts';
+import { statusHandler } from './routes/status.ts';
 import { uploadHandler } from './routes/upload.ts';
 
 const app = new Hono()
@@ -35,8 +36,9 @@ app.use('/*', cors()
 
 // Put your custom routes here
 app.get('/healthz', (c :Context) => c.text('OK'))
-app.get('/download/:hash', downloadHandler)
-app.get('/upload/:hash', uploadHandler)
+app.get('/download/:key', downloadHandler)
+app.get('/upload/:key', uploadHandler)
+app.get('/:queue/status', statusHandler)
 
 // Serve static assets, and the index.html as the fallback
 app.get('/*', serveStatic({ root: './assets' }));

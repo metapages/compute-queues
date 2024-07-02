@@ -1,6 +1,6 @@
-import { useServerState } from './serverStateHook';
+import { useStore } from '../store';
 
 export const useWorkersCount = () => {
-  const {workers} = useServerState();
+  const workers = useStore((state) => state.workers);
   return workers?.workers?.length || 0;
 };

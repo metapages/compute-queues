@@ -12,6 +12,7 @@ import {
   WebsocketMessageSenderWorker,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
+  WebsocketMessageTypeWorkerToServer,
   WebsocketMessageWorkerToServer,
 } from '../shared/mod.ts';
 
@@ -26,10 +27,8 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
 
   console.log('CLI:', args);
 
-  
-
   // @ts-ignore: frustrating cannot get compiler "default" import setup working
-  const url = `${server.replace('http', 'ws')}/worker/${queueId}`;
+  const url = `${server.replace('http', 'ws')}/${queueId}/worker`;
   console.log(`🪐 connecting... ${url}`)
   // @ts-ignore: frustrating cannot get compiler "default" import setup working
   const rws = new ReconnectingWebSocket(url, []);
@@ -41,7 +40,7 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
   let timeLastPong = Date.now();
   let timeLastPing = Date.now();
 
-  const dockerJobQueueArgs: DockerJobQueueArgs = { sender, cpus, id: workerId, version: VERSION };
+  const dockerJobQueueArgs: DockerJobQueueArgs = { sender, cpus, id: workerId, version: VERSION, time: Date.now() };
   const dockerJobQueue = new DockerJobQueue(dockerJobQueueArgs);
 
   rws.addEventListener('error', (error: any) => {
@@ -92,7 +91,7 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
         case WebsocketMessageTypeServerBroadcast.JobStates:
           const allJobsStatesPayload = possibleMessage.payload as BroadcastJobStates;
           if (!allJobsStatesPayload) {
-            console.log({ error: 'Missing payload in message', message });
+            console.log({ error: 'Missing payload in message', possibleMessage });
             break;
           }
           dockerJobQueue.onUpdateSetAllJobStates(allJobsStatesPayload);
@@ -100,13 +99,22 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
         case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
             const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
             if (!someJobsPayload) {
-              console.log({ error: 'Missing payload in message', message });
+              console.log({ error: 'Missing payload in message', possibleMessage });
               break;
             }
             dockerJobQueue.onUpdateUpdateASubsetOfJobs(someJobsPayload);
             break;
+        case WebsocketMessageTypeServerBroadcast.StatusRequest:
+          const status = dockerJobQueue.status();
+          sender({
+            type: WebsocketMessageTypeWorkerToServer.WorkerStatusResponse,
+            payload: status,
+          });
+          break;
+          
         default:
         //ignored
+          break;
       }
     } catch (err) {
       console.log(err);

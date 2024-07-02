@@ -1,3 +1,6 @@
+import { ms } from 'https://deno.land/x/ms@v0.1.0/ms.ts';
+
+import { resolvePreferredWorker } from '../../../shared/src/mod.ts';
 import mod from '../../mod.json' with { type: 'json' };
 import { config } from '../config.ts';
 import {
@@ -13,6 +16,7 @@ import {
   WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
   WorkerRegistration,
+  WorkerStatusResponse,
 } from '../shared/mod.ts';
 import {
   DockerJobArgs,
@@ -39,7 +43,7 @@ type WorkerJobQueueItem = {
     // TODO: put local state
 }
 
-
+const UPDATE_WORKERS_INTERVAL = ms("5s")
 
 export class DockerJobQueue {
     workerId: string;
@@ -63,8 +67,28 @@ export class DockerJobQueue {
         this.workerId = id;
     }
 
+    status() :WorkerStatusResponse {
+        return {
+            time: Date.now(),
+            id: this.workerId,
+            cpus: this.cpus,
+            queue: Object.fromEntries(Object.entries(this.queue).map(([key, item]) => {
+                return [
+                    key,
+                    {
+                        jobId: key,
+                        definition: item.definition,
+                        finished: !!item.execution
+                    }
+
+                ]
+            })),
+        }
+    }
+
     register() {
         const registration: WorkerRegistration = {
+            time: Date.now(),
             version: Version,
             id: this.workerId,
             cpus: this.cpus,
@@ -108,7 +132,7 @@ export class DockerJobQueue {
             if (!jobStates[locallyRunningJobId]) {
                 // we can only kill the job if we know it's not running on the server
                 if (isAllJobs) {
-                    console.log(`Cannot find local job ${locallyRunningJobId} in server state, killing and removing`);
+                    console.log(`[${this.workerId.substring(0,6)}] Cannot find local job ${locallyRunningJobId.substring(0,6)} in server state, killing and removing`);
                     this._killJobAndIgnore(locallyRunningJobId);
                     return;
                 } else {
@@ -122,14 +146,17 @@ export class DockerJobQueue {
 
             switch (serverJobState.state) {
                 case DockerJobState.Finished:
-                    // FINE it finished elsewhere
+                    // FINE it finished elsewhere, how rude
+                    console.log(`[${this.workerId.substring(0,6)}] [${locallyRunningJobId.substring(0,6)}] finished elsehwere, killing here`);
                     this._killJobAndIgnore(locallyRunningJobId);
                     break;
+                case DockerJobState.ReQueued:
                 case DockerJobState.Queued:
                     // server says queued, I say running, remind the server
                     // this can easily happen if I submit Running, but then
                     // the worker gets another update immediately
                     // The server will ignore this if it gets multiple times
+                    console.log(`[${this.workerId.substring(0,6)}] [${locallyRunningJobId.substring(0,6)}] server says queued, I say running, sending running again`);
                     this.sender({
                         type: WebsocketMessageTypeWorkerToServer.StateChange,
                         payload: {
@@ -138,7 +165,7 @@ export class DockerJobQueue {
                             state: DockerJobState.Running,
                             value: {
                                 worker: this.workerId,
-                                time: new Date(),
+                                time: Date.now(),
                             },
                         }
                     });
@@ -147,14 +174,21 @@ export class DockerJobQueue {
                     // good!
                     // except if another worker has taken it, then kill ours (server is dictator)
                     if ((serverJobState.value as StateChangeValueRunning).worker !== this.workerId) {
-                        this._killJobAndIgnore(locallyRunningJobId);
+                        
+                        const preferredWorker = resolvePreferredWorker(this.workerId, (serverJobState.value as StateChangeValueRunning).worker);
+                        if (preferredWorker === this.workerId) {
+                            console.log(`[${this.workerId.substring(0,6)}] [${locallyRunningJobId.substring(0,6)}] running, but elsewhere apparently. We are keeping ours since we are preferred`);
+                        } else {
+                            console.log(`[${this.workerId.substring(0,6)}] [${locallyRunningJobId.substring(0,6)}] running, but elsewhere also. Killing ours because preferred by ${preferredWorker.substring(0,6)}`);
+                            this._killJobAndIgnore(locallyRunningJobId);
+                        }
                     }
                     break;
             }
 
             // are any jobs running locally actually killed by the server? or running
             if (serverJobState.state === DockerJobState.Finished) {
-                console.log(`Cannot find local job ${locallyRunningJobId} in server state, killing and removing`);
+                console.log(`[${this.workerId.substring(0,6)}] Cannot find local job ${locallyRunningJobId.substring(0,6)} in server state, killing and removing`);
                 this._killJobAndIgnore(locallyRunningJobId);
             }
         }
@@ -182,7 +216,8 @@ export class DockerJobQueue {
         });
 
         // only care about queued jobs
-        const queuedJobKeys: string[] = Object.keys(jobStates).filter(key => jobStates[key].state === DockerJobState.Queued);
+        const queuedJobKeys: string[] = Object.keys(jobStates)
+            .filter(key => jobStates[key].state === DockerJobState.Queued || jobStates[key].state === DockerJobState.ReQueued);
         // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
         while (queuedJobKeys.length > 0 && Object.keys(this.queue).length < this.cpus) {
             const jobKey = queuedJobKeys.pop()!;
@@ -195,12 +230,10 @@ export class DockerJobQueue {
     
 
     async _startJob(jobBlob: DockerJobDefinitionRow): Promise<void> {
-
-
-        console.log(`[${jobBlob.hash}] starting...`)
+        console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] starting...`)
         const definition = (jobBlob.history[0].value as StateChangeValueQueued).definition;
         if (!definition) {
-            console.log(`💥 _startJob but no this.jobs[${jobBlob.hash.substring(0, 10)}]`);
+            console.log(`💥 [${this.workerId.substring(0,6)}] _startJob but no this.jobs[${jobBlob.hash.substring(0, 6)}]`);
             return;
         }
 
@@ -210,7 +243,7 @@ export class DockerJobQueue {
         // tell the server we've started the job
         const valueRunning: StateChangeValueRunning = {
             worker: this.workerId,
-            time: new Date(),
+            time: Date.now(),
         };
         this.sender({
             type: WebsocketMessageTypeWorkerToServer.StateChange,
@@ -224,9 +257,9 @@ export class DockerJobQueue {
 
         let volumes: { inputs: Volume, outputs: Volume };
         try {
-            volumes = await convertIOToVolumeMounts({id:jobBlob.hash, definition}, config.server);
+            volumes = await convertIOToVolumeMounts({id:jobBlob.hash, definition}, config.server, this.workerId);
         } catch (err) {
-            console.error('💥', err);
+            console.error(`💥 [${this.workerId.substring(0,6)}]`, err);
             // TODO too much code duplication here
             // Delete from our local queue before sending
             // TODO: cache locally before attempting to send
@@ -235,7 +268,7 @@ export class DockerJobQueue {
             const valueError: StateChangeValueWorkerFinished = {
                 reason: DockerJobFinishedReason.Error,
                 worker: this.workerId,
-                time: new Date(),
+                time: Date.now(),
                 result: ({
                     error: `${err}`,
                 } as DockerRunResultWithOutputs),
@@ -271,7 +304,7 @@ export class DockerJobQueue {
 
         const dockerExecution: DockerJobExecution = await dockerJobExecute(executionArgs);
         if (!this.queue[jobBlob.hash]) {
-            console.log(`[${jobBlob.hash}] after await jobBlob.hash no job in queue so killing`);
+            console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] after await jobBlob.hash no job in queue so killing`);
             // what happened? the job was removed from the queue by someone else?
             dockerExecution.kill();
             return;
@@ -279,7 +312,7 @@ export class DockerJobQueue {
         this.queue[jobBlob.hash].execution = dockerExecution;
 
         dockerExecution.finish.then(async (result: DockerRunResult) => {
-            console.log(`[${jobBlob.hash}] result ${JSON.stringify(result, null, '  ').substr(0, 200)}`);
+            console.log(`[${jobBlob.hash.substring(0, 6)}] result ${JSON.stringify(result, null, '  ').substr(0, 200)}`);
 
             const resultWithOutputs: DockerRunResultWithOutputs = result as DockerRunResultWithOutputs;
             resultWithOutputs.outputs = {};
@@ -290,26 +323,26 @@ export class DockerJobQueue {
                 valueFinished = {
                     reason: DockerJobFinishedReason.Error,
                     worker: this.workerId,
-                    time: new Date(),
+                    time: Date.now(),
                     result: resultWithOutputs,
                 };
 
             } else {
                 // get outputs
                 try {
-                    const outputs = await getOutputs(jobBlob);
+                    const outputs = await getOutputs(jobBlob, this.workerId);
                     valueFinished = {
                         reason: DockerJobFinishedReason.Success,
                         worker: this.workerId,
-                        time: new Date(),
+                        time: Date.now(),
                         result: { ...result, outputs },
                     };
                 } catch (err) {
-                    console.log(`[${jobBlob.hash}] 💥 failed to getOutputs ${err}`);
+                    console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] 💥 failed to getOutputs ${err}`);
                     valueFinished = {
                         reason: DockerJobFinishedReason.Error,
                         worker: this.workerId,
-                        time: new Date(),
+                        time: Date.now(),
                         result: { ...resultWithOutputs, error: `${err}` },
                     };
                 }
@@ -330,7 +363,7 @@ export class DockerJobQueue {
                 }
             });
         }).catch(err => {
-            console.log(`[${jobBlob.hash}] 💥 errored ${err}`);
+            console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] 💥 errored ${err}`);
 
             // Delete from our local queue before sending
             // TODO: cache locally before attempting to send
@@ -339,7 +372,7 @@ export class DockerJobQueue {
             const valueError: StateChangeValueWorkerFinished = {
                 reason: DockerJobFinishedReason.Error,
                 worker: this.workerId,
-                time: new Date(),
+                time: Date.now(),
                 result: ({
                     error: err,
                 } as DockerRunResultWithOutputs),
@@ -365,7 +398,7 @@ export class DockerJobQueue {
     }
 
     _killJobAndIgnore(locallyRunningJobId: string) {
-        console.log(`Killing job ${locallyRunningJobId}`);
+        console.log(`[${this.workerId.substring(0,6)}] Killing job ${locallyRunningJobId.substring(0,6)}`);
         const localJob = this.queue[locallyRunningJobId];
         delete this.queue[locallyRunningJobId];
         localJob?.execution?.kill();

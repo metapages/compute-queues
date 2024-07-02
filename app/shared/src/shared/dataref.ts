@@ -40,7 +40,7 @@ export const copyLargeBlobsToCloud = async (
   inputs: InputsRefs | undefined,
   address:string
 ): Promise<InputsRefs | undefined> => {
-  if (!inputs) {
+  if (!inputs || Object.keys(inputs).length === 0) {
     return;
   }
   const result: InputsRefs = {};
@@ -50,7 +50,7 @@ export const copyLargeBlobsToCloud = async (
       const type: DataRefType = inputs[name]?.type || DataRefTypeDefault;
       let uint8ArrayIfBig: Uint8Array | undefined;
       switch (type) {
-        case DataRefType.hash:
+        case DataRefType.key:
           // this is already cloud storage. weird. or really advanced? who knows, but trust it anyway,
           break;
         case DataRefType.json:
@@ -83,7 +83,7 @@ export const copyLargeBlobsToCloud = async (
         // upload and replace the dataref
         const hash = objectHash.sha1(uint8ArrayIfBig);
         const urlGetUpload = `${address}/upload/${hash}`;
-        console.log('urlGetUpload', urlGetUpload);
+        // console.log('urlGetUpload', urlGetUpload);
         const resp = await fetch(urlGetUpload);
         if (!resp.ok) {
           throw new Error(
@@ -134,9 +134,9 @@ export const convertJobOutputDataRefsToExpectedFormat = async (
           };
           newOutputs[name] = internalBlobRefFromBase64;
           break;
-        case DataRefType.hash:
+        case DataRefType.key:
           arrayBuffer = await fetchBlobFromHash(
-            outputs[name].hash ?? outputs[name].value,
+            outputs[name].value,
             address
           );
           arrayBuffer = new Uint8Array(arrayBuffer);
@@ -157,7 +157,7 @@ export const convertJobOutputDataRefsToExpectedFormat = async (
           arrayBuffer = await fetchBlobFromUrl(outputs[name].value);
           // newOutputs[name] = Unibabel.bufferToBase64(arrayBuffer);
           arrayBuffer = await fetchBlobFromHash(
-            outputs[name].hash || outputs[name].value,
+            outputs[name].value,
             address
           );
           const internalBlobRefFromUrl: DataRefSerializedBlob = {
@@ -187,6 +187,16 @@ const fetchBlobFromUrl = async (url: string): Promise<ArrayBuffer> => {
   });
   const arrayBuffer = await response.arrayBuffer();
   return arrayBuffer;
+};
+
+export const fetchJsonFromUrl = async <T>(url: string): Promise<T> => {
+  const response = await fetch(url, {
+    method: "GET",
+    redirect: "follow",
+    headers: { "Content-Type": "application/json" },
+  });
+  const json = await response.json();
+  return json;
 };
 
 const fetchBlobFromHash = async (hash: string, address:string): Promise<ArrayBuffer> => {
@@ -235,7 +245,7 @@ export const bufferToUtf8 = (buffer: Uint8Array): string => {
 
 // 👍
 export function bufferToBinaryString(buffer: ArrayBuffer) :string {
-  var base64Str = Array.prototype.map.call(buffer, function (ch) {
+  var base64Str = Array.prototype.map.call(buffer, function (ch:number) {
     return String.fromCharCode(ch);
   }).join('');
   return base64Str;

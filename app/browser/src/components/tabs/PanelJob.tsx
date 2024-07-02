@@ -1,10 +1,10 @@
-import { useServerState } from '/@/hooks/serverStateHook';
 import {
   DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
   StateChangeValueWorkerFinished,
 } from '/@/shared';
+import { useStore } from '/@/store';
 
 import {
   Alert,
@@ -24,6 +24,7 @@ import {
 import { useHashParam } from '@metapages/hash-query';
 
 import { ButtonCancelOrRetry } from '../ButtonCancelOrRetry';
+import { ButtonDeleteCache } from '../ButtonDeleteCache';
 import { PanelJobInputFromUrlParams } from './PanelJobInputFromUrlParams';
 
 type ErrorObject = { statusCode: number; json: { message: string } };
@@ -56,6 +57,7 @@ export const PanelJob: React.FC<{
                 {job?.hash ? `id: ${job?.hash}` : null}
               </Text>
             </HStack>
+            <ButtonDeleteCache job={job} />
             <HStack w="100%" h="100%">
               {!queue || queue === "" ? null : <JobStatusDisplay job={job} />}
             </HStack>
@@ -71,13 +73,13 @@ const JobStatusDisplay: React.FC<{
   job: DockerJobDefinitionRow | undefined;
 }> = ({ job }) => {
   const state = job?.state;
-  const { workers } = useServerState();
+  const workers = useStore((state) => state.workers);
 
   if (!job) {
     return (
-      <Alert status="error">
+      <Alert status="info">
         <AlertIcon />
-        No job definition. Click edit
+        Waiting on job status from the server...
       </Alert>
     );
   }

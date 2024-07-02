@@ -1,13 +1,13 @@
-import { DockerJobDefinitionProvider } from "./hooks/jobDefinitionHook";
-import { ServerStateProvider } from "./hooks/serverStateHook";
-import { TabMenu } from "./routes/TabMenu";
+import { useDockerJobDefinition } from './hooks/jobDefinitionHook';
+import { serverWebsocket } from './hooks/serverWebsocket';
+import { TabMenu } from './routes/TabMenu';
 
 export const App: React.FC = () => {
+  // This creates the server websocket connection and gets/sets state on the store
+  serverWebsocket();
+  // Get the job definition from the URL and metaframe inputs, set in the store
+  useDockerJobDefinition();
   return (
-    <ServerStateProvider>
-      <DockerJobDefinitionProvider>
-        <TabMenu />
-      </DockerJobDefinitionProvider>
-    </ServerStateProvider>
+    <TabMenu />
   );
 };

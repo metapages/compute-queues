@@ -9,9 +9,9 @@ export const handleWebsocketConnection = (
 ) => {
   const urlBlob = new URL(request.url);
   const pathTokens = urlBlob.pathname.split("/").filter((x) => x !== "");
-  const isClient = pathTokens[0] === "browser" || pathTokens[0] === "client";
-  const isWorker = pathTokens[0] === "worker";
-  const queueKey = pathTokens[1];
+  const queueKey = pathTokens[0];
+  const isClient = pathTokens[1] === "browser" || pathTokens[1] === "client";
+  const isWorker = pathTokens[1] === "worker";
 
   if (!queueKey) {
     console.log("No queue key, closing socket");

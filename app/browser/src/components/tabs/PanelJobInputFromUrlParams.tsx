@@ -1,4 +1,5 @@
 import {
+  ChangeEvent,
   ReactNode,
   useCallback,
 } from 'react';
@@ -25,12 +26,11 @@ import {
 
 const validationSchema = yup.object({
   image: yup.string(),
-  command: yup.string(),
-  entrypoint: yup.string(),
-  workdir: yup.string(),
-  cache: yup.boolean(),
-  debug: yup.boolean(),
-  gpu: yup.boolean(),
+  command: yup.string().optional(),
+  entrypoint: yup.string().optional(),
+  workdir: yup.string().optional(),
+  debug: yup.boolean().optional(),
+  gpu: yup.boolean().optional(),
 });
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
@@ -39,7 +39,6 @@ export const PanelJobInputFromUrlParams: React.FC<{
 }> = ({ onSave }) => {
   const [jobDefinitionBlob, setJobDefinitionBlob] =
     useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
-  const [nocache, setnocache] = useHashParamBoolean("nocache");
   const [debug, setDebug] = useHashParamBoolean("debug");
 
   const onSubmit = useCallback(
@@ -58,14 +57,12 @@ export const PanelJobInputFromUrlParams: React.FC<{
       newJobDefinitionBlob.gpu = values.gpu;
 
       setJobDefinitionBlob(newJobDefinitionBlob);
-      setnocache(!values.cache);
-
       setDebug(values.debug!!);
       if (onSave) {
         onSave();
       }
     },
-    [onSave, setJobDefinitionBlob, setnocache, setDebug]
+    [onSave, setJobDefinitionBlob, setDebug]
   );
 
   const formik = useFormik({
@@ -75,18 +72,26 @@ export const PanelJobInputFromUrlParams: React.FC<{
       command: jobDefinitionBlob?.command,
       entrypoint: jobDefinitionBlob?.entrypoint,
       workdir: jobDefinitionBlob?.workdir,
-      cache: !nocache,
       gpu: jobDefinitionBlob?.gpu,
     },
     onSubmit,
     validationSchema,
   });
 
+  // Custom handler for Switch onChange
+  const handleSwitchChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const { name, checked } = event.target;
+      formik.setFieldValue(name, checked);
+      formik.submitForm();
+    },
+    [formik]
+  );
+
   return (
-    <VStack w="100%" alignItems="stretch" >
+    <VStack w="100%" alignItems="stretch">
       <form onSubmit={formik.handleSubmit}>
         <Heading size="sm">Configure docker batch job </Heading>
-
 
         <VStack alignItems="stretch" width="100%" spacing="4px" pt="9px">
           <VStack
@@ -97,25 +102,56 @@ export const PanelJobInputFromUrlParams: React.FC<{
             width="100%"
             // spacing="4px"
           >
-            <Heading size="xs" >
-              Docker container
-            </Heading>
+            <Heading size="xs">Docker container</Heading>
 
             {["image", "command", "entrypoint", "workdir"].map((key) => {
-              
-              let labelJsx :ReactNode;
-              switch(key) {
+              let labelJsx: ReactNode;
+              switch (key) {
                 case "image":
-                  labelJsx = <><Link isExternal href="https://hub.docker.com/" >docker image name</Link>{` / `}<Link isExternal href="https://docs.docker.com/build/building/context/#git-repositories" >git repository url</Link></>;
+                  labelJsx = (
+                    <>
+                      <Link isExternal href="https://hub.docker.com/">
+                        docker image name
+                      </Link>
+                      {` / `}
+                      <Link
+                        isExternal
+                        href="https://docs.docker.com/build/building/context/#git-repositories"
+                      >
+                        git repository url
+                      </Link>
+                    </>
+                  );
                   break;
                 case "command":
-                  labelJsx = <Link isExternal href="https://docs.docker.com/reference/dockerfile/#cmd" >command</Link>;
+                  labelJsx = (
+                    <Link
+                      isExternal
+                      href="https://docs.docker.com/reference/dockerfile/#cmd"
+                    >
+                      command
+                    </Link>
+                  );
                   break;
                 case "entrypoint":
-                  labelJsx = <Link isExternal href="https://docs.docker.com/reference/dockerfile/#entrypoint" >entrypoint</Link>;
+                  labelJsx = (
+                    <Link
+                      isExternal
+                      href="https://docs.docker.com/reference/dockerfile/#entrypoint"
+                    >
+                      entrypoint
+                    </Link>
+                  );
                   break;
                 case "workdir":
-                  labelJsx = <Link isExternal href="https://docs.docker.com/reference/dockerfile/#workdir" >workdir</Link>;
+                  labelJsx = (
+                    <Link
+                      isExternal
+                      href="https://docs.docker.com/reference/dockerfile/#workdir"
+                    >
+                      workdir
+                    </Link>
+                  );
                   break;
               }
 
@@ -145,7 +181,7 @@ export const PanelJobInputFromUrlParams: React.FC<{
               <Switch
                 id="gpu"
                 name="gpu"
-                onChange={formik.handleChange}
+                onChange={handleSwitchChange}
                 isChecked={formik.values.gpu}
               />
             </FormControl>
@@ -162,27 +198,15 @@ export const PanelJobInputFromUrlParams: React.FC<{
             width="100%"
             spacing="4px"
           >
-            <Heading size="xs">
-              Misc
-            </Heading>
+            <Heading size="xs">Misc</Heading>
             <br />
-
-            <FormControl>
-              <FormLabel htmlFor="nocache">Cache</FormLabel>
-              <Switch
-                id="nocache"
-                name="cache"
-                onChange={formik.handleChange}
-                isChecked={formik.values.cache}
-              />
-            </FormControl>
 
             <FormControl>
               <FormLabel htmlFor="debug">Debug</FormLabel>
               <Switch
                 id="debug"
                 name="debug"
-                onChange={formik.handleChange}
+                onChange={handleSwitchChange}
                 isChecked={formik.values.debug}
               />
             </FormControl>

@@ -64,6 +64,7 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
+      # - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio:9000}
       - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio.worker-metaframe.localhost}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
@@ -79,6 +80,7 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
       - local.graphql.nhost.run:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
     labels:
       - "custom.label=worker-metaframe.localhost"
       - "traefik.enable=true"
@@ -117,6 +119,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
       - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio.worker-metaframe.localhost}
+      # - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio:9000}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
@@ -131,6 +134,7 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
       - local.graphql.nhost.run:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
     labels:
       - "custom.label=worker-metaframe.localhost"
       # - "traefik.enable=true"

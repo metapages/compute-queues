@@ -1,6 +1,6 @@
 import {
-  BroadcastJobStates,
   DockerJobState,
+  JobsStateMap,
   StateChangeValueRunning,
 } from '/@/shared';
 
@@ -15,10 +15,11 @@ import {
   Tr,
 } from '@chakra-ui/react';
 
-import { useServerState } from '../hooks/serverStateHook';
+import { useStore } from '../store';
 
 export const Workers: React.FC = () => {
-  const {workers, jobStates} = useServerState();
+  const workers = useStore((state) => state.workers);
+  const jobs = useStore((state) => state.jobStates);
 
   return (
     <Box width="100%" p={2}>
@@ -38,7 +39,7 @@ export const Workers: React.FC = () => {
               key={worker.id}
               cpus={worker.cpus}
               workerId={worker.id}
-              state={jobStates}
+              jobs={jobs}
             />
           ))}
         </Tbody>
@@ -50,28 +51,30 @@ export const Workers: React.FC = () => {
 const WorkerComponent: React.FC<{
   workerId: string;
   cpus: number;
-  state: BroadcastJobStates;
-}> = ({ workerId, cpus, state }) => {
+  jobs: JobsStateMap;
+}> = ({ workerId, cpus, jobs }) => {
   // How many jobs is this worker running
-  const jobCount = !state?.state?.jobs ? 0 : Object.keys(state.state.jobs)
-    .filter((jobId) => state.state.jobs[jobId].state === DockerJobState.Running)
-    .reduce<number>((count: number, jobHash: string) => {
-      const running = state.state.jobs[jobHash].history.filter(
-        (state) => state.state === DockerJobState.Running
-      );
-      if (running.length > 0) {
-        const workerRunning = running[running.length - 1]
-          .value as StateChangeValueRunning;
-        if (workerRunning.worker === workerId) {
-          return count + 1;
-        }
-      }
-      return count;
-    }, 0);
+  const jobCount = !jobs
+    ? 0
+    : Object.keys(jobs)
+        .filter((jobId) => jobs[jobId].state === DockerJobState.Running)
+        .reduce<number>((count: number, jobHash: string) => {
+          const running = jobs[jobHash].history.filter(
+            (state) => state.state === DockerJobState.Running
+          );
+          if (running.length > 0) {
+            const workerRunning = running[running.length - 1]
+              .value as StateChangeValueRunning;
+            if (workerRunning.worker === workerId) {
+              return count + 1;
+            }
+          }
+          return count;
+        }, 0);
 
   return (
     <Tr>
-      <Td>{workerId}</Td>
+      <Td>{workerId.substring(0, 6)}</Td>
       <Td>{cpus}</Td>
       <Td>0</Td>
       <Td>{jobCount}</Td>
