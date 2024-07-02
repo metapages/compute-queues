@@ -28,6 +28,5 @@ export const handleWebsocketConnection = (
     socket.close();
     return;
   }
-
 };
 

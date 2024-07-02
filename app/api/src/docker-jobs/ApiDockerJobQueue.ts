@@ -546,12 +546,20 @@ export class ApiDockerJobQueue {
     // as sending all jobs is declaring what jobs are in the queue
   }
 
+  disposeCheck() {
+    if (this.clients.length === 0 && this.workers.myWorkers.length === 0) {
+      this.dispose();
+    }
+  }
+
   dispose() {
     this.channel.onmessage = null;
     this.channel.close();
     // https://github.com/ai/nanoevents?tab=readme-ov-file#remove-all-listeners
     this.channelEmitter.events = {};
     clearInterval(this._intervalWorkerBroadcast);
+    delete userJobQueues[this.address];
+    console.log(`➖ 🗑️ 🎾 UserDockerJobQueue ${this.address}`);
   }
 
   async stateChange(change: StateChange): Promise<void> {
@@ -1025,6 +1033,7 @@ export class ApiDockerJobQueue {
           `[${this.address.substring(0, 15)}] ➖ c ⏹️ Removing client`
         );
         this.clients.splice(index, 1);
+        this.disposeCheck();
       }
     });
 
@@ -1248,6 +1257,7 @@ export class ApiDockerJobQueue {
     this.broadcastWorkersToChannel();
     // update the other workers and (browser) clients
     this.broadcastWorkersToClientsAndWorkers();
+    this.disposeCheck();
   }
 
   async requeueJobsFromMissingWorkers() {
