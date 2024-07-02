@@ -11,7 +11,6 @@ import {
   StateChange,
   StateChangeValueQueued,
   StateChangeValueWorkerFinished,
-  WebsocketMessageTypeClientToServer,
 } from '/@/shared/types';
 
 import {
@@ -22,9 +21,9 @@ import {
   Button,
   useMediaQuery,
 } from '@chakra-ui/react';
-import { useHashParam } from '@metapages/hash-query';
+import { useHashParamBoolean } from '@metapages/hash-query';
 
-import { useServerState } from '../hooks/serverStateHook';
+import { useStore } from '../store';
 
 interface ButtonCancelOrRetryProps {
   job?: DockerJobDefinitionRow;
@@ -34,55 +33,51 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
   job,
 }) => {
   const [clicked, setClicked] = useState<boolean>(false);
-  const {stateChange} = useServerState();
-  const [nocacheString, setnocacheString] = useHashParam("nocache");
-  const [isLargerThan800] = useMediaQuery('(min-width: 800px)');
+  const sendClientStateChange = useStore(
+    (state) => state.sendClientStateChange
+  );
+  const [debug, setDebug] = useHashParamBoolean("debug");
+  const [isLargerThan800] = useMediaQuery("(min-width: 800px)");
 
   useEffect(() => {
     setClicked(false);
-  }, [stateChange]);
+  }, [sendClientStateChange]);
 
   const state = job?.state;
 
   const onClickCancel = useCallback(() => {
-    if (stateChange && job) {
+    if (job) {
       setClicked(true);
-      stateChange({
-        type: WebsocketMessageTypeClientToServer.StateChange,
-        payload: {
-          tag: "",
-          state: DockerJobState.Finished,
-          job: job.hash,
-          value: {
-            reason: DockerJobFinishedReason.Cancelled,
-            time: new Date(),
-          },
-        } as StateChange,
-      });
+      sendClientStateChange({
+        tag: "",
+        state: DockerJobState.Finished,
+        job: job.hash,
+        value: {
+          reason: DockerJobFinishedReason.Cancelled,
+          time: Date.now(),
+        },
+      } as StateChange);
     }
-  }, [job, stateChange]);
+  }, [job, sendClientStateChange]);
 
   const onClickRetry = useCallback(() => {
-    if (stateChange && job) {
+    if (job) {
       setClicked(true);
 
       const value: StateChangeValueQueued = {
         definition: (job.history[0].value as StateChangeValueQueued).definition,
-        time: new Date(),
-        nocache: nocacheString === "1" || nocacheString === "true",
+        time: Date.now(),
+        debug,
       };
 
-      stateChange({
-        type: WebsocketMessageTypeClientToServer.StateChange,
-        payload: {
-          tag: "",
-          state: DockerJobState.Queued,
-          job: job.hash,
-          value,
-        } as StateChange,
-      });
+      sendClientStateChange({
+        tag: "",
+        state: DockerJobState.Queued,
+        job: job.hash,
+        value,
+      } as StateChange);
     }
-  }, [job, stateChange]);
+  }, [job, sendClientStateChange, debug]);
 
   switch (state) {
     case DockerJobState.Queued:
@@ -95,7 +90,7 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
           isActive={!clicked}
           size="lg"
         >
-          { isLargerThan800 ? "Cancel job" : ""}
+          {isLargerThan800 ? "Cancel job" : ""}
         </Button>
       );
     case DockerJobState.Finished:
@@ -115,8 +110,7 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
                 size="lg"
                 onClick={onClickRetry}
               >
-                { isLargerThan800 ? "Re-queue" : ""}
-                
+                {isLargerThan800 ? "Re-queue" : ""}
               </Button>
             );
           case DockerJobFinishedReason.WorkerLost:
@@ -127,8 +121,7 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
                 isDisabled={true}
                 size="lg"
               >
-                { isLargerThan800 ? "Cancel job" : ""}
-                
+                {isLargerThan800 ? "Cancel job" : ""}
               </Button>
             );
         }

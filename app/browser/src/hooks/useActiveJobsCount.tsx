@@ -1,20 +1,16 @@
 import { DockerJobState } from '/@/shared';
 
-import { useServerState } from './serverStateHook';
+import { useStore } from '../store';
 
 export const useActiveJobsCount = () => {
-  const {jobStates} = useServerState();
+  const jobs = useStore((state) => state.jobStates);
 
-  if (jobStates?.state?.jobs === undefined) {
+  if (jobs === undefined) {
     return 0;
   }
 
-  const jobIds = (
-    Object.keys(jobStates?.state?.jobs)
-  ).filter((jobId) => {
-    const jobState = jobStates?.state?.jobs
-      ? jobStates.state.jobs[jobId].state
-      : DockerJobState.Finished;
+  const jobIds = Object.keys(jobs).filter((jobId) => {
+    const jobState = jobs ? jobs[jobId].state : DockerJobState.Finished;
     return jobState !== DockerJobState.Finished;
   });
 

@@ -2,12 +2,7 @@
  * Via Context provide the current docker job definition which is combined from metaframe inputs
  * and URL query parameters, and the means to change (some of) them
  */
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
+import { useEffect } from 'react';
 
 import {
   copyLargeBlobsToCloud,
@@ -18,7 +13,7 @@ import {
 } from '/@/shared';
 
 import {
-  useHashParam,
+  useHashParamBoolean,
   useHashParamJson,
 } from '@metapages/hash-query';
 import { useMetaframeAndInput } from '@metapages/metaframe-hook';
@@ -28,26 +23,14 @@ import {
 } from '@metapages/metapage';
 
 import { JobInputs } from '../components/PanelInputs';
+import { UPLOAD_DOWNLOAD_BASE_URL } from '../config';
+import { useStore } from '../store';
 
-type Props = {
-  children: any;
-};
-
-interface DockerJobDefinitionObject {
-  // this is the entire job definition
-  definitionMeta?: DockerJobDefinitionMetadata;
-  // TODO: metaframe inputs
-}
-
-const defaultDockerJobDefinitionObject: DockerJobDefinitionObject = {
-  definitionMeta: undefined,
-};
-
-const DockerJobDefinitionContext = createContext<DockerJobDefinitionObject>(
-  defaultDockerJobDefinitionObject
-);
-
-export const DockerJobDefinitionProvider = ({ children }: Props) => {
+/**
+ * Gets the configuration from the URL hash parameters and the metaframe inputs
+ * combines them together, and sets the docker job definition in the store
+ */
+export const useDockerJobDefinition = () => {
   // we listen to the job parameters embedded in the URL changing
   const [definitionParamsInUrl] = useHashParamJson<
     DockerJobDefinitionParamsInUrlHash | undefined
@@ -66,11 +49,12 @@ export const DockerJobDefinitionProvider = ({ children }: Props) => {
     }
   }, [metaframeBlob?.metaframe]);
 
-  const [nocacheString] = useHashParam("nocache");
-  const nocache = nocacheString === "1" ? true : false;
-  const [definitionMeta, setDefinitionMeta] = useState<
-    DockerJobDefinitionMetadata | undefined
-  >(undefined);
+  const [debug] = useHashParamBoolean("debug");
+
+  const setNewJobDefinition = useStore(
+    (state) => state.setNewJobDefinition
+  );
+ 
 
   // if the URL inputs change, or the metaframe inputs change, maybe update the dockerJobDefinitionMeta
   useEffect(() => {
@@ -81,7 +65,7 @@ export const DockerJobDefinitionProvider = ({ children }: Props) => {
       ...definitionParamsInUrl,
     };
 
-    console.log('definition', definition);
+    // console.log('definition', definition);
     // These are inputs set in the metaframe and stored in the url hash params. They
     // are always type: DataRefType.utf8 because they come from the text editor
     definition.inputs = !jobInputs
@@ -98,7 +82,6 @@ export const DockerJobDefinitionProvider = ({ children }: Props) => {
     // console.log("🍔 useEffect definition", definition);
 
     if (!definition.image) {
-      setDefinitionMeta(undefined);
       return;
     }
 
@@ -148,7 +131,7 @@ export const DockerJobDefinitionProvider = ({ children }: Props) => {
 
       // at this point, these inputs could be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
-      definition.inputs = await copyLargeBlobsToCloud(definition.inputs, globalThis.location.origin);
+      definition.inputs = await copyLargeBlobsToCloud(definition.inputs, UPLOAD_DOWNLOAD_BASE_URL);
       if (cancelled) {
         return;
       }
@@ -156,25 +139,16 @@ export const DockerJobDefinitionProvider = ({ children }: Props) => {
       // if uploading a large blob means new inputs have arrived and replaced this set, break out
       const newJobDefinition: DockerJobDefinitionMetadata = {
         definition,
-        nocache,
+        debug,
       };
-      console.log(`🍔 setDefinitionMeta`, newJobDefinition)
-      setDefinitionMeta(newJobDefinition);
+      // console.log(`🍔 setDefinitionMeta`, newJobDefinition)
+      setNewJobDefinition(newJobDefinition);
 
       return () => {
         // console.log("🍔😞 useEffect cancelled");
         cancelled = true;
       };
     })();
-  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputs]);
+  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputs, debug]);
 
-  return (
-    <DockerJobDefinitionContext.Provider value={{ definitionMeta }}>
-      {children}
-    </DockerJobDefinitionContext.Provider>
-  );
-};
-
-export const useDockerJobDefinition = () => {
-  return useContext(DockerJobDefinitionContext);
 };

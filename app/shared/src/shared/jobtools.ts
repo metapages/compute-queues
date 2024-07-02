@@ -20,16 +20,26 @@ import {
   shaObject,
 } from './util.ts';
 
+/**
+ * If two workers claim a job, this function will resolve which worker should take the job.
+ * @param workerA 
+ * @param workerB 
+ * @returns preferred worker id
+ */
+export const resolvePreferredWorker = (workerA :string, workerB:string) => {
+  return workerA.localeCompare(workerB) < 0 ? workerA : workerB;
+}
+
 export const createNewContainerJobMessage = async (opts: {
   definition: DockerJobDefinitionInputRefs;
-  nocache?: boolean;
+  debug?: boolean;
   jobId?: string;
 }) :Promise<{message:WebsocketMessageClientToServer, jobId:string, stageChange:StateChange}> => {
-  let { definition, nocache, jobId } = opts;
+  let { definition, debug, jobId } = opts;
   const value: StateChangeValueQueued = {
     definition,
-    nocache,
-    time: new Date(),
+    debug,
+    time: Date.now(),
   };
   if (!jobId) {
     jobId = await shaObject(definition);
@@ -148,10 +158,10 @@ export const dataRefToFile = async (ref: DataRef, filename:string, address:strin
           // @ts-ignore
           // await streamPipeline(responseUrl.body, fileStreamUrl);
           return;
-      case DataRefType.hash:
+      case DataRefType.key:
           
           // we know how to get this internal cloud referenced
-          const cloudRefUrl = `${address}/download/${ref.hash || ref.value}`;
+          const cloudRefUrl = `${address}/download/${ref.value}`;
           // console.log('cloudRefUrl', cloudRefUrl);
           const responseHash = await fetch(cloudRefUrl);
 

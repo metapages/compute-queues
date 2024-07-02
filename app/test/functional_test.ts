@@ -19,7 +19,7 @@ const API_URL = Deno.env.get("API_URL") || "http://api1:8081";
 Deno.test(
   "pretend to be a client: submit job and get expected results",
   async () => {
-    const socket = new WebSocket(`${API_URL.replace("http", "ws")}/client/local1`);
+    const socket = new WebSocket(`${API_URL.replace("http", "ws")}/local1/client`);
 
     const definition = {
       image: "alpine:3.18.5",

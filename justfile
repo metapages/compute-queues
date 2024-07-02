@@ -8,6 +8,8 @@ green            := "\\e[32m"
   just --list --unsorted --list-heading $'Commands: (all services)\n'
   echo -e ""
   echo -e "    Quick links:"
+  
+  echo -e "       api local:             {{green}}https://worker-metaframe.localhost/{{normal}}"
   echo -e "       api production:        {{green}}https://container.mtfm.io{{normal}}"
   echo -e "       github repo:           {{green}}https://github.com/metapages/compute-queues{{normal}}"
   echo -e "       api deployment config: {{green}}https://dash.deno.com/projects/compute-queue-api{{normal}}"

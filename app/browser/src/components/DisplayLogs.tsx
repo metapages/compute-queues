@@ -56,7 +56,10 @@ const JustLogs: React.FC<{
   let logsNewlineHandled: string[] = [];
   if (logs) {
     logs.forEach((line) => {
-      const lines = line.split("\n");
+      if (!line) {
+        return;
+      }
+      const lines = line?.split("\n");
       logsNewlineHandled = logsNewlineHandled.concat(lines);
     });
   }

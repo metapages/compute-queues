@@ -26,7 +26,8 @@ const TMPDIR = "/tmp/asman";
  */
 export const convertIOToVolumeMounts = async (
   job: {id:string, definition: DockerJobDefinitionInputRefs},
-  address: string
+  address: string,
+  workerId: string
 ): Promise<{ inputs: Volume; outputs: Volume }> => {
   const { id , definition } = job;
   const baseDir = join(TMPDIR, id);
@@ -45,7 +46,7 @@ export const convertIOToVolumeMounts = async (
   await Deno.chmod(inputsDir, 0o777);
   await Deno.chmod(outputsDir, 0o777);
 
-  console.log(`[${id}] creating\n\t ${inputsDir}\n\t ${outputsDir}`);
+  console.log(`[${workerId.substring(0, 6)}] [${id.substring(0, 6)}] creating\n\t ${inputsDir}\n\t ${outputsDir}`);
 
   // copy the inputs (if any)
   const inputs = definition.inputs;
@@ -73,7 +74,7 @@ export const convertIOToVolumeMounts = async (
   return result;
 };
 
-export const getOutputs = async (job: DockerJobDefinitionRow
+export const getOutputs = async (job: DockerJobDefinitionRow, workerId:string
   
 ): Promise<InputsRefs> => {
   // TODO: duplicate code
@@ -95,7 +96,7 @@ export const getOutputs = async (job: DockerJobDefinitionRow
   }
 
   console.log(
-    `[${job.hash}] outputs ${JSON.stringify(outputs, null, "  ").substring(
+    `[${workerId.substring(0,6)}] [${job.hash.substring(0,6)}] outputs ${JSON.stringify(outputs, null, "  ").substring(
       0,
       100
     )}`

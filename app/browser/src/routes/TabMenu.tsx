@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useState,
 } from 'react';
@@ -12,20 +13,16 @@ import { PanelOutputsLabel } from '/@/components/tabs/PanelOutputsLabel';
 import { PanelQueue } from '/@/components/tabs/PanelQueue';
 import { PanelStdLabel } from '/@/components/tabs/PanelStdLabel';
 import { TabLabelQueue } from '/@/components/tabs/queue/TabLabelQueue';
-import { useDockerJobDefinition } from '/@/hooks/jobDefinitionHook';
-import { useServerState } from '/@/hooks/serverStateHook';
 import {
   convertJobOutputDataRefsToExpectedFormat,
-  DockerJobDefinitionInputRefs,
   DockerJobDefinitionRow,
   DockerJobState,
   shaObject,
   StateChange,
   StateChangeValueQueued,
   StateChangeValueWorkerFinished,
-  WebsocketMessageClientToServer,
-  WebsocketMessageTypeClientToServer,
 } from '/@/shared';
+import pDebounce from 'p-debounce';
 
 import { QuestionIcon } from '@chakra-ui/icons';
 import {
@@ -35,15 +32,15 @@ import {
   TabPanels,
   Tabs,
 } from '@chakra-ui/react';
-import {
-  useHashParam,
-  useHashParamInt,
-} from '@metapages/hash-query';
+import { useHashParamInt } from '@metapages/hash-query';
 import { useMetaframeAndInput } from '@metapages/metaframe-hook';
 import {
   isIframe,
   MetaframeInputMap,
 } from '@metapages/metapage';
+
+import { UPLOAD_DOWNLOAD_BASE_URL } from '../config';
+import { useStore } from '../store';
 
 export const TabMenu: React.FC = () => {
   const [tabIndex, setTabIndex] = useHashParamInt("tab", 0);
@@ -52,13 +49,20 @@ export const TabMenu: React.FC = () => {
   // 2. send the job definition if changed
   // 3. Show the status of the current job, and allow cancelling
   // 4. If the current job is finished, send the outputs (once)
-  const dockerJob = useDockerJobDefinition();
-  const { jobStates, stateChange } = useServerState();
+  const dockerJob = useStore((state) => state.newJobDefinition);
+  const jobs = useStore((state) => state.jobStates);
+  const connected = useStore((state) => state.isServerConnected);
+  const sendClientStateChange = useStore(
+    (state) => state.sendClientStateChange
+  );
+
   const [jobHash, setJobHash] = useState<string | undefined>(undefined);
   const [jobHashCurrentOutputs, setJobHashCurrentOutputs] = useState<
     string | undefined
   >(undefined);
-  const [job, setJob] = useState<DockerJobDefinitionRow | undefined>(undefined);
+  const [ourConfiguredJob, setOurConfiguredJob] = useState<
+    DockerJobDefinitionRow | undefined
+  >(undefined);
 
   const metaframeBlob = useMetaframeAndInput();
   useEffect(() => {
@@ -68,24 +72,14 @@ export const TabMenu: React.FC = () => {
       metaframeBlob.metaframe.isInputOutputBlobSerialization = false;
     }
   }, [metaframeBlob?.metaframe]);
-  // const metaframe = useContext<MetaframeAndInputsObject>(
-  //   MetaframeAndInputsContext
-  // );
-  const [nocacheString] = useHashParam("nocache");
-
-  // debugging
-  // useEffect(() => {
-  //   console.log(`🍔 TabMenu: useEffect: dockerJob`, dockerJob?.definitionMeta?.definition?.inputs ? Object.keys(dockerJob?.definitionMeta?.definition?.inputs).length : 0)
-  // }, [dockerJob])
+  // const [debug] = useHashParamBoolean("debug");
 
   // Update the local job hash (id) on change
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (dockerJob.definitionMeta) {
-        const jobHashCurrent = await shaObject(
-          dockerJob.definitionMeta.definition
-        );
+      if (dockerJob) {
+        const jobHashCurrent = await shaObject(dockerJob.definition);
         if (cancelled) {
           return;
         }
@@ -107,113 +101,178 @@ export const TabMenu: React.FC = () => {
   // Update the local job definition on change
   useEffect(() => {
     if (!jobHash) {
-      if (job !== undefined) {
-        setJob(undefined);
+      if (ourConfiguredJob !== undefined) {
+        setOurConfiguredJob(undefined);
       }
       return;
     }
-    const newJobState = jobStates?.state?.jobs?.[jobHash];
-    if (!newJobState) {
+    const serverJobState = jobs?.[jobHash];
+    if (!serverJobState) {
       // only clear the job IF it's different from our last inputs
       if (jobHash !== jobHashCurrentOutputs) {
         // console.log('🍔🍔 setJob undefined');
-        setJob(undefined);
+        setOurConfiguredJob(undefined);
       }
-    } else if (!job) {
+    } else if (!ourConfiguredJob) {
       // console.log('🍔🍔 setJob (bc !job)', newJobState);
-      setJob(newJobState);
+      setOurConfiguredJob(serverJobState);
     } else {
       if (
-        newJobState.hash !== job.hash ||
-        newJobState.history.length !== job.history.length
+        serverJobState.hash !== ourConfiguredJob.hash ||
+        serverJobState.history.length !== ourConfiguredJob.history.length
       ) {
         // console.log('🍔🍔 setJob (bc newJobState.hash !== job.hash) ', newJobState);
-        setJob(newJobState);
+        setOurConfiguredJob(serverJobState);
       }
     }
-  }, [jobHash, jobStates, job, setJob]);
+  }, [jobHash, jobs, ourConfiguredJob, setOurConfiguredJob]);
 
   // only maybe update metaframe outputs if the job updates and is finished (with outputs)
   useEffect(() => {
     const metaframeObj = metaframeBlob?.metaframe;
-    if (metaframeObj?.setOutputs && job?.state === DockerJobState.Finished) {
+    if (
+      metaframeObj?.setOutputs &&
+      ourConfiguredJob?.state === DockerJobState.Finished
+    ) {
       const stateFinished: StateChangeValueWorkerFinished =
-        job.value as StateChangeValueWorkerFinished;
+        ourConfiguredJob.value as StateChangeValueWorkerFinished;
       if (isIframe() && stateFinished?.result?.outputs) {
         // const outputs: InputsRefs = stateFinished!.result!.outputs;
-        const {outputs, ...theRest} = stateFinished!.result!;
+        const { outputs, ...theRest } = stateFinished!.result!;
         (async () => {
           const metaframeOutputs: MetaframeInputMap | undefined =
-            await convertJobOutputDataRefsToExpectedFormat(outputs, globalThis.location.origin);
+            await convertJobOutputDataRefsToExpectedFormat(
+              outputs,
+              UPLOAD_DOWNLOAD_BASE_URL
+            );
           // if (metaframeOutputs) {
-            try {
-              metaframeObj.setOutputs!({...metaframeOutputs, ...theRest});
-            } catch (err) {
-              console.error("Failed to send metaframe outputs", err);
-            }
+          try {
+            metaframeObj.setOutputs!({ ...metaframeOutputs, ...theRest });
+          } catch (err) {
+            console.error("Failed to send metaframe outputs", err);
+          }
           // } else {
           //   console.log(`❗no metaframeOutputs`);
           // }
-          setJobHashCurrentOutputs(job.hash);
+          setJobHashCurrentOutputs(ourConfiguredJob.hash);
         })();
       }
     }
-  }, [job, metaframeBlob?.metaframe, setJobHashCurrentOutputs]);
+  }, [ourConfiguredJob, metaframeBlob?.metaframe, setJobHashCurrentOutputs]);
+
+  const sendClientStateChangeDeBounced = useCallback(
+    pDebounce((payload: StateChange) => {
+      // console.log("🍔 ACTUALLY debounced sending payload", payload);
+      sendClientStateChange(payload);
+    }, 200),
+    [sendClientStateChange]
+  );
 
   // track the job state that matches our job definition (created by URL query params and inputs)
   // when we get the correct job state, it's straightforward to just show it
   useEffect(() => {
-
+    if (!connected) {
+      return;
+    }
     let cancelled = false;
 
     (async () => {
-
       // console.log('❔ dockerJob', dockerJob);
       // console.log('❔ jobStates', jobStates);
       // console.log('❔ stateChange', stateChange);
-      if (dockerJob.definitionMeta && jobStates) {
-        const jobHashCurrent = await shaObject(
-          dockerJob.definitionMeta.definition
-        );
+      if (dockerJob && jobs) {
+        const jobHashCurrent = await shaObject(dockerJob.definition);
+
+        // console.log('dockerJob.definitionMeta', dockerJob.definitionMeta);
+        // console.log('jobHashCurrent', jobHashCurrent);
         if (cancelled) {
+          // console.log("cancelled")
           return;
         }
         if (jobHash !== jobHashCurrent) {
           setJobHash(jobHashCurrent);
         }
-        if (jobStates.state.jobs[jobHashCurrent]) {
-          // Do we need to do anything here?
-        } else {
-          if (jobStates && stateChange) {
-            // no job found, let's add it
-            // BUT only if our last outputs aren't this jobId
-            // because the server eventually deletes our job, but we can know we have already computed it
-            if (jobHashCurrentOutputs !== jobHashCurrent) {
-              // inputs are already minified (fat blobs uploaded to the cloud)
-              const definition: DockerJobDefinitionInputRefs =
-                dockerJob.definitionMeta!.definition!;
-              const value: StateChangeValueQueued = {
-                definition,
-                nocache: nocacheString === "1",
-                time: new Date(),
-              };
-              const payload: StateChange = {
-                state: DockerJobState.Queued,
-                value,
-                job: jobHashCurrent,
-                tag: "", // document the meaning of this. It's the worker claim. Might be unneccesary due to history
-              };
 
-              
-              const message: WebsocketMessageClientToServer = {
-                payload,
-                type: WebsocketMessageTypeClientToServer.StateChange,
-              };
-              
-              stateChange(message);
-            }
-          } else {
-            console.error("Why no state change?");
+        // delete the local cache if the job is not cacheable and also Finished
+        // if (!isClientJobCacheable) {
+        //   // not cachable means delete all the caches
+        //   // remove local cache
+        //   console.log(
+        //     `🍔🍔 [${jobHash.substring(
+        //       0,
+        //       6
+        //     )}] cache=false so deleting all local caches of the Finished job`
+        //   );
+        //   // jobs[jobHashCurrent].
+        //   const currentState = jobs[jobHashCurrent];
+        //   if (
+        //     currentState &&
+        //     isJobCacheAllowedToBeDeleted(
+        //       currentState.history[currentState.history.length - 1]
+        //     )
+        //   ) {
+        //     deleteFinishedJob(jobHashCurrent);
+        //     delete jobs[jobHashCurrent];
+        //   }
+        // }
+
+        const sendQueuedStateChange = () => {
+          // console.log(`🍔🍔 sendQueuedStateChange id=${jobHash}`);
+          // inputs are already minified (fat blobs uploaded to the cloud)
+          const value: StateChangeValueQueued = {
+            definition: dockerJob!.definition!,
+            debug: dockerJob.debug,
+            time: Date.now(),
+          };
+          const payload: StateChange = {
+            state: DockerJobState.Queued,
+            value,
+            job: jobHashCurrent,
+            tag: "", // document the meaning of this. It's the worker claim. Might be unneccesary due to history
+          };
+
+          sendClientStateChangeDeBounced(payload);
+        };
+
+        const currentJobFromTheServer = jobs[jobHashCurrent];
+
+        if (currentJobFromTheServer) {
+          // Do we need to do anything here?
+          // console.log("🍔🍔 existing job with the same id id", jobHashCurrent);
+          // console.log(
+          //   "🍔🍔 existing job with the same id",
+          //   currentJobFromTheServer
+          // );
+          // const isCurrentJobFromTheServerFinished =
+          //   currentJobFromTheServer.history[
+          //     currentJobFromTheServer.history.length - 1
+          //   ]?.state === DockerJobState.Finished;
+
+          // if (isCurrentJobFromTheServerFinished) {
+
+          //   if (isClientJobCacheable) {
+          //     console.log('🍔🍔 existing job with the same id is cacheable and finished', jobHashCurrent);
+          //     setOurConfiguredJob(currentJobFromTheServer);
+          //   } else {
+          //     console.log(`!isClientJobCacheable and isCurrentJobFromTheServerFinished SO sendQueuedStateChange`)
+          //     sendQueuedStateChange();
+          //   }
+          // } else {
+          // console.log('🍔🍔 existing server job is not finished, but resending just in case');
+          // sendQueuedStateChange();
+          // console.log(
+          //   "🍔🍔 existing server job is not finished, so we do nothing, since new results will come back cached or not"
+          // );
+          // }
+        } else {
+          // no job found, let's add it
+          // BUT only if our last outputs aren't this jobId
+          // because the server eventually deletes our job, but we can know we have already computed it
+          if (jobHashCurrentOutputs !== jobHashCurrent) {
+            // console.log(
+            //   `jobHashCurrentOutputs !== jobHashCurrent SO sendQueuedStateChange`
+            // );
+            sendQueuedStateChange();
           }
         }
       }
@@ -222,23 +281,29 @@ export const TabMenu: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dockerJob, jobStates, stateChange, jobHashCurrentOutputs]);
+  }, [
+    connected,
+    dockerJob,
+    jobs,
+    sendClientStateChangeDeBounced,
+    jobHashCurrentOutputs,
+  ]);
 
   return (
     <Tabs index={tabIndex} onChange={setTabIndex}>
       <TabList>
         <Tab>
-          <PanelJobLabel job={job} />
+          <PanelJobLabel job={ourConfiguredJob} />
         </Tab>
         <Tab>Inputs</Tab>
         <Tab>
-          <PanelStdLabel stdout={true} job={job} />
+          <PanelStdLabel stdout={true} job={ourConfiguredJob} />
         </Tab>
         <Tab>
-          <PanelStdLabel stdout={false} job={job} />
+          <PanelStdLabel stdout={false} job={ourConfiguredJob} />
         </Tab>
         <Tab>
-          <PanelOutputsLabel job={job} />
+          <PanelOutputsLabel job={ourConfiguredJob} />
         </Tab>
         <Tab>
           <TabLabelQueue />
@@ -251,21 +316,21 @@ export const TabMenu: React.FC = () => {
 
       <TabPanels>
         <TabPanel>
-          <PanelJob job={job} />
+          <PanelJob job={ourConfiguredJob} />
         </TabPanel>
 
         <TabPanel>
           <PanelInputs />
         </TabPanel>
         <TabPanel background="#ECF2F7">
-          <DisplayLogs job={job} stdout={true} />
+          <DisplayLogs job={ourConfiguredJob} stdout={true} />
         </TabPanel>
 
         <TabPanel>
-          <DisplayLogs job={job} stdout={false} />
+          <DisplayLogs job={ourConfiguredJob} stdout={false} />
         </TabPanel>
         <TabPanel>
-          <JobDisplayOutputs job={job} />
+          <JobDisplayOutputs job={ourConfiguredJob} />
         </TabPanel>
         <TabPanel>
           <PanelQueue />
@@ -274,7 +339,14 @@ export const TabMenu: React.FC = () => {
         <TabPanel>
           <iframe
             style={{ width: "100%", height: "90vh" }}
-            src={`https://markdown.mtfm.io/#?url=${globalThis.location.origin}${globalThis.location.pathname.endsWith("/") ? globalThis.location.pathname.substring(0, globalThis.location.pathname.length - 2) : globalThis.location.pathname}/README.md`}
+            src={`https://markdown.mtfm.io/#?url=${globalThis.location.origin}${
+              globalThis.location.pathname.endsWith("/")
+                ? globalThis.location.pathname.substring(
+                    0,
+                    globalThis.location.pathname.length - 2
+                  )
+                : globalThis.location.pathname
+            }/README.md`}
           />
         </TabPanel>
       </TabPanels>

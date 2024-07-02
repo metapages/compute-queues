@@ -1,4 +1,3 @@
-import { useServerState } from '/@/hooks/serverStateHook';
 import {
   DockerJobDefinitionParamsInUrlHash,
   DockerJobDefinitionRow,
@@ -17,13 +16,15 @@ import {
   useHashParamJson,
 } from '@metapages/hash-query';
 
+import { useStore } from '../store';
+
 export const StatusIcon: React.FC<{
   job?: DockerJobDefinitionRow;
 }> = ({ job }) => {
   const [queue] = useHashParam("queue", "");
   const [jobDefinitionBlob] =
     useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
-  const serverState = useServerState();
+  const isServerConnected = useStore((state) => state.isServerConnected);
   const state = job?.state;
 
   let isJobHereOrOnServer = !!job;
@@ -37,7 +38,7 @@ export const StatusIcon: React.FC<{
     return <WarningIcon color="red" />;
   }
 
-  if (!!queue && !serverState.connected) {
+  if (!!queue && !isServerConnected) {
     return <Spinner size="sm" />;
   }
 

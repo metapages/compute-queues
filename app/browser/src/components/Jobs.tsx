@@ -5,13 +5,12 @@ import {
 } from 'react';
 
 import {
-  BroadcastJobStates,
   DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
+  JobsStateMap,
   StateChange,
   StateChangeValueQueued,
-  WebsocketMessageTypeClientToServer,
 } from '/@/shared';
 
 import { CloseIcon } from '@chakra-ui/icons';
@@ -26,11 +25,10 @@ import {
   Tr,
 } from '@chakra-ui/react';
 
-import { useServerState } from '../hooks/serverStateHook';
+import { useStore } from '../store';
 
 export const Jobs: React.FC = () => {
-  const {jobStates} = useServerState();
-  const jobs = jobStates?.state?.jobs || {};
+  const jobs = useStore((state) => state.jobStates);
 
   const jobIds = jobs ? Object.keys(jobs) : [];
   jobIds.sort((jobA, jobB) => {
@@ -67,7 +65,7 @@ export const Jobs: React.FC = () => {
         </Thead>
         <Tbody>
           {jobIds.map((jobHash) => (
-            <JobComponent key={jobHash} jobId={jobHash} state={jobStates} />
+            <JobComponent key={jobHash} jobId={jobHash} jobs={jobs} />
           ))}
         </Tbody>
       </Table>
@@ -77,16 +75,17 @@ export const Jobs: React.FC = () => {
 
 const JobComponent: React.FC<{
   jobId: string;
-  state: BroadcastJobStates;
-}> = ({ jobId, state }) => {
+  jobs: JobsStateMap;
+}> = ({ jobId, jobs }) => {
   // How many jobs is this worker running
-  const jobBlob = state.state.jobs[jobId];
+  const jobBlob = jobs[jobId];
+  // console.log('jobBlob', jobBlob);
   const definition = (jobBlob!.history[0]!.value as StateChangeValueQueued)
     .definition;
 
   return (
     <Tr>
-      <Td>{jobId}</Td>
+      <Td>{jobId.substring(0, 6)}</Td>
       <Td>{definition.image}</Td>
       <Td>{definition.command}</Td>
       <Td>TBD</Td>
@@ -102,34 +101,34 @@ const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({
   job,
 }) => {
   const [clicked, setClicked] = useState<boolean>(false);
-  const {stateChange} = useServerState();
+  const sendClientStateChange = useStore(
+    (state) => state.sendClientStateChange
+  );
 
   useEffect(() => {
     setClicked(false);
-  }, [stateChange]);
+  }, [sendClientStateChange]);
 
   const state = job?.state;
 
   const onClickCancel = useCallback(() => {
-    if (stateChange && job) {
+    if (job) {
       setClicked(true);
-      stateChange({
-        type: WebsocketMessageTypeClientToServer.StateChange,
-        payload: {
-          tag: "",
-          state: DockerJobState.Finished,
-          job: job.hash,
-          value: {
-            reason: DockerJobFinishedReason.Cancelled,
-            time: new Date(),
-          },
-        } as StateChange,
-      });
+      sendClientStateChange({
+        tag: "",
+        state: DockerJobState.Finished,
+        job: job.hash,
+        value: {
+          reason: DockerJobFinishedReason.Cancelled,
+          time: Date.now(),
+        },
+      } as StateChange);
     }
-  }, [job, stateChange]);
+  }, [job, sendClientStateChange]);
 
   switch (state) {
     case DockerJobState.Queued:
+    case DockerJobState.ReQueued:
     case DockerJobState.Running:
       return (
         <Button
