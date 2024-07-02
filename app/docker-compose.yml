@@ -22,7 +22,7 @@ services:
       - DENO_INSTALL_ROOT=/deno
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
       - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio.worker-metaframe.localhost}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
@@ -47,6 +47,8 @@ services:
         condition: service_started
       denokv:
         condition: service_started
+      redis:
+        condition: service_started
     image: denoland/deno:alpine-1.43.6
     command: deno run --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
     working_dir: /app/api
@@ -63,9 +65,9 @@ services:
       - DENO_INSTALL_ROOT=/deno
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
       # - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio:9000}
-      - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio.worker-metaframe.localhost}
+      # - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio.worker-metaframe.localhost}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
@@ -101,6 +103,8 @@ services:
         condition: service_started
       denokv:
         condition: service_started
+      redis:
+        condition: service_started
     image: denoland/deno:alpine-1.43.6
     command: deno run --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
     working_dir: /app/api
@@ -117,8 +121,8 @@ services:
       - DENO_INSTALL_ROOT=/deno
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
-      - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio.worker-metaframe.localhost}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
+      # - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio.worker-metaframe.localhost}
       # - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio:9000}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
@@ -255,7 +259,7 @@ services:
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-west-2}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
     extra_hosts:
       - host.docker.internal:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
@@ -274,7 +278,7 @@ services:
       - "9000"
     environment:
       MINIO_SERVER_URL: http://minio.worker-metaframe.localhost
-      MINIO_REGION: ${AWS_DEFAULT_REGION:-us-west-2}
+      MINIO_REGION: ${AWS_REGION:-us-west-2}
       MINIO_ROOT_PASSWORD: minioaccesskey123123
       MINIO_ROOT_USER: minioaccesskey123123
     extra_hosts:

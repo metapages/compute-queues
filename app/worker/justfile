@@ -36,7 +36,7 @@ normal                := '\033[0m'
 
 # Run the worker locally, pointing to the previous API
 @dev-docker-mtfm-io queue="local1":
-    deno run --allow-all src/cli.ts run --cores=1 --api-server-address=https://docker.mtfm.io {{queue}}
+    deno run --allow-all src/cli.ts run --cores=1 --api-server-address=https://container.mtfm.io {{queue}}
 
 # Quick type check
 @check:

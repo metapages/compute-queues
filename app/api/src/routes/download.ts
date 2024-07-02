@@ -9,11 +9,11 @@ import {
 } from './s3config.ts';
 
 export const downloadHandler = async (c: Context) => {
-    const hash: string | undefined = c.req.param("hash");
+    const key: string | undefined = c.req.param("key");
 
-    if (!hash) {
+    if (!key) {
         c.status(400)
-        return c.text('Missing hash');
+        return c.text('Missing key');
     }
     // console.log('params', params);
 
@@ -24,13 +24,12 @@ export const downloadHandler = async (c: Context) => {
     //  ContentLength: 4
     // ContentMD5?: string;
     // ContentType?: string;
-    const command = new GetObjectCommand({ ...bucketParams, Key: hash});
+    const command = new GetObjectCommand({ ...bucketParams, Key: key});
     const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
     return c.json({
         url, ref: {
             value: url,
             type: DataRefType.url,
-            hash,
         }
     });
 }

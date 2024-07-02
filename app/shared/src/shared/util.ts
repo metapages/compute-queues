@@ -20,12 +20,12 @@ export const fetchRobust = fetchRetry(fetch, {
   retryOn: (attempt:number, error:any, response:Response | null) => {
     // retry on any network error, or 4xx or 5xx status codes
     if (error !== null || (response && response.status >= 400)) {
-      console.log(`retrying, attempt number ${attempt + 1}`);
+      
+      console.log(`retrying, response.status=${response?.status} response.statusText=${response?.statusText} attempt number ${attempt + 1} url=${response?.url}`);
       console.error(error);
-      // (async() => {
-      //   response?.statusText
-      // })();
-      console.error(response?.statusText);
+      if (attempt > 7) {
+        return false;
+      }
       return true;
     }
     return false;

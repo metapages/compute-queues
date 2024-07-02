@@ -27,7 +27,6 @@ export const uploadHandler = async (c: Context) => {
     try {
 
         const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-        // console.log('url', url);
         return c.json({
             url, ref: {
                 value: key, // no http means we know it's an internal address, workers will know how to reach

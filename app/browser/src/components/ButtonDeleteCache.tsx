@@ -20,6 +20,7 @@ import {
   useToast,
 } from '@chakra-ui/react';
 
+import { deleteFinishedJob } from '../cache';
 import { useStore } from '../store';
 
 interface ButtonDeleteCacheProps {
@@ -30,6 +31,7 @@ export const ButtonDeleteCache: React.FC<ButtonDeleteCacheProps> = ({
   job,
 }) => {
   const toast = useToast();
+  const jobs = useStore((state) => state.jobStates);
   const sendMessage = useStore(
     (state) => state.sendMessage
   );
@@ -63,7 +65,7 @@ export const ButtonDeleteCache: React.FC<ButtonDeleteCacheProps> = ({
         break;
     }
 
-  }, [rawMessage, sentJobId])
+  }, [rawMessage, sentJobId, toast])
   
   
   const [isLargerThan800] = useMediaQuery("(min-width: 800px)");
@@ -72,6 +74,10 @@ export const ButtonDeleteCache: React.FC<ButtonDeleteCacheProps> = ({
 
     const jobId = job?.hash;
     if (jobId) {
+      deleteFinishedJob(jobId);
+      // NB: I am NOT updating the store state because I don't want to retrigger
+      // a resubmit, the user can do that.
+      delete jobs[jobId];
       setSendJobId(jobId);
       sendMessage({
         type: WebsocketMessageTypeClientToServer.ClearJobCache,
@@ -80,7 +86,7 @@ export const ButtonDeleteCache: React.FC<ButtonDeleteCacheProps> = ({
         } as PayloadClearJobCache,
       } as WebsocketMessageClientToServer);
     }
-  }, [job, sendMessage]);
+  }, [job, sendMessage, jobs]);
 
   
   const isCacheDeletable = job?.state === DockerJobState.Finished;
