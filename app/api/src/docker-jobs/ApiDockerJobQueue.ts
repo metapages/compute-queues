@@ -259,11 +259,13 @@ export class ApiDockerJobQueue {
       // console.log(`🌘 recieved broadcast message ${payload.type}`, payload)
       switch (payload.type) {
         case "job-states-minimal":
+          // If any of the jobs are different, update them
           // console.log(`[${this.address.substring(0, 6)}] 📡 recieved job-states-minimal`, payload.value)
           const jobStatesMinimal: string[] = payload.value as string[];
           if (!jobStatesMinimal) {
             break;
           }
+
           for (let i = 0; i < jobStatesMinimal.length; i += 2) {
             const jobId = jobStatesMinimal[i];
             const state = jobStatesMinimal[i + 1];
@@ -273,10 +275,17 @@ export class ApiDockerJobQueue {
             ) {
               (async () => {
                 const loadedJobResult = await db.queueJobGet(this.address, jobId);
-                if (loadedJobResult) {
+                if (!loadedJobResult) {
+                  return;
+                }
+                const resolvedJob = resolveMostCorrectJob(
+                  this.state.jobs[jobId],
+                  loadedJobResult
+                );
+                if (resolvedJob && resolvedJob !== this.state.jobs[jobId]) { 
                   this.state.jobs[jobId] = loadedJobResult;
-                  // console.log(`[${this.address.substring(0, 6)}] 📡 recieved job-states-minimal job different, broadcasting...`, jobId)
-                  this.broadcastJobStateToChannel(jobId);
+                  console.log(`[${this.address.substring(0, 6)}] 📡 recieved job-states-minimal job different, broadcasting...`, jobId)
+                  this.broadcastJobStatesToChannel([jobId]);
                   this.broadcastJobStatesToWebsockets([jobId]);
                 }
 
@@ -563,17 +572,19 @@ export class ApiDockerJobQueue {
     console.log(
       `On startup, got ${allPersistedJobInTheQueue.length} jobs from the db`
     );
-    // Why broadcase here? New UserDockerJobQueue instances will get their
-    // own state from the db
-    // this.broadcastJobStateToChannel();
+    // Why broadcast here? New UserDockerJobQueue instances will get their
+    // own state from the db. Probably race conditions, it won't hurt at all
+    // since correct job state always wins
+    this.broadcastJobStatesToChannel();
     this.broadcastJobStatesToWebsockets();
   }
 
-  broadcastJobStateToChannel(jobId: string) {
+  broadcastJobStatesToChannel(jobIds?: string[]) {
+    if (!jobIds) {
+      jobIds = Object.keys(this.state.jobs);
+    }
     const stateWithOneJob: JobStates = {
-      jobs: {
-        [jobId]: this.state.jobs[jobId],
-      },
+      jobs: Object.fromEntries(jobIds.filter(jobId => this.state.jobs[jobId]).map((jobId) => [jobId, this.state.jobs[jobId]])),
     };
     const message: BroadcastChannelMessage = {
       type: "job-states",
@@ -585,12 +596,6 @@ export class ApiDockerJobQueue {
     // NB! This is a single job update not all jobs
     // as sending all jobs is declaring what jobs are in the queue
   }
-
-  // disposeCheck() {
-  //   if (this.clients.length === 0 && this.workers.myWorkers.length === 0) {
-  //     this.dispose();
-  //   }
-  // }
 
   dispose() {
     this.channel.onmessage = null;
@@ -625,17 +630,6 @@ export class ApiDockerJobQueue {
       }
     }
 
-    // if (change.state !== DockerJobState.Queued) {
-    //   // did we miss a job? or is this a job that was never queued?
-    //   console.log(
-    //     `jobId=${jobId.substring(
-    //       0,
-    //       6
-    //     )} ignoring because not queued but there's no existing job`
-    //   );
-    //   return;
-    // }
-
     let jobRow: DockerJobDefinitionRow | undefined = this.state.jobs[jobId];
 
     const updateState = async (replace = false) => {
@@ -652,7 +646,7 @@ export class ApiDockerJobQueue {
       jobRow!.state = change.state;
       jobRow!.value = change.value;
       // broadcast first
-      this.broadcastJobStateToChannel(jobId);
+      this.broadcastJobStatesToChannel([jobId]);
       this.broadcastJobStatesToWebsockets([jobId]);
       // these are slower since they involve s3
       try {
@@ -684,7 +678,7 @@ export class ApiDockerJobQueue {
     };
 
     const broadcastCurrentStateBecauseIDoubtStateIsSynced = async () => {
-      this.broadcastJobStateToChannel(jobId);
+      this.broadcastJobStatesToChannel([jobId]);
       await this.broadcastJobStatesToWebsockets([jobId]);
     };
 
