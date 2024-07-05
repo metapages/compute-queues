@@ -275,6 +275,9 @@ export class ApiDockerJobQueue {
             ) {
               (async () => {
                 const loadedJobResult = await db.queueJobGet(this.address, jobId);
+                if (!loadedJobResult) {
+                  return;
+                }
                 const resolvedJob = resolveMostCorrectJob(
                   this.state.jobs[jobId],
                   loadedJobResult
