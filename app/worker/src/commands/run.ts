@@ -87,7 +87,7 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
         console.log('message not JSON')
         return;
       }
-      console.log('message', messageString);
+      // console.log('message', messageString);
       const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(messageString);
       switch (possibleMessage.type) {
         // definitive list of jobs

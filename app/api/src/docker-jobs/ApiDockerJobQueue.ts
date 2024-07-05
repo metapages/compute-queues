@@ -259,7 +259,7 @@ export class ApiDockerJobQueue {
       // console.log(`🌘 recieved broadcast message ${payload.type}`, payload)
       switch (payload.type) {
         case "job-states-minimal":
-          console.log(`[${this.address.substring(0, 6)}] 📡 recieved job-states-minimal`, payload.value)
+          // console.log(`[${this.address.substring(0, 6)}] 📡 recieved job-states-minimal`, payload.value)
           const jobStatesMinimal: string[] = payload.value as string[];
           if (!jobStatesMinimal) {
             break;
@@ -275,7 +275,7 @@ export class ApiDockerJobQueue {
                 const loadedJobResult = await db.queueJobGet(this.address, jobId);
                 if (loadedJobResult) {
                   this.state.jobs[jobId] = loadedJobResult;
-                  console.log(`[${this.address.substring(0, 6)}] 📡 recieved job-states-minimal job different, broadcasting...`, jobId)
+                  // console.log(`[${this.address.substring(0, 6)}] 📡 recieved job-states-minimal job different, broadcasting...`, jobId)
                   this.broadcastJobStateToChannel(jobId);
                   this.broadcastJobStatesToWebsockets([jobId]);
                 }
@@ -1329,7 +1329,7 @@ export class ApiDockerJobQueue {
         .flat(),
     };
     // use the BroadcastChannel to notify other servers
-    console.log(`[${this.address.substring(0, 6)}] 📡 broadcastMinimalJobsStatesToChannel`, message.value)
+    // console.log(`[${this.address.substring(0, 6)}] 📡 broadcastMinimalJobsStatesToChannel`, message.value)
     this.channel.postMessage(message);
   }
   /**

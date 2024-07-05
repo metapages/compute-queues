@@ -63,6 +63,7 @@ Deno.test(
       }
     };
 
+    
     console.log(`opening the socket to the API server...`)
     await open(socket);
     console.log(`...socket opened. Sending message...`, message);
