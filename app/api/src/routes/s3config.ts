@@ -11,11 +11,11 @@ const AWS_ENDPOINT :string | undefined = Deno.env.get("AWS_ENDPOINT");
 const AWS_ACCESS_KEY_ID = Deno.env.get("AWS_ACCESS_KEY_ID")!
 const AWS_SECRET_ACCESS_KEY = Deno.env.get("AWS_SECRET_ACCESS_KEY")!
 
-// console.log('Bucket', Bucket);
-// console.log('AWS_REGION', AWS_REGION);
-// console.log('endpoint', endpoint);
-// console.log('AWS_ACCESS_KEY_ID', AWS_ACCESS_KEY_ID);
-// console.log('AWS_SECRET_ACCESS_KEY', AWS_SECRET_ACCESS_KEY);
+console.log('Bucket', Bucket);
+console.log('AWS_REGION', AWS_REGION);
+console.log('AWS_ENDPOINT', AWS_ENDPOINT);
+console.log('AWS_ACCESS_KEY_ID', AWS_ACCESS_KEY_ID);
+console.log('AWS_SECRET_ACCESS_KEY', AWS_SECRET_ACCESS_KEY);
 
 export const bucketParams = { 
   Bucket,
@@ -36,7 +36,11 @@ const config = {
 };
 
 export const s3Client = new S3Client(config);
-const data = await s3Client.send(new ListBucketsCommand({...bucketParams}));
+try {
+  const data = await s3Client.send(new ListBucketsCommand({...bucketParams}));
+} catch(err) {
+  console.error(err);
+}
 // console.log('data', data);
 
 // Connecting to a local MinIO server:

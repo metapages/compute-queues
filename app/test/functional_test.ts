@@ -15,6 +15,7 @@ import {
 import { createNewContainerJobMessage } from '../shared/src/shared/jobtools.ts';
 
 const API_URL = Deno.env.get("API_URL") || "http://api1:8081";
+console.log('API_URL', API_URL);
 
 Deno.test(
   "pretend to be a client: submit job and get expected results",
@@ -62,8 +63,12 @@ Deno.test(
       }
     };
 
+    
+    console.log(`opening the socket to the API server...`)
     await open(socket);
+    console.log(`...socket opened. Sending message...`, message);
     socket.send(JSON.stringify(message));
+    console.log(`...awaiting job to finish`);
     const result = await jobCompleteDeferred;
     assertEquals(result, ".\n..\n.dockerenv\nbin\ndev\netc\nhome\ninputs\nlib\nmedia\nmnt\nopt\noutputs\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n");
   
