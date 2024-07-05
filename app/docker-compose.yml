@@ -10,7 +10,7 @@ services:
       api2: 
         condition: service_healthy
       minio:
-        condition: service_started
+        condition: service_healthy
       denokv:
         condition: service_started
     image: denoland/deno:alpine-1.43.6
@@ -44,11 +44,11 @@ services:
       traefik: 
         condition: service_started
       minio:
-        condition: service_started
+        condition: service_healthy
       denokv:
         condition: service_started
       redis:
-        condition: service_started
+        condition: service_healthy
     image: denoland/deno:alpine-1.43.6
     command: deno run --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
     working_dir: /app/api
@@ -104,7 +104,7 @@ services:
       denokv:
         condition: service_started
       redis:
-        condition: service_started
+        condition: service_healthy
     image: denoland/deno:alpine-1.43.6
     command: deno run --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
     working_dir: /app/api
@@ -276,6 +276,11 @@ services:
     command: server --address :9000 /data
     expose:
       - "9000"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     environment:
       MINIO_SERVER_URL: http://minio.worker-metaframe.localhost
       MINIO_REGION: ${AWS_REGION:-us-west-2}
@@ -343,6 +348,8 @@ services:
   redis:
     container_name: wm-redis
     image: redis:7.2.4
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
     ports:
       - "6379:6379"
 

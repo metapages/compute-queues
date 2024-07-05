@@ -34,12 +34,23 @@ down +args="": _ensure-all
   just shared/check
   just cli/check
 
+status queue="local1":
+    curl https://{{APP_FQDN}}:{{APP_PORT}}/{{queue}}/status | jq .
+
+status-test queue="local1":
+    APP_PORT=4470 curl https://{{APP_FQDN}}:4470/{{queue}}/status | jq .
+
+status-prod queue="public1":
+    curl https://container.mtfm.io/{{queue}}/status | jq .
+
 @test:
-    docker compose up --remove-orphans --detach
-    just worker/test
-    just test/test
-    just shared/test
-    just cli/test
+    just down -v
+    APP_PORT=4470 docker compose up --remove-orphans --detach
+    APP_PORT=4470 just worker/test
+    APP_PORT=4470 just test/test
+    APP_PORT=4470 just shared/test
+    APP_PORT=4470 just cli/test
+    just down -v
 
 # Clean up the project
 @test-cleanup:

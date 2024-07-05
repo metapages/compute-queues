@@ -1,4 +1,5 @@
 import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
+import { ms } from 'ms';
 import ReconnectingWebSocket from 'npm:reconnecting-websocket@4.4.0';
 
 import mod from '../../mod.json' with { type: 'json' };
@@ -58,24 +59,25 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
     console.log(`💥🚀💥 disconnected! ${url}`)
   });
 
+  const intervalSinceNoTrafficToTriggerReconnect = ms("10s") as number;
+  setInterval(() => {
+  if ((Date.now() - timeLastPong) >= intervalSinceNoTrafficToTriggerReconnect) {
+    console.log(`Reconnecting because no PONG since ${(Date.now() - timeLastPong) / 1000}s `);
+    rws.reconnect();
+  }
+  }, ms("2s") as number);
+
   rws.addEventListener('message', (message: MessageEvent) => {
     try {
       const messageString = message.data.toString();
+
       if (messageString === 'PONG') {
         timeLastPong = Date.now();
 
         // wait a bit then send a ping
         setTimeout(() => {
-          if ((Date.now() - timeLastPing) >= 5000) {
-            rws.send('PING');
-            timeLastPing = Date.now();
-          }
-          setTimeout(() => {
-            if ((Date.now() - timeLastPong) >= 10000 && rws.readyState === rws.OPEN) {
-              console.log(`Reconnecting because no PONG since ${Date.now() - timeLastPong}ms `);
-              rws.reconnect();
-            }
-          }, 10000);
+          rws.send('PING');
+          timeLastPing = Date.now();
         }, 5000);
 
         return;
@@ -85,6 +87,7 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
         console.log('message not JSON')
         return;
       }
+      console.log('message', messageString);
       const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(messageString);
       switch (possibleMessage.type) {
         // definitive list of jobs
@@ -157,7 +160,5 @@ export const runCommand = new Command()
       config.gpus,
       config.server
     );
-    // if (false) {
-      connectToServer({ server: config.server || "", queueId: queue, cpus: cores || 1, workerId: config.id });
-    // }
+    connectToServer({ server: config.server || "", queueId: queue, cpus: cores || 1, workerId: config.id });
   });

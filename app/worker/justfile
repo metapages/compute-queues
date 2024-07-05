@@ -1,9 +1,13 @@
 # Always use locally installed tools (always pin versions)
-set shell                          := ["bash", "-c"]
-set dotenv-load                    := true
+set shell             := ["bash", "-c"]
+set dotenv-load       := true
+set export            := true
+APP_PORT              := env_var_or_default("APP_PORT", "443")
+API_URL               := "https://worker-metaframe.localhost:" + APP_PORT
 # minimal formatting, bold is very useful
 bold                  := '\033[1m'
 normal                := '\033[0m'
+
 
 @_help:
     just --list --unsorted --list-heading $'Worker Commands:\n'
