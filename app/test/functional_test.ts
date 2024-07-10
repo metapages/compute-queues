@@ -124,7 +124,7 @@ Deno.test(
               const finishedState = jobState.value as StateChangeValueWorkerFinished;
               const lines :string = finishedState.result?.stdout?.[0]!;
               const i = messages.findIndex((m) => m.jobId === jobId);
-              if (!jobIdsFinished.has(jobId)) {
+              if (i >= 0 && lines && !jobIdsFinished.has(jobId)) {
                 promises[i]?.resolve(lines.trim());
                 jobIdsFinished.add(jobId);
               }

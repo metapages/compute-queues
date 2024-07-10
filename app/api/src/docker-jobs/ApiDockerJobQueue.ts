@@ -145,8 +145,17 @@ const resolveMostCorrectJob = (
   jobB: DockerJobDefinitionRow
 ): DockerJobDefinitionRow | null => {
   if (equal(jobA, jobB)) {
-    return null;
+    return jobA;
   }
+
+  if (jobA && !jobB) {
+    return jobA;
+  }
+
+  if (!jobA && jobB) {
+    return jobB;
+  }
+
   const jobALastChange = jobA.history[jobA.history.length - 1];
   const isJobAFinished = jobALastChange.state === DockerJobState.Finished;
 
