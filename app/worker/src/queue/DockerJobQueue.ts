@@ -15,6 +15,7 @@ import {
   StateChangeValueWorkerFinished,
   WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
+  WebsocketMessageWorkerToServer,
   WorkerRegistration,
   WorkerStatusResponse,
 } from '../shared/mod.ts';
@@ -40,7 +41,9 @@ export interface DockerJobQueueArgs extends WorkerRegistration {
 type WorkerJobQueueItem = {
     execution: DockerJobExecution | null;
     definition: DockerJobDefinitionInputRefs;
-    // TODO: put local state
+    // We might have to send this multiple times, so keep it around
+    runningMessageToServer: WebsocketMessageWorkerToServer;
+    
 }
 
 const UPDATE_WORKERS_INTERVAL = ms("5s")
@@ -97,6 +100,9 @@ export class DockerJobQueue {
             type: WebsocketMessageTypeWorkerToServer.WorkerRegistration,
             payload: registration,
         });
+        for (const runningQueueObject of Object.values(this.queue)) {
+            this.sender(runningQueueObject.runningMessageToServer);
+        }
     }
 
 
@@ -108,10 +114,10 @@ export class DockerJobQueue {
     //     this._claimJobs(state);
     // }
 
-    onUpdateUpdateASubsetOfJobs(message: BroadcastJobStates) {
+    async onUpdateUpdateASubsetOfJobs(message: BroadcastJobStates) {
         message.isSubset = true;
         this._checkRunningJobs(message);
-        this._claimJobs(message);
+        await this._claimJobs(message);
     }
 
     onUpdateSetAllJobStates(message: BroadcastJobStates) {
@@ -195,25 +201,25 @@ export class DockerJobQueue {
 
         // Remove jobs not in the jobState update from our local store
         // Maybe in the future we keep around
-        // for (const storedJobDefinitionId of Object.keys(this.jobs)) {
+        // for (const storedJobDefinitionId of Object.keys(this.jobss)) {
         //     if (!jobStates[storedJobDefinitionId]) {
         //         delete this.jobs[storedJobDefinitionId];
         //     }
         // }
     }
 
-    _claimJobs(message: BroadcastJobStates) {
+    async _claimJobs(message: BroadcastJobStates) {
         const jobStates = message.state.jobs;
         // check if the server says I have a job running (that I told it)
         // but I don't have it running now (I restarted?) and didn't reconnect
         // to the running container
 
         const jobsServerSaysAreRunningOnMe = Object.keys(jobStates).filter(key => jobStates[key].state === DockerJobState.Running && (jobStates[key].value as StateChangeValueRunning).worker === this.workerId);
-        jobsServerSaysAreRunningOnMe.forEach(runningJobId => {
+        for (const runningJobId of jobsServerSaysAreRunningOnMe) {
             if (!this.queue[runningJobId]) {
-                this._startJob(jobStates[runningJobId]);
+                await this._startJob(jobStates[runningJobId]);
             }
-        });
+        }
 
         // only care about queued jobs
         const queuedJobKeys: string[] = Object.keys(jobStates)
@@ -223,8 +229,7 @@ export class DockerJobQueue {
             const jobKey = queuedJobKeys.pop()!;
             const job = jobStates[jobKey]
             // console.log(`[${job.hash}] about to claim ${JSON.stringify(job)}`)
-            this._startJob(job);
-            return;
+            await this._startJob(job);
         }
     }
     
@@ -237,15 +242,14 @@ export class DockerJobQueue {
             return;
         }
 
-        // add a placeholder on the queue for this job
-        this.queue[jobBlob.hash] = { execution: null, definition };
+        
 
         // tell the server we've started the job
         const valueRunning: StateChangeValueRunning = {
             worker: this.workerId,
             time: Date.now(),
         };
-        this.sender({
+        const runningMessageToServer: WebsocketMessageWorkerToServer = {
             type: WebsocketMessageTypeWorkerToServer.StateChange,
             payload: {
                 job: jobBlob.hash,
@@ -253,146 +257,156 @@ export class DockerJobQueue {
                 state: DockerJobState.Running,
                 value: valueRunning,
             }
-        });
-
-        let volumes: { inputs: Volume, outputs: Volume };
-        try {
-            volumes = await convertIOToVolumeMounts({id:jobBlob.hash, definition}, config.server, this.workerId);
-        } catch (err) {
-            console.error(`💥 [${this.workerId.substring(0,6)}]`, err);
-            // TODO too much code duplication here
-            // Delete from our local queue before sending
-            // TODO: cache locally before attempting to send
-            delete this.queue[jobBlob.hash];
-
-            const valueError: StateChangeValueWorkerFinished = {
-                reason: DockerJobFinishedReason.Error,
-                worker: this.workerId,
-                time: Date.now(),
-                result: ({
-                    error: `${err}`,
-                } as DockerRunResultWithOutputs),
-            };
-
-            this.sender({
-                type: WebsocketMessageTypeWorkerToServer.StateChange,
-                payload: {
-                    job: jobBlob.hash,
-                    tag: this.workerId,
-                    state: DockerJobState.Finished,
-                    value: valueError,
-                }
-            });
-            return;
         }
+        // add a placeholder on the queue for this job
+        this.queue[jobBlob.hash] = { execution: null, definition, runningMessageToServer };
+        this.sender(runningMessageToServer);
 
+        // after this it can all happen async
 
-        // TODO hook up the durationMax to a timeout
-        // TODO add input mounts
-        const executionArgs: DockerJobArgs = {
-            id: jobBlob.hash,
-            image: definition.image,
-            command: definition.command ? convertStringToDockerCommand(definition.command, definition.env) : undefined,
-            entrypoint: definition.entrypoint ? convertStringToDockerCommand(definition.entrypoint, definition.env) : undefined,
-            workdir: definition.workdir,
-            env: definition.env,
-            volumes: [volumes!.inputs, volumes!.outputs],
-            gpu: definition.gpu,
-            // outStream?: Writable;
-            // errStream?: Writable;
-        }
+        (async () => {
+        
 
-        const dockerExecution: DockerJobExecution = await dockerJobExecute(executionArgs);
-        if (!this.queue[jobBlob.hash]) {
-            console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] after await jobBlob.hash no job in queue so killing`);
-            // what happened? the job was removed from the queue by someone else?
-            dockerExecution.kill();
-            return;
-        }
-        this.queue[jobBlob.hash].execution = dockerExecution;
+            let volumes: { inputs: Volume, outputs: Volume };
+            try {
+                volumes = await convertIOToVolumeMounts({id:jobBlob.hash, definition}, config.server, this.workerId);
+            } catch (err) {
+                console.error(`💥 [${this.workerId.substring(0,6)}]`, err);
+                // TODO too much code duplication here
+                // Delete from our local queue before sending
+                // TODO: cache locally before attempting to send
+                delete this.queue[jobBlob.hash];
 
-        dockerExecution.finish.then(async (result: DockerRunResult) => {
-            console.log(`[${jobBlob.hash.substring(0, 6)}] result ${JSON.stringify(result, null, '  ').substr(0, 200)}`);
-
-            const resultWithOutputs: DockerRunResultWithOutputs = result as DockerRunResultWithOutputs;
-            resultWithOutputs.outputs = {};
-
-            let valueFinished: StateChangeValueWorkerFinished | undefined;
-            if (result.error) {
-                // no outputs on error
-                valueFinished = {
+                const valueError: StateChangeValueWorkerFinished = {
                     reason: DockerJobFinishedReason.Error,
                     worker: this.workerId,
                     time: Date.now(),
-                    result: resultWithOutputs,
+                    result: ({
+                        error: `${err}`,
+                    } as DockerRunResultWithOutputs),
                 };
 
-            } else {
-                // get outputs
-                try {
-                    const outputs = await getOutputs(jobBlob, this.workerId);
-                    valueFinished = {
-                        reason: DockerJobFinishedReason.Success,
-                        worker: this.workerId,
-                        time: Date.now(),
-                        result: { ...result, outputs },
-                    };
-                } catch (err) {
-                    console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] 💥 failed to getOutputs ${err}`);
+                this.sender({
+                    type: WebsocketMessageTypeWorkerToServer.StateChange,
+                    payload: {
+                        job: jobBlob.hash,
+                        tag: this.workerId,
+                        state: DockerJobState.Finished,
+                        value: valueError,
+                    }
+                });
+                return;
+            }
+
+
+            // TODO hook up the durationMax to a timeout
+            // TODO add input mounts
+            const executionArgs: DockerJobArgs = {
+                id: jobBlob.hash,
+                image: definition.image,
+                command: definition.command ? convertStringToDockerCommand(definition.command, definition.env) : undefined,
+                entrypoint: definition.entrypoint ? convertStringToDockerCommand(definition.entrypoint, definition.env) : undefined,
+                workdir: definition.workdir,
+                env: definition.env,
+                volumes: [volumes!.inputs, volumes!.outputs],
+                gpu: definition.gpu,
+                // outStream?: Writable;
+                // errStream?: Writable;
+            }
+
+            const dockerExecution: DockerJobExecution = await dockerJobExecute(executionArgs);
+            if (!this.queue[jobBlob.hash]) {
+                console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] after await jobBlob.hash no job in queue so killing`);
+                // what happened? the job was removed from the queue by someone else?
+                dockerExecution.kill();
+                return;
+            }
+            this.queue[jobBlob.hash].execution = dockerExecution;
+
+            dockerExecution.finish.then(async (result: DockerRunResult) => {
+                console.log(`[${jobBlob.hash.substring(0, 6)}] result ${JSON.stringify(result, null, '  ').substr(0, 200)}`);
+
+                const resultWithOutputs: DockerRunResultWithOutputs = result as DockerRunResultWithOutputs;
+                resultWithOutputs.outputs = {};
+
+                let valueFinished: StateChangeValueWorkerFinished | undefined;
+                if (result.error) {
+                    // no outputs on error
                     valueFinished = {
                         reason: DockerJobFinishedReason.Error,
                         worker: this.workerId,
                         time: Date.now(),
-                        result: { ...resultWithOutputs, error: `${err}` },
+                        result: resultWithOutputs,
                     };
+
+                } else {
+                    // get outputs
+                    try {
+                        const outputs = await getOutputs(jobBlob, this.workerId);
+                        valueFinished = {
+                            reason: DockerJobFinishedReason.Success,
+                            worker: this.workerId,
+                            time: Date.now(),
+                            result: { ...result, outputs },
+                        };
+                    } catch (err) {
+                        console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] 💥 failed to getOutputs ${err}`);
+                        valueFinished = {
+                            reason: DockerJobFinishedReason.Error,
+                            worker: this.workerId,
+                            time: Date.now(),
+                            result: { ...resultWithOutputs, error: `${err}` },
+                        };
+                    }
+
                 }
 
-            }
+                // Delete from our local queue first
+                // TODO: cache locally before attempting to send
+                delete this.queue[jobBlob.hash];
 
-            // Delete from our local queue first
-            // TODO: cache locally before attempting to send
-            delete this.queue[jobBlob.hash];
+                this.sender({
+                    type: WebsocketMessageTypeWorkerToServer.StateChange,
+                    payload: {
+                        job: jobBlob.hash,
+                        tag: this.workerId,
+                        state: DockerJobState.Finished,
+                        value: valueFinished,
+                    }
+                });
+            }).catch(err => {
+                console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] 💥 errored ${err}`);
 
-            this.sender({
-                type: WebsocketMessageTypeWorkerToServer.StateChange,
-                payload: {
-                    job: jobBlob.hash,
-                    tag: this.workerId,
-                    state: DockerJobState.Finished,
-                    value: valueFinished,
-                }
-            });
-        }).catch(err => {
-            console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] 💥 errored ${err}`);
+                // Delete from our local queue before sending
+                // TODO: cache locally before attempting to send
+                delete this.queue[jobBlob.hash];
 
-            // Delete from our local queue before sending
-            // TODO: cache locally before attempting to send
-            delete this.queue[jobBlob.hash];
+                const valueError: StateChangeValueWorkerFinished = {
+                    reason: DockerJobFinishedReason.Error,
+                    worker: this.workerId,
+                    time: Date.now(),
+                    result: ({
+                        error: err,
+                    } as DockerRunResultWithOutputs),
+                };
 
-            const valueError: StateChangeValueWorkerFinished = {
-                reason: DockerJobFinishedReason.Error,
-                worker: this.workerId,
-                time: Date.now(),
-                result: ({
-                    error: err,
-                } as DockerRunResultWithOutputs),
-            };
+                this.sender({
+                    type: WebsocketMessageTypeWorkerToServer.StateChange,
+                    payload: {
+                        job: jobBlob.hash,
+                        tag: this.workerId,
+                        state: DockerJobState.Finished,
+                        value: valueError,
+                    }
+                });
 
-            this.sender({
-                type: WebsocketMessageTypeWorkerToServer.StateChange,
-                payload: {
-                    job: jobBlob.hash,
-                    tag: this.workerId,
-                    state: DockerJobState.Finished,
-                    value: valueError,
-                }
-            });
+            }).finally(() => {
+                // I had the queue removal here initially but I wanted
+                // to remove the element from the queue before sending to server
+                // in case server send fails and throws an error
+            })
 
-        }).finally(() => {
-            // I had the queue removal here initially but I wanted
-            // to remove the element from the queue before sending to server
-            // in case server send fails and throws an error
-        })
+        })();
 
 
     }
