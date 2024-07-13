@@ -1,7 +1,9 @@
-set shell        := ["bash", "-c"]
-set dotenv-load  := true
-normal           := '\033[0m'
-green            := "\\e[32m"
+set shell          := ["bash", "-c"]
+set dotenv-load    := true
+set export         := true
+
+normal             := '\033[0m'
+green              := "\\e[32m"
 
 @_help:
   echo ""
