@@ -59,7 +59,7 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
     console.log(`💥🚀💥 disconnected! ${url}`)
   });
 
-  const intervalSinceNoTrafficToTriggerReconnect = ms("10s") as number;
+  const intervalSinceNoTrafficToTriggerReconnect = ms("15s") as number;
   setInterval(() => {
   if ((Date.now() - timeLastPong) >= intervalSinceNoTrafficToTriggerReconnect) {
     console.log(`Reconnecting because no PONG since ${(Date.now() - timeLastPong) / 1000}s `);

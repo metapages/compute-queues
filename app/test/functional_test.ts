@@ -76,3 +76,82 @@ Deno.test(
     await closed(socket);
   }
 );
+
+
+Deno.test(
+  "submit multiple jobs and get expected results",
+  async () => {
+    const socket = new WebSocket(`${API_URL.replace("http", "ws")}/local1/client`);
+
+    const definitions = Array.from(Array(10).keys()).map((i) => ({
+      
+        image: "alpine:3.18.5",
+        command: `echo ${Math.random()}`,
+      
+    }));
+
+    const jobIds  = new Set<string>();
+    const jobIdsFinished  = new Set<string>();
+
+    const messages = await Promise.all(definitions.map(async (definition) => {
+      const message = await createNewContainerJobMessage({
+        definition,
+      });
+      jobIds.add(message.jobId);
+      return message;
+    }));
+
+
+    const promises = messages.map((_) => (Promise.withResolvers<string>()));
+
+    socket.onmessage = (message: MessageEvent) => {
+      const messageString = message.data.toString();
+      const possibleMessage: WebsocketMessageServerBroadcast =
+        JSON.parse(messageString);
+      switch (possibleMessage.type) {
+        case WebsocketMessageTypeServerBroadcast.JobStates:
+        case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
+          const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
+          if (!someJobsPayload) {
+            break;
+          }
+          jobIds.forEach((jobId) => {
+            const jobState = someJobsPayload.state.jobs[jobId];
+            if (!jobState) {
+              return;
+            }
+            if (jobState.state === DockerJobState.Finished) {
+              const finishedState = jobState.value as StateChangeValueWorkerFinished;
+              const lines :string = finishedState.result?.stdout?.[0]!;
+              const i = messages.findIndex((m) => m.jobId === jobId);
+              if (i >= 0 && lines && !jobIdsFinished.has(jobId)) {
+                promises[i]?.resolve(lines.trim());
+                jobIdsFinished.add(jobId);
+              }
+            }
+          });
+          break;
+        default:
+          //ignored
+      }
+    };
+
+    
+    console.log(`opening the socket to the API server...`)
+    await open(socket);
+    console.log(`...socket opened. Sending messages...`);
+    for(const { message } of messages) {
+      socket.send(JSON.stringify(message));
+    }
+    
+    console.log(`...awaiting jobs to finish`);
+    const results = await Promise.all(promises.map((p) => p.promise));
+    results.forEach((result, i) => {
+      assertEquals(result, definitions[i].command.replace("echo ", ""));
+    });
+  
+    socket.close();
+    await closed(socket);
+  }
+);
+

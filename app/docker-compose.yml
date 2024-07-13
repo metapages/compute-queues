@@ -17,6 +17,7 @@ services:
     command: deno test --watch --allow-all --unstable-broadcast-channel --unstable-kv .
     working_dir: /app/test
     environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - API_URL=http://api1:8081
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
@@ -60,6 +61,7 @@ services:
     expose:
       - "8081"
     environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - PORT=8081
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
@@ -116,6 +118,7 @@ services:
     expose:
       - "8082"
     environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - PORT=8082
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
@@ -166,6 +169,7 @@ services:
       dockerfile: worker/Dockerfile
       target: worker
     environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
     volumes:
@@ -202,6 +206,7 @@ services:
       dockerfile: worker/Dockerfile
       target: worker
     environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
     volumes:
@@ -227,6 +232,7 @@ services:
     command: just watch
     working_dir: /app/browser
     environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - SERVER_ORIGIN=https://worker-metaframe.localhost
     volumes:
       - ../.git:/.git
@@ -253,6 +259,7 @@ services:
     command: deno run --watch --allow-all ./src/s3/create-bucket-development.ts
     working_dir: /app/api
     environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - AWS_ACCESS_KEY_ID=minioaccesskey123123
       - AWS_SECRET_ACCESS_KEY=minioaccesskey123123
       - AWS_ENDPOINT=http://minio.worker-metaframe.localhost

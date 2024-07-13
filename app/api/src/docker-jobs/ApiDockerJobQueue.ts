@@ -54,6 +54,7 @@ const MAX_TIME_FINISHED_JOB_IN_QUEUE = ms("60 seconds") as number;
 const INTERVAL_UNTIL_WORKERS_ASSUMED_LOST = ms("30 seconds") as number;
 const INTERVAL_WORKERS_BROADCAST = ms("10 seconds") as number;
 const INTERVAL_JOB_STATES_MINIMAL_BROADCAST = ms("5 seconds") as number;
+const INTERVAL_JOBS_BROADCAST = ms("10 seconds") as number;
 
 type ServerWorkersObject = { [key: string]: WorkerRegistration[] };
 
@@ -144,8 +145,17 @@ const resolveMostCorrectJob = (
   jobB: DockerJobDefinitionRow
 ): DockerJobDefinitionRow | null => {
   if (equal(jobA, jobB)) {
-    return null;
+    return jobA;
   }
+
+  if (jobA && !jobB) {
+    return jobA;
+  }
+
+  if (!jobA && jobB) {
+    return jobB;
+  }
+
   const jobALastChange = jobA.history[jobA.history.length - 1];
   const isJobAFinished = jobALastChange.state === DockerJobState.Finished;
 
@@ -225,6 +235,7 @@ export class ApiDockerJobQueue {
   // intervals
   _intervalWorkerBroadcast: number | undefined;
   _intervalJobsStatesMinimalBroadcast: number | undefined;
+  _intervalJobsBroadcast: number | undefined;
 
   constructor(opts: { serverId: string; address: string }) {
     // super();
@@ -419,6 +430,11 @@ export class ApiDockerJobQueue {
     this._intervalJobsStatesMinimalBroadcast = setInterval(() => {
       this.broadcastMinimalJobsStatesToChannel();
     }, INTERVAL_JOB_STATES_MINIMAL_BROADCAST);
+
+    this._intervalJobsBroadcast = setInterval(() => {
+      this.broadcastJobStatesToWebsockets(Object.keys(this.state.jobs).filter(jobId => this.state.jobs[jobId].state !== DockerJobState.Finished), true);
+    }, INTERVAL_JOBS_BROADCAST);
+
   }
 
   /**
@@ -604,6 +620,7 @@ export class ApiDockerJobQueue {
     this.channelEmitter.events = {};
     clearInterval(this._intervalWorkerBroadcast);
     clearInterval(this._intervalJobsStatesMinimalBroadcast);
+    clearInterval(this._intervalJobsBroadcast);
     delete userJobQueues[this.address];
     console.log(`➖ 🗑️ 🎾 UserDockerJobQueue ${this.address}`);
   }
@@ -1158,25 +1175,26 @@ export class ApiDockerJobQueue {
   }
 
   createWebsocketBroadcastMessageJobStates(jobIds?: string[]): string {
+    const sendingJobIds = jobIds || Object.keys(this.state.jobs);
+    return this.createWebsocketBroadcastMessageJobStatesInternal(sendingJobIds, jobIds ? false : true);
+  }
+
+  createWebsocketBroadcastMessageJobStatesInternal(jobIds: string[], isAll = false): string {
     const jobStates: BroadcastJobStates = { state: { jobs: {} } };
-    jobStates.isSubset = !!jobIds;
+    jobStates.isSubset = !isAll;
     const message: WebsocketMessageServerBroadcast = {
       // If you supply jobIds it's not the full set
-      type: jobIds
-        ? WebsocketMessageTypeServerBroadcast.JobStateUpdates
-        : WebsocketMessageTypeServerBroadcast.JobStates,
+      type: isAll
+        ? WebsocketMessageTypeServerBroadcast.JobStates
+        : WebsocketMessageTypeServerBroadcast.JobStateUpdates,
       payload: jobStates,
     };
 
-    if (jobIds) {
-      jobIds.forEach((jobId) => {
-        if (this.state.jobs[jobId]) {
-          jobStates.state.jobs[jobId] = this.state.jobs[jobId];
-        }
-      });
-    } else {
-      jobStates.state.jobs = this.state.jobs;
-    }
+    jobIds.forEach((jobId) => {
+      if (this.state.jobs[jobId]) {
+        jobStates.state.jobs[jobId] = this.state.jobs[jobId];
+      }
+    });
 
     const messageString = JSON.stringify(message);
     return messageString;
@@ -1206,8 +1224,8 @@ export class ApiDockerJobQueue {
     });
   }
 
-  async broadcastJobStatesToWebsockets(jobIds?: string[]) {
-    const messageString = this.createWebsocketBroadcastMessageJobStates(jobIds);
+  async broadcastJobStatesToWebsockets(jobIds?: string[], isAll = false) {
+    const messageString = jobIds ? this.createWebsocketBroadcastMessageJobStatesInternal(jobIds, isAll) : this.createWebsocketBroadcastMessageJobStates();
     if (!messageString) {
       return;
     }

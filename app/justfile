@@ -45,7 +45,8 @@ status-prod queue="public1":
 
 @test:
     just down -v
-    APP_PORT=4470 docker compose up --remove-orphans --detach
+    NPM_CONFIG_REGISTRY=http://host.docker.internal:4873 \
+        APP_PORT=4470 docker compose up --remove-orphans --detach
     APP_PORT=4470 just worker/test
     APP_PORT=4470 just test/test
     APP_PORT=4470 just shared/test
