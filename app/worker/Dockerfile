@@ -22,4 +22,4 @@ ENV VERSION=$VERSION
 
 RUN deno cache --unstable src/cli.ts
 
-ENTRYPOINT ["deno", "run", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "--allow-run", "src/cli.ts"]
+ENTRYPOINT ["deno", "run", "--allow-sys", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "--allow-run", "src/cli.ts"]
