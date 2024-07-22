@@ -23,15 +23,28 @@ export type InputsRefs = { [name in string]: DataRef };
 // values are base64 encoded buffers
 export type InputsBase64String = { [name in string]: string };
 
+export type DockerJobImageBuild = {
+  context?: string;
+  filename?: string;
+  target?: string;
+  // An actual Dockerfile content
+  dockerfile?: string;
+  buildArgs?: string[];
+};
+
 // inputs values are base64 encoded strings
 export type DockerJobDefinitionInputsBase64 = {
   // the docker image OR git repository URL
-  image: Image;
+  image?: Image;
+
+  build?: DockerJobImageBuild;
+
   command?: Command;
   env?: Env;
   // entrypoint?: string[];
   entrypoint?: string;
   workdir?: string;
+
   inputs?: InputsBase64String;
   durationMax?: number;
   gpu?: boolean;
@@ -121,7 +134,8 @@ export interface DockerJobDefinitionRow {
   history: StateChange[];
 }
 
-export type JobsStateMap = { [id in string]: DockerJobDefinitionRow };
+// export type JobsStateMap = { [id in string]: DockerJobDefinitionRow };
+export type JobsStateMap = Record<string, DockerJobDefinitionRow>;
 
 export interface JobStates {
   jobs: JobsStateMap;
@@ -138,9 +152,18 @@ export interface WorkerStatusResponse {
   time: number;
   id: string;
   cpus: number;
-  queue: Record<string,{jobId:string, finished:boolean}>;
+  queue: Record<string, { jobId: string; finished: boolean }>;
 }
 
+export interface JobStatusPayload {
+  jobId: string;
+  step?: string;
+  logs: {
+    time: number;
+    type: "stdout" | "stderr" | "event";
+    val: string | any;
+  }[];
+}
 
 // export interface WorkerRegistrationWithServerId extends WorkerRegistration {
 //     serverId: string;
@@ -159,12 +182,15 @@ export enum WebsocketMessageTypeWorkerToServer {
   StateChange = "StateChange",
   WorkerRegistration = "WorkerRegistration",
   WorkerStatusResponse = "WorkerStatusResponse",
-  // TODO: add logs
-  // Logs = "Logs",
+  JobStatusLogs = "JobStatusLogs",
 }
 export interface WebsocketMessageWorkerToServer {
   type: WebsocketMessageTypeWorkerToServer;
-  payload: StateChange | WorkerRegistration | WorkerStatusResponse;
+  payload:
+    | StateChange
+    | WorkerRegistration
+    | WorkerStatusResponse
+    | JobStatusPayload;
 }
 export type WebsocketMessageSenderWorker = (
   message: WebsocketMessageWorkerToServer
@@ -178,6 +204,15 @@ export enum WebsocketMessageTypeClientToServer {
   ClearJobCache = "ClearJobCache",
 }
 export interface PayloadClearJobCache {
+  jobId: string;
+  definition: DockerJobDefinitionInputRefs;
+}
+
+export interface PayloadClearJobCacheConfirm {
+  jobId: string;
+}
+
+export interface PayloadClearJobOnWorker {
   jobId: string;
 }
 
@@ -199,15 +234,24 @@ export enum WebsocketMessageTypeServerBroadcast {
   JobStates = "JobStates",
   // Updated jobs, not declarative of the entire queue
   JobStateUpdates = "JobStateUpdates",
-  // TODO: this might not be necessary, as the JobStates contain the definition
-  // Jobs      = "Jobs",
+  // logs from the worker
+  JobStatusPayload = "JobStatusPayload",
   Workers = "Workers",
   StatusRequest = "StatusRequest",
+  // Only the worker listens to this
+  ClearJobCache = "ClearJobCache",
   ClearJobCacheConfirm = "ClearJobCacheConfirm",
 }
 export interface WebsocketMessageServerBroadcast {
   type: WebsocketMessageTypeServerBroadcast;
-  payload: BroadcastJobStates | BroadcastJobs | BroadcastWorkers | BroadcastStatusRequest | PayloadClearJobCache;
+  payload:
+    | BroadcastJobStates
+    | BroadcastJobs
+    | BroadcastWorkers
+    | BroadcastStatusRequest
+    | PayloadClearJobCacheConfirm
+    | PayloadClearJobCache
+    | JobStatusPayload;
 }
 /**
  * The job states, not the jobs themselves
@@ -233,12 +277,14 @@ export interface BroadcastWorkers {
 
 export type BroadcastStatusRequest = undefined;
 
-
 /************************************************************
  * Client specific
  ************************************************************/
 
-export type DockerJobDefinitionParamsInUrlHash = Omit<DockerJobDefinitionInputRefs, "inputs">;
+export type DockerJobDefinitionParamsInUrlHash = Omit<
+  DockerJobDefinitionInputRefs,
+  "inputs"
+>;
 
 // this is the actual job definition consumed by the workers
 export interface DockerJobDefinitionMetadata {
@@ -250,16 +296,15 @@ export interface DockerJobDefinitionMetadata {
  * End Client specific
  ************************************************************/
 
-
 /**
  * Only Finished jobs can have the cached state deleted
  * Queued or Running jobs should not be deleted
- * @param state 
- * @returns 
+ * @param state
+ * @returns
  */
-export const isJobCacheAllowedToBeDeleted = (state:StateChange): boolean => {
+export const isJobCacheAllowedToBeDeleted = (state: StateChange): boolean => {
   // This is duplicated (search for it, turn into function)
-  switch(state.state) {
+  switch (state.state) {
     case DockerJobState.Queued:
     case DockerJobState.ReQueued:
     case DockerJobState.Running:
@@ -270,4 +315,4 @@ export const isJobCacheAllowedToBeDeleted = (state:StateChange): boolean => {
     default:
       return false;
   }
-}
+};

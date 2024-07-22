@@ -4,12 +4,14 @@ import ReconnectingWebSocket from 'npm:reconnecting-websocket@4.4.0';
 
 import mod from '../../mod.json' with { type: 'json' };
 import { config } from '../config.ts';
+import { clearCache } from '../queue/docker-image.ts';
 import {
   DockerJobQueue,
   DockerJobQueueArgs,
 } from '../queue/DockerJobQueue.ts';
 import {
   BroadcastJobStates,
+  PayloadClearJobCache,
   WebsocketMessageSenderWorker,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
@@ -99,6 +101,7 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
           }
           dockerJobQueue.onUpdateSetAllJobStates(allJobsStatesPayload);
           break;
+
         case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
             const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
             if (!someJobsPayload) {
@@ -107,12 +110,21 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
             }
             dockerJobQueue.onUpdateUpdateASubsetOfJobs(someJobsPayload);
             break;
+
         case WebsocketMessageTypeServerBroadcast.StatusRequest:
           const status = dockerJobQueue.status();
           sender({
             type: WebsocketMessageTypeWorkerToServer.WorkerStatusResponse,
             payload: status,
           });
+          break;
+
+        case WebsocketMessageTypeServerBroadcast.ClearJobCache:
+          const clearJobCacheConfirm = possibleMessage.payload as PayloadClearJobCache;
+          console.log(`[${clearJobCacheConfirm.jobId?.substring(0, 6)}] 🗑️ deleting docker images`)
+          if (clearJobCacheConfirm?.definition?.build) {
+            clearCache({build:clearJobCacheConfirm.definition.build});
+          }
           break;
           
         default:

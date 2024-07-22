@@ -8,6 +8,7 @@ import {
   DockerJobDefinitionRow,
   DockerJobState,
   PayloadClearJobCache,
+  PayloadClearJobCacheConfirm,
   WebsocketMessageClientToServer,
   WebsocketMessageTypeClientToServer,
   WebsocketMessageTypeServerBroadcast,
@@ -49,7 +50,7 @@ export const ButtonDeleteCache: React.FC<ButtonDeleteCacheProps> = ({
     switch (possibleMessage.type) {
       case WebsocketMessageTypeServerBroadcast.ClearJobCacheConfirm:
         // We asked for this now we have a response
-        if ((possibleMessage.payload as PayloadClearJobCache).jobId === sentJobId) {
+        if ((possibleMessage.payload as PayloadClearJobCacheConfirm).jobId === sentJobId) {
           setSendJobId(undefined);
           toast({
             title: `Cache cleared for ${sentJobId.substring(0,6)}`,

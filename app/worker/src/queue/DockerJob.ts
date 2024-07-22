@@ -5,11 +5,18 @@ import { existsSync } from 'https://deno.land/std@0.224.0/fs/exists.ts';
 import Docker from 'npm:dockerode@4.0.2';
 
 import { config } from '../config.ts';
-import { createDockerClient } from '../docker/client.ts';
 // import { Buffer } from "node:buffer";
 // import { args as CliArgs } from '../args.ts';
 import * as StreamTools from '../docker/streamtools.ts';
-import { generateDockerImageTag } from './utils.ts';
+import {
+  DockerJobImageBuild,
+  DockerJobState,
+  JobStatusPayload,
+  WebsocketMessageSenderWorker,
+  WebsocketMessageTypeWorkerToServer,
+} from '../shared/mod.ts';
+import { ensureDockerImage } from './docker-image.ts';
+import { docker } from './dockerClient.ts';
 
 // Minimal interface for interacting with docker jobs:
 //  inputs:
@@ -38,9 +45,9 @@ import { generateDockerImageTag } from './utils.ts';
 // path?: string;
 // }
 
-const { docker, close } = createDockerClient(8343);
-// Close all docker connections on exit
-globalThis.addEventListener("unload", () => close());
+// const { docker, close } = createDockerClient(8343);
+// // Close all docker connections on exit
+// globalThis.addEventListener("unload", () => close());
 
 export interface Volume {
   host: string;
@@ -49,8 +56,10 @@ export interface Volume {
 
 // this goes in
 export interface DockerJobArgs {
+  sender: WebsocketMessageSenderWorker;
   id: string;
-  image: string;
+  image?: string;
+  build?:DockerJobImageBuild;
   command?: string[] | undefined;
   env?: any;
   entrypoint?: string[] | undefined;
@@ -60,6 +69,7 @@ export interface DockerJobArgs {
   outStream?: Writable;
   errStream?: Writable;
   gpu?: boolean;
+  durationMax?: number;
 }
 
 // this comes out
@@ -88,7 +98,11 @@ export interface DockerRunResult {
 export const dockerJobExecute = async (
   args: DockerJobArgs
 ): Promise<DockerJobExecution> => {
+
+  // console.log('dockerJobExecute args', args);
   const {
+    sender,
+    id,
     image,
     command,
     env,
@@ -156,6 +170,14 @@ export const dockerJobExecute = async (
 
   var grabberOutStream = StreamTools.createTransformStream((s: string) => {
     result.stdout!.push(s.toString());
+    sender({
+      type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+      payload: {
+        jobId: id,
+        step: `${DockerJobState.Running}`,
+        logs: [{time:Date.now(), type:"stdout", val:s.toString()}],
+      } as JobStatusPayload,
+    });
     return s;
   });
   if (outStream) {
@@ -164,6 +186,14 @@ export const dockerJobExecute = async (
 
   var grabberErrStream = StreamTools.createTransformStream((s: string) => {
     result.stderr!.push(s.toString());
+    sender({
+      type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+      payload: {
+        jobId: id,
+        step: `${DockerJobState.Running}`,
+        logs: [{time:Date.now(), type:"stderr", val:s.toString()}],
+      } as JobStatusPayload,
+    });
     return s;
   });
   if (errStream) {
@@ -182,7 +212,7 @@ export const dockerJobExecute = async (
 
   const finish = async () => {
     try {
-      createOptions.image = await ensureDockerImage({image});
+      createOptions.image = await ensureDockerImage({jobId: id, image, build: args.build, sender});
     } catch (err) {
       console.error('💥 ensureDockerImage error', err);
       result.error = `Failure to pull or build the docker image:  ${err?.message}`;
@@ -248,113 +278,6 @@ const killAndRemove = async (container?: Docker.Container): Promise<any> => {
   }
 };
 
-// assume that no images are deleted while we are running
-const CACHED_DOCKER_IMAGES: { [key: string]: boolean } = {};
-
-
-const ensureDockerImage = async (args:{
-  image: string,
-  pullOptions?: any
-}): Promise<string> => {
-  let { image, pullOptions } = args;
-  
-  if (!image) {
-    throw new Error("ensureDockerImage missing image");
-  }
-  
-  let gitRepoUrl: string | undefined;
-  if (image.startsWith("git@") || image.startsWith("https://")) {
-    gitRepoUrl = image;
-    image = generateDockerImageTag(image);
-  }
-
-  // console.log(`👀 ensureDockerImage: image=${image}  gitRepoUrl=${gitRepoUrl}`)
-
-  if (CACHED_DOCKER_IMAGES[image]) {
-    // console.log(`👀 ensureDockerImage: ${image} FOUND IMAGE IN MY FAKE CACHE`)
-    // console.log('FOUND IMAGE IN MY FAKE CACHE')
-    return image;
-  }
-
-  const imageExists = await hasImage(image);
-  // console.log(`👀 ensureDockerImage: ${image} imageExists=${imageExists}`)
-  // console.log('imageExists', imageExists);
-  if (imageExists) {
-    CACHED_DOCKER_IMAGES[image] = true;
-    return image;
-  }
-
-  if (gitRepoUrl) {
-
-    // console.log(`docker.buildImage("", {remote: ${gitRepoUrl}, t:${image}, ...:${pullOptions ? JSON.stringify(pullOptions) : ""}) `)
-    // const buildImageStream = await 
-    const stream = await docker.buildImage("", {remote: gitRepoUrl, t:image, ...pullOptions});
-    
-    await new Promise((resolve, reject) => {
-      docker.modem.followProgress(stream, (err:any, res:any) => err ? reject(err) : resolve(res), (progressEvent:Event) => {
-        console.log(progressEvent);
-      });
-    });
-    // const buildResultString :string[] = await new Promise<string[]>((resolve, reject) => {
-    //   docker.buildImage("", {remote: gitRepoUrl, t:image, ...pullOptions}, (err :any, stream:any) => {
-    //     console.log('stream', stream);
-    //     const output :string[] = [];
-    //     stream.on('data', (data :any) => {
-    //       console.log(`BUILD STREAM: ${data.toString()}`)
-    //       output.push(data.toString());
-    //     });
-        
-    //     stream.on('end', () => {
-    //       resolve(output);
-    //     });
-        
-    //     stream.on('error', (err :any) => {
-    //       reject(err);
-    //     });
-    //   });
-    // });
-    // console.log('buildImageResult', buildImageResult);
-  } else {
-    const stream = await docker.pull(image);
-    await new Promise<void>((resolve, reject) => {
-
-      function onFinished(err:any, output:any) {
-        if (err) {
-          console.error('Error during pull:', err);
-          reject(err);
-          return;
-        }
-        console.log(`${image} pull complete`);
-        resolve()
-      }
-
-      function onProgress(event:any) {
-        console.log(JSON.stringify(event));
-      }
-
-      docker.modem.followProgress(stream, onFinished, onProgress);
-    });
-
-    // console.log(`👀 ensureDockerImage: docker pull ${image} complete`)
-  }
-  return image;
-};
-
-const hasImage = async (imageUrl: string): Promise<boolean> => {
-  // console.log("hasImage, imageUrl", imageUrl)
-  const images = await docker.listImages();
-  return images.some((e: any) => {
-    return (
-      e.RepoTags != null &&
-      e.RepoTags.some((tag: string) => {
-        return (
-          tag != null &&
-          dockerUrlMatches(parseDockerUrl(imageUrl), parseDockerUrl(tag))
-        );
-      })
-    );
-  });
-};
 
 const dockerUrlMatches = (a: DockerUrlBlob, b: DockerUrlBlob) => {
   if (a.repository == b.repository) {

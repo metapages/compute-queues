@@ -13,6 +13,7 @@ import {
 } from './shared';
 import {
   DockerJobDefinitionMetadata,
+  JobStatusPayload,
   WebsocketMessageServerBroadcast,
 } from './shared/types';
 
@@ -48,6 +49,9 @@ interface MainStore {
   /** Sends the websocket message to the API server */
   rawMessage :WebsocketMessageServerBroadcast | undefined;
   setRawMessage: (rawMessage: WebsocketMessageServerBroadcast) => void;
+
+  jobLog: JobStatusPayload | undefined;
+  setJobLog: (jobLog: JobStatusPayload) => void;
 }
 
 export const useStore = create<MainStore>((set, get) => ({
@@ -121,4 +125,10 @@ export const useStore = create<MainStore>((set, get) => ({
   setRawMessage: (rawMessage: WebsocketMessageServerBroadcast) => {
     set((state) => ({ rawMessage }));
   },
+
+  jobLog: undefined,
+  setJobLog: (jobLog: JobStatusPayload) => {
+    set((state) => ({ jobLog }));
+  },
+  
 }));
