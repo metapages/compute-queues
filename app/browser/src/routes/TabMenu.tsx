@@ -172,14 +172,17 @@ export const TabMenu: React.FC = () => {
   // when we get the correct job state, it's straightforward to just show it
   useEffect(() => {
     if (!connected) {
+      // console.log('❔ not connected');
       return;
     }
     let cancelled = false;
 
+    let resubmitInterval: number | undefined = undefined;
+
     (async () => {
       // console.log('❔ dockerJob', dockerJob);
-      // console.log('❔ jobStates', jobStates);
-      // console.log('❔ stateChange', stateChange);
+      // console.log('❔ jobStates', jobs);
+      
       if (dockerJob && jobs) {
         const jobHashCurrent = await shaObject(dockerJob.definition);
 
@@ -231,10 +234,17 @@ export const TabMenu: React.FC = () => {
             tag: "", // document the meaning of this. It's the worker claim. Might be unneccesary due to history
           };
 
+          // console.log('payload', payload);
+
           sendClientStateChangeDeBounced(payload);
         };
 
         const currentJobFromTheServer = jobs[jobHashCurrent];
+
+        // resubmitInterval = setInterval(() => {
+        //   console.log("Resubmitting job, just in case")
+        //   sendQueuedStateChange();
+        // }, 6000);
 
         if (currentJobFromTheServer) {
           // Do we need to do anything here?
@@ -280,6 +290,9 @@ export const TabMenu: React.FC = () => {
 
     return () => {
       cancelled = true;
+      if (resubmitInterval) {
+        clearInterval(resubmitInterval);
+      }
     };
   }, [
     connected,

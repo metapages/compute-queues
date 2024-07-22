@@ -81,7 +81,7 @@ export const useDockerJobDefinition = () => {
 
     // console.log("🍔 useEffect definition", definition);
 
-    if (!definition.image) {
+    if (!definition.image && !definition.build) {
       return;
     }
 

@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import {
   BroadcastJobStates,
   BroadcastWorkers,
+  JobStatusPayload,
   WebsocketMessageClientToServer,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
@@ -118,6 +119,10 @@ export const serverWebsocket = (): void => {
             break;
           case WebsocketMessageTypeServerBroadcast.ClearJobCacheConfirm:
             // We asked for this now we have a response
+            break;
+          case WebsocketMessageTypeServerBroadcast.JobStatusPayload:
+            const jobLogs = possibleMessage.payload as JobStatusPayload;
+            console.log(`⛈️ JobStatusPayload`, jobLogs);
             break;
           default:
             //ignored

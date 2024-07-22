@@ -302,14 +302,17 @@ export class DockerJobQueue {
             // TODO hook up the durationMax to a timeout
             // TODO add input mounts
             const executionArgs: DockerJobArgs = {
+                sender: this.sender,
                 id: jobBlob.hash,
                 image: definition.image,
+                build: definition.build,
                 command: definition.command ? convertStringToDockerCommand(definition.command, definition.env) : undefined,
                 entrypoint: definition.entrypoint ? convertStringToDockerCommand(definition.entrypoint, definition.env) : undefined,
                 workdir: definition.workdir,
                 env: definition.env,
                 volumes: [volumes!.inputs, volumes!.outputs],
                 gpu: definition.gpu,
+                durationMax: definition.durationMax,
                 // outStream?: Writable;
                 // errStream?: Writable;
             }
@@ -318,7 +321,13 @@ export class DockerJobQueue {
             if (!this.queue[jobBlob.hash]) {
                 console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] after await jobBlob.hash no job in queue so killing`);
                 // what happened? the job was removed from the queue by someone else?
-                dockerExecution.kill();
+                try {
+                    dockerExecution.kill();
+
+                } catch(err) {
+                    console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] ❗ dockerExecution.kill() errored but could be expeced`, err);
+                }
+
                 return;
             }
             this.queue[jobBlob.hash].execution = dockerExecution;
@@ -376,6 +385,7 @@ export class DockerJobQueue {
                 });
             }).catch(err => {
                 console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] 💥 errored ${err}`);
+
 
                 // Delete from our local queue before sending
                 // TODO: cache locally before attempting to send

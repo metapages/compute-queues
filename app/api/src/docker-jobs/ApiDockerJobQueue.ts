@@ -48,6 +48,7 @@ import {
 import { BroadcastChannelRedis } from '@metapages/deno-redis-broadcastchannel';
 
 import { db } from '../db/kv/mod.ts';
+import { JobStatusPayload } from '../shared/mod.ts';
 
 // 60 seconds
 const MAX_TIME_FINISHED_JOB_IN_QUEUE = ms("60 seconds") as number;
@@ -83,6 +84,7 @@ type BroadcastChannelDeleteCachedJob = {
 type BroadcastChannelMessageType =
   | "job-states"
   | "job-states-minimal"
+  | "job-logs"
   | "workers"
   | "status-request"
   | "status-response"
@@ -95,7 +97,8 @@ type BroadcastChannelMessage = {
     | BroadcastChannelWorkersRegistration
     | BroadcastChannelStatusRequest
     | BroadcastChannelStatusResponse
-    | BroadcastChannelDeleteCachedJob;
+    | BroadcastChannelDeleteCachedJob
+    | JobStatusPayload;
 };
 
 // in memory active queue of jobs. they're persisted to the db
@@ -285,7 +288,10 @@ export class ApiDockerJobQueue {
               this.state.jobs[jobId].state !== state
             ) {
               (async () => {
-                const loadedJobResult = await db.queueJobGet(this.address, jobId);
+                const loadedJobResult = await db.queueJobGet(
+                  this.address,
+                  jobId
+                );
                 if (!loadedJobResult) {
                   return;
                 }
@@ -293,13 +299,18 @@ export class ApiDockerJobQueue {
                   this.state.jobs[jobId],
                   loadedJobResult
                 );
-                if (resolvedJob && resolvedJob !== this.state.jobs[jobId]) { 
+                if (resolvedJob && resolvedJob !== this.state.jobs[jobId]) {
                   this.state.jobs[jobId] = loadedJobResult;
-                  console.log(`[${this.address.substring(0, 6)}] 📡 recieved job-states-minimal job different, broadcasting...`, jobId)
+                  console.log(
+                    `[${this.address.substring(
+                      0,
+                      6
+                    )}] 📡 recieved job-states-minimal job different, broadcasting...`,
+                    jobId
+                  );
                   this.broadcastJobStatesToChannel([jobId]);
                   this.broadcastJobStatesToWebsockets([jobId]);
                 }
-
               })();
             }
           }
@@ -393,22 +404,14 @@ export class ApiDockerJobQueue {
           break;
 
         case "delete-cached-job":
-          const jobId = (payload.value as BroadcastChannelDeleteCachedJob)
-            .jobId;
-          const mostRecentState =
-            this.state.jobs[jobId] &&
-            this.state.jobs[jobId].history[
-              this.state.jobs[jobId].history.length - 1
-            ];
-          if (
-            mostRecentState &&
-            isJobCacheAllowedToBeDeleted(mostRecentState)
-          ) {
-            console.log(
-              `[${jobId.substring(0, 6)}] 🗑️ deleting from local state`
-            );
-            delete this.state.jobs[jobId];
-          }
+          const jobId = (payload.value as BroadcastChannelDeleteCachedJob).jobId;
+          this.deleteCachedJob(jobId);
+          break;
+
+        case "job-logs":
+          console.log(`⛈️ got job-logs from broadcast`);
+          const logs = payload.value as JobStatusPayload;
+          this.sendLogsToLocalClients(logs);
           break;
 
         default:
@@ -432,9 +435,28 @@ export class ApiDockerJobQueue {
     }, INTERVAL_JOB_STATES_MINIMAL_BROADCAST);
 
     this._intervalJobsBroadcast = setInterval(() => {
-      this.broadcastJobStatesToWebsockets(Object.keys(this.state.jobs).filter(jobId => this.state.jobs[jobId].state !== DockerJobState.Finished), true);
+      // this.broadcastJobStatesToWebsockets(Object.keys(this.state.jobs).filter(jobId => this.state.jobs[jobId].state !== DockerJobState.Finished), true);
+      this.broadcastJobStatesToWebsockets();
     }, INTERVAL_JOBS_BROADCAST);
+  }
 
+  /**
+   * Delete CACHED locally, from the kvdb
+   * This is NOT deleting any old job, this is only deleting a job that has been cached
+   * @param jobId
+   */
+  async deleteCachedJob(jobId: string) {
+    
+    const mostRecentState =
+      this.state.jobs[jobId] &&
+      this.state.jobs[jobId].history[this.state.jobs[jobId].history.length - 1];
+    if (mostRecentState && isJobCacheAllowedToBeDeleted(mostRecentState)) {
+      console.log(`[${jobId.substring(0, 6)}] 🗑️ deleting from local state`);
+      delete this.state.jobs[jobId];
+      await db.queueJobRemove(this.address, jobId);
+    }
+    // don't wait for the result of this, and it's a finished job so also no need to check
+    await db.resultCacheRemove(jobId);
   }
 
   /**
@@ -506,22 +528,31 @@ export class ApiDockerJobQueue {
    * This is NOT deleting any old job, this is only deleting a job that has been cached
    * @param jobId
    */
-  async deleteCachedJob(jobId: string) {
-    console.log(`[${jobId.substring(0, 6)}] 🗑️ deleting from db`);
+  async broadcastAndDeleteCachedJob(jobId: string) {
     this.channel.postMessage({
       type: "delete-cached-job",
       value: { jobId } as BroadcastChannelDeleteCachedJob,
     } as BroadcastChannelMessage);
-    const mostRecentState =
-      this.state.jobs[jobId] &&
-      this.state.jobs[jobId].history[this.state.jobs[jobId].history.length - 1];
-    if (mostRecentState && isJobCacheAllowedToBeDeleted(mostRecentState)) {
-      console.log(`[${jobId.substring(0, 6)}] 🗑️ deleting from local state`);
-      delete this.state.jobs[jobId];
-      await db.queueJobRemove(this.address, jobId);
-    }
-    // don't wait for the result of this, and it's a finished job so also no need to check
-    await db.resultCacheRemove(jobId);
+    console.log(`[${jobId.substring(0, 6)}] 🗑️ deleting from db`);
+    await this.deleteCachedJob(jobId);
+  }
+
+  async broadcastAndSendLogsToLocalClients(logs: JobStatusPayload) {
+    this.channel.postMessage({
+      type: "job-logs",
+      value: logs,
+    } as BroadcastChannelMessage);
+    
+    await this.sendLogsToLocalClients(logs);
+  }
+
+  async sendLogsToLocalClients(logs: JobStatusPayload) {
+    console.log(`⛈️ sendLogsToLocalClients`);
+    const messageString = JSON.stringify({
+      type: WebsocketMessageTypeServerBroadcast.JobStatusPayload,
+      payload: logs,
+    });
+    this.broadcastToLocalClients(messageString)
   }
 
   async getStatusFromLocalWorkers(): Promise<
@@ -600,7 +631,11 @@ export class ApiDockerJobQueue {
       jobIds = Object.keys(this.state.jobs);
     }
     const stateWithOneJob: JobStates = {
-      jobs: Object.fromEntries(jobIds.filter(jobId => this.state.jobs[jobId]).map((jobId) => [jobId, this.state.jobs[jobId]])),
+      jobs: Object.fromEntries(
+        jobIds
+          .filter((jobId) => this.state.jobs[jobId])
+          .map((jobId) => [jobId, this.state.jobs[jobId]])
+      ),
     };
     const message: BroadcastChannelMessage = {
       type: "job-states",
@@ -836,7 +871,7 @@ export class ApiDockerJobQueue {
                 6
               )}] adding new job row to local state as Queued`
             );
-            
+
             jobRow = {
               hash: jobId,
               state: DockerJobState.Queued,
@@ -1091,6 +1126,13 @@ export class ApiDockerJobQueue {
               possibleMessage.payload as WorkerStatusResponse;
 
             break;
+
+          case WebsocketMessageTypeWorkerToServer.JobStatusLogs:
+            const logsFromWorker =
+              possibleMessage.payload as JobStatusPayload;
+            // Send to all clients
+            this.broadcastAndSendLogsToLocalClients(logsFromWorker);
+            break;
           default:
           //ignored
         }
@@ -1151,14 +1193,40 @@ export class ApiDockerJobQueue {
             break;
           case WebsocketMessageTypeClientToServer.ClearJobCache:
             (async () => {
+              // Send a message to our local workers to clear their respective caches
+              const jobId = (possibleMessage.payload as PayloadClearJobCache)
+                .jobId;
+              // Can only send the message to the workers with the whole definition 
+              // because the definition used to construct unique cache keys
+              if (this.state.jobs[jobId]) {
+                const jobDefinition = (
+                  this.state.jobs[jobId].history[
+                    this.state.jobs[jobId].history.length - 1
+                  ].value as StateChangeValueQueued
+                ).definition;
+                if (jobDefinition) {
+                  this.broadcastToLocalWorkers(
+                    JSON.stringify({
+                      type: WebsocketMessageTypeServerBroadcast.ClearJobCache,
+                      payload: {
+                        jobId: (possibleMessage.payload as PayloadClearJobCache)
+                          .jobId,
+                        definition: jobDefinition,
+                      } as PayloadClearJobCache,
+                    } as WebsocketMessageServerBroadcast)
+                  );
+                } else {
+                  jobDefinition
+                }
+                connection.socket.send(
+                  JSON.stringify({
+                    type: WebsocketMessageTypeServerBroadcast.ClearJobCacheConfirm,
+                    payload: possibleMessage.payload,
+                  } as WebsocketMessageServerBroadcast)
+                );
+              }
               await this.deleteCachedJob(
                 (possibleMessage.payload as PayloadClearJobCache).jobId
-              );
-              connection.socket.send(
-                JSON.stringify({
-                  type: WebsocketMessageTypeServerBroadcast.ClearJobCacheConfirm,
-                  payload: possibleMessage.payload,
-                } as WebsocketMessageServerBroadcast)
               );
             })();
             break;
@@ -1176,10 +1244,16 @@ export class ApiDockerJobQueue {
 
   createWebsocketBroadcastMessageJobStates(jobIds?: string[]): string {
     const sendingJobIds = jobIds || Object.keys(this.state.jobs);
-    return this.createWebsocketBroadcastMessageJobStatesInternal(sendingJobIds, jobIds ? false : true);
+    return this.createWebsocketBroadcastMessageJobStatesInternal(
+      sendingJobIds,
+      jobIds ? false : true
+    );
   }
 
-  createWebsocketBroadcastMessageJobStatesInternal(jobIds: string[], isAll = false): string {
+  createWebsocketBroadcastMessageJobStatesInternal(
+    jobIds: string[],
+    isAll = false
+  ): string {
     const jobStates: BroadcastJobStates = { state: { jobs: {} } };
     jobStates.isSubset = !isAll;
     const message: WebsocketMessageServerBroadcast = {
@@ -1225,7 +1299,9 @@ export class ApiDockerJobQueue {
   }
 
   async broadcastJobStatesToWebsockets(jobIds?: string[], isAll = false) {
-    const messageString = jobIds ? this.createWebsocketBroadcastMessageJobStatesInternal(jobIds, isAll) : this.createWebsocketBroadcastMessageJobStates();
+    const messageString = jobIds
+      ? this.createWebsocketBroadcastMessageJobStatesInternal(jobIds, isAll)
+      : this.createWebsocketBroadcastMessageJobStates();
     if (!messageString) {
       return;
     }
@@ -1336,7 +1412,9 @@ export class ApiDockerJobQueue {
     const message: BroadcastChannelMessage = {
       type: "job-states-minimal",
       value: Object.keys(this.state.jobs)
-        .filter((jobId) => this.state.jobs[jobId].state !== DockerJobState.Finished)
+        .filter(
+          (jobId) => this.state.jobs[jobId].state !== DockerJobState.Finished
+        )
         .map((jobId) => [jobId, this.state.jobs[jobId].state])
         .flat(),
     };

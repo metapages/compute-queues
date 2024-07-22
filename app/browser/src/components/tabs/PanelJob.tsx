@@ -25,7 +25,7 @@ import { useHashParam } from '@metapages/hash-query';
 
 import { ButtonCancelOrRetry } from '../ButtonCancelOrRetry';
 import { ButtonDeleteCache } from '../ButtonDeleteCache';
-import { PanelJobInputFromUrlParams } from './PanelJobInputFromUrlParams';
+import { PanelImageAndContainer } from './PanelImageAndContainer';
 
 type ErrorObject = { statusCode: number; json: { message: string } };
 
@@ -37,7 +37,7 @@ export const PanelJob: React.FC<{
   return (
     <Box w="100%" maxW="100%" p={2}>
       <HStack w="100%" spacing="24px" alignItems="flex-start">
-        <PanelJobInputFromUrlParams />
+        <PanelImageAndContainer />
 
         <VStack w="50%" alignItems="flex-start">
           <Heading size="sm">Job status and control</Heading>
