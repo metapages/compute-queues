@@ -72,12 +72,10 @@ export const ensureDockerImage = async (args: {
     // image name comes from the build arguments so it can be retrieved if
     // already built
     const buildSha = await getBuildSha({build});
-    // image = `worker-image:${buildSha.substring(0, 12)}`;
     
-    // const imageSha = buildSha.substring(0, 32);
     image = getDockerImageName(buildSha);
 
-    imageExists = false; //await checkForDockerImage(image);
+    imageExists = await checkForDockerImage({jobId, image, sender});
     if (imageExists) {
       return image;
     }
@@ -247,58 +245,6 @@ export const ensureDockerImage = async (args: {
       throw err;
     }
 
-    // let gitRepoUrl: string | undefined;
-    // if (image.startsWith("git@") || image.startsWith("https://")) {
-    //   gitRepoUrl = image;
-    //   image = generateDockerImageTag(image);
-    // }
-
-    // // console.log(`👀 ensureDockerImage: image=${image}  gitRepoUrl=${gitRepoUrl}`)
-
-    // if (CACHED_DOCKER_IMAGES[image]) {
-    //   // console.log(`👀 ensureDockerImage: ${image} FOUND IMAGE IN MY FAKE CACHE`)
-    //   // console.log('FOUND IMAGE IN MY FAKE CACHE')
-    //   return image;
-    // }
-
-    // const imageExists = await hasImage(image);
-    // // console.log(`👀 ensureDockerImage: ${image} imageExists=${imageExists}`)
-    // // console.log('imageExists', imageExists);
-    // if (imageExists) {
-    //   CACHED_DOCKER_IMAGES[image] = true;
-    //   return image;
-    // }
-
-    // if (gitRepoUrl) {
-
-    //   // console.log(`docker.buildImage("", {remote: ${gitRepoUrl}, t:${image}, ...:${pullOptions ? JSON.stringify(pullOptions) : ""}) `)
-    //   // const buildImageStream = await
-    //   const stream = await docker.buildImage("", {remote: gitRepoUrl, t:image, ...pullOptions});
-
-    //   await new Promise((resolve, reject) => {
-    //     docker.modem.followProgress(stream, (err:any, res:any) => err ? reject(err) : resolve(res), (progressEvent:Event) => {
-    //       console.log(progressEvent);
-    //     });
-    //   });
-    // const buildResultString :string[] = await new Promise<string[]>((resolve, reject) => {
-    //   docker.buildImage("", {remote: gitRepoUrl, t:image, ...pullOptions}, (err :any, stream:any) => {
-    //     console.log('stream', stream);
-    //     const output :string[] = [];
-    //     stream.on('data', (data :any) => {
-    //       console.log(`BUILD STREAM: ${data.toString()}`)
-    //       output.push(data.toString());
-    //     });
-
-    //     stream.on('end', () => {
-    //       resolve(output);
-    //     });
-
-    //     stream.on('error', (err :any) => {
-    //       reject(err);
-    //     });
-    //   });
-    // });
-    // console.log('buildImageResult', buildImageResult);
   } else {
     console.log("ensureDockerImage PULLING bc image and no build");
     const stream = await docker.pull(image);
@@ -328,14 +274,13 @@ export const ensureDockerImage = async (args: {
             ],
           } as JobStatusPayload,
         });
-        // console.log(JSON.stringify(event));
+
       }
 
       docker.modem.followProgress(stream, onFinished, onProgress);
     });
     CACHED_DOCKER_IMAGES[image!] = true;
 
-    // console.log(`👀 ensureDockerImage: docker pull ${image} complete`)
   }
   return image!;
 };
