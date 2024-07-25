@@ -75,7 +75,7 @@ export const ensureDockerImage = async (args: {
     
     image = getDockerImageName(buildSha);
 
-    imageExists = await checkForDockerImage({jobId, image, sender});
+    imageExists = false ;//await checkForDockerImage({jobId, image, sender});
     if (imageExists) {
       return image;
     }
@@ -120,16 +120,22 @@ export const ensureDockerImage = async (args: {
       });
       const process = command.spawn();
 
+      const stdout :string[] = [];
+      const stderr :string[] = [];
+
       (async () => {
         for await (const data of process.stdout.pipeThrough(new TextDecoderStream())) {
-          // console.log(`DOCKER BUILD stdout: ${data}`);
+          console.log(`DOCKER BUILD stdout: ${data}`);
           const time = Date.now();
+          const decodedLines :string[] = data.trim().split("\n");
+          stdout.push(...decodedLines);
+          
           sender({
             type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
             payload: {
               jobId,
               step: "docker build",
-              logs: data.trim().split("\n").map((l) => ({time, type: "stdout", val:l.trim()})),
+              logs: decodedLines.map((l:string) => ({time, type: "stdout", val:l.trim()})),
             } as JobStatusPayload,
           });
         }
@@ -139,12 +145,14 @@ export const ensureDockerImage = async (args: {
         for await (const data of process.stderr.pipeThrough(new TextDecoderStream())) {
           // console.log(`DOCKER BUILD stderr: ${data}`);
           const time = Date.now();
+          const decodedLines :string[] = data.trim().split("\n");
+          stderr.push(...decodedLines);
           sender({
             type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
             payload: {
               jobId,
               step: "docker build",
-              logs: data.trim().split("\n").map((l) => ({time, type: "stderr", val:l.trim()})),
+              logs: decodedLines.map((l:string) => ({time, type: "stderr", val:l.trim()})),
             } as JobStatusPayload,
           });
         }
@@ -155,6 +163,11 @@ export const ensureDockerImage = async (args: {
       console.log("success", success);
       console.log("status", code);
       console.log("signal", signal);
+
+      if (!success) {
+        console.error(`💥 DOCKER BUILD FAILED: ${code} ${signal}\n ${stdout.join("\n")} \n ${stderr.join("\n")}`);
+        throw new Error(`Failure to build the docker image: ${stderr.join("\n")} \n ${stdout.join("\n")}`);
+      }
 
       if (success) {
         try {
@@ -424,10 +437,53 @@ const parseDockerUrl = (s: string): DockerUrlBlob => {
   return url;
 };
 
-const getDownloadLinkFromContext = (context: string): string => {
-  // https://github.com/ulysseherbach/harissa
-  // const url = new URL(context);
-  return context;
+const getDownloadLinkFromContext = async (context: string): Promise<string> => {
+  // https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
+  if (context.endsWith(".tar.gz") || context.endsWith(".zip")) {
+    return context;
+    
+  } else if (context.startsWith("https://github.com")) {
+    // Create a personal access token at https://github.com/settings/tokens/new?scopes=repo
+    // const octokit = new Octokit({ auth: `personal-access-token123` });
+    const matches = new RegExp(/https:\/\/github.com\/([-\w]{6,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([\/-\w\.]{1,100}))?/).exec(context);
+    console.log('matches', matches);
+    if (!matches) {
+      throw new Error(`Invalid GitHub URL: ${context}`);
+    }
+
+    const owner = matches[1];
+    const repo = matches[2];
+    const ref = matches[5] || 'main';
+
+    return `https://api.github.com/repos/${owner}/${repo}/tarball/${ref}`;
+
+
+
+    // const octokit = new Octokit();
+    // // https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#download-a-repository-archive-tar
+    // const redirectUrl = await octokit.request('GET /repos/{owner}/{repo}/tarball/{ref}', {
+    //   // https://github.com/octokit/octokit.js/issues/2369#issuecomment-1648744759
+    //   request: {
+    //     parseSuccessResponseBody: false
+    //   },
+    //   owner,
+    //   repo,
+    //   ref,
+    //   headers: {
+    //     'X-GitHub-Api-Version': '2022-11-28'
+    //   }
+    // });
+
+    // console.log('redirectURl', redirectUrl);
+
+    // return redirectUrl.url;
+
+  } else {
+
+    // https://github.com/ulysseherbach/harissa
+    // const url = new URL(context);
+    return context;
+  }
 };
 
 const getFilePathForDownload = (url: string): string => {
@@ -460,7 +516,7 @@ const downloadContextIntoDirectory = async (args:{
   // TODO: for now, just download the context as is
   // First check if the context has been already downloaded
   // ch
-  const downloadUrl = getDownloadLinkFromContext(context);
+  const downloadUrl = await getDownloadLinkFromContext(context);
   const filePathForDownload = getFilePathForDownload(downloadUrl);
 
   console.log(`downloadContextIntoDirectory downloadUrl=${downloadUrl}`);
@@ -476,7 +532,17 @@ const downloadContextIntoDirectory = async (args:{
     console.log(`downloadContextIntoDirectory fileExists=${fileExists}`);
     if (!fileExists) {
       console.log(`downloadContextIntoDirectory downloading...`);
-      const res = await fetch(downloadUrl, { redirect: "follow" });
+      // TODO: secrets and tokens
+      // Create needed headers
+      const headers = {};
+      if (downloadUrl.startsWith("https://api.github.com/")) {
+        headers["Accept"] = "application/vnd.github+json";
+        headers["X-GitHub-Api-Version"] = "2022-11-28";
+      }
+      const res = await fetch(downloadUrl, { 
+        redirect: "follow",
+        headers,
+      });
       if (res.status !== 200) {
         throw new Error(
           `Failure to download context from ${downloadUrl} [status=${res.status}]:  ${res?.statusText}`
@@ -531,7 +597,9 @@ const downloadContextIntoDirectory = async (args:{
     console.log("fileExistsAgain", fileExistsAgain);
     if (
       filePathForDownload.endsWith(".tar.gz") ||
-      filePathForDownload.endsWith(".tgz")
+      filePathForDownload.endsWith(".tgz") || 
+      // https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#download-a-repository-archive-tar
+      downloadUrl.includes("tarball")
     ) {
       console.log(`tgz.uncompress ${filePathForDownload} into ${destination}`);
       await tgz.uncompress(filePathForDownload, destination);

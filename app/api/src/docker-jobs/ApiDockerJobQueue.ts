@@ -274,7 +274,7 @@ export class ApiDockerJobQueue {
       switch (payload.type) {
         case "job-states-minimal":
           // If any of the jobs are different, update them
-          // console.log(`[${this.address.substring(0, 6)}] 📡 recieved job-states-minimal`, payload.value)
+          console.log(`[${this.address.substring(0, 6)}] 📡 recieved job-states-minimal`, payload.value)
           const jobStatesMinimal: string[] = payload.value as string[];
           if (!jobStatesMinimal) {
             break;
@@ -287,20 +287,21 @@ export class ApiDockerJobQueue {
               !this.state.jobs[jobId] ||
               this.state.jobs[jobId].state !== state
             ) {
+
+              console.log(`[${this.address.substring(0, 6)}] 📡 found job [${jobId.substring(0, 6)}] state mismatch`);
+
               (async () => {
-                const loadedJobResult = await db.queueJobGet(
+                let mostCurrentLocalJobResult = await db.queueJobGet(
                   this.address,
                   jobId
                 );
-                if (!loadedJobResult) {
-                  return;
-                }
+                
                 const resolvedJob = resolveMostCorrectJob(
                   this.state.jobs[jobId],
-                  loadedJobResult
+                  mostCurrentLocalJobResult
                 );
                 if (resolvedJob && resolvedJob !== this.state.jobs[jobId]) {
-                  this.state.jobs[jobId] = loadedJobResult;
+                  this.state.jobs[jobId] = mostCurrentLocalJobResult;
                   console.log(
                     `[${this.address.substring(
                       0,
