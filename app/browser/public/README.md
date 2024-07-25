@@ -6,7 +6,7 @@
 Run a worker pointing to a queue `public1` (you can change this queue name to anything you like, just make it long and unguessable):
 
 ```
-docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.23.0 run --cores=2 public1
+docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.24.0 run --cores=2 public1
 ```
 
 ## Quickstart: Run a job from the browser
@@ -49,7 +49,7 @@ Versioned. Reproducible. No client install requirements, as long as you have at 
 2. Configure the docker job
 3. Run a worker (or a bunch) pointing to a queue: `public1` (warning: this is a public shared compute queue)
    ```
-   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.23.0 run --cores=2 public1
+   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.24.0 run --cores=2 public1
    ```
 
 **Coming soon:** GPU support
