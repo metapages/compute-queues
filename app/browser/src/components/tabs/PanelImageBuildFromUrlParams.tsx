@@ -44,6 +44,7 @@ export const PanelImageBuildFromUrlParams: React.FC<{
 
   const onSubmit = useCallback(
     (values: FormType) => {
+
       const newJobDefinitionBlob = { ...jobDefinitionBlob };
 
       if (!values.image) {
@@ -63,6 +64,9 @@ export const PanelImageBuildFromUrlParams: React.FC<{
         delete newJobDefinitionBlob.build;
       } else {
         newJobDefinitionBlob.build = {};
+        if (jobDefinitionBlob?.build?.dockerfile) {
+          newJobDefinitionBlob.build.dockerfile = jobDefinitionBlob.build.dockerfile;
+        }
         // build and image are mutually exclusive
         delete newJobDefinitionBlob.image;
         if (values.buildArgs) {
@@ -84,8 +88,6 @@ export const PanelImageBuildFromUrlParams: React.FC<{
           newJobDefinitionBlob.build.target = values.target;
         }
       }
-
-      // console.log('PanelImageBuildFromUrlParams newJobDefinitionBlob', newJobDefinitionBlob);
 
       setJobDefinitionBlob(newJobDefinitionBlob);
       onSave?.();

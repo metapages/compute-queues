@@ -188,41 +188,41 @@ services:
       driver: ${LOGGING_WORKER:-json-file}
 
 
-  worker2:
-    container_name: wm-worker2
-    depends_on:
-      api1: 
-        condition: service_healthy
-      api2: 
-        condition: service_healthy
-      minio: 
-        condition: service_started
-    image: metapage/metaframe-docker-worker:${DOCKER_TAG:-cache}
-    # Add dev useful stuff
-    entrypoint: ["deno", "run", "--watch", "--allow-all", "src/cli.ts"]
-    command: run --cores=1 --api-server-address=http://api2:8082 local1
-    build:
-      context: .
-      dockerfile: worker/Dockerfile
-      target: worker
-    environment:
-      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
-      - DENO_DIR=/deno
-      - DENO_INSTALL_ROOT=/deno
-    volumes:
-      - ./shared:/app/shared
-      - ./worker:/app/worker
-      # Must match the host path name since used by docker to mount host directories
-      - /tmp:/tmp
-      - /var/run/docker.sock:/var/run/docker.sock
-      - deno:/deno
-    extra_hosts:
-      - host.docker.internal:host-gateway
-      - minio.worker-metaframe.localhost:host-gateway
-    networks:
-      - default
-    logging:
-      driver: ${LOGGING_WORKER:-json-file}
+  # worker2:
+  #   container_name: wm-worker2
+  #   depends_on:
+  #     api1: 
+  #       condition: service_healthy
+  #     api2: 
+  #       condition: service_healthy
+  #     minio: 
+  #       condition: service_started
+  #   image: metapage/metaframe-docker-worker:${DOCKER_TAG:-cache}
+  #   # Add dev useful stuff
+  #   entrypoint: ["deno", "run", "--watch", "--allow-all", "src/cli.ts"]
+  #   command: run --cores=1 --api-server-address=http://api2:8082 local1
+  #   build:
+  #     context: .
+  #     dockerfile: worker/Dockerfile
+  #     target: worker
+  #   environment:
+  #     - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+  #     - DENO_DIR=/deno
+  #     - DENO_INSTALL_ROOT=/deno
+  #   volumes:
+  #     - ./shared:/app/shared
+  #     - ./worker:/app/worker
+  #     # Must match the host path name since used by docker to mount host directories
+  #     - /tmp:/tmp
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - deno:/deno
+  #   extra_hosts:
+  #     - host.docker.internal:host-gateway
+  #     - minio.worker-metaframe.localhost:host-gateway
+  #   networks:
+  #     - default
+  #   logging:
+  #     driver: ${LOGGING_WORKER:-json-file}
 
   create-browser-assets:
     container_name: wm-create-browser-assets

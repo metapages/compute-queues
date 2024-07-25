@@ -122,7 +122,7 @@ export const serverWebsocket = (): void => {
             break;
           case WebsocketMessageTypeServerBroadcast.JobStatusPayload:
             const jobLogs = possibleMessage.payload as JobStatusPayload;
-            console.log(`⛈️ JobStatusPayload`, jobLogs);
+            // console.log(`⛈️ JobStatusPayload`, jobLogs);
             break;
           default:
             //ignored

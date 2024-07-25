@@ -25,16 +25,14 @@ const CACHED_DOCKER_IMAGES: { [key: string]: boolean } = {};
 const ROOT_BUILD_DIR = "/tmp/docker-builds";
 const ROOT_BUILD_DIR_DOWNLOADS = `${ROOT_BUILD_DIR}/downloads`;
 
-export const clearCache = async (args: {build?: DockerJobImageBuild}) => {
+export const clearCache = async (args: { build?: DockerJobImageBuild }) => {
   const buildSha = await getBuildSha(args);
   const image = getDockerImageName(buildSha);
-  docker.getImage(image).remove({}, (err:any, result:any) => {
-    console.log('docker.image.remove result', result);  
-    console.log('docker.image.remove err', err);
+  docker.getImage(image).remove({}, (err: any, result: any) => {
+    console.log("docker.image.remove result", result);
+    console.log("docker.image.remove err", err);
   });
-
-}
-
+};
 
 export const getBuildSha = async (args: {
   image?: string;
@@ -44,12 +42,12 @@ export const getBuildSha = async (args: {
   const buildSha = await shaObject(args.build);
   const sha = buildSha.substring(0, 32);
   return sha;
-}
+};
 
-export const getDockerImageName = (sha :string) => {
+export const getDockerImageName = (sha: string) => {
   // https://www.civo.com/learn/ttl-sh-your-anonymous-and-ephemeral-docker-image-registry
   return `ttl.sh/${sha}:1d`;
-}
+};
 
 export const ensureDockerImage = async (args: {
   jobId: string;
@@ -71,11 +69,11 @@ export const ensureDockerImage = async (args: {
     console.log("ensureDockerImage BUILDING");
     // image name comes from the build arguments so it can be retrieved if
     // already built
-    const buildSha = await getBuildSha({build});
-    
+    const buildSha = await getBuildSha({ build });
+
     image = getDockerImageName(buildSha);
 
-    imageExists = await checkForDockerImage({jobId, image, sender});
+    imageExists = false; //await checkForDockerImage({jobId, image, sender});
     if (imageExists) {
       return image;
     }
@@ -92,7 +90,12 @@ export const ensureDockerImage = async (args: {
     await ensureDir(buildDir);
 
     if (context) {
-      await downloadContextIntoDirectory({jobId, context, destination:buildDir, sender});
+      await downloadContextIntoDirectory({
+        jobId,
+        context,
+        destination: buildDir,
+        sender,
+      });
       console.log(`✅ ensureDockerImage: downloaded context into ${buildDir}`);
     }
 
@@ -120,31 +123,51 @@ export const ensureDockerImage = async (args: {
       });
       const process = command.spawn();
 
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+
       (async () => {
-        for await (const data of process.stdout.pipeThrough(new TextDecoderStream())) {
-          // console.log(`DOCKER BUILD stdout: ${data}`);
+        for await (const data of process.stdout.pipeThrough(
+          new TextDecoderStream()
+        )) {
+          console.log(`DOCKER BUILD stdout: ${data}`);
           const time = Date.now();
+          const decodedLines: string[] = data.trim().split("\n");
+          stdout.push(...decodedLines);
+
           sender({
             type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
             payload: {
               jobId,
               step: "docker build",
-              logs: data.trim().split("\n").map((l) => ({time, type: "stdout", val:l.trim()})),
+              logs: decodedLines.map((l: string) => ({
+                time,
+                type: "stdout",
+                val: l.trim(),
+              })),
             } as JobStatusPayload,
           });
         }
       })();
 
       (async () => {
-        for await (const data of process.stderr.pipeThrough(new TextDecoderStream())) {
+        for await (const data of process.stderr.pipeThrough(
+          new TextDecoderStream()
+        )) {
           // console.log(`DOCKER BUILD stderr: ${data}`);
           const time = Date.now();
+          const decodedLines: string[] = data.trim().split("\n");
+          stderr.push(...decodedLines);
           sender({
             type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
             payload: {
               jobId,
               step: "docker build",
-              logs: data.trim().split("\n").map((l) => ({time, type: "stderr", val:l.trim()})),
+              logs: decodedLines.map((l: string) => ({
+                time,
+                type: "stderr",
+                val: l.trim(),
+              })),
             } as JobStatusPayload,
           });
         }
@@ -156,31 +179,42 @@ export const ensureDockerImage = async (args: {
       console.log("status", code);
       console.log("signal", signal);
 
+      if (!success) {
+        console.error(
+          `💥 DOCKER BUILD FAILED: ${code} ${signal}\n ${stdout.join(
+            "\n"
+          )} \n ${stderr.join("\n")}`
+        );
+        throw new Error(
+          `Failure to build the docker image: ${stderr.join(
+            "\n"
+          )} \n ${stdout.join("\n")}`
+        );
+      }
+
       if (success) {
         try {
-          
           const dockerimage = docker.getImage(image);
-          dockerimage.push({tag: '1d'}, (err:any, stream:any) => {
+          dockerimage.push({ tag: "1d" }, (err: any, stream: any) => {
             try {
               if (err) {
-                console.log(`💥 DOCKER PUSH: ${err}`);  
+                console.log(`💥 DOCKER PUSH: ${err}`);
               }
-              
+
               console.log(`DOCKER PUSHING...`);
 
               docker.modem.followProgress(
                 stream,
                 (err: any, output: any) => {
                   if (err) {
-                    console.log(`💥 DOCKER PUSH: ${err}`);  
+                    console.log(`💥 DOCKER PUSH: ${err}`);
                     return;
                   }
                   // console.log(`DOCKER PUSH:`, output);
-                  
                 },
                 (progressEvent: Event) => {
                   console.log(progressEvent);
-                  
+
                   sender({
                     type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
                     payload: {
@@ -197,19 +231,14 @@ export const ensureDockerImage = async (args: {
                   });
                 }
               );
-
-
-            
-
-            } catch(err) {
+            } catch (err) {
               console.error("pushed error", err);
             }
-          }) 
+          });
         } catch (err) {
           //ignored
         }
       }
-
 
       // let allFiles = getFiles(buildDir).map((f) =>
       //   f.path.replace(buildDir + "/", "")
@@ -244,7 +273,6 @@ export const ensureDockerImage = async (args: {
       console.error("💥 ensureDockerImage error", err);
       throw err;
     }
-
   } else {
     console.log("ensureDockerImage PULLING bc image and no build");
     const stream = await docker.pull(image);
@@ -274,19 +302,21 @@ export const ensureDockerImage = async (args: {
             ],
           } as JobStatusPayload,
         });
-
       }
 
       docker.modem.followProgress(stream, onFinished, onProgress);
     });
     CACHED_DOCKER_IMAGES[image!] = true;
-
   }
   return image!;
 };
 
-const checkForDockerImage = async (args: {jobId: string, image: string, sender: WebsocketMessageSenderWorker}): Promise<boolean> => {
-  const {image, sender, jobId} = args;
+const checkForDockerImage = async (args: {
+  jobId: string;
+  image: string;
+  sender: WebsocketMessageSenderWorker;
+}): Promise<boolean> => {
+  const { image, sender, jobId } = args;
   if (CACHED_DOCKER_IMAGES[image]) {
     // console.log(`👀 ensureDockerImage: ${image} FOUND IMAGE IN MY FAKE CACHE`)
     // console.log('FOUND IMAGE IN MY FAKE CACHE')
@@ -303,7 +333,6 @@ const checkForDockerImage = async (args: {jobId: string, image: string, sender: 
   try {
     await new Promise<void>((resolve, reject) => {
       docker.pull(image, function (err: any, stream: any) {
-
         if (err) {
           reject(err);
           return;
@@ -329,7 +358,7 @@ const checkForDockerImage = async (args: {jobId: string, image: string, sender: 
             payload: {
               jobId,
               step: "docker image pull",
-              logs: [{time:Date.now(), type: "event", val:event}],
+              logs: [{ time: Date.now(), type: "event", val: event }],
             } as JobStatusPayload,
           });
           console.log("pull event", event);
@@ -337,7 +366,7 @@ const checkForDockerImage = async (args: {jobId: string, image: string, sender: 
       });
     });
   } catch (err) {
-    console.error("Didn't wanna pull", err)
+    console.error("Didn't wanna pull", err);
   }
 
   return imageExists;
@@ -424,10 +453,50 @@ const parseDockerUrl = (s: string): DockerUrlBlob => {
   return url;
 };
 
-const getDownloadLinkFromContext = (context: string): string => {
-  // https://github.com/ulysseherbach/harissa
-  // const url = new URL(context);
-  return context;
+const getDownloadLinkFromContext = async (context: string): Promise<string> => {
+  // https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
+  if (context.endsWith(".tar.gz") || context.endsWith(".zip")) {
+    return context;
+  } else if (context.startsWith("https://github.com")) {
+    // Create a personal access token at https://github.com/settings/tokens/new?scopes=repo
+    // const octokit = new Octokit({ auth: `personal-access-token123` });
+    const matches = new RegExp(
+      /https:\/\/github.com\/([-\w]{6,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([\/-\w\.]{1,100}))?/
+    ).exec(context);
+    console.log("matches", matches);
+    if (!matches) {
+      throw new Error(`Invalid GitHub URL: ${context}`);
+    }
+
+    const owner = matches[1];
+    const repo = matches[2];
+    const ref = matches[5] || "main";
+
+    return `https://api.github.com/repos/${owner}/${repo}/tarball/${ref}`;
+
+    // const octokit = new Octokit();
+    // // https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#download-a-repository-archive-tar
+    // const redirectUrl = await octokit.request('GET /repos/{owner}/{repo}/tarball/{ref}', {
+    //   // https://github.com/octokit/octokit.js/issues/2369#issuecomment-1648744759
+    //   request: {
+    //     parseSuccessResponseBody: false
+    //   },
+    //   owner,
+    //   repo,
+    //   ref,
+    //   headers: {
+    //     'X-GitHub-Api-Version': '2022-11-28'
+    //   }
+    // });
+
+    // console.log('redirectURl', redirectUrl);
+
+    // return redirectUrl.url;
+  } else {
+    // https://github.com/ulysseherbach/harissa
+    // const url = new URL(context);
+    return context;
+  }
 };
 
 const getFilePathForDownload = (url: string): string => {
@@ -440,11 +509,11 @@ const getFilePathForDownload = (url: string): string => {
   return "";
 };
 
-const downloadContextIntoDirectory = async (args:{
-  jobId: string,
-  context: string,
-  destination: string,
-  sender: WebsocketMessageSenderWorker
+const downloadContextIntoDirectory = async (args: {
+  jobId: string;
+  context: string;
+  destination: string;
+  sender: WebsocketMessageSenderWorker;
 }): Promise<void> => {
   const { context, destination, sender, jobId } = args;
   sender({
@@ -452,7 +521,13 @@ const downloadContextIntoDirectory = async (args:{
     payload: {
       jobId,
       step: "cloning repo",
-      logs: [{time:Date.now(), type: "event", val:`Downloading context: ${context}`}],
+      logs: [
+        {
+          time: Date.now(),
+          type: "event",
+          val: `Downloading context: ${context}`,
+        },
+      ],
     } as JobStatusPayload,
   });
   // Download git repo, unpack, and use as context
@@ -460,14 +535,14 @@ const downloadContextIntoDirectory = async (args:{
   // TODO: for now, just download the context as is
   // First check if the context has been already downloaded
   // ch
-  const downloadUrl = getDownloadLinkFromContext(context);
+  const downloadUrl = await getDownloadLinkFromContext(context);
   const filePathForDownload = getFilePathForDownload(downloadUrl);
 
   console.log(`downloadContextIntoDirectory downloadUrl=${downloadUrl}`);
   console.log(
     `downloadContextIntoDirectory filePathForDownload=${filePathForDownload}`
   );
-  let file :Deno.FsFile|null = null;
+  let file: Deno.FsFile | null = null;
   try {
     const fileExists = await exists(filePathForDownload, {
       isFile: true,
@@ -476,7 +551,17 @@ const downloadContextIntoDirectory = async (args:{
     console.log(`downloadContextIntoDirectory fileExists=${fileExists}`);
     if (!fileExists) {
       console.log(`downloadContextIntoDirectory downloading...`);
-      const res = await fetch(downloadUrl, { redirect: "follow" });
+      // TODO: secrets and tokens
+      // Create needed headers
+      const headers: Record<string, string> = {};
+      if (downloadUrl.startsWith("https://api.github.com/")) {
+        headers["Accept"] = "application/vnd.github+json";
+        headers["X-GitHub-Api-Version"] = "2022-11-28";
+      }
+      const res = await fetch(downloadUrl, {
+        redirect: "follow",
+        headers,
+      });
       if (res.status !== 200) {
         throw new Error(
           `Failure to download context from ${downloadUrl} [status=${res.status}]:  ${res?.statusText}`
@@ -493,7 +578,7 @@ const downloadContextIntoDirectory = async (args:{
         create: true,
         write: true,
       });
-      
+
       console.log(`downloadContextIntoDirectory created file and piping...`);
       await res.body.pipeTo(file.writable);
       console.log(`downloadContextIntoDirectory finished piping...`);
@@ -508,7 +593,13 @@ const downloadContextIntoDirectory = async (args:{
         payload: {
           jobId,
           step: "cloning repo",
-          logs: [{time:Date.now(), type: "event", val:`✅ Downloaded context: ${context}`}],
+          logs: [
+            {
+              time: Date.now(),
+              type: "event",
+              val: `✅ Downloaded context: ${context}`,
+            },
+          ],
         } as JobStatusPayload,
       });
 
@@ -519,7 +610,13 @@ const downloadContextIntoDirectory = async (args:{
         payload: {
           jobId,
           step: "cloning repo",
-          logs: [{time:Date.now(), type: "event", val:`Context file already exists`}],
+          logs: [
+            {
+              time: Date.now(),
+              type: "event",
+              val: `Context file already exists`,
+            },
+          ],
         } as JobStatusPayload,
       });
     }
@@ -531,7 +628,9 @@ const downloadContextIntoDirectory = async (args:{
     console.log("fileExistsAgain", fileExistsAgain);
     if (
       filePathForDownload.endsWith(".tar.gz") ||
-      filePathForDownload.endsWith(".tgz")
+      filePathForDownload.endsWith(".tgz") ||
+      // https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#download-a-repository-archive-tar
+      downloadUrl.includes("tarball")
     ) {
       console.log(`tgz.uncompress ${filePathForDownload} into ${destination}`);
       await tgz.uncompress(filePathForDownload, destination);
@@ -548,7 +647,13 @@ const downloadContextIntoDirectory = async (args:{
       payload: {
         jobId,
         step: "cloning repo",
-        logs: [{time:Date.now(), type:"event", val:`✅ copied context, ready to build`}],
+        logs: [
+          {
+            time: Date.now(),
+            type: "event",
+            val: `✅ copied context, ready to build`,
+          },
+        ],
       } as JobStatusPayload,
     });
   } catch (err) {
@@ -563,4 +668,3 @@ const downloadContextIntoDirectory = async (args:{
     }
   }
 };
-
