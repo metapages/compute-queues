@@ -296,12 +296,12 @@ export class ApiDockerJobQueue {
                   jobId
                 );
                 
-                const resolvedJob = resolveMostCorrectJob(
+                const resolvedJob = mostCurrentLocalJobResult ? resolveMostCorrectJob(
                   this.state.jobs[jobId],
                   mostCurrentLocalJobResult
-                );
+                ) : this.state.jobs[jobId];
                 if (resolvedJob && resolvedJob !== this.state.jobs[jobId]) {
-                  this.state.jobs[jobId] = mostCurrentLocalJobResult;
+                  this.state.jobs[jobId] = resolvedJob;
                   console.log(
                     `[${this.address.substring(
                       0,
