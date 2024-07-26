@@ -534,7 +534,8 @@ export class ApiDockerJobQueue {
       return false;
     }
 
-    if (!isJobCacheAllowedToBeDeleted(this.state.jobs[jobId])) {
+    const currentState = this.state.jobs[jobId].history[this.state.jobs[jobId].history.length - 1];
+    if (!isJobCacheAllowedToBeDeleted(currentState)) {
       console.log(
         `[${this.address.substring(
           0,
