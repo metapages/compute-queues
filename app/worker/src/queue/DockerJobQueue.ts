@@ -334,7 +334,14 @@ export class DockerJobQueue {
 
             dockerExecution.finish.then(async (result: DockerRunResult) => {
                 console.log(`[${jobBlob.hash.substring(0, 6)}] result ${JSON.stringify(result, null, '  ').substr(0, 200)}`);
-
+                if (result.error) {
+                    console.log(`[${jobBlob.hash.substring(0, 6)}] 💥 error: ${result.error}`);
+                }
+                if (result.StatusCode !== 0) {
+                    console.log(`[${jobBlob.hash.substring(0, 6)}] 💥 StatusCode: ${result.StatusCode}`);
+                    console.log(`[${jobBlob.hash.substring(0, 6)}] 💥 stderr: ${result.stderr?.join("\n")}`);
+                }
+                
                 const resultWithOutputs: DockerRunResultWithOutputs = result as DockerRunResultWithOutputs;
                 resultWithOutputs.outputs = {};
 
