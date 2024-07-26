@@ -188,6 +188,7 @@ services:
       driver: ${LOGGING_WORKER:-json-file}
 
 
+  # Uncomment this to work with two workers
   # worker2:
   #   container_name: wm-worker2
   #   depends_on:
