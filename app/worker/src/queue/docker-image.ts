@@ -2,7 +2,10 @@ import {
   ensureDir,
   exists,
 } from 'https://deno.land/std@0.224.0/fs/mod.ts';
-import { dirname } from 'https://deno.land/std@0.224.0/path/dirname.ts';
+import {
+  dirname,
+  join,
+} from 'https://deno.land/std@0.224.0/path/mod.ts';
 // import getFiles from 'https://deno.land/x/getfiles@v1.0.0/mod.ts';
 // import {
 //   mergeReadableStreams,
@@ -626,6 +629,9 @@ const downloadContextIntoDirectory = async (args: {
       isReadable: true,
     });
     console.log("fileExistsAgain", fileExistsAgain);
+    // recreate destination
+    Deno.removeSync(destination, { recursive: true });
+    await ensureDir(destination);
     if (
       filePathForDownload.endsWith(".tar.gz") ||
       filePathForDownload.endsWith(".tgz") ||
@@ -642,6 +648,17 @@ const downloadContextIntoDirectory = async (args: {
         `Downloaded context as ${downloadUrl} but do not know how to convert to a context folder`
       );
     }
+
+    // github downloads create a parent folder with the repo name and branch/tag/commit
+    // move the contents of that folder to the destination
+    const tempDirectory = `/tmp/${Math.random().toString(36).substring(7)}`;
+    const dir = [...Deno.readDirSync(destination)].filter(e => e.isDirectory)[0].name;
+
+    await Deno.rename(join(destination, dir), tempDirectory);
+    await Deno.remove(destination, { recursive: true });
+    await Deno.rename(tempDirectory, destination);
+    console.log(`Moved ${join(destination, dir)} => ${tempDirectory} => ${destination}`);
+
     sender({
       type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
       payload: {
