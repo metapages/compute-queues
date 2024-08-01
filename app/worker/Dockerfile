@@ -1,12 +1,15 @@
 #################################################################
 # Base image
 #################################################################
-FROM denoland/deno:alpine-1.43.6 as worker
+FROM denoland/deno:1.45.5 as worker
 
 # # https://gist.github.com/squarebracket/e719069522436873bc6f13efb359cac9
 # RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
 
-RUN apk add --no-cache --update docker openrc
+RUN apt-get update && apt-get -y install podman ca-certificates fuse-overlayfs slirp4netns
+
+COPY ./worker/entrypoint.sh /entrypoint.sh
+VOLUME /var/lib/containers
 
 WORKDIR /app
 COPY ./worker/src ./worker/src
@@ -22,4 +25,4 @@ ENV VERSION=$VERSION
 
 RUN deno cache --unstable src/cli.ts
 
-ENTRYPOINT ["deno", "run", "--allow-sys", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "--allow-run", "src/cli.ts"]
+ENTRYPOINT ["/entrypoint.sh"]
