@@ -34,14 +34,8 @@ await new Command()
     .command("test", testCommand)
     
     // end sub-commands
-    
     .reset()
     .action(function () {
       this.showHelp();
     })
-    
     .parse(Deno.args);
-
-
-
-    
