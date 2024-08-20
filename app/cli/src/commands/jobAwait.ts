@@ -32,7 +32,7 @@ export const jobAwait = new Command()
       const { apiServerAddress, outputs } = options;
 
       const address = apiServerAddress || globalThis.location.origin;
-      const url = `${address}/client/${queue}`;
+      const url = `${address}/${queue}/client`;
       
       let {
         promise: jobCompleteDeferred,

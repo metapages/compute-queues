@@ -34,7 +34,22 @@ Any time the inputs change (and on start) the configured docker contaner is run:
  - `/outputs`: any files here when the container exits are passed on as metaframe outputs
 
 
-[![](https://mermaid.ink/svg/pako:eNqNkk9v2zAMxb8KoV5WwGnWdScVKFA0OezUQ3qLe1BsKlZtSZ5ENQ2SfPdRttM_u2yAAdPye-SPDzqIytcopNgG1TfwtCgdQNWpGBeowfYPvvMBtOk6eaG1LiIF36K8uLm-Xy5_Tp-znampkT_6t9vS5QYxbcZ-Fkn1aov5EGAT_C5iWJeiIeqjnM_P_-PV1lCTNlfGz2tftRhK8SylnABGexbroCz-cuv3GnZsBOP6RPGTA2azOzhO50Aexq7w4jfHM8cXqMngEw0OHbz94nkf-Jjo0_TKu5iscduz8y9qdPUQCIZXXnx8jcjcFX4nTPh8mxU7H9ohmrGAb6RajFkVISTnhhEO9j4F3oqHc_SpohRwXnnLkzFccma8xgyOE7ixHG0xZlAwHz_xOLHkmR-r_79nwstp8e6kjBuoP6JiiKzrjGtXtO8QvhfX8O9rIwphMVhlar6Mh9yhFNSgxVJILmvUKnVUitKdWJr6WhEua0M-CKlVF7EQimlXe1cJydHgWbQwiu-inVSnPyX5DNs)](https://mermaid-js.github.io/mermaid-live-editor/edit#pako:eNqNkk9v2zAMxb8KoV5WwGnWdScVKFA0OezUQ3qLe1BsKlZtSZ5ENQ2SfPdRttM_u2yAAdPye-SPDzqIytcopNgG1TfwtCgdQNWpGBeowfYPvvMBtOk6eaG1LiIF36K8uLm-Xy5_Tp-znampkT_6t9vS5QYxbcZ-Fkn1aov5EGAT_C5iWJeiIeqjnM_P_-PV1lCTNlfGz2tftRhK8SylnABGexbroCz-cuv3GnZsBOP6RPGTA2azOzhO50Aexq7w4jfHM8cXqMngEw0OHbz94nkf-Jjo0_TKu5iscduz8y9qdPUQCIZXXnx8jcjcFX4nTPh8mxU7H9ohmrGAb6RajFkVISTnhhEO9j4F3oqHc_SpohRwXnnLkzFccma8xgyOE7ixHG0xZlAwHz_xOLHkmR-r_79nwstp8e6kjBuoP6JiiKzrjGtXtO8QvhfX8O9rIwphMVhlar6Mh9yhFNSgxVJILmvUKnVUitKdWJr6WhEua0M-CKlVF7EQimlXe1cJydHgWbQwiu-inVSnPyX5DNs)
+```mermaid
+flowchart TD
+  classDef mpColor fill:#fff,stroke:#31AEE4,stroke-width:2px;
+
+  subgraph metapage
+    browser["https://docker.mtfm.io"]:::mpColor
+    metaframeIn[metaframe with inputs]:::mpColor --> | inputs to docker job| browser
+    browser --> | outputs from docker job| metaframeOut[metaframe consuming outputs]:::mpColor
+  end
+  server[server with job queue];
+  worker["worker (takes jobs running on your infrastructure/computer)"] --- |docker image,inputs,outouts| server
+  browser --- |docker image,inputs,outouts| server
+  worker --> container["docker job"]
+  linkStyle 0,1 stroke:#31AEE4,stroke-width:2px;
+
+```
 
 Versioned. Reproducible. No client install requirements, as long as you have at least one worker running somewhere, you can run any programming language.
 
@@ -53,10 +68,6 @@ Versioned. Reproducible. No client install requirements, as long as you have at 
    ```
 
 **Coming soon:** GPU support
-
-## Repository
-[https://github.com/metapages/metaframe-docker](https://github.com/metapages/metaframe-docker)
-
 
 ## Example URL
 
