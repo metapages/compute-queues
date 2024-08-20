@@ -903,6 +903,7 @@ export class ApiDockerJobQueue {
                     this.state.jobs[jobId].state
                   } ignoring queue request, job already queued or running`
                 );
+                
                 // TODO: what is happening here? It could be a lost job
                 await broadcastCurrentStateBecauseIDoubtStateIsSynced();
                 break;
