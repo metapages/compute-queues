@@ -1,0 +1,16 @@
+app = "metapage-autoscaler"
+
+[build]
+image = "flyio/fly-autoscaler:0.3.1"
+
+[env]
+FAS_ORG="personal"
+FAS_APP_NAME = "metapage-workers-*"
+FAS_STARTED_MACHINE_COUNT = "ceil(queue_length / 1) + 1"
+FAS_PROMETHEUS_ADDRESS = "https://api.fly.io/prometheus/miend"
+FAS_PROMETHEUS_METRIC_NAME = "queue_length"
+FAS_PROMETHEUS_QUERY = "sum(queue_length{app='$APP_NAME'})"
+
+[metrics]
+port = 9090
+path = "/metrics"

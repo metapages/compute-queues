@@ -13,5 +13,5 @@ deno run \
     --allow-run \
     src/cli.ts \
     run \
-    --cores=2 \
+    --cores=$METAPAGE_WORKER_CORES \
     $METAPAGE_QUEUE_ID
