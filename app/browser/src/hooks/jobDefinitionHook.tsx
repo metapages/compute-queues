@@ -99,6 +99,10 @@ export const useDockerJobDefinition = () => {
       }
       Object.keys(inputs).forEach((name) => {
         let value = inputs[name];
+        // null (and undefined) cannot be serialized, so skip them
+        if (value === undefined || value === null) {
+          return;
+        }
         if (typeof value === "object" && value._s === true) {
           const blob = value as DataRefSerialized;
           // serialized blob/typedarray/arraybuffer

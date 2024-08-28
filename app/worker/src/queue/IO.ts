@@ -89,7 +89,6 @@ export const getOutputs = async (job: DockerJobDefinitionRow, workerId:string
   for (const file of files) {
     // TODO: handle BIG blobs
     const ref = await fileToDataref(file, config.server);
-    const fileName = 
     // const fileBuffer: Buffer = await fse.readFile(file);
     // const ref: DataRef = await bufferToBase64Ref(fileBuffer);
     outputs[file.replace(`${outputsDir}/`, "")] = ref;
