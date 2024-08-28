@@ -15,7 +15,6 @@ console.log('Bucket', Bucket);
 console.log('AWS_REGION', AWS_REGION);
 console.log('AWS_ENDPOINT', AWS_ENDPOINT);
 console.log('AWS_ACCESS_KEY_ID', AWS_ACCESS_KEY_ID);
-console.log('AWS_SECRET_ACCESS_KEY', AWS_SECRET_ACCESS_KEY);
 
 export const bucketParams = { 
   Bucket,
