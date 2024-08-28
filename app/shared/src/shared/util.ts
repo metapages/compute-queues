@@ -15,15 +15,16 @@ export const shaObject = async (obj :any) :Promise<string> => {
 export const fetchRobust = fetchRetry(fetch, {
   retries: 8,
   retryDelay: (attempt:number, error:any, response:any) => {
-    return Math.pow(2, attempt) * 500; // 500, 1000, 2000, 4000, 5000
+    return Math.pow(2, attempt) * 400; // 500, 1000, 2000, 4000, 5000
   },
   retryOn: (attempt:number, error:any, response:Response | null) => {
     // retry on any network error, or 4xx or 5xx status codes
-    if (error !== null || (response && response.status >= 400)) {
-      
-      console.log(`retrying, response.status=${response?.status} response.statusText=${response?.statusText} attempt number ${attempt + 1} url=${response?.url}`);
-      console.error(error);
+    if (error !== null || (response && response.status >= 400)) {      
       if (attempt > 7) {
+        if (error) {
+          console.error(error);
+        }
+        console.log(`Retried too many times: response.status=${response?.status} response.statusText=${response?.statusText} attempt number ${attempt + 1} url=${response?.url}`);
         return false;
       }
       return true;
