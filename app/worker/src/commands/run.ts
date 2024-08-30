@@ -1,9 +1,8 @@
+// For serving metrics endpoint
+import { serve } from 'https://deno.land/std@0.201.0/http/server.ts';
 import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
 import { ms } from 'ms';
 import ReconnectingWebSocket from 'npm:reconnecting-websocket@4.4.0';
-
-// For serving metrics endpoint
-import { serve } from "https://deno.land/std@0.201.0/http/server.ts";
 
 import mod from '../../mod.json' with { type: 'json' };
 import { config } from '../config.ts';
@@ -15,6 +14,7 @@ import {
 } from '../queue/DockerJobQueue.ts';
 import {
   BroadcastJobStates,
+  JobStates,
   PayloadClearJobCache,
   WebsocketMessageSenderWorker,
   WebsocketMessageServerBroadcast,
@@ -25,7 +25,7 @@ import {
 
 const VERSION :string = mod.version;
 
-let jobList :string[] = [];
+let jobList :JobStates = { jobs: {} };
 
 /**
  * Connect via websocket to the API server, and attach the DockerJobQueue object
@@ -112,7 +112,7 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
         // definitive list of jobs
         case WebsocketMessageTypeServerBroadcast.JobStates:
             const allJobsStatesPayload = possibleMessage.payload as BroadcastJobStates;
-            jobList = allJobsStatesPayload;
+            jobList = allJobsStatesPayload.state;
           if (!allJobsStatesPayload) {
             console.log({ error: 'Missing payload in message', possibleMessage });
             break;
@@ -160,7 +160,7 @@ const metricsHandler = (req: Request): Response => {
   const url = new URL(req.url);
   // Route the metrics endpoint
   if (url.pathname === "/metrics") {
-    const unfinishedJobs = Object.values(jobList.state.jobs).filter((job) => job.state !== "Finished");
+    const unfinishedJobs = Object.values(jobList.jobs).filter((job) => job.state !== "Finished");
     const unfinishedQueueLength = unfinishedJobs.length;
     // Simple Prometheus-compatible metric response
     const response = `
