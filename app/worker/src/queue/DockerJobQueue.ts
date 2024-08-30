@@ -5,6 +5,7 @@ import mod from '../../mod.json' with { type: 'json' };
 import { config } from '../config.ts';
 import {
   BroadcastJobStates,
+  DockerApiDeviceRequest,
   DockerJobDefinitionInputRefs,
   DockerJobDefinitionRow,
   DockerJobFinishedReason,
@@ -43,6 +44,7 @@ type WorkerJobQueueItem = {
     definition: DockerJobDefinitionInputRefs;
     // We might have to send this multiple times, so keep it around
     runningMessageToServer: WebsocketMessageWorkerToServer;
+    gpuIndices?: number[];
     
 }
 
@@ -51,7 +53,9 @@ const UPDATE_WORKERS_INTERVAL = ms("5s")
 export class DockerJobQueue {
     workerId: string;
     cpus: number;
+    gpus: number;
     // space in the value structure for local state
+    // These are RUNNING jobs
     queue: { [hash in string]: WorkerJobQueueItem } = {};
 
     // If we finish a job but the server is unavailabe when we request a stateChange
@@ -64,10 +68,84 @@ export class DockerJobQueue {
     // jobs: { [hash in string]: DockerJobDefinitionInputRefs } = {};
 
     constructor(args: DockerJobQueueArgs) {
-        const { sender, cpus, id } = args;
+        const { sender, cpus, gpus, id } = args;
         this.cpus = cpus;
+        this.gpus = gpus;
         this.sender = sender;
         this.workerId = id;
+    }
+
+    gpuDeviceIndicesUsed() :number[] {
+        const gpuDeviceIndicesUsed :number[] = Object.values(this.queue)
+            .filter((item :WorkerJobQueueItem) => item.gpuIndices)
+            .reduce<number[]>((array, item) => {
+                return item.gpuIndices ? array.concat(item.gpuIndices) : array;
+            }, []);
+            gpuDeviceIndicesUsed.sort();
+        return gpuDeviceIndicesUsed;
+        // return Object.entries(this.queue).filter(([_, item]) => item.definition.gpu).length;
+    }
+
+    gpuCapacity() :number {
+        return this.gpus - this.gpuDeviceIndicesUsed().length;
+    }
+
+    isGPUCapacity() :boolean {
+        return this.gpuCapacity() > 0;
+    }
+
+    // getGPUDeviceRequests() :{
+    //     Driver:string,
+    //     Count: number,
+    //     DeviceIDs?: string[],
+    //     Capabilities: string[][]
+    //   }[] {
+    //     if (!this.isGPUCapacity()) {
+    //         throw `getGPUDeviceRequests but no capacity`;
+    //     }
+    //     const gpuDeviceIndicesUsed :number[] = Object.values(this.queue)
+    //         .filter((item :WorkerJobQueueItem) => item.gpuIndices)
+    //         .reduce<number[]>((array, item) => {
+    //             return item.gpuIndices ? array.concat(item.gpuIndices) : array;
+    //         }, []);
+        
+    //     gpuDeviceIndicesUsed.sort();
+    //     // Now get thei first available GPU
+        
+    //     for (let gpuIndex = 0; gpuIndex < this.gpus; gpuIndex++) {
+    //         if (!gpuDeviceIndicesUsed.includes(gpuIndex)) {
+    //             return [{
+    //                 Driver: 'nvidia',
+    //                 Count: 1,
+    //                 DeviceIDs: [`${gpuIndex}`],
+    //                 Capabilities: [["gpu"]],
+    //             }];
+    //         }
+    //     }
+
+    //     throw `getGPUDeviceRequests but could not find an available GPU`;
+    // }
+
+    getGPUDeviceIndex() :number {
+        if (!this.isGPUCapacity()) {
+            throw `getGPUDeviceIndex but no capacity`;
+        }
+        const gpuDeviceIndicesUsed :number[] = Object.values(this.queue)
+            .filter((item :WorkerJobQueueItem) => item.gpuIndices)
+            .reduce<number[]>((array, item) => {
+                return item.gpuIndices ? array.concat(item.gpuIndices) : array;
+            }, []);
+        
+        gpuDeviceIndicesUsed.sort();
+        // Now get thei first available GPU
+        
+        for (let gpuIndex = 0; gpuIndex < this.gpus; gpuIndex++) {
+            if (!gpuDeviceIndicesUsed.includes(gpuIndex)) {
+                return gpuIndex;
+            }
+        }
+
+        throw `getGPUDeviceIndex but could not find an available GPU`;
     }
 
     status() :WorkerStatusResponse {
@@ -75,6 +153,7 @@ export class DockerJobQueue {
             time: Date.now(),
             id: this.workerId,
             cpus: this.cpus,
+            gpus: this.gpus,
             queue: Object.fromEntries(Object.entries(this.queue).map(([key, item]) => {
                 return [
                     key,
@@ -95,6 +174,7 @@ export class DockerJobQueue {
             version: Version,
             id: this.workerId,
             cpus: this.cpus,
+            gpus: this.gpus,
         };
         this.sender({
             type: WebsocketMessageTypeWorkerToServer.WorkerRegistration,
@@ -225,11 +305,31 @@ export class DockerJobQueue {
         const queuedJobKeys: string[] = Object.keys(jobStates)
             .filter(key => jobStates[key].state === DockerJobState.Queued || jobStates[key].state === DockerJobState.ReQueued);
         // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
-        while (queuedJobKeys.length > 0 && Object.keys(this.queue).length < this.cpus) {
+        // Go through the queued jobs and start them if we have capacity
+        // let index = 0;
+        while (queuedJobKeys.length > 0) {
             const jobKey = queuedJobKeys.pop()!;
-            const job = jobStates[jobKey]
-            // console.log(`[${job.hash}] about to claim ${JSON.stringify(job)}`)
-            await this._startJob(job);
+            const job = jobStates[jobKey];
+            const definition = (job.history[0].value as StateChangeValueQueued).definition;
+            // Can I start this job?
+            // This logic *could* be above in the while loop, but it's going to get
+            // more complicated when we add more features, so make the check steps explicit
+            // even if it's a bit more verbose
+            const cpusOK = Object.keys(this.queue).length < this.cpus;
+
+            if (cpusOK) {
+                // cpu capacity is 👍
+                // GPUs?
+                if (definition.gpu) {
+                    if (!this.isGPUCapacity()) {
+                        // no gpu capacity but the job needs it
+                        // skip this job
+                        continue;
+                    }
+                }
+                // console.log(`[${job.hash}] about to claim ${JSON.stringify(job)}`)
+                await this._startJob(job);
+            }
         }
     }
     
@@ -258,8 +358,22 @@ export class DockerJobQueue {
                 value: valueRunning,
             }
         }
+
         // add a placeholder on the queue for this job
         this.queue[jobBlob.hash] = { execution: null, definition, runningMessageToServer };
+        let deviceRequests: DockerApiDeviceRequest[] | undefined;
+        if (definition.gpu) {
+            const deviceIndex = this.getGPUDeviceIndex();
+            this.queue[jobBlob.hash].gpuIndices = [deviceIndex];
+            deviceRequests = [{
+                                Driver: 'nvidia',
+                                // Count: 1,
+                                DeviceIDs: [`${deviceIndex}`],
+                                Capabilities: [["gpu"]],
+                            }]
+        }
+
+
         this.sender(runningMessageToServer);
 
         // after this it can all happen async
@@ -311,7 +425,7 @@ export class DockerJobQueue {
                 workdir: definition.workdir,
                 env: definition.env,
                 volumes: [volumes!.inputs, volumes!.outputs],
-                gpu: definition.gpu,
+                deviceRequests,
                 durationMax: definition.durationMax,
                 // outStream?: Writable;
                 // errStream?: Writable;
@@ -333,7 +447,7 @@ export class DockerJobQueue {
             this.queue[jobBlob.hash].execution = dockerExecution;
 
             dockerExecution.finish.then(async (result: DockerRunResult) => {
-                console.log(`[${jobBlob.hash.substring(0, 6)}] result ${JSON.stringify(result, null, '  ').substr(0, 200)}`);
+                // console.log(`[${jobBlob.hash.substring(0, 6)}] result ${JSON.stringify(result, null, '  ').substring(0, 200)}`);
                 if (result.error) {
                     console.log(`[${jobBlob.hash.substring(0, 6)}] 💥 error: ${result.error}`);
                 }
@@ -358,6 +472,7 @@ export class DockerJobQueue {
                 } else {
                     // get outputs
                     try {
+                        console.log(`[${this.workerId.substring(0,6)}] [${jobBlob.hash.substring(0,6)}] getting outputs`);
                         const outputs = await getOutputs(jobBlob, this.workerId);
                         valueFinished = {
                             reason: DockerJobFinishedReason.Success,

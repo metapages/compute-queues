@@ -1,6 +1,7 @@
 import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
 
 import { runCommand } from './commands/run.ts';
+import { testCommand } from './commands/test.ts';
 
 // running in docker doesn't automatically kill on ctrl-c
 // https://github.com/nodejs/node/issues/4182
@@ -9,7 +10,6 @@ Deno.addSignalListener("SIGINT", () => {
   console.log("SIGINT exiting...");
   Deno.exit(0);
 });
-
 
 
 Deno.addSignalListener("SIGTERM", () => {
@@ -31,6 +31,8 @@ await new Command()
     })
     // Put all the sub-commands here
     .command("run", runCommand)
+    .command("test", testCommand)
+    
     // end sub-commands
     
     .reset()

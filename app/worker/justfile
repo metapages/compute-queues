@@ -31,7 +31,7 @@ normal                := '\033[0m'
     echo -e ""
 
 # Run the worker locally, pointing to the local API
-@dev +args="":
+dev +args="":
     deno run --allow-all --unsafely-ignore-certificate-errors src/cli.ts run {{args}}
 
 # Run the worker locally, pointing to production API

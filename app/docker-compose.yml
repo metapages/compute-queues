@@ -60,6 +60,8 @@ services:
       retries: 3
     expose:
       - "8081"
+    ports:
+      - "8081:8081"
     environment:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - PORT=8081
@@ -163,7 +165,7 @@ services:
     image: metapage/metaframe-docker-worker:${DOCKER_TAG:-cache}
     # Add dev useful stuff
     entrypoint: ["deno", "run", "--watch", "--allow-all", "src/cli.ts"]
-    command: run --cores=1 --api-server-address=http://api2:8082 local1
+    command: run --cpus=2 --gpus=1 --api-server-address=http://api2:8082 local1
     build:
       context: .
       dockerfile: worker/Dockerfile
