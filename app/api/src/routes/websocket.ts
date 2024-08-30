@@ -36,12 +36,8 @@ export async function wsHandlerClient(token:string, socket: WebSocket, request: 
 
 export async function wsHandlerWorker(token:string, socket: WebSocket, request: Request) {
   try {
-    // console.log(`/worker/:token wsHandler`)
-    // const params = request.params as WebsocketUrlParameters;
-    // const token = params.token;
-    // console.log('token', token);
     if (!token) {
-      console.log('No token, closing socket');
+      console.log('No token/queue, closing socket');
       socket.close();
       return;
     }
@@ -50,7 +46,7 @@ export async function wsHandlerWorker(token:string, socket: WebSocket, request: 
       userJobQueues[token] = new ApiDockerJobQueue({serverId: SERVER_INSTANCE_ID, address:token});
       await userJobQueues[token].setup()
     }
-    userJobQueues[token].connectWorker({socket});
+    userJobQueues[token].connectWorker({socket}, token);
   } catch (err) {
     console.error(err);
   }

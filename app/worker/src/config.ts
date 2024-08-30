@@ -4,12 +4,16 @@ export const VERSION: string = "0.2.0";
 const MACHINE_ID: string = await machineId();
 
 export interface Arguments {
+    // This is a proxy for the number of jobs, since currently, jobs
+    // are not prevented from claiming as many cpu cores as they want.
     cpus: number;
     server: string;
     // version?: Boolean;
     queue: string;
     id: string;
-    gpus?: Boolean;
+    // This is the most GPUs this worker will claim.
+    // https://docs.docker.com/engine/containers/resource_constraints/#gpu
+    gpus?: number;
 }
 /**
  * Global configuration for the worker.
@@ -21,5 +25,5 @@ export const config :Arguments = {
     server: "https://container.mtfm.io", // { type: String, alias: 's', description: `Custom server (default: https://container.mtfm.io)`, optional: true, defaultValue: "https://container.mtfm.io" },
     queue: "", //{ type: String, alias: 'q', description: 'Queue id. Browser links to this queue ' },
     id: MACHINE_ID, //{ type: String, alias: 'i', description: `Worker Id (default:${MACHINE_ID})`, defaultValue: MACHINE_ID },
-    gpus: false, //{ type: Boolean, alias: 'g', description: `Enable "--gpus all" flag if the job requests and the worker supports`, optional: true },
+    gpus: 0, //{ type: Number, alias: 'g', description: `Enable "--gpus all" flag if the job requests and the worker supports`, optional: true },
 };

@@ -4,11 +4,11 @@ import { existsSync } from 'https://deno.land/std@0.224.0/fs/exists.ts';
 // import Docker from 'https://deno.land/x/dockerapi@v0.1.0/mod.ts';
 import Docker from 'npm:dockerode@4.0.2';
 
-import { config } from '../config.ts';
 // import { Buffer } from "node:buffer";
 // import { args as CliArgs } from '../args.ts';
 import * as StreamTools from '../docker/streamtools.ts';
 import {
+  DockerApiDeviceRequest,
   DockerJobImageBuild,
   DockerJobState,
   JobStatusPayload,
@@ -68,7 +68,7 @@ export interface DockerJobArgs {
   volumes?: Array<Volume>;
   outStream?: Writable;
   errStream?: Writable;
-  gpu?: boolean;
+  deviceRequests?: DockerApiDeviceRequest[];
   durationMax?: number;
 }
 
@@ -111,7 +111,7 @@ export const dockerJobExecute = async (
     volumes,
     outStream,
     errStream,
-    gpu,
+    deviceRequests,
   } = args;
 
   const result: DockerRunResult = {
@@ -145,16 +145,17 @@ export const dockerJobExecute = async (
     }
   };
 
-  if (gpu && config.gpus) {
+  if (deviceRequests) {
     // https://github.com/apocas/dockerode/issues/628
-    createOptions.HostConfig!.DeviceRequests = [
-      {
-        // TODO: what did I disable this?
-        Count: -1,
-        Driver: "nvidia",
-        Capabilities: [["gpu"]],
-      },
-    ];
+    createOptions.HostConfig!.DeviceRequests = deviceRequests;
+    // [ 
+    //   // {
+    //   //   // TODO: what did I disable this?
+    //   //   Count: -1,
+    //   //   Driver: "nvidia",
+    //   //   Capabilities: [["gpu"]],
+    //   // },
+    // ];
   }
 
   if (volumes != null) {
@@ -243,9 +244,12 @@ export const dockerJobExecute = async (
     if (!existingJobContainer) {
       // is buffer
       const startData: Buffer = await container!.start();
+      console.log('🚀 container started, startData', new TextDecoder().decode(startData));
     }
 
+    console.log('🚀 container started, waiting...', id);
     const dataWait = await container!.wait();
+    console.log('🚀 container finished', dataWait);
 
     result.StatusCode = dataWait != null ? dataWait.StatusCode : null;
 
@@ -274,6 +278,7 @@ const killAndRemove = async (container?: Docker.Container): Promise<any> => {
         console.log(`Failed to remove but ignoring error: ${err}`);
       }
     })();
+    // console.log(`❗❗❗ WARNING: container NOT removed: ${container.id}`);
     return killResult;
   }
 };

@@ -145,6 +145,7 @@ export interface WorkerRegistration {
   version: string;
   id: string;
   cpus: number;
+  gpus: number;
   time: number;
 }
 
@@ -152,6 +153,7 @@ export interface WorkerStatusResponse {
   time: number;
   id: string;
   cpus: number;
+  gpus: number;
   queue: Record<string, { jobId: string; finished: boolean }>;
 }
 
@@ -316,3 +318,11 @@ export const isJobCacheAllowedToBeDeleted = (state: StateChange): boolean => {
       return false;
   }
 };
+
+export type DockerApiDeviceRequest = {
+    Driver: string,
+    Count?: number,
+    DeviceIDs?: string[],
+    Capabilities: string[][],
+}
+

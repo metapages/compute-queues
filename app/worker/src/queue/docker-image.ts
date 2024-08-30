@@ -69,15 +69,16 @@ export const ensureDockerImage = async (args: {
   let imageExists = false;
 
   if (build) {
-    console.log("ensureDockerImage BUILDING");
+    console.log("ensureDockerImage BUILDING...");
     // image name comes from the build arguments so it can be retrieved if
     // already built
     const buildSha = await getBuildSha({ build });
 
     image = getDockerImageName(buildSha);
 
-    imageExists = false; //await checkForDockerImage({jobId, image, sender});
+    imageExists = await checkForDockerImage({jobId, image, sender});
     if (imageExists) {
+      console.log("✅ ensureDockerImage: image exists");
       return image;
     }
 
@@ -116,11 +117,28 @@ export const ensureDockerImage = async (args: {
       // For the love of me, I cannot get the dockerode buildImage to work
       // So intead, just use the docker cli
       // start the process
+      const args = ["build"];
+
+
+
+      
+      if (filename) {
+        args.push(`--file=${filename}`);
+      }
+      if (target) {
+        args.push(`--target=${target}`);
+      }
+      args.push(`--tag=${image}`);
+      args.push(".");
+
+
+      console.log('args', args);
+
       const command = new Deno.Command("docker", {
         cwd: buildDir,
         clearEnv: true,
         // env: Record<string, string>
-        args: ["build", `--tag=${image}`, "."],
+        args,
         stdout: "piped",
         stderr: "piped",
       });
@@ -198,46 +216,52 @@ export const ensureDockerImage = async (args: {
       if (success) {
         try {
           const dockerimage = docker.getImage(image);
-          dockerimage.push({ tag: "1d" }, (err: any, stream: any) => {
-            try {
-              if (err) {
-                console.log(`💥 DOCKER PUSH: ${err}`);
-              }
-
-              console.log(`DOCKER PUSHING...`);
-
-              docker.modem.followProgress(
-                stream,
-                (err: any, output: any) => {
-                  if (err) {
-                    console.log(`💥 DOCKER PUSH: ${err}`);
-                    return;
-                  }
-                  // console.log(`DOCKER PUSH:`, output);
-                },
-                (progressEvent: Event) => {
-                  console.log(progressEvent);
-
-                  sender({
-                    type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
-                    payload: {
-                      jobId,
-                      step: "docker image push",
-                      logs: [
-                        {
-                          time: Date.now(),
-                          type: "event",
-                          val: progressEvent,
-                        },
-                      ],
-                    } as JobStatusPayload,
-                  });
+          const info :{Size:number} = await dockerimage.inspect();
+          // TODO put this parameter in the cli configuration
+          if (info.Size < 536870912) { // 0.5gb
+            dockerimage.push({ tag: "1d" }, (err: any, stream: any) => {
+              try {
+                if (err) {
+                  console.log(`💥 DOCKER PUSH: ${err}`);
                 }
-              );
-            } catch (err) {
-              console.error("pushed error", err);
-            }
-          });
+  
+                console.log(`DOCKER PUSHING...`);
+  
+                docker.modem.followProgress(
+                  stream,
+                  (err: any, output: any) => {
+                    if (err) {
+                      console.log(`💥 DOCKER PUSH: ${err}`);
+                      return;
+                    }
+                    // console.log(`DOCKER PUSH:`, output);
+                  },
+                  (progressEvent: Event) => {
+                    console.log(progressEvent);
+  
+                    sender({
+                      type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+                      payload: {
+                        jobId,
+                        step: "docker image push",
+                        logs: [
+                          {
+                            time: Date.now(),
+                            type: "event",
+                            val: progressEvent,
+                          },
+                        ],
+                      } as JobStatusPayload,
+                    });
+                  }
+                );
+              } catch (err) {
+                console.error("pushed error", err);
+              }
+            });
+          } else {
+            console.log(`DOCKER NOT pushing since image is too large: ${info.Size}`);
+          }
         } catch (err) {
           //ignored
         }

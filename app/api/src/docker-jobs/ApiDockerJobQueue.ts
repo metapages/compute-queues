@@ -1083,9 +1083,9 @@ export class ApiDockerJobQueue {
     }
   }
 
-  async connectWorker(connection: { socket: WebSocket }) {
+  async connectWorker(connection: { socket: WebSocket }, queue: string) {
     console.log(
-      `[${this.address.substring(0, 15)}] ➕ w 🔌 Connected a worker`
+      `[${this.address.substring(0, 15)}] ➕ w 🔌 Connected a worker to queue [${queue.substring(0, 6)}]`
     );
 
     let workerRegistration: WorkerRegistration;
@@ -1093,7 +1093,7 @@ export class ApiDockerJobQueue {
 
     connection.socket.addEventListener("close", () => {
       console.log(
-        `[${this.address.substring(0, 15)}] ➖ w 🔌 ⏹️ Removing ${
+        `[${this.address.substring(0, 15)}] [${queue.substring(0, 6)}] ➖ w 🔌 ⏹️ Removing ${
           workerRegistration
             ? workerRegistration.id.substring(0, 6)
             : "unknown worker"
@@ -1235,10 +1235,9 @@ export class ApiDockerJobQueue {
       var index = this.clients.indexOf(connection.socket);
       if (index > -1) {
         console.log(
-          `[${this.address.substring(0, 15)}] ➖ c ⏹️ Removing client`
+          `[${this.address.substring(0, 15)}] ➖ c ⏹️ close event: Removing client`
         );
         this.clients.splice(index, 1);
-        // this.disposeCheck();
       }
     });
 
@@ -1374,7 +1373,10 @@ export class ApiDockerJobQueue {
       return;
     }
     try {
-      connection.send(messageString);
+      
+      if (connection.readyState === WebSocket.OPEN) {
+        connection.send(messageString);
+      }
     } catch (err) {
       console.log(`Failed sendJobStatesToWebsocket to connection ${err}`);
     }
@@ -1488,7 +1490,6 @@ export class ApiDockerJobQueue {
     this.broadcastWorkersToChannel();
     // update the other workers and (browser) clients
     this.broadcastWorkersToClientsAndWorkers();
-    // this.disposeCheck();
   }
 
   async requeueJobsFromMissingWorkers() {

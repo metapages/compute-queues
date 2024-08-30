@@ -25,8 +25,8 @@ const VERSION :string = mod.version;
  * Connect via websocket to the API server, and attach the DockerJobQueue object
  * TODO: listen to multiple job queues?
  */
-export async function connectToServer(args:{server:string, queueId:string, cpus:number, workerId:string}) {
-  const { server, queueId, cpus, workerId } = args;
+export async function connectToServer(args:{server:string, queueId:string, cpus:number, gpus:number, workerId:string}) {
+  const { server, queueId, cpus, gpus, workerId } = args;
 
   console.log('CLI:', args);
 
@@ -34,7 +34,17 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
   const url = `${server.replace('http', 'ws')}/${queueId}/worker`;
   console.log(`🪐 connecting... ${url}`)
   // @ts-ignore: frustrating cannot get compiler "default" import setup working
-  const rws = new ReconnectingWebSocket(url, []);
+  const rws = new ReconnectingWebSocket(url, [], {
+    maxReconnectionDelay: 10000,
+    minReconnectionDelay: 1000 + Math.random() * 4000,
+    reconnectionDelayGrowFactor: 1.3,
+    minUptime: 5000,
+    // connectionTimeout: 4000,
+    connectionTimeout: 6000,
+    maxRetries: Infinity,
+    maxEnqueuedMessages: Infinity,
+    // debug: true,
+  });
 
   const sender: WebsocketMessageSenderWorker = (message: WebsocketMessageWorkerToServer) => {
     rws.send(JSON.stringify(message));
@@ -42,12 +52,13 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
 
   let timeLastPong = Date.now();
   let timeLastPing = Date.now();
+  
 
-  const dockerJobQueueArgs: DockerJobQueueArgs = { sender, cpus, id: workerId, version: VERSION, time: Date.now() };
+  const dockerJobQueueArgs: DockerJobQueueArgs = { sender, cpus, gpus, id: workerId, version: VERSION, time: Date.now() };
   const dockerJobQueue = new DockerJobQueue(dockerJobQueueArgs);
 
   rws.addEventListener('error', (error: any) => {
-    console.log(`error=${error.message}`);
+    console.log(`Websocket error=${error.message}`);
   });
 
   rws.addEventListener('open', () => {
@@ -63,10 +74,10 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
 
   const intervalSinceNoTrafficToTriggerReconnect = ms("15s") as number;
   setInterval(() => {
-  if ((Date.now() - timeLastPong) >= intervalSinceNoTrafficToTriggerReconnect) {
-    console.log(`Reconnecting because no PONG since ${(Date.now() - timeLastPong) / 1000}s `);
-    rws.reconnect();
-  }
+    if ((Date.now() - timeLastPong) >= intervalSinceNoTrafficToTriggerReconnect && rws.readyState === rws.OPEN) {
+      console.log(`Reconnecting because no PONG since ${(Date.now() - timeLastPong) / 1000}s `);
+      rws.reconnect();
+    }
   }, ms("2s") as number);
 
   rws.addEventListener('message', (message: MessageEvent) => {
@@ -149,17 +160,17 @@ export const runCommand = new Command()
       required: false,
     },
   )
-  .option("-c, --cores [cores:number]", "CPU cores to use", { default: 1 })
+  .option("-c, --cpus [cpus:number]", "Available CPU cores", { default: 1 })
   .option("-a, --api-server-address [api-server-address:string]", "Custom API queue server")
-  .option("-g, --gpu [gpu:boolean]", "Enable GPU access", { default: false })
+  .option("-g, --gpus [gpus:number]", "Available GPUs", { default: 0 })
   .action(async (options, queue: string) => {
-    const { cores, gpu, apiServerAddress } = options as {cores:number, gpu:boolean, apiServerAddress:string};
+    const { cpus, gpus, apiServerAddress } = options as {cpus:number, gpus:number, apiServerAddress:string};
     if (!queue) {
       throw 'Must supply the queue id ';
     }
 
-    config.cpus = typeof(cores) === "number" ? cores as number : 1;
-    config.gpus = gpu || false;
+    config.cpus = typeof(cpus) === "number" ? cpus as number : 1;
+    config.gpus = typeof(gpus) === "number" ? gpus as number : 0;
     config.queue = queue;
     if (apiServerAddress) {
       config.server = apiServerAddress;
@@ -172,5 +183,5 @@ export const runCommand = new Command()
       config.gpus,
       config.server
     );
-    connectToServer({ server: config.server || "", queueId: queue, cpus: cores || 1, workerId: config.id });
+    connectToServer({ server: config.server || "", queueId: queue, cpus, gpus, workerId: config.id });
   });
