@@ -5,6 +5,7 @@ primary_region = 'iad'
 
 [build]
   dockerfile = './worker/Dockerfile'
+  build-target = 'worker-standalone'
 
 [[vm]]
   memory = '2gb'
@@ -12,7 +13,7 @@ primary_region = 'iad'
   cpus = 1
 
 [env]
-  METAPAGE_WORKER_CORES = 1
+  METAPAGE_WORKER_CPUS = 1
 
 [metrics]
   port = 8000

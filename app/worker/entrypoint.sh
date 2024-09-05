@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Run podman's API service in the background, making a docker-compatible socket available
-podman system service --time=0 unix:///var/run/docker.sock &
+# Run docker daemon
+dockerd -p /var/run/docker.pid &
 
 # Run the metapage worker, with a queue ID provided by environment variable
 deno run \
@@ -13,5 +13,5 @@ deno run \
     --allow-run \
     src/cli.ts \
     run \
-    --cores=$METAPAGE_WORKER_CORES \
+    --cpus=$METAPAGE_WORKER_CPUS \
     $METAPAGE_QUEUE_ID

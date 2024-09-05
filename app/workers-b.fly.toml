@@ -1,22 +1,24 @@
-# fly.toml app configuration file generated for metapage-workers-b on 2024-08-20T23:59:57-05:00
-#
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
 
 app = 'metapage-workers-b'
 primary_region = 'iad'
 
 [build]
   dockerfile = './worker/Dockerfile'
-
-[env]
-  METAPAGE_WORKER_CORES = '2'
+  build-target = 'worker-standalone'
 
 [[vm]]
   memory = '4gb'
   cpu_kind = 'shared'
   cpus = 2
 
+[env]
+  METAPAGE_WORKER_CPUS = '2'
+
 [[metrics]]
   port = 8000
   path = '/metrics'
+
+[[restart]]
+  policy = "never"
+  retries = 10
