@@ -13,6 +13,7 @@ import {
   DockerJobQueueArgs,
 } from '../queue/DockerJobQueue.ts';
 import {
+  DockerJobState,
   BroadcastJobStates,
   JobStates,
   PayloadClearJobCache,
@@ -160,7 +161,7 @@ const metricsHandler = (req: Request): Response => {
   const url = new URL(req.url);
   // Route the metrics endpoint
   if (url.pathname === "/metrics") {
-    const unfinishedJobs = Object.values(jobList.jobs).filter((job) => job.state !== "Finished");
+    const unfinishedJobs = Object.values(jobList.jobs).filter((job) => job.state !== DockerJobState.Finished);
     const unfinishedQueueLength = unfinishedJobs.length;
     // Simple Prometheus-compatible metric response
     const response = `
