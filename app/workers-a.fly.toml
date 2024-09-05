@@ -12,7 +12,7 @@ primary_region = 'iad'
   cpus = 1
 
 [env]
-  METAPAGE_WORKER_CORES = 1
+  METAPAGE_WORKER_CPUS = 1
 
 [metrics]
   port = 8000
