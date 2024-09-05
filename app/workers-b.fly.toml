@@ -5,7 +5,6 @@ primary_region = 'iad'
 
 [build]
   dockerfile = './worker/Dockerfile'
-  build-target = 'worker-standalone'
 
 [[vm]]
   memory = '4gb'
