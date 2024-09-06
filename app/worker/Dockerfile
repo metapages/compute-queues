@@ -7,6 +7,8 @@ FROM denoland/deno:1.45.5 as worker
 # RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
 
 RUN apt-get update && apt-get -y install podman ca-certificates fuse-overlayfs slirp4netns
+# Alias docker to podman
+RUN ln -s $(which podman) /usr/bin/docker
 
 COPY ./worker/entrypoint.sh /entrypoint.sh
 VOLUME /var/lib/containers
