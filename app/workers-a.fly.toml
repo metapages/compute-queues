@@ -13,11 +13,12 @@ primary_region = 'iad'
 
 [env]
   METAPAGE_WORKER_CPUS = 1
+  METAPAGE_WORKER_RUN_STANDALONE = true
 
 [metrics]
   port = 8000
   path = "/metrics"
 
 [[restart]]
-  policy = "never"
+  policy = "on-failure"
   retries = 10
