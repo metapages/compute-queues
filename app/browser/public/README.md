@@ -14,6 +14,12 @@ docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker
 Go [this link](https://container.mtfm.io/?command=cHJpbnQgXCggc2Rmc2RmMiBcKQ%3D%3D&image=python3#/queue/1?command=cHl0aG9uIC1jICdwcmludCgiaGVscCIpJw%253D%253D&image=python%253A3.8.8-alpine3.13&job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnB5dGhvbiUyMC1jJTIwJ3ByaW50KCU1QyUyMmhlbHAlNUMlMjIpJyUyMiUyQyUyMmltYWdlJTIyJTNBJTIycHl0aG9uJTNBMy4xMi4xLWFscGluZTMuMTklMjIlN0Q=&queue=public1) to run a simple python job using the worker above:
 
 
+## Important details
+
+### Directory for caching data and large ML models
+
+The directory `/shared` and `/cache` point to the same volume, which is shared between all jobs running on a host.
+Use this location to store large data sets and models.
 
 ## Description
 

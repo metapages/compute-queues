@@ -16,7 +16,7 @@ normal                := '\033[0m'
     echo -e ""
     echo -e "            docker run --restart unless-stopped -tid \\"
     echo -e "                -v /var/run/docker.sock:/var/run/docker.sock \\"
-    echo -e "                -v /tmp:/tmp metapage/metaframe-docker-worker:$(cat mod.json | jq -r '.version') run --cores=4 public1"
+    echo -e "                -v /tmp:/tmp metapage/metaframe-docker-worker:$(cat mod.json | jq -r '.version') run --cpus=4 public1"
     echo -e ""
     echo -e "        Example commands to start a worker using local development code:"
     echo -e ""
@@ -31,11 +31,11 @@ normal                := '\033[0m'
     echo -e ""
 
 # Run the worker locally, pointing to the local API
-dev +args="":
+run +args="":
     deno run --allow-all --unsafely-ignore-certificate-errors src/cli.ts run {{args}}
 
 # Run the worker locally, pointing to production API
-@dev-prod queue="local1":
+@run-prod queue="local1":
     deno run --allow-all src/cli.ts run --cores=1 --api-server-address=https://container.mtfm.io {{queue}}
 
 # Run the worker locally, pointing to the previous API

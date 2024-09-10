@@ -4,6 +4,7 @@ import ReconnectingWebSocket from 'npm:reconnecting-websocket@4.4.0';
 
 import mod from '../../mod.json' with { type: 'json' };
 import { config } from '../config.ts';
+import { ensureSharedVolume } from '../docker/volume.ts';
 import { clearCache } from '../queue/docker-image.ts';
 import {
   DockerJobQueue,
@@ -183,5 +184,6 @@ export const runCommand = new Command()
       config.gpus,
       config.server
     );
+    await ensureSharedVolume();
     connectToServer({ server: config.server || "", queueId: queue, cpus, gpus, workerId: config.id });
   });

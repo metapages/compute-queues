@@ -7,6 +7,7 @@ import Docker from 'npm:dockerode@4.0.2';
 // import { Buffer } from "node:buffer";
 // import { args as CliArgs } from '../args.ts';
 import * as StreamTools from '../docker/streamtools.ts';
+import { DockerJobSharedVolumeName } from '../docker/volume.ts';
 import {
   DockerApiDeviceRequest,
   DockerJobImageBuild,
@@ -168,6 +169,18 @@ export const dockerJobExecute = async (
       );
     });
   }
+
+  // Hack: add a volume shared between all job containers
+  // For e.g. big downloaded models
+  // Security issue? Maybe. Don't store your job
+  // data there, store it in /inputs and /outputs.
+  createOptions.HostConfig!.Binds!.push(
+    `${DockerJobSharedVolumeName}:/shared:Z`
+  );
+  // Create the same volume but mounted at /cache
+  createOptions.HostConfig!.Binds!.push(
+    `${DockerJobSharedVolumeName}:/cache:Z`
+  );
 
   var grabberOutStream = StreamTools.createTransformStream((s: string) => {
     result.stdout!.push(s.toString());

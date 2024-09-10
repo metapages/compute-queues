@@ -412,7 +412,6 @@ export class DockerJobQueue {
                 return;
             }
 
-
             // TODO hook up the durationMax to a timeout
             // TODO add input mounts
             const executionArgs: DockerJobArgs = {
