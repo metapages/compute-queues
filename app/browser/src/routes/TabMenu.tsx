@@ -32,7 +32,6 @@ import {
   TabPanels,
   Tabs,
 } from '@chakra-ui/react';
-import { useHashParamInt } from '@metapages/hash-query';
 import { useMetaframeAndInput } from '@metapages/metaframe-hook';
 import {
   isIframe,
@@ -43,7 +42,7 @@ import { UPLOAD_DOWNLOAD_BASE_URL } from '../config';
 import { useStore } from '../store';
 
 export const TabMenu: React.FC = () => {
-  const [tabIndex, setTabIndex] = useHashParamInt("tab", 0);
+  const [tabIndex, setTabIndex] = useState<number>(2);
   // this is where two complex hooks are threaded together:
   // 1. get the job definition
   // 2. send the job definition if changed
