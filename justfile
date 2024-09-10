@@ -4,10 +4,13 @@ set export         := true
 
 normal             := '\033[0m'
 green              := "\\e[32m"
+cyan               := "\\e[36m"
 
 @_help:
   echo ""
   just --list --unsorted --list-heading $'Commands: (all services)\n'
+  echo -e ""
+  echo -e "    Current worker version: {{cyan}}$(cat app/worker/mod.json | jq -r '.version'){{normal}}"
   echo -e ""
   echo -e "    Quick links:"
   
