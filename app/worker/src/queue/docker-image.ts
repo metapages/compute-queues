@@ -6,10 +6,6 @@ import {
   dirname,
   join,
 } from 'https://deno.land/std@0.224.0/path/mod.ts';
-// import getFiles from 'https://deno.land/x/getfiles@v1.0.0/mod.ts';
-// import {
-//   mergeReadableStreams,
-// } from 'https://deno.land/std@0.224.0/streams/merge_readable_streams.ts';
 import { tgz } from 'https://deno.land/x/compress@v0.4.5/mod.ts';
 import { decompress } from 'https://deno.land/x/zip@v1.2.5/mod.ts';
 
@@ -118,9 +114,6 @@ export const ensureDockerImage = async (args: {
       // So intead, just use the docker cli
       // start the process
       const args = ["build"];
-
-
-
       
       if (filename) {
         args.push(`--file=${filename}`);
@@ -175,7 +168,6 @@ export const ensureDockerImage = async (args: {
         for await (const data of process.stderr.pipeThrough(
           new TextDecoderStream()
         )) {
-          // console.log(`DOCKER BUILD stderr: ${data}`);
           const time = Date.now();
           const decodedLines: string[] = data.trim().split("\n");
           stderr.push(...decodedLines);
@@ -217,6 +209,7 @@ export const ensureDockerImage = async (args: {
         try {
           const dockerimage = docker.getImage(image);
           const info :{Size:number} = await dockerimage.inspect();
+          CACHED_DOCKER_IMAGES[image!] = true;
           // TODO put this parameter in the cli configuration
           if (info.Size < 536870912) { // 0.5gb
             dockerimage.push({ tag: "1d" }, (err: any, stream: any) => {
@@ -266,35 +259,6 @@ export const ensureDockerImage = async (args: {
           //ignored
         }
       }
-
-      // let allFiles = getFiles(buildDir).map((f) =>
-      //   f.path.replace(buildDir + "/", "")
-      // );
-      // console.log("allFiles", allFiles);
-      // const stream = await docker.buildImage(
-      //   { context: buildDir, src: allFiles },
-      //   { t: image }
-      // );
-
-      // console.log("stream from docker.buildImage...")
-
-      // await new Promise<void>((resolve, reject) => {
-      //   docker.modem.followProgress(
-      //     stream,
-      //     (err: any, output: any) => {
-      //       if (err) {
-      //         reject(err);
-      //         return;
-      //       }
-      //       console.log(output);
-      //       resolve();
-      //     },
-      //     (progressEvent: Event) => {
-      //       console.log(progressEvent);
-      //     }
-      //   );
-      // });
-      CACHED_DOCKER_IMAGES[image] = true;
       return image;
     } catch (err) {
       console.error("💥 ensureDockerImage error", err);
@@ -311,6 +275,7 @@ export const ensureDockerImage = async (args: {
           return;
         }
         console.log(`${image} pull complete`);
+        CACHED_DOCKER_IMAGES[image!] = true;
         resolve();
       }
 
@@ -333,7 +298,7 @@ export const ensureDockerImage = async (args: {
 
       docker.modem.followProgress(stream, onFinished, onProgress);
     });
-    CACHED_DOCKER_IMAGES[image!] = true;
+    
   }
   return image!;
 };
