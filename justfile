@@ -20,10 +20,10 @@ cyan               := "\\e[36m"
   echo -e "       api deployment config: {{green}}https://dash.deno.com/projects/compute-queue-api{{normal}}"
   
 
-
+# (_app "dev" args)
 # Run the local development stack
-@dev +args="": (_app "dev" args)
-  just app/dev
+@dev +args="": 
+  just app/dev {{args}}
 
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":
