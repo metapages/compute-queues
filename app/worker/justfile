@@ -22,12 +22,12 @@ normal                := '\033[0m'
     echo -e ""
     echo -e "            directly using deno:"
     echo -e ""
-    echo -e "                just run --cores=1 --api-server-address=https://worker-metaframe.localhost local1"
+    echo -e "                just run --cpus=1 --api-server-address=https://worker-metaframe.localhost local1"
     echo -e ""
     echo -e "            using the docker image (build and run):"
     echo -e ""
     echo -e "                just docker-image-run cache && \\"
-    echo -e "                    run --cores=1 --api-server-address=https://worker-metaframe.localhost local1"
+    echo -e "                    run --cpus=1 --api-server-address=https://worker-metaframe.localhost local1"
     echo -e ""
 
 # Run the worker locally, pointing to the local API
@@ -36,11 +36,11 @@ run +args="":
 
 # Run the worker locally, pointing to production API
 @run-prod queue="local1":
-    deno run --allow-all src/cli.ts run --cores=1 --api-server-address=https://container.mtfm.io {{queue}}
+    deno run --allow-all src/cli.ts run --cpus=1 --api-server-address=https://container.mtfm.io {{queue}}
 
 # Run the worker locally, pointing to the previous API
 @dev-docker-mtfm-io queue="local1":
-    deno run --allow-all src/cli.ts run --cores=1 --api-server-address=https://container.mtfm.io {{queue}}
+    deno run --allow-all src/cli.ts run --cpus=1 --api-server-address=https://container.mtfm.io {{queue}}
 
 # Quick type check
 @check:
@@ -100,4 +100,4 @@ docker-image-build-for-local version="":
 
 # Build and run a worker docker image, pointing to the local API
 docker-image-run queue="local1": (docker-image-build-for-local "local")
-    docker run --net=host --entrypoint ""  --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local deno run --allow-net --allow-read --allow-env --allow-run --unsafely-ignore-certificate-errors src/cli.ts run --cores=1 --api-server-address=https://worker-metaframe.localhost {{queue}}
+    docker run --net=host --entrypoint ""  --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local deno run --allow-net --allow-read --allow-env --allow-run --unsafely-ignore-certificate-errors src/cli.ts run --cpus=1 --api-server-address=https://worker-metaframe.localhost {{queue}}

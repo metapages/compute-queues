@@ -161,7 +161,7 @@ export const runCommand = new Command()
       required: false,
     },
   )
-  .option("-c, --cpus [cpus:number]", "Available CPU cores", { default: 1 })
+  .option("-c, --cpus [cpus:number]", "Available CPU cpus", { default: 1 })
   .option("-a, --api-server-address [api-server-address:string]", "Custom API queue server")
   .option("-g, --gpus [gpus:number]", "Available GPUs", { default: 0 })
   .action(async (options, queue: string) => {
@@ -178,7 +178,7 @@ export const runCommand = new Command()
     }
 
     console.log(
-      "run %s with cores=%s gpu=%s at server %s",
+      "run %s with cpus=%s gpu=%s at server %s",
       config.queue,
       config.cpus,
       config.gpus,
