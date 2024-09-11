@@ -18,7 +18,7 @@ up +args="": _ensure-all _mkcert
     #!/usr/bin/env bash
     # A local NPM registry saves time, bandwidth, and avoids rate limits
     # If a local npm registry cache is running, use that for all npm modules (faster and better when internet not great)
-    # docker run -it --rm --name verdaccio -p 4873:4873 verdaccio/verdaccio
+    # docker run -d -v verdaccio_npm_storage:/verdaccio/storage --name verdaccio -p 4873:4873 verdaccio/verdaccio
     # https://verdaccio.org/docs/docker/
     STATUS_CODE=$(curl --max-time 2 --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873)
     if [ $STATUS_CODE = "200" ]; then
@@ -26,8 +26,8 @@ up +args="": _ensure-all _mkcert
     fi
     docker compose up --remove-orphans {{args}}
 
-# 'docker compose down'
-down +args="": _ensure-all
+# Shut down the local stack: 'docker compose down'
+down +args="":
     docker compose down {{args}}
 
 # Open the browser to the local frontend
@@ -105,3 +105,13 @@ clean:
         echo -e "\nmkcert is not installed. Please install mkcert and try again: 👉 {{green}}https://github.com/FiloSottile/mkcert?tab=readme-ov-file#installation{{normal}}\n"; \
         exit 1; \
     fi
+
+# app subdirectory commands
+alias browser := _browser
+@_browser +args="":
+    just browser/{{args}}
+
+# app subdirectory commands
+alias worker := _worker
+@_worker +args="":
+    just worker/{{args}}

@@ -25,6 +25,9 @@ cyan               := "\\e[36m"
 @dev +args="": 
   just app/dev {{args}}
 
+@down +args="": 
+  just app/down {{args}}
+
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":
   just app/publish-versioned-artifacts {{version}}
@@ -53,8 +56,8 @@ run-local-workers: publish-versioned-artifacts
   fi
 
   VERSION=$(cat app/worker/mod.json | jq -r .version)
-  docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:$VERSION run --cores=2 public1
-  docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:$VERSION run --cores=2 ${DIONS_SECRET_QUEUE}
+  docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:$VERSION run --cpus=2 public1
+  docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:$VERSION run --cpus=2 ${DIONS_SECRET_QUEUE}
 
 # Checks and tests
 @test: check
@@ -72,3 +75,8 @@ run-local-workers: publish-versioned-artifacts
 alias app := _app
 @_app +args="":
     just app/{{args}}
+
+# app subdirectory commands
+alias worker := _worker
+@_worker +args="":
+    just app/worker/{{args}}
