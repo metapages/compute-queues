@@ -18,6 +18,9 @@ jobs:
         with:
           fetch-depth: '0'
 
+      - name: Set PATH
+        run: echo "export PATH=\$PATH:/usr/local/bin:/snap/bin" >> $GITHUB_ENV
+
       - name: deno deploy api+browser
         env:
           DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
