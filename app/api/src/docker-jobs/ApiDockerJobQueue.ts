@@ -37,7 +37,6 @@ import {
   WorkerRegistration,
   WorkerStatusResponse,
 } from '/@/shared';
-import equal from 'fast-deep-equal/es6';
 import { delay } from 'https://deno.land/std@0.224.0/async/delay.ts';
 // import LRU from 'https://deno.land/x/lru_cache@6.0.0-deno.4/mod.ts';
 import { ms } from 'ms';
@@ -50,6 +49,7 @@ import { BroadcastChannelRedis } from '@metapages/deno-redis-broadcastchannel';
 
 import { db } from '../db/kv/mod.ts';
 import { isDockerJobDefinitionRowFinished } from '../shared/mod.ts';
+import { resolveMostCorrectJob } from './util.ts';
 
 // 60 seconds
 const MAX_TIME_FINISHED_JOB_IN_QUEUE = ms("60 seconds") as number;
@@ -130,95 +130,6 @@ export interface CollectedWorkersRegistration {
   }[];
 }
 
-/**
- * The situation here is fluid and dynamic, workers and servers and clients coming
- * and going all the time. Rather than force some rigid single source of truth, we
- * resolve conflicts and differences as they come in, and allow jobs to be requeued.
- * This means that resolving which of two jobs is the *most correct* is critical
- * and drives a lot of the rest of the dynamics.
- * At a high level:
- *  - if a job is Finished, it trumps most things
- *  - if two jobs seem the same, the one queued first is priority
- *  - other conflicts: check the time, the earliest wins
- *  - otherwise, whoever has the longest history is priority
- *
- */
-const resolveMostCorrectJob = (
-  // jobA is the DEFAULT, if that matters
-  jobA: DockerJobDefinitionRow,
-  jobB: DockerJobDefinitionRow
-): DockerJobDefinitionRow | null => {
-  if (equal(jobA, jobB)) {
-    return jobA;
-  }
-
-  if (jobA && !jobB) {
-    return jobA;
-  }
-
-  if (!jobA && jobB) {
-    return jobB;
-  }
-
-  const jobALastChange = jobA.history[jobA.history.length - 1];
-  const isJobAFinished = jobALastChange.state === DockerJobState.Finished;
-
-  const jobBLastChange = jobB.history[jobB.history.length - 1];
-  const isJobBFinished = jobBLastChange.state === DockerJobState.Finished;
-
-  if (isJobAFinished && isJobBFinished) {
-    return jobALastChange.value.time < jobBLastChange.value.time ? jobA : jobB;
-  }
-
-  if (isJobAFinished) {
-    return jobA;
-  }
-
-  if (isJobBFinished) {
-    return jobB;
-  }
-
-  if (jobA.history.length < jobB.history.length) {
-    return jobB;
-  } else if (jobA.history.length > jobB.history.length) {
-    return jobA;
-  }
-  const jobALastEvent = jobA.history[jobA.history.length - 1];
-  const jobBLastEvent = jobB.history[jobB.history.length - 1];
-
-  if (jobALastEvent.state === jobBLastEvent.state) {
-    // If the states are equal, it depends on the state
-    switch (jobALastEvent.state) {
-      case DockerJobState.Running:
-        const workerA = (jobALastEvent.value as StateChangeValueRunning).worker;
-        const workerB = (jobBLastEvent.value as StateChangeValueRunning).worker;
-        return resolvePreferredWorker(workerA, workerB) === workerA
-          ? jobA
-          : jobB;
-      case DockerJobState.Queued:
-      case DockerJobState.ReQueued:
-      case DockerJobState.Finished:
-      default:
-        // this is just about dates now, take the first
-        return jobALastEvent.value.time < jobBLastEvent.value.time
-          ? jobA
-          : jobB;
-    }
-  } else {
-    // They have different states? This is more complex
-    console.log(
-      `🇨🇭🇨🇭🇨🇭 🌘 resolving but jobA=${jobA.state} jobB=${jobB.state}`
-    );
-    if (jobA.state === DockerJobState.Running) {
-      return jobA;
-    } else if (jobB.state === DockerJobState.Running) {
-      return jobB;
-    }
-    return jobA.history[0].value.time < jobB.history[0].value.time
-      ? jobA
-      : jobB;
-  }
-};
 
 /**
  * Each user has their own personal docker job queue
@@ -336,11 +247,11 @@ export class ApiDockerJobQueue {
             jobs
           )) {
             if (!this.state.jobs[jobId]) {
-              console.log(
-                `🌘 ...from merge adding jobId=${jobId.substring(0, 6)}`
-              );
-              this.state.jobs[jobId] = job;
-              jobIds.push(jobId);
+                console.log(
+                  `🌘 ...from merge adding jobId=${jobId.substring(0, 6)}`
+                );
+                this.state.jobs[jobId] = job;
+                jobIds.push(jobId);
             } else {
               const resolvedJob = resolveMostCorrectJob(
                 this.state.jobs[jobId],
@@ -446,8 +357,8 @@ export class ApiDockerJobQueue {
     }, INTERVAL_JOB_STATES_MINIMAL_BROADCAST);
 
     this._intervalJobsBroadcast = setInterval(() => {
-      // this.broadcastJobStatesToWebsockets(Object.keys(this.state.jobs).filter(jobId => this.state.jobs[jobId].state !== DockerJobState.Finished), true);
       this.broadcastJobStatesToWebsockets();
+      this.broadcastJobStatesToChannel();
     }, INTERVAL_JOBS_BROADCAST);
   }
 
@@ -695,7 +606,7 @@ export class ApiDockerJobQueue {
     if (!jobIds) {
       jobIds = Object.keys(this.state.jobs);
     }
-    const stateWithOneJob: JobStates = {
+    const jobStates: JobStates = {
       jobs: Object.fromEntries(
         jobIds
           .filter((jobId) => this.state.jobs[jobId])
@@ -704,7 +615,7 @@ export class ApiDockerJobQueue {
     };
     const message: BroadcastChannelMessage = {
       type: "job-states",
-      value: stateWithOneJob,
+      value: jobStates,
     };
     this.channel.postMessage(message);
 
@@ -1479,6 +1390,7 @@ export class ApiDockerJobQueue {
     this.channel.postMessage(message);
   }
 
+  /** Just the job and the state enum */
   broadcastMinimalJobsStatesToChannel() {
     const message: BroadcastChannelMessage = {
       type: "job-states-minimal",
@@ -1490,7 +1402,7 @@ export class ApiDockerJobQueue {
         .flat(),
     };
     // use the BroadcastChannel to notify other servers
-    // console.log(`[${this.address.substring(0, 6)}] 📡 broadcastMinimalJobsStatesToChannel`, message.value)
+    console.log(`[${this.address.substring(0, 6)}] 📡 broadcastMinimalJobsStatesToChannel`, message.value)
     this.channel.postMessage(message);
   }
   /**
