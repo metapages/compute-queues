@@ -816,8 +816,6 @@ export class ApiDockerJobQueue {
       await this.broadcastJobStatesToWebsockets([jobId]);
     };
 
-    console.log(`🌗jobId=${jobId.substring(0, 6)} jobRow=${JSON.stringify(jobRow, null, "  ")}`)
-    console.log(`🌗jobId=${jobId.substring(0, 6)} change=${JSON.stringify(change, null, "  ")}`)
     try {
       switch (change.state) {
         // incoming state
