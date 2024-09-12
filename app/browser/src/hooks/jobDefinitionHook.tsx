@@ -90,7 +90,10 @@ export const useDockerJobDefinition = () => {
         return;
       }
       // convert inputs into internal data refs so workers can consume
-      let inputs = metaframeBlob.inputs;
+      // Get ALL inputs, not just the most recent, since inputs come
+      // in from different sources at different times, and we accumulate them
+      let inputs = metaframeBlob?.metaframe?.getInputs() || {};
+
       // TODO: this shouldn't be needed, but there is a bug:
       // https://github.com/metapages/metapage/issues/117
       inputs = await Metaframe.serializeInputs(inputs);
@@ -98,6 +101,7 @@ export const useDockerJobDefinition = () => {
         return;
       }
       Object.keys(inputs).forEach((name) => {
+        const fixedName = name.startsWith("/") ? name.slice(1) : name;
         let value = inputs[name];
         // null (and undefined) cannot be serialized, so skip them
         if (value === undefined || value === null) {
@@ -106,23 +110,23 @@ export const useDockerJobDefinition = () => {
         if (typeof value === "object" && value._s === true) {
           const blob = value as DataRefSerialized;
           // serialized blob/typedarray/arraybuffer
-          definition.inputs![name] = {
+          definition.inputs![fixedName] = {
             value: blob.value,
             type: DataRefType.base64,
           };
         } else {
           if (typeof value === "object") {
-            definition.inputs![name] = {
+            definition.inputs![fixedName] = {
               value,
               type: DataRefType.json,
             };
           } else if (typeof value === "string") {
-            definition.inputs![name] = {
+            definition.inputs![fixedName] = {
               value,
               type: DataRefType.utf8,
             };
           } else if (typeof value === "number") {
-            definition.inputs![name] = {
+            definition.inputs![fixedName] = {
               value: `${value}`,
               type: DataRefType.utf8,
             };

@@ -5,5 +5,5 @@
   "search.exclude": {
     "**/app/api/assets": true
   },
-  "deno.enable": true
+  "deno.enable": false
 }
