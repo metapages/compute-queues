@@ -16,8 +16,8 @@ import {
   WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
 } from '../shared/mod.ts';
-import { ensureDockerImage } from './docker-image.ts';
 import { docker } from './dockerClient.ts';
+import { ensureDockerImage } from './dockerImage.ts';
 
 // Minimal interface for interacting with docker jobs:
 //  inputs:
@@ -96,6 +96,8 @@ export interface DockerRunResult {
   error?: any;
 }
 
+export const JobCacheDirectory = "/job-cache";
+
 export const dockerJobExecute = async (
   args: DockerJobArgs
 ): Promise<DockerJobExecution> => {
@@ -137,7 +139,7 @@ export const dockerJobExecute = async (
     Env:
       env != null
         ? Object.keys(env).map((key) => `${key}=${env[key]}`)
-        : undefined,
+        : [],
     Tty: false, // needed for splitting stdout/err
     AttachStdout: true,
     AttachStderr: true,
@@ -146,40 +148,30 @@ export const dockerJobExecute = async (
     }
   };
 
+  createOptions.Env.push("JOB_INPUTS=/inputs");
+  createOptions.Env.push("JOB_OUTPUTS=/outputs");
+  createOptions.Env.push(`JOB_CACHE=${JobCacheDirectory}`);
+
   if (deviceRequests) {
     // https://github.com/apocas/dockerode/issues/628
     createOptions.HostConfig!.DeviceRequests = deviceRequests;
-    // [ 
-    //   // {
-    //   //   // TODO: what did I disable this?
-    //   //   Count: -1,
-    //   //   Driver: "nvidia",
-    //   //   Capabilities: [["gpu"]],
-    //   // },
-    // ];
   }
 
   if (volumes != null) {
     createOptions.HostConfig!.Binds = [];
     volumes.forEach((volume) => {
-      // assert(volume.host, `Missing volume.host`);
-      // assert(volume.container, `Missing volume.container`);
       createOptions.HostConfig!.Binds!.push(
         `${volume.host}:${volume.container}:Z`
       );
     });
   }
 
-  // Hack: add a volume shared between all job containers
+  // Add a volume shared between all job containers
   // For e.g. big downloaded models
   // Security issue? Maybe. Don't store your job
   // data there, store it in /inputs and /outputs.
-  createOptions.HostConfig!.Binds!.push(
-    `${DockerJobSharedVolumeName}:/shared:Z`
-  );
-  // Create the same volume but mounted at /cache
-  createOptions.HostConfig!.Binds!.push(
-    `${DockerJobSharedVolumeName}:/cache:Z`
+    createOptions.HostConfig!.Binds!.push(
+    `${DockerJobSharedVolumeName}:${JobCacheDirectory}:Z`
   );
 
   var grabberOutStream = StreamTools.createTransformStream((s: string) => {
@@ -220,9 +212,6 @@ export const dockerJobExecute = async (
   // console.log('runningContainers', runningContainers.length);
 
   // console.log('createOptions', createOptions);
-
-
-
 
   const finish = async () => {
     try {

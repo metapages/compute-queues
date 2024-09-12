@@ -1,0 +1,8 @@
+{
+  "files.exclude": {
+    "**/app/api/assets": true
+  },
+  "search.exclude": {
+    "**/app/api/assets": true
+  }
+}

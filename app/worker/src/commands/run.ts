@@ -5,7 +5,7 @@ import ReconnectingWebSocket from 'npm:reconnecting-websocket@4.4.0';
 import mod from '../../mod.json' with { type: 'json' };
 import { config } from '../config.ts';
 import { ensureSharedVolume } from '../docker/volume.ts';
-import { clearCache } from '../queue/docker-image.ts';
+import { clearCache } from '../queue/dockerImage.ts';
 import {
   DockerJobQueue,
   DockerJobQueueArgs,

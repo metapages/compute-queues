@@ -265,6 +265,23 @@ export const ensureDockerImage = async (args: {
       throw err;
     }
   } else {
+    
+    if (CACHED_DOCKER_IMAGES[image!]) {
+      // returning because we think we have already check, but just in case
+      // the image has gone missing, we check out-of-band, so retries will
+      // work, and validate
+      (async () => {
+        const imageInfo = docker.getImage(image);
+        try {
+          await imageInfo.inspect();
+        } catch (err) {
+          delete CACHED_DOCKER_IMAGES[image!];
+          console.log(`❗ out-of-band check: image ${image} does not exist, so removing it my record`);
+        }
+      })();
+      console.log("ensureDockerImage I think the image already exists");
+      return image!;
+    }
     console.log("ensureDockerImage PULLING bc image and no build");
     const stream = await docker.pull(image);
     await new Promise<void>((resolve, reject) => {
