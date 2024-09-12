@@ -3,7 +3,7 @@ set shell                          := ["bash", "-c"]
 set dotenv-load                    := true
 set export                         := true
 DENO_DEPLOY_TOKEN                  := env_var_or_default("DENO_DEPLOY_TOKEN", "")
-PATH                               := env_var_or_default("PATH", "") + "$HOME/.deno/bin"
+PATH                               := env_var_or_default("PATH", "") + "$HOME/.deno/bin:/snap/bin"
 
 # minimal formatting, bold is very useful
 bold                  := '\033[1m'
