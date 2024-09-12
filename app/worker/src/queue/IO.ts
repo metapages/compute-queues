@@ -95,41 +95,13 @@ export const getOutputs = async (job: DockerJobDefinitionRow, workerId:string
   }
 
   console.log(
-    `[${workerId.substring(0,6)}] [${job.hash.substring(0,6)}] outputs ${JSON.stringify(outputs, null, "  ").substring(
+    `[${workerId.substring(0,6)}] [${job.hash.substring(0,6)}] outputs:[${Object.keys(outputs).join(",").substring(
       0,
       100
-    )}`
+    )}]`
   );
   return outputs;
 };
-
-// const ENV_VAR_DATA_ITEM_LENGTH_MAX = 200;
-// export const fileToDataref = async (file: string): Promise<DataRef> => {
-//   const fileBuffer: Uint8Array = await Deno.readFile(file);
-
-//   if (fileBuffer.length > ENV_VAR_DATA_ITEM_LENGTH_MAX) {
-//     const hash = objectHash.sha1(fileBuffer);
-//     const urlGetUpload = `${config.server}/upload/${hash}`;
-//     const resp = await fetch(urlGetUpload);
-//     if (!resp.ok) {
-//       throw new Error(
-//         `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`
-//       );
-//     }
-//     const json: { url: string; ref: DataRef } = await resp.json();
-//     const responseUpload = await fetch(json.url, {
-//       method: "PUT",
-//       redirect: "follow",
-//       body: fileBuffer,
-//       headers: { "Content-Type": "application/octet-stream" },
-//     });
-//     await responseUpload.text();
-//     return json.ref; // the server gave us this ref to use
-//   } else {
-//     const ref: DataRef = await bufferToBase64Ref(fileBuffer);
-//     return ref;
-//   }
-// };
 
 const getFiles = async (path: string): Promise<string[]> => {
   const pathExists = await exists(path);
