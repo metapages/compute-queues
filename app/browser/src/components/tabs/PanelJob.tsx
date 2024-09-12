@@ -160,7 +160,7 @@ const JobStatusDisplay: React.FC<{
             >
               <AlertIcon />
               <AlertTitle>Exit code:</AlertTitle>
-              {resultFinished?.result?.StatusCode}
+              {resultFinished?.result?.StatusCode} {job?.fromCache ? " (cached)" : ""}
             </Alert>
           );
         case DockerJobFinishedReason.TimedOut:

@@ -6,7 +6,7 @@
 Run a worker pointing to a queue `public1` (you can change this queue name to anything you like, just make it long and unguessable):
 
 ```
-docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.27.0 run --cpus=4 --gpus=1 public1
+docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.28.0 run --cpus=4 --gpus=1 public1
 ```
 
 ## Quickstart: Run a job from the browser
@@ -14,12 +14,16 @@ docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker
 Go [this link](https://container.mtfm.io/?command=cHJpbnQgXCggc2Rmc2RmMiBcKQ%3D%3D&image=python3#/queue/1?command=cHl0aG9uIC1jICdwcmludCgiaGVscCIpJw%253D%253D&image=python%253A3.8.8-alpine3.13&job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnB5dGhvbiUyMC1jJTIwJ3ByaW50KCU1QyUyMmhlbHAlNUMlMjIpJyUyMiUyQyUyMmltYWdlJTIyJTNBJTIycHl0aG9uJTNBMy4xMi4xLWFscGluZTMuMTklMjIlN0Q=&queue=public1) to run a simple python job using the worker above:
 
 
-## Important details
+## Inputs, outputs, and caching
+
+ - env var `JOB_INPUTS` is the directory where job input files are copied. Defaults to `/inputs`
+ - env var `JOB_OUTPUTS` is the directory where job output files will be copied when the job finishes successfully. Defaults to `/outputs` 
 
 ### Directory for caching data and large ML models
 
-The directory `/shared` and `/cache` point to the same volume, which is shared between all jobs running on a host.
-Use this location to store large data sets and models.
+The directory defined in the env var `JOB_CACHE` (defaults to `/job-cache`) is shared between all jobs running on a host. Use this location to store large data sets and models.
+
+The cache is not shared between worker instances, only between jobs running on a single instance or computer.
 
 ## Description
 
@@ -70,7 +74,7 @@ Versioned. Reproducible. No client install requirements, as long as you have at 
 2. Configure the docker job
 3. Run a worker (or a bunch) pointing to a queue: `public1` (warning: this is a public shared compute queue)
    ```
-   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.27.0 run --cpus=4 --gpus=1 public1
+   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.28.0 run --cpus=4 --gpus=1 public1
    ```
 
 **Coming soon:** GPU support

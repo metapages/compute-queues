@@ -132,6 +132,11 @@ export interface DockerJobDefinitionRow {
   state: DockerJobState;
   value: DockerJobStateValue;
   history: StateChange[];
+  fromCache?: boolean;
+}
+
+export const isDockerJobDefinitionRowFinished = (row:DockerJobDefinitionRow) => {
+  return row.state === DockerJobState.Finished;
 }
 
 // export type JobsStateMap = { [id in string]: DockerJobDefinitionRow };
