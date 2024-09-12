@@ -3,6 +3,7 @@ set shell                          := ["bash", "-c"]
 set dotenv-load                    := true
 set export                         := true
 DENO_DEPLOY_TOKEN                  := env_var_or_default("DENO_DEPLOY_TOKEN", "")
+PATH                               := env_var_or_default("PATH", "") + "$HOME/.deno/bin"
 
 # minimal formatting, bold is very useful
 bold                  := '\033[1m'
@@ -10,7 +11,7 @@ normal                := '\033[0m'
 
 @_help:
     just --list --unsorted --list-heading $'Api commands:\n'
-    echo -e ""
+    echo -e "{{PATH}}"
 
 # Run the server locally
 @dev +args="":
@@ -43,8 +44,7 @@ _serve:
 
 # Perform a fresh build and deploy to deno-deploy
 deploy: _ensure_deployctl clean build
-    PATH="$PATH:$HOME/.deno/bin" \
-        cd dist && \
+    cd dist && \
         deployctl deploy --project=compute-queue-api --prod src/server.ts
 
 # Delete generate assets and caches
@@ -52,5 +52,4 @@ clean:
     rm -rf dist
 
 @_ensure_deployctl:
-    PATH="$PATH:$HOME/.deno/bin" \
-        if ! command -v deployctl &> /dev/null; then echo '‼️ deployctl is being installed ‼️'; deno install -Arf jsr:@deno/deployctl; fi
+    if ! command -v deployctl &> /dev/null; then echo '‼️ deployctl is being installed ‼️'; deno install -Arf jsr:@deno/deployctl; fi
