@@ -43,7 +43,8 @@ _serve:
 
 # Perform a fresh build and deploy to deno-deploy
 deploy: _ensure_deployctl clean build
-    PATH=$PATH:$HOME/.deno/bin cd dist && \
+    PATH="$PATH:$HOME/.deno/bin" \
+        cd dist && \
         deployctl deploy --project=compute-queue-api --prod src/server.ts
 
 # Delete generate assets and caches
@@ -51,4 +52,5 @@ clean:
     rm -rf dist
 
 @_ensure_deployctl:
-    PATH=$PATH:$HOME/.deno/bin if ! command -v deployctl &> /dev/null; then echo '‼️ deployctl is being installed ‼️'; deno install -Arf jsr:@deno/deployctl; fi
+    PATH="$PATH:$HOME/.deno/bin" \
+        if ! command -v deployctl &> /dev/null; then echo '‼️ deployctl is being installed ‼️'; deno install -Arf jsr:@deno/deployctl; fi
