@@ -6,7 +6,8 @@ FROM denoland/deno:alpine-1.43.6 as worker
 # # https://gist.github.com/squarebracket/e719069522436873bc6f13efb359cac9
 # RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
 
-RUN apk add --no-cache --update docker openrc
+# curl is needed because this issue: https://github.com/metapages/compute-queues/issues/46
+RUN apk add --no-cache --update docker openrc curl
 
 WORKDIR /app
 COPY ./worker/src ./worker/src
