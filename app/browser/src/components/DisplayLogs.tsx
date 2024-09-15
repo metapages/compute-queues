@@ -4,11 +4,7 @@ import {
   useState,
 } from 'react';
 
-import {
-  DockerJobDefinitionRow,
-  DockerJobState,
-  StateChangeValueWorkerFinished,
-} from '/@/shared';
+import { ConsoleLogLine } from '/@/shared';
 import { useStore } from '/@/store';
 
 import {
@@ -16,84 +12,65 @@ import {
   Stack,
 } from '@chakra-ui/react';
 
+export type LogsMode = "stdout+stderr" | "stdout" | "stderr" | "build";
+
+const EMPTY_ARRAY: ConsoleLogLine[] = [];
+
 // show e.g. running, or exit code, or error
 export const DisplayLogs: React.FC<{
-  stdout: boolean;
-  job?: DockerJobDefinitionRow;
-}> = ({ job, stdout }) => {
-  const state = job?.state;
-
-  const [jobId, setJobId] = useState<string|undefined>(job?.hash);
+  mode: LogsMode;
+}> = ({ mode }) => {
+  const logsRef = useRef<string[]>([]);
   const [logs, setLogs] = useState<string[]>([]);
-  const logsRef = useRef<string[]>(logs);
-  const jobLog = useStore(
-    (state) => state.jobLog
-  );
-
-  // new job? set jobId
-  useEffect(() => {
-    setJobId(job?.hash);
-  }, [job?.hash]);
-  
-  // new jobId? clear logs
+  const [jobId, setJobId] = useState<string | undefined>();
+  // new jobId? reset the local logs ref
   useEffect(() => {
     logsRef.current = [];
     setLogs(logsRef.current);
   }, [jobId]);
 
-  // listen to logs
+  const jobState = useStore((state) => state.jobState);
+  const buildLogs = useStore((state) => state.buildLogs);
+  const runLogs = useStore((state) => state.runLogs);
+
+  // update the job id
   useEffect(() => {
-    if (!jobId || jobLog?.jobId !== jobId) {
+    setJobId(jobState?.hash);
+    logsRef.current = [];
+    setLogs(logsRef.current);
+  }, [jobState]);
+
+  // Actually update logs
+  useEffect(() => {
+    if (!jobId) {
       return;
     }
-    
-    const logs = jobLog.logs.map((log) => log.val);
-    logsRef.current = logsRef.current.concat(logs);
+
+    let currentLogs: ConsoleLogLine[] = EMPTY_ARRAY;
+    switch (mode) {
+      case "stdout+stderr":
+        currentLogs = runLogs || EMPTY_ARRAY;
+        break;
+      case "stdout":
+        currentLogs = runLogs?.filter((l) => !l[2]) || EMPTY_ARRAY;
+        break;
+      case "stderr":
+        currentLogs = runLogs?.filter((l) => l[2]) || EMPTY_ARRAY;
+        break;
+      case "build":
+        currentLogs = buildLogs || [];
+        break;
+    }
+
+    logsRef.current = currentLogs?.map((l) => l[0]);
     setLogs(logsRef.current);
+  }, [mode, jobState, jobId, buildLogs, runLogs]);
 
-  }, [jobId, jobLog]);
-
-
-  if (!job || !state) {
-    return (
-      <>
-        <JustLogs logs={undefined} />
-      </>
-    );
+  if (!jobId) {
+    return <JustLogs logs={undefined} />;
   }
 
-  switch (state) {
-    case DockerJobState.Finished:
-      const resultFinished = job?.value as StateChangeValueWorkerFinished;
-      return (
-        <>
-          <JustLogs
-            logs={
-              stdout
-                ? resultFinished?.result?.stdout
-                : resultFinished?.result?.stderr
-            }
-          />
-        </>
-      );
-    case DockerJobState.Running:
-      // TODO: handled streaming logs
-      return (
-        <>
-          <JustLogs logs={logs} />
-        </>
-      );
-    case DockerJobState.Queued:
-    case DockerJobState.ReQueued:
-      // TODO: handled streaming logs
-      return (
-        <>
-          <JustLogs logs={undefined} />
-        </>
-      );
-      
-    
-  }
+  return <JustLogs logs={logs} />;
 };
 
 const JustLogs: React.FC<{

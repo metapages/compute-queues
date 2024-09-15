@@ -1,8 +1,6 @@
 import fetchRetry from 'fetch-retry';
 import stringify from 'safe-stable-stringify';
 
-// import { DockerJobDefinitionInputRefs } from './types.ts';
-
 export const shaObject = async (obj :any) :Promise<string> => { 
     const orderedStringFromObject = stringify(obj);
     const msgBuffer = new TextEncoder().encode(orderedStringFromObject);

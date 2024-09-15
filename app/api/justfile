@@ -12,7 +12,6 @@ normal                := '\033[0m'
 
 @_help:
     just --list --unsorted --list-heading $'Api commands:\n'
-    echo -e "{{PATH}}"
 
 # Run the server locally
 @dev +args="":

@@ -1,9 +1,8 @@
 import { StatusIcon } from '/@/components/StatusIcon';
-import { DockerJobDefinitionRow } from '/@/shared';
+import { useStore } from '/@/store';
 
-export const PanelJobLabel: React.FC<{
-  job: DockerJobDefinitionRow | undefined;
-}> = ({ job }) => {
+export const PanelJobLabel: React.FC = () => {
+  const job = useStore((state) => state.jobState);
   return (
     <>
       <StatusIcon job={job} />

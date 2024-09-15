@@ -395,6 +395,7 @@ export class DockerJobQueue {
                     reason: DockerJobFinishedReason.Error,
                     worker: this.workerId,
                     time: Date.now(),
+                    
                     result: ({
                         error: `${err}`,
                     } as DockerRunResultWithOutputs),
@@ -452,7 +453,7 @@ export class DockerJobQueue {
                 }
                 if (result.StatusCode !== 0) {
                     console.log(`[${jobBlob.hash.substring(0, 6)}] 💥 StatusCode: ${result.StatusCode}`);
-                    console.log(`[${jobBlob.hash.substring(0, 6)}] 💥 stderr: ${result.stderr?.join("\n")}`);
+                    console.log(`[${jobBlob.hash.substring(0, 6)}] 💥 stderr: ${result.logs?.join("\n")?.substring(0, 200)}`);
                 }
                 
                 const resultWithOutputs: DockerRunResultWithOutputs = result as DockerRunResultWithOutputs;
