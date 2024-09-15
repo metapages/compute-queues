@@ -3,6 +3,7 @@ import {
   DockerJobState,
   StateChangeValueWorkerFinished,
 } from '/@/shared';
+import { useStore } from '/@/store';
 
 import {
   Box,
@@ -13,12 +14,9 @@ import {
   Thead,
   Tr,
 } from '@chakra-ui/react';
-import { useHashParam } from '@metapages/hash-query';
 
-export const JobDisplayOutputs: React.FC<{
-  job: DockerJobDefinitionRow | undefined;
-}> = ({ job }) => {
-  const [queue] = useHashParam("queue");
+export const JobDisplayOutputs: React.FC = () => {
+  const job = useStore((state) => state.jobState);
   return (
     <Box maxW="100%" p={2}>
       <Table variant="simple">

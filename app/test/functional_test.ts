@@ -53,7 +53,7 @@ Deno.test(
           }
           if (jobState.state === DockerJobState.Finished) {
             const finishedState = jobState.value as StateChangeValueWorkerFinished;
-            const lines :string = finishedState.result?.stdout?.[0]!;
+            const lines :string = finishedState.result?.logs?.map(l => l[0])[0]!;
             resolve(lines);
             
           }
@@ -122,7 +122,7 @@ Deno.test(
             }
             if (jobState.state === DockerJobState.Finished) {
               const finishedState = jobState.value as StateChangeValueWorkerFinished;
-              const lines :string = finishedState.result?.stdout?.[0]!;
+              const lines :string = finishedState.result?.logs?.map(l => l[0])[0]!;
               const i = messages.findIndex((m) => m.jobId === jobId);
               if (i >= 0 && lines && !jobIdsFinished.has(jobId)) {
                 promises[i]?.resolve(lines.trim());

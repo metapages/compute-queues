@@ -9,7 +9,10 @@ import {
 import { tgz } from 'https://deno.land/x/compress@v0.4.5/mod.ts';
 import { decompress } from 'https://deno.land/x/zip@v1.2.5/mod.ts';
 
-import { JobStatusPayload } from '../../../shared/src/mod.ts';
+import {
+  ConsoleLogLine,
+  JobStatusPayload,
+} from '../../../shared/src/mod.ts';
 import {
   DockerJobImageBuild,
   shaObject,
@@ -48,6 +51,16 @@ export const getDockerImageName = (sha: string) => {
   return `ttl.sh/${sha}:1d`;
 };
 
+export class DockerBuildError extends Error {
+  logs?: ConsoleLogLine[];
+
+  constructor(message: string, logs?: ConsoleLogLine[]) {
+      super(message);
+      this.logs = logs;
+  }
+}
+
+
 export const ensureDockerImage = async (args: {
   jobId: string;
   image?: string;
@@ -59,7 +72,7 @@ export const ensureDockerImage = async (args: {
   let { jobId, image, pullOptions, build, sender } = args;
 
   if (!image && !build) {
-    throw new Error("Missing image or build configuration");
+    throw new DockerBuildError("Missing image or build configuration");
   }
 
   let imageExists = false;
@@ -81,7 +94,7 @@ export const ensureDockerImage = async (args: {
     const { dockerfile, context, filename, target, buildArgs } = build;
 
     if (!dockerfile && !context) {
-      throw new Error(
+      throw new DockerBuildError(
         "Missing Dockerfile or context. Where does the Dockerfile come from?"
       );
     }
@@ -137,8 +150,9 @@ export const ensureDockerImage = async (args: {
       });
       const process = command.spawn();
 
-      const stdout: string[] = [];
-      const stderr: string[] = [];
+      const consoleOut: ConsoleLogLine[] = [];
+      // const stdout: string[] = [];
+      // const stderr: string[] = [];
 
       (async () => {
         for await (const data of process.stdout.pipeThrough(
@@ -146,19 +160,17 @@ export const ensureDockerImage = async (args: {
         )) {
           console.log(`DOCKER BUILD stdout: ${data}`);
           const time = Date.now();
-          const decodedLines: string[] = data.trim().split("\n");
-          stdout.push(...decodedLines);
+          const decodedLines: ConsoleLogLine[] = data.trim().split("\n").map((l: string) => [l, time]);
+          decodedLines.forEach(l => {
+            consoleOut.push(l);
+          });
 
           sender({
             type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
             payload: {
               jobId,
               step: "docker build",
-              logs: decodedLines.map((l: string) => ({
-                time,
-                type: "stdout",
-                val: l.trim(),
-              })),
+              logs: decodedLines,
             } as JobStatusPayload,
           });
         }
@@ -169,18 +181,17 @@ export const ensureDockerImage = async (args: {
           new TextDecoderStream()
         )) {
           const time = Date.now();
-          const decodedLines: string[] = data.trim().split("\n");
-          stderr.push(...decodedLines);
+          const decodedLines: ConsoleLogLine[] = data.trim().split("\n").map((l: string) => [l, time, true]);
+          decodedLines.forEach(l => {
+            consoleOut.push(l);
+          });
+
           sender({
             type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
             payload: {
               jobId,
               step: "docker build",
-              logs: decodedLines.map((l: string) => ({
-                time,
-                type: "stderr",
-                val: l.trim(),
-              })),
+              logs: decodedLines,
             } as JobStatusPayload,
           });
         }
@@ -194,14 +205,12 @@ export const ensureDockerImage = async (args: {
 
       if (!success) {
         console.error(
-          `💥 DOCKER BUILD FAILED: ${code} ${signal}\n ${stdout.join(
+          `💥 DOCKER BUILD FAILED: ${code} ${signal}\n ${consoleOut.map(l => l[0]).join(
             "\n"
-          )} \n ${stderr.join("\n")}`
+          )}`
         );
-        throw new Error(
-          `Failure to build the docker image: ${stderr.join(
-            "\n"
-          )} \n ${stdout.join("\n")}`
+        throw new DockerBuildError(
+          "Failure to build the docker image", consoleOut
         );
       }
 
@@ -237,13 +246,7 @@ export const ensureDockerImage = async (args: {
                       payload: {
                         jobId,
                         step: "docker image push",
-                        logs: [
-                          {
-                            time: Date.now(),
-                            type: "event",
-                            val: progressEvent,
-                          },
-                        ],
+                        logs: [[`${progressEvent}`, Date.now()]],
                       } as JobStatusPayload,
                     });
                   }
@@ -302,13 +305,7 @@ export const ensureDockerImage = async (args: {
           payload: {
             jobId,
             step: "docker image pull",
-            logs: [
-              {
-                time: Date.now(),
-                type: "event",
-                val: event,
-              },
-            ],
+            logs: [[`${event}`, Date.now()]],
           } as JobStatusPayload,
         });
       }
@@ -367,7 +364,7 @@ const checkForDockerImage = async (args: {
             payload: {
               jobId,
               step: "docker image pull",
-              logs: [{ time: Date.now(), type: "event", val: event }],
+              logs: [[`${event}`, Date.now()]],
             } as JobStatusPayload,
           });
           console.log("pull event", event);
@@ -530,13 +527,8 @@ const downloadContextIntoDirectory = async (args: {
     payload: {
       jobId,
       step: "cloning repo",
-      logs: [
-        {
-          time: Date.now(),
-          type: "event",
-          val: `Downloading context: ${context}`,
-        },
-      ],
+      logs: [[`Downloading context: ${context}`, Date.now() ]],
+        
     } as JobStatusPayload,
   });
   // Download git repo, unpack, and use as context
@@ -602,13 +594,7 @@ const downloadContextIntoDirectory = async (args: {
         payload: {
           jobId,
           step: "cloning repo",
-          logs: [
-            {
-              time: Date.now(),
-              type: "event",
-              val: `✅ Downloaded context: ${context}`,
-            },
-          ],
+          logs: [[`✅ Downloaded context: ${context}`, Date.now()]],
         } as JobStatusPayload,
       });
 
@@ -619,13 +605,7 @@ const downloadContextIntoDirectory = async (args: {
         payload: {
           jobId,
           step: "cloning repo",
-          logs: [
-            {
-              time: Date.now(),
-              type: "event",
-              val: `Context file already exists`,
-            },
-          ],
+          logs: [["Context file already exists", Date.now()]],
         } as JobStatusPayload,
       });
     }
@@ -670,17 +650,11 @@ const downloadContextIntoDirectory = async (args: {
       payload: {
         jobId,
         step: "cloning repo",
-        logs: [
-          {
-            time: Date.now(),
-            type: "event",
-            val: `✅ copied context, ready to build`,
-          },
-        ],
+        logs: [["✅ copied context, ready to build", Date.now()]],
       } as JobStatusPayload,
     });
   } catch (err) {
-    throw new Error(
+    throw new DockerBuildError(
       `Failure to build the docker image context: ${err?.message}`
     );
   } finally {

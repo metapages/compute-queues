@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import {
   BroadcastJobStates,
   BroadcastWorkers,
+  DockerJobState,
   JobStatusPayload,
   WebsocketMessageClientToServer,
   WebsocketMessageServerBroadcast,
@@ -45,6 +46,14 @@ export const serverWebsocket = (): void => {
 
   const setRawMessage = useStore(
     (state) => state.setRawMessage
+  );
+
+  const appendBuildLogs = useStore(
+    (state) => state.appendBuildLogs
+  );
+
+  const appendRunLogs = useStore(
+    (state) => state.appendRunLogs
   );
 
   useEffect(() => {
@@ -119,10 +128,26 @@ export const serverWebsocket = (): void => {
             break;
           case WebsocketMessageTypeServerBroadcast.ClearJobCacheConfirm:
             // We asked for this now we have a response
+            // TODO: do something with this
             break;
           case WebsocketMessageTypeServerBroadcast.JobStatusPayload:
             const jobLogs = possibleMessage.payload as JobStatusPayload;
-            // console.log(`⛈️ JobStatusPayload`, jobLogs);
+            switch (jobLogs.step) {
+              case "docker image push":
+                // TODO: do something with the push logs?
+                break;
+              case "docker image pull":
+              case "cloning repo":
+              case "docker build":
+                appendBuildLogs(jobLogs.logs);
+                break;
+              case `${DockerJobState.Running}`:
+                appendRunLogs(jobLogs.logs);
+                break;
+              default:
+                console.error(`❌ Unknown job step:`, jobLogs.step);
+                break;
+            }
             break;
           default:
             //ignored

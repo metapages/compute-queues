@@ -10,6 +10,7 @@ import {
   DockerJobDefinitionInputRefs,
   DockerJobDefinitionMetadata,
   DockerJobDefinitionParamsInUrlHash,
+  shaObject,
 } from '/@/shared';
 
 import {
@@ -137,7 +138,7 @@ export const useDockerJobDefinition = () => {
         }
       });
 
-      // at this point, these inputs could be very large blobs.
+      // at this point, these inputs *could* be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
       definition.inputs = await copyLargeBlobsToCloud(definition.inputs, UPLOAD_DOWNLOAD_BASE_URL);
       if (cancelled) {
@@ -145,11 +146,14 @@ export const useDockerJobDefinition = () => {
       }
 
       // if uploading a large blob means new inputs have arrived and replaced this set, break out
+      const jobHashCurrent = await shaObject(definition);
       const newJobDefinition: DockerJobDefinitionMetadata = {
+        hash: jobHashCurrent,
         definition,
         debug,
       };
       // console.log(`🍔 setDefinitionMeta`, newJobDefinition)
+      
       setNewJobDefinition(newJobDefinition);
 
       return () => {

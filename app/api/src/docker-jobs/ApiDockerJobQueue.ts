@@ -48,7 +48,6 @@ import {
 import { BroadcastChannelRedis } from '@metapages/deno-redis-broadcastchannel';
 
 import { db } from '../db/kv/mod.ts';
-import { isDockerJobDefinitionRowFinished } from '../shared/mod.ts';
 import { resolveMostCorrectJob } from './util.ts';
 
 // 60 seconds
@@ -169,7 +168,6 @@ export class ApiDockerJobQueue {
     if (Deno.env.get("REDIS_URL") === "redis://redis:6379") {
       console.log("👀 Using redis broadcast channel");
       this.channel = new BroadcastChannelRedis(address);
-      // (this.channel as BroadcastChannelRedis).ready();
     } else {
       this.channel = new BroadcastChannel(address);
     }
@@ -667,10 +665,6 @@ export class ApiDockerJobQueue {
         if (cachedJob) {
           this.state.jobs[jobId] = cachedJob;
         }
-      }
-      if (this.state.jobs[jobId] && isDockerJobDefinitionRowFinished(this.state.jobs[jobId])) {
-        console.log(`${jobId.substring(0, 6)} fromCache = true`);
-        this.state.jobs[jobId].fromCache = true;
       }
     }
 
