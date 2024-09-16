@@ -14,17 +14,20 @@ green            := "\\e[32m"
 dev +args="": _ensure-all open (up args)
 
 # Start the docker compose local stack
-@up +args="": _ensure-all _mkcert
+up +args="": _ensure-all _mkcert
     #!/usr/bin/env bash
     # A local NPM registry saves time, bandwidth, and avoids rate limits
-    STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873)
+    # If a local npm registry cache is running, use that for all npm modules (faster and better when internet not great)
+    # docker run -d -v verdaccio_npm_storage:/verdaccio/storage --name verdaccio -p 4873:4873 verdaccio/verdaccio
+    # https://verdaccio.org/docs/docker/
+    STATUS_CODE=$(curl --max-time 2 --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873)
     if [ $STATUS_CODE = "200" ]; then
         export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
     fi
     docker compose up --remove-orphans {{args}}
 
-# 'docker compose down'
-down +args="": _ensure-all
+# Shut down the local stack: 'docker compose down'
+down +args="":
     docker compose down {{args}}
 
 # Open the browser to the local frontend
@@ -102,3 +105,13 @@ clean:
         echo -e "\nmkcert is not installed. Please install mkcert and try again: 👉 {{green}}https://github.com/FiloSottile/mkcert?tab=readme-ov-file#installation{{normal}}\n"; \
         exit 1; \
     fi
+
+# app subdirectory commands
+alias browser := _browser
+@_browser +args="":
+    just browser/{{args}}
+
+# app subdirectory commands
+alias worker := _worker
+@_worker +args="":
+    just worker/{{args}}

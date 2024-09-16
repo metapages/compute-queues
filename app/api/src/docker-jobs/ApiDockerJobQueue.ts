@@ -37,7 +37,6 @@ import {
   WorkerRegistration,
   WorkerStatusResponse,
 } from '/@/shared';
-import equal from 'fast-deep-equal/es6';
 import { delay } from 'https://deno.land/std@0.224.0/async/delay.ts';
 // import LRU from 'https://deno.land/x/lru_cache@6.0.0-deno.4/mod.ts';
 import { ms } from 'ms';
@@ -49,6 +48,7 @@ import {
 import { BroadcastChannelRedis } from '@metapages/deno-redis-broadcastchannel';
 
 import { db } from '../db/kv/mod.ts';
+import { resolveMostCorrectJob } from './util.ts';
 
 // 60 seconds
 const MAX_TIME_FINISHED_JOB_IN_QUEUE = ms("60 seconds") as number;
@@ -129,95 +129,6 @@ export interface CollectedWorkersRegistration {
   }[];
 }
 
-/**
- * The situation here is fluid and dynamic, workers and servers and clients coming
- * and going all the time. Rather than force some rigid single source of truth, we
- * resolve conflicts and differences as they come in, and allow jobs to be requeued.
- * This means that resolving which of two jobs is the *most correct* is critical
- * and drives a lot of the rest of the dynamics.
- * At a high level:
- *  - if a job is Finished, it trumps most things
- *  - if two jobs seem the same, the one queued first is priority
- *  - other conflicts: check the time, the earliest wins
- *  - otherwise, whoever has the longest history is priority
- *
- */
-const resolveMostCorrectJob = (
-  // jobA is the DEFAULT, if that matters
-  jobA: DockerJobDefinitionRow,
-  jobB: DockerJobDefinitionRow
-): DockerJobDefinitionRow | null => {
-  if (equal(jobA, jobB)) {
-    return jobA;
-  }
-
-  if (jobA && !jobB) {
-    return jobA;
-  }
-
-  if (!jobA && jobB) {
-    return jobB;
-  }
-
-  const jobALastChange = jobA.history[jobA.history.length - 1];
-  const isJobAFinished = jobALastChange.state === DockerJobState.Finished;
-
-  const jobBLastChange = jobB.history[jobB.history.length - 1];
-  const isJobBFinished = jobBLastChange.state === DockerJobState.Finished;
-
-  if (isJobAFinished && isJobBFinished) {
-    return jobALastChange.value.time < jobBLastChange.value.time ? jobA : jobB;
-  }
-
-  if (isJobAFinished) {
-    return jobA;
-  }
-
-  if (isJobBFinished) {
-    return jobB;
-  }
-
-  if (jobA.history.length < jobB.history.length) {
-    return jobB;
-  } else if (jobA.history.length > jobB.history.length) {
-    return jobA;
-  }
-  const jobALastEvent = jobA.history[jobA.history.length - 1];
-  const jobBLastEvent = jobB.history[jobB.history.length - 1];
-
-  if (jobALastEvent.state === jobBLastEvent.state) {
-    // If the states are equal, it depends on the state
-    switch (jobALastEvent.state) {
-      case DockerJobState.Running:
-        const workerA = (jobALastEvent.value as StateChangeValueRunning).worker;
-        const workerB = (jobBLastEvent.value as StateChangeValueRunning).worker;
-        return resolvePreferredWorker(workerA, workerB) === workerA
-          ? jobA
-          : jobB;
-      case DockerJobState.Queued:
-      case DockerJobState.ReQueued:
-      case DockerJobState.Finished:
-      default:
-        // this is just about dates now, take the first
-        return jobALastEvent.value.time < jobBLastEvent.value.time
-          ? jobA
-          : jobB;
-    }
-  } else {
-    // They have different states? This is more complex
-    console.log(
-      `🇨🇭🇨🇭🇨🇭 🌘 resolving but jobA=${jobA.state} jobB=${jobB.state}`
-    );
-    if (jobA.state === DockerJobState.Running) {
-      return jobA;
-    } else if (jobB.state === DockerJobState.Running) {
-      return jobB;
-    }
-    return jobA.history[0].value.time < jobB.history[0].value.time
-      ? jobA
-      : jobB;
-  }
-};
 
 /**
  * Each user has their own personal docker job queue
@@ -241,7 +152,6 @@ export class ApiDockerJobQueue {
   _intervalJobsBroadcast: number | undefined;
 
   constructor(opts: { serverId: string; address: string }) {
-    // super();
     const { serverId, address } = opts;
     console.log(`➕ 🎾 UserDockerJobQueue ${address}`);
 
@@ -258,7 +168,6 @@ export class ApiDockerJobQueue {
     if (Deno.env.get("REDIS_URL") === "redis://redis:6379") {
       console.log("👀 Using redis broadcast channel");
       this.channel = new BroadcastChannelRedis(address);
-      // (this.channel as BroadcastChannelRedis).ready();
     } else {
       this.channel = new BroadcastChannel(address);
     }
@@ -336,11 +245,11 @@ export class ApiDockerJobQueue {
             jobs
           )) {
             if (!this.state.jobs[jobId]) {
-              console.log(
-                `🌘 ...from merge adding jobId=${jobId.substring(0, 6)}`
-              );
-              this.state.jobs[jobId] = job;
-              jobIds.push(jobId);
+                console.log(
+                  `🌘 ...from merge adding jobId=${jobId.substring(0, 6)}`
+                );
+                this.state.jobs[jobId] = job;
+                jobIds.push(jobId);
             } else {
               const resolvedJob = resolveMostCorrectJob(
                 this.state.jobs[jobId],
@@ -414,7 +323,7 @@ export class ApiDockerJobQueue {
           const jobId = (payload.value as BroadcastChannelDeleteCachedJob)
             .jobId;
           this.deleteCachedJob(jobId);
-          // No need to delete from the db, the server that triggered this 
+          // No need to delete from the db, the server that triggered this
           // broadcast has already done that, we just need to remove it from
           // our cache
           break;
@@ -446,8 +355,8 @@ export class ApiDockerJobQueue {
     }, INTERVAL_JOB_STATES_MINIMAL_BROADCAST);
 
     this._intervalJobsBroadcast = setInterval(() => {
-      // this.broadcastJobStatesToWebsockets(Object.keys(this.state.jobs).filter(jobId => this.state.jobs[jobId].state !== DockerJobState.Finished), true);
       this.broadcastJobStatesToWebsockets();
+      this.broadcastJobStatesToChannel();
     }, INTERVAL_JOBS_BROADCAST);
   }
 
@@ -526,24 +435,21 @@ export class ApiDockerJobQueue {
         `[${this.address.substring(
           0,
           6
-        )}]🗑️ NOT broadcastAndDeleteCachedJob no job [${jobId.substring(
-          0,
-          6
-        )}]`
+        )}]🗑️ NOT broadcastAndDeleteCachedJob no job [${jobId.substring(0, 6)}]`
       );
       return false;
     }
 
-    const currentState = this.state.jobs[jobId].history[this.state.jobs[jobId].history.length - 1];
+    const currentState =
+      this.state.jobs[jobId].history[this.state.jobs[jobId].history.length - 1];
     if (!isJobCacheAllowedToBeDeleted(currentState)) {
       console.log(
         `[${this.address.substring(
           0,
           6
-        )}]🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${this.state.jobs[jobId].state} [${jobId.substring(
-          0,
-          6
-        )}]`
+        )}]🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${
+          this.state.jobs[jobId].state
+        } [${jobId.substring(0, 6)}]`
       );
       return false;
     }
@@ -551,8 +457,7 @@ export class ApiDockerJobQueue {
     // Can only send the message to the workers with the whole definition
     // because the definition used to construct unique cache keys
     const jobDefinition = (
-      this.state.jobs[jobId].history[0]
-        .value as StateChangeValueQueued
+      this.state.jobs[jobId].history[0].value as StateChangeValueQueued
     ).definition;
     if (jobDefinition) {
       this.broadcastToLocalWorkers(
@@ -699,7 +604,7 @@ export class ApiDockerJobQueue {
     if (!jobIds) {
       jobIds = Object.keys(this.state.jobs);
     }
-    const stateWithOneJob: JobStates = {
+    const jobStates: JobStates = {
       jobs: Object.fromEntries(
         jobIds
           .filter((jobId) => this.state.jobs[jobId])
@@ -708,7 +613,7 @@ export class ApiDockerJobQueue {
     };
     const message: BroadcastChannelMessage = {
       type: "job-states",
-      value: stateWithOneJob,
+      value: jobStates,
     };
     this.channel.postMessage(message);
 
@@ -734,9 +639,7 @@ export class ApiDockerJobQueue {
     // console.log('this.state.jobs', JSON.stringify(this.state.jobs, null, '  '));
 
     if (!change?.job) {
-      console.log(
-        `stateChange but bad state ${JSON.stringify(change)}`
-      );
+      console.log(`stateChange but bad state ${JSON.stringify(change)}`);
       return;
     }
 
@@ -746,7 +649,7 @@ export class ApiDockerJobQueue {
       console.log(
         `${jobId.substring(0, 6)} stateChange ${
           this.state.jobs[jobId] ? this.state!.jobs![jobId]!.state : ""
-        } => ${change.state}`
+        } => ${change.state} (existing job: ${!!this.state.jobs[jobId]})`
       );
     }
 
@@ -755,6 +658,13 @@ export class ApiDockerJobQueue {
       const possibleMissedJob = await db.queueJobGet(this.address, jobId);
       if (possibleMissedJob) {
         this.state.jobs[jobId] = possibleMissedJob;
+
+      } else {
+        // is this job already finished, but in the longer-term cache?
+        const cachedJob: DockerJobDefinitionRow | undefined = await db.resultCacheGet(jobId);
+        if (cachedJob) {
+          this.state.jobs[jobId] = cachedJob;
+        }
       }
     }
 
@@ -762,9 +672,7 @@ export class ApiDockerJobQueue {
 
     const updateState = async (replace = false) => {
       if (!jobRow) {
-        console.log(
-          `💥 updateState but missing jobRow, maybe cache is bad?`
-        );
+        console.log(`💥 updateState but missing jobRow, maybe cache is bad?`);
         return;
       }
       if (change.state === DockerJobState.Queued) {
@@ -786,10 +694,7 @@ export class ApiDockerJobQueue {
       try {
         // Finished jobs are cached in the db
         if (change.state === DockerJobState.Finished) {
-          await db.resultCacheAdd(
-            jobId,
-            change.value as StateChangeValueWorkerFinished
-          );
+          await db.resultCacheAdd(jobId, jobRow);
         }
 
         if (change.state === DockerJobState.Queued) {
@@ -816,7 +721,6 @@ export class ApiDockerJobQueue {
       await this.broadcastJobStatesToWebsockets([jobId]);
     };
 
-    // console.log(`🌗jobId=${jobId.substring(0, 6)} jobRow=${JSON.stringify(jobRow, null, "  ")}`)
     try {
       switch (change.state) {
         // incoming state
@@ -903,7 +807,7 @@ export class ApiDockerJobQueue {
                     this.state.jobs[jobId].state
                   } ignoring queue request, job already queued or running`
                 );
-                
+
                 // TODO: what is happening here? It could be a lost job
                 await broadcastCurrentStateBecauseIDoubtStateIsSynced();
                 break;
@@ -1063,8 +967,11 @@ export class ApiDockerJobQueue {
     )) {
       if (job?.state === DockerJobState.Finished) {
         const stateChange = this.state.jobs[jobId]
-          .value as StateChangeValueWorkerFinished;
-        if (now - stateChange.time > MAX_TIME_FINISHED_JOB_IN_QUEUE) {
+          ?.value as StateChangeValueWorkerFinished;
+        if (
+          stateChange &&
+          now - stateChange.time > MAX_TIME_FINISHED_JOB_IN_QUEUE
+        ) {
           console.log(
             `[${this.address.substring(
               0,
@@ -1085,7 +992,10 @@ export class ApiDockerJobQueue {
 
   async connectWorker(connection: { socket: WebSocket }, queue: string) {
     console.log(
-      `[${this.address.substring(0, 15)}] ➕ w 🔌 Connected a worker to queue [${queue.substring(0, 6)}]`
+      `[${this.address.substring(
+        0,
+        15
+      )}] ➕ w 🔌 Connected a worker to queue [${queue.substring(0, 6)}]`
     );
 
     let workerRegistration: WorkerRegistration;
@@ -1093,7 +1003,10 @@ export class ApiDockerJobQueue {
 
     connection.socket.addEventListener("close", () => {
       console.log(
-        `[${this.address.substring(0, 15)}] [${queue.substring(0, 6)}] ➖ w 🔌 ⏹️ Removing ${
+        `[${this.address.substring(0, 15)}] [${queue.substring(
+          0,
+          6
+        )}] ➖ w 🔌 ⏹️ Removing ${
           workerRegistration
             ? workerRegistration.id.substring(0, 6)
             : "unknown worker"
@@ -1235,7 +1148,10 @@ export class ApiDockerJobQueue {
       var index = this.clients.indexOf(connection.socket);
       if (index > -1) {
         console.log(
-          `[${this.address.substring(0, 15)}] ➖ c ⏹️ close event: Removing client`
+          `[${this.address.substring(
+            0,
+            15
+          )}] ➖ c ⏹️ close event: Removing client`
         );
         this.clients.splice(index, 1);
       }
@@ -1373,7 +1289,6 @@ export class ApiDockerJobQueue {
       return;
     }
     try {
-      
       if (connection.readyState === WebSocket.OPEN) {
         connection.send(messageString);
       }
@@ -1469,6 +1384,7 @@ export class ApiDockerJobQueue {
     this.channel.postMessage(message);
   }
 
+  /** Just the job and the state enum */
   broadcastMinimalJobsStatesToChannel() {
     const message: BroadcastChannelMessage = {
       type: "job-states-minimal",
@@ -1480,7 +1396,7 @@ export class ApiDockerJobQueue {
         .flat(),
     };
     // use the BroadcastChannel to notify other servers
-    // console.log(`[${this.address.substring(0, 6)}] 📡 broadcastMinimalJobsStatesToChannel`, message.value)
+    console.log(`[${this.address.substring(0, 6)}] 📡 broadcastMinimalJobsStatesToChannel`, message.value)
     this.channel.postMessage(message);
   }
   /**

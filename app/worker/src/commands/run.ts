@@ -6,7 +6,8 @@ import ReconnectingWebSocket from 'npm:reconnecting-websocket@4.4.0';
 
 import mod from '../../mod.json' with { type: 'json' };
 import { config } from '../config.ts';
-import { clearCache } from '../queue/docker-image.ts';
+import { ensureSharedVolume } from '../docker/volume.ts';
+import { clearCache } from '../queue/dockerImage.ts';
 import {
   DockerJobQueue,
   DockerJobQueueArgs,
@@ -192,7 +193,7 @@ export const runCommand = new Command()
       required: false,
     },
   )
-  .option("-c, --cpus [cpus:number]", "Available CPU cores", { default: 1 })
+  .option("-c, --cpus [cpus:number]", "Available CPU cpus", { default: 1 })
   .option("-a, --api-server-address [api-server-address:string]", "Custom API queue server")
   .option("-g, --gpus [gpus:number]", "Available GPUs", { default: 0 })
   .action(async (options, queue: string) => {
@@ -209,12 +210,13 @@ export const runCommand = new Command()
     }
 
     console.log(
-      "run %s with cores=%s gpu=%s at server %s",
+      "run %s with cpus=%s gpu=%s at server %s",
       config.queue,
       config.cpus,
       config.gpus,
       config.server
     );
+    await ensureSharedVolume();
     connectToServer({ server: config.server || "", queueId: queue, cpus, gpus, workerId: config.id });
     console.log("Metrics accessible at: http://localhost:8000/metrics");
     await serve(metricsHandler, { port: 8000 });

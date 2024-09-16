@@ -3,6 +3,8 @@ set shell                          := ["bash", "-c"]
 set dotenv-load                    := true
 set export                         := true
 DENO_DEPLOY_TOKEN                  := env_var_or_default("DENO_DEPLOY_TOKEN", "")
+# Make sure to include the just and deployctl paths here
+PATH                               := env_var_or_default("PATH", "") + ":" + env_var_or_default("HOME", "") + "/.deno/bin:/snap/bin"
 
 # minimal formatting, bold is very useful
 bold                  := '\033[1m'
@@ -10,7 +12,6 @@ normal                := '\033[0m'
 
 @_help:
     just --list --unsorted --list-heading $'Api commands:\n'
-    echo -e ""
 
 # Run the server locally
 @dev +args="":
@@ -51,4 +52,4 @@ clean:
     rm -rf dist
 
 @_ensure_deployctl:
-    if ! command -v deployctl &> /dev/null; then echo '‼️ deployctl is being installed ‼️'; deno install --allow-all --no-check -r -f https://deno.land/x/deploy/deployctl.ts; fi
+    if ! command -v deployctl &> /dev/null; then echo '‼️ deployctl is being installed ‼️'; deno install -Arf jsr:@deno/deployctl; fi

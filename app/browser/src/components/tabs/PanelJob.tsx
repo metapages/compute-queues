@@ -18,22 +18,21 @@ import {
   ListItem,
   Text,
   UnorderedList,
-  useMediaQuery,
   VStack,
 } from '@chakra-ui/react';
 import { useHashParam } from '@metapages/hash-query';
 
 import { ButtonCancelOrRetry } from '../ButtonCancelOrRetry';
 import { ButtonDeleteCache } from '../ButtonDeleteCache';
+import { DisplayLogs } from '../DisplayLogs';
 import { PanelImageAndContainer } from './PanelImageAndContainer';
 
 type ErrorObject = { statusCode: number; json: { message: string } };
 
-export const PanelJob: React.FC<{
-  job: DockerJobDefinitionRow | undefined;
-}> = ({ job }) => {
+export const PanelJob: React.FC = () => {
+  const job = useStore((state) => state.jobState);
   const [queue] = useHashParam("queue");
-  const [isSmallerThan800] = useMediaQuery("(max-width: 800px)");
+
   return (
     <Box w="100%" maxW="100%" p={2}>
       <HStack w="100%" spacing="24px" alignItems="flex-start">
@@ -51,7 +50,6 @@ export const PanelJob: React.FC<{
           >
             <HStack w="100%" justifyContent="space-between">
               <ButtonCancelOrRetry job={job} />
-              {/* <Spacer /> */}
 
               <Text maxW="200px" isTruncated>
                 {job?.hash ? `id: ${job?.hash}` : null}
@@ -61,6 +59,12 @@ export const PanelJob: React.FC<{
             <HStack w="100%" h="100%">
               {!queue || queue === "" ? null : <JobStatusDisplay job={job} />}
             </HStack>
+
+            <Heading size="sm">Build Logs</Heading>
+
+            <DisplayLogs mode={"build"} />
+
+            
           </VStack>
         </VStack>
       </HStack>
@@ -95,6 +99,8 @@ const JobStatusDisplay: React.FC<{
 
   const workersTotal = workers?.workers?.length || 0;
 
+  
+
   switch (state) {
     case DockerJobState.Finished:
       const resultFinished = job.value as StateChangeValueWorkerFinished;
@@ -112,6 +118,7 @@ const JobStatusDisplay: React.FC<{
           </Alert>
         );
       }
+
       switch (resultFinished.reason) {
         case DockerJobFinishedReason.Cancelled:
           return (

@@ -7,7 +7,9 @@ import Docker from 'npm:dockerode@4.0.2';
 // import { Buffer } from "node:buffer";
 // import { args as CliArgs } from '../args.ts';
 import * as StreamTools from '../docker/streamtools.ts';
+import { DockerJobSharedVolumeName } from '../docker/volume.ts';
 import {
+  ConsoleLogLine,
   DockerApiDeviceRequest,
   DockerJobImageBuild,
   DockerJobState,
@@ -15,8 +17,11 @@ import {
   WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
 } from '../shared/mod.ts';
-import { ensureDockerImage } from './docker-image.ts';
 import { docker } from './dockerClient.ts';
+import {
+  DockerBuildError,
+  ensureDockerImage,
+} from './dockerImage.ts';
 
 // Minimal interface for interacting with docker jobs:
 //  inputs:
@@ -85,15 +90,13 @@ if (!existsSync("/var/run/docker.sock")) {
   Deno.exit(1);
 }
 
-
-
-
 export interface DockerRunResult {
   StatusCode?: number;
-  stdout?: string[];
-  stderr?: string[];
+  logs: ConsoleLogLine[];
   error?: any;
 }
+
+export const JobCacheDirectory = "/job-cache";
 
 export const dockerJobExecute = async (
   args: DockerJobArgs
@@ -115,8 +118,7 @@ export const dockerJobExecute = async (
   } = args;
 
   const result: DockerRunResult = {
-    stdout: [],
-    stderr: [],
+    logs: [],
   };
 
   let container: Docker.Container | undefined;
@@ -136,7 +138,7 @@ export const dockerJobExecute = async (
     Env:
       env != null
         ? Object.keys(env).map((key) => `${key}=${env[key]}`)
-        : undefined,
+        : [],
     Tty: false, // needed for splitting stdout/err
     AttachStdout: true,
     AttachStderr: true,
@@ -145,38 +147,40 @@ export const dockerJobExecute = async (
     }
   };
 
+  createOptions.Env.push("JOB_INPUTS=/inputs");
+  createOptions.Env.push("JOB_OUTPUTS=/outputs");
+  createOptions.Env.push(`JOB_CACHE=${JobCacheDirectory}`);
+
   if (deviceRequests) {
     // https://github.com/apocas/dockerode/issues/628
     createOptions.HostConfig!.DeviceRequests = deviceRequests;
-    // [ 
-    //   // {
-    //   //   // TODO: what did I disable this?
-    //   //   Count: -1,
-    //   //   Driver: "nvidia",
-    //   //   Capabilities: [["gpu"]],
-    //   // },
-    // ];
   }
 
   if (volumes != null) {
     createOptions.HostConfig!.Binds = [];
     volumes.forEach((volume) => {
-      // assert(volume.host, `Missing volume.host`);
-      // assert(volume.container, `Missing volume.container`);
       createOptions.HostConfig!.Binds!.push(
         `${volume.host}:${volume.container}:Z`
       );
     });
   }
 
+  // Add a volume shared between all job containers
+  // For e.g. big downloaded models
+  // Security issue? Maybe. Don't store your job
+  // data there, store it in /inputs and /outputs.
+    createOptions.HostConfig!.Binds!.push(
+    `${DockerJobSharedVolumeName}:${JobCacheDirectory}:Z`
+  );
+
   var grabberOutStream = StreamTools.createTransformStream((s: string) => {
-    result.stdout!.push(s.toString());
+    result.logs.push([s.toString(), Date.now()]);
     sender({
       type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
       payload: {
         jobId: id,
         step: `${DockerJobState.Running}`,
-        logs: [{time:Date.now(), type:"stdout", val:s.toString()}],
+        logs: [[s.toString(), Date.now()]],
       } as JobStatusPayload,
     });
     return s;
@@ -186,13 +190,13 @@ export const dockerJobExecute = async (
   }
 
   var grabberErrStream = StreamTools.createTransformStream((s: string) => {
-    result.stderr!.push(s.toString());
+    result.logs.push([s.toString(), Date.now(), true]);
     sender({
       type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
       payload: {
         jobId: id,
         step: `${DockerJobState.Running}`,
-        logs: [{time:Date.now(), type:"stderr", val:s.toString()}],
+        logs: [[s.toString(), Date.now(), true]],
       } as JobStatusPayload,
     });
     return s;
@@ -204,20 +208,20 @@ export const dockerJobExecute = async (
   const runningContainers :any[] = await docker.listContainers({Labels: {
     "container.mtfm.io/id": args.id,
   }});
-  // console.log('runningContainers', runningContainers.length);
-
-  // console.log('createOptions', createOptions);
-
-
-
 
   const finish = async () => {
     try {
       createOptions.image = await ensureDockerImage({jobId: id, image, build: args.build, sender});
     } catch (err) {
-      console.error('💥 ensureDockerImage error', err);
-      result.error = `Failure to pull or build the docker image:  ${err?.message}`;
-      return result;
+      if (err instanceof DockerBuildError) {
+        result.error = err.message;
+        result.logs = err.logs ? err.logs : [];
+        return result;
+      } else {
+        console.error('💥 ensureDockerImage error', err);
+        result.error = `Failure to pull or build the docker image:  ${err?.message}`;
+        return result;
+      }
     }
 
     // Check for existing job container

@@ -53,7 +53,7 @@ Deno.test(
           }
           if (jobState.state === DockerJobState.Finished) {
             const finishedState = jobState.value as StateChangeValueWorkerFinished;
-            const lines :string = finishedState.result?.stdout?.[0]!;
+            const lines :string = finishedState.result?.logs?.map(l => l[0])[0]!;
             resolve(lines);
             
           }
@@ -63,14 +63,14 @@ Deno.test(
       }
     };
 
-    
     console.log(`opening the socket to the API server...`)
     await open(socket);
     console.log(`...socket opened. Sending message...`, message);
     socket.send(JSON.stringify(message));
+
     console.log(`...awaiting job to finish`);
     const result = await jobCompleteDeferred;
-    assertEquals(result, ".\n..\n.dockerenv\nbin\ndev\netc\nhome\ninputs\nlib\nmedia\nmnt\nopt\noutputs\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n");
+    assertEquals(result, ".\n..\n.dockerenv\nbin\ndev\netc\nhome\ninputs\njob-cache\nlib\nmedia\nmnt\nopt\noutputs\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n");
   
     socket.close();
     await closed(socket);
@@ -122,7 +122,7 @@ Deno.test(
             }
             if (jobState.state === DockerJobState.Finished) {
               const finishedState = jobState.value as StateChangeValueWorkerFinished;
-              const lines :string = finishedState.result?.stdout?.[0]!;
+              const lines :string = finishedState.result?.logs?.map(l => l[0])[0]!;
               const i = messages.findIndex((m) => m.jobId === jobId);
               if (i >= 0 && lines && !jobIdsFinished.has(jobId)) {
                 promises[i]?.resolve(lines.trim());
@@ -146,7 +146,7 @@ Deno.test(
     
     console.log(`...awaiting jobs to finish`);
     const results = await Promise.all(promises.map((p) => p.promise));
-    results.forEach((result, i) => {
+    results.forEach((result, i:number) => {
       assertEquals(result, definitions[i].command.replace("echo ", ""));
     });
   

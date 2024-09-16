@@ -6,7 +6,8 @@ FROM denoland/deno:1.45.5 as worker
 # # https://gist.github.com/squarebracket/e719069522436873bc6f13efb359cac9
 # RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
 
-RUN apt-get update && apt-get -y install podman ca-certificates fuse-overlayfs slirp4netns
+# curl is needed because this issue: https://github.com/metapages/compute-queues/issues/46
+RUN apt-get update && apt-get -y install curl podman ca-certificates fuse-overlayfs slirp4netns
 # Alias docker to podman
 RUN ln -s $(which podman) /usr/bin/docker
 

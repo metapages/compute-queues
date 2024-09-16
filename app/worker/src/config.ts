@@ -5,7 +5,7 @@ const MACHINE_ID: string = await machineId();
 
 export interface Arguments {
     // This is a proxy for the number of jobs, since currently, jobs
-    // are not prevented from claiming as many cpu cores as they want.
+    // are not prevented from claiming as many cpu cpus as they want.
     cpus: number;
     server: string;
     // version?: Boolean;

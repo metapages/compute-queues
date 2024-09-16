@@ -1,3 +1,6 @@
+export type IsStdErr = boolean;
+export type ConsoleLogLine = [string, number, IsStdErr] | [string, number];
+
 // represents a way of getting a blob of data (inputs/outputs)
 export enum DataRefType {
   base64 = "base64", //default, value is a base64 encoded bytes
@@ -63,23 +66,25 @@ export type DockerJobDefinitionInputRefs = Omit<
 
 export interface DockerRunResultWithOutputs {
   StatusCode?: number;
-  stdout?: string[];
-  stderr?: string[];
+  logs?: ConsoleLogLine[];
   error?: any;
   outputs: InputsRefs;
 }
 
+/** 
+ * Think very hard and carefully before adding a new state.
+ * There is a lot of power in keeping this part simple.
+ */
 export enum DockerJobState {
-  // These should go on a substate
-  // CloningRepo = "CloningRepo",
-  // DownloadingImage = "DownloadingImage",
-  // Building = "Building",
   Queued = "Queued",
   ReQueued = "ReQueued",
   Running = "Running",
   Finished = "Finished",
 }
 
+/**
+ * Add as many as needed to help anyone understand why a job finished
+ */
 export enum DockerJobFinishedReason {
   Cancelled = "Cancelled",
   TimedOut = "TimedOut",
@@ -103,7 +108,10 @@ export interface StateChange {
   job: string;
   value: DockerJobStateValue;
 }
-
+/**
+ * This state change contains the job definition.
+ * This means history is recoverable.
+ */
 export interface StateChangeValueQueued {
   definition: DockerJobDefinitionInputRefs;
   time: number;
@@ -134,6 +142,10 @@ export interface DockerJobDefinitionRow {
   history: StateChange[];
 }
 
+export const isDockerJobDefinitionRowFinished = (row:DockerJobDefinitionRow) => {
+  return row.state === DockerJobState.Finished;
+}
+
 // export type JobsStateMap = { [id in string]: DockerJobDefinitionRow };
 export type JobsStateMap = Record<string, DockerJobDefinitionRow>;
 
@@ -159,17 +171,9 @@ export interface WorkerStatusResponse {
 
 export interface JobStatusPayload {
   jobId: string;
-  step?: string;
-  logs: {
-    time: number;
-    type: "stdout" | "stderr" | "event";
-    val: string | any;
-  }[];
+  step: "docker image pull" | "cloning repo" | "docker build" | `${DockerJobState.Running}` | "docker image push";
+  logs: ConsoleLogLine[];
 }
-
-// export interface WorkerRegistrationWithServerId extends WorkerRegistration {
-//     serverId: string;
-// }
 
 export interface InstanceRegistration {
   instances: {
@@ -290,6 +294,7 @@ export type DockerJobDefinitionParamsInUrlHash = Omit<
 
 // this is the actual job definition consumed by the workers
 export interface DockerJobDefinitionMetadata {
+  hash: string;
   definition: DockerJobDefinitionInputRefs;
   debug?: boolean;
 }
@@ -325,4 +330,3 @@ export type DockerApiDeviceRequest = {
     DeviceIDs?: string[],
     Capabilities: string[][],
 }
-

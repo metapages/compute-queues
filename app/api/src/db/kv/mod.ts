@@ -1,14 +1,14 @@
 import { ms } from 'ms';
 
 import {
-  getJsonFromS3,
+  deleteFromS3,
   putJsonToS3,
+  resolveDataRefFromS3,
 } from '../../docker-jobs/job-s3.ts';
 import {
   DataRef,
   DataRefType,
   DockerJobDefinitionRow,
-  StateChangeValueWorkerFinished,
 } from '../../shared/mod.ts';
 import { getKv } from './getKv.ts';
 
@@ -22,8 +22,8 @@ export class DB {
     async queueJobAdd(queue: string, job: DockerJobDefinitionRow): Promise<void> {
         // INSERT INTO queue (id, hash, queue, job, created_at) VALUES (@id, @queue, @hash, @job, @created_at) ON CONFLICT(id) DO UPDATE SET job=@job'
         const id = job.hash;
+        // deno kv has a 64kb limit, so we store the job in s3, and store a reference to it in kv
         const dataRef = await putJsonToS3(id, job);
-
         const res = await kv.atomic()
         // .check({ key, versionstamp: null }) // `null` versionstamps mean 'no value'
             .set(["queue", queue, id], dataRef, { expireIn: expireIn1Week })
@@ -31,17 +31,18 @@ export class DB {
             .commit();
     }
 
+    // TODO: just store jobs in their own ids, not on a queue
     async queueJobGet(queue: string, id: string): Promise<DockerJobDefinitionRow | null> {
-        const entry = await kv.get<DataRef<DockerJobDefinitionRow> | DockerJobDefinitionRow>(["queue", queue, id])
-        const jobDataRef :DataRef<DockerJobDefinitionRow> | DockerJobDefinitionRow | null = entry.value;
+        const entry = await kv.get<DataRef<DockerJobDefinitionRow>>(["queue", queue, id])
+        const jobDataRef :DataRef<DockerJobDefinitionRow> | null = entry.value;
         if (!jobDataRef) {
             return null;
         }
-        if ((jobDataRef as any)?.type === DataRefType.key || (jobDataRef as any)?.type === "hash") {
-            const job :DockerJobDefinitionRow = await getJsonFromS3(jobDataRef as DataRef<DockerJobDefinitionRow>);
-            return job;
+        if ((jobDataRef as any)?.type === DataRefType.key) {
+            const job :DockerJobDefinitionRow | undefined = await resolveDataRefFromS3(jobDataRef as DataRef<DockerJobDefinitionRow>);
+            return job || null;
         } else {
-            return jobDataRef as DockerJobDefinitionRow;
+            return null;
         }
     }
 
@@ -66,28 +67,38 @@ export class DB {
             // console.log(entry.value); // { ... }
             // console.log(entry.versionstamp); // "00000000000000010000"
             const jobDataRef :DataRef<DockerJobDefinitionRow> | DockerJobDefinitionRow = entry.value;
-            if ((jobDataRef as any)?.type === DataRefType.key || (jobDataRef as any)?.type === "hash") {
-                const job :DockerJobDefinitionRow = await getJsonFromS3(jobDataRef as DataRef<DockerJobDefinitionRow>);
-                results.push(job);
-            } else {
-                results.push((jobDataRef as any) as DockerJobDefinitionRow);
+            if ((jobDataRef as any)?.type === DataRefType.key) {
+                const job :DockerJobDefinitionRow | undefined = await resolveDataRefFromS3(jobDataRef as DataRef<DockerJobDefinitionRow>);
+                if (job) {
+                    results.push(job);
+                }
             }
-            
         }
         return results;
     }
 
-    async resultCacheAdd(id: string, result: StateChangeValueWorkerFinished): Promise<void> {
-        await kv.set(["cache", id], result, {expireIn: expireIn1Week});
+    async resultCacheAdd(id: string, result: DockerJobDefinitionRow): Promise<void> {
+        const dataRef = await putJsonToS3(id, result);
+        await kv.set(["cache", id], dataRef, {expireIn: expireIn1Week});
     }
 
-    async resultCacheGet(id: string): Promise<StateChangeValueWorkerFinished | undefined> {
-        const row = (await kv.get(["cache", id])).value as StateChangeValueWorkerFinished;
-        return row;
+    async resultCacheGet(id: string): Promise<DockerJobDefinitionRow | undefined> {
+        const cachedValueRefBlob = await kv.get<DataRef<DockerJobDefinitionRow>>(["cache", id]);
+        const cachedValueRef :DataRef<DockerJobDefinitionRow> | null = cachedValueRefBlob?.value;
+        if (!cachedValueRef || !cachedValueRef?.value) {
+            return;
+        }
+        const job :DockerJobDefinitionRow | undefined = await resolveDataRefFromS3<DockerJobDefinitionRow>(cachedValueRef);
+        return job?.history ? job : undefined;
     }
 
-    async resultCacheRemove(id: string): Promise<void | undefined> {
-        await kv.delete(["cache", id])
+    /**
+     * Deletes from all the caches
+     * @param id hash of the job
+     * @returns 
+     */
+    async resultCacheRemove(id: string): Promise<void> {
+        await Promise.all([kv.delete(["cache", id]), deleteFromS3(id)]);
     }
 }
 
