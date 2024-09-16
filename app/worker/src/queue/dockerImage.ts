@@ -364,7 +364,7 @@ const checkForDockerImage = async (args: {
             payload: {
               jobId,
               step: "docker image pull",
-              logs: [[`${event}`, Date.now()]],
+              logs: [[`${JSON.stringify(event)}`, Date.now()]],
             } as JobStatusPayload,
           });
           console.log("pull event", event);
