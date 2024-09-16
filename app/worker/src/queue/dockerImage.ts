@@ -305,7 +305,7 @@ export const ensureDockerImage = async (args: {
           payload: {
             jobId,
             step: "docker image pull",
-            logs: [[`${event}`, Date.now()]],
+            logs: [[`${JSON.stringify(event)}`, Date.now()]],
           } as JobStatusPayload,
         });
       }
@@ -605,7 +605,7 @@ const downloadContextIntoDirectory = async (args: {
         payload: {
           jobId,
           step: "cloning repo",
-          logs: [["Context file already exists", Date.now()]],
+          logs: [["✅ Context file already exists", Date.now()]],
         } as JobStatusPayload,
       });
     }

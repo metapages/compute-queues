@@ -71,17 +71,20 @@ export interface DockerRunResultWithOutputs {
   outputs: InputsRefs;
 }
 
+/** 
+ * Think very hard and carefully before adding a new state.
+ * There is a lot of power in keeping this part simple.
+ */
 export enum DockerJobState {
-  // These should go on a substate
-  // CloningRepo = "CloningRepo",
-  // DownloadingImage = "DownloadingImage",
-  // Building = "Building",
   Queued = "Queued",
   ReQueued = "ReQueued",
   Running = "Running",
   Finished = "Finished",
 }
 
+/**
+ * Add as many as needed to help anyone understand why a job finished
+ */
 export enum DockerJobFinishedReason {
   Cancelled = "Cancelled",
   TimedOut = "TimedOut",
@@ -105,7 +108,10 @@ export interface StateChange {
   job: string;
   value: DockerJobStateValue;
 }
-
+/**
+ * This state change contains the job definition.
+ * This means history is recoverable.
+ */
 export interface StateChangeValueQueued {
   definition: DockerJobDefinitionInputRefs;
   time: number;
