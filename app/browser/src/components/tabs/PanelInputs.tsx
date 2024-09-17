@@ -2,16 +2,15 @@ import { useCallback } from "react";
 import {
   Button,
   Table,
-  Thead,
   Tr,
-  Th,
   Tbody,
   Td,
+  Icon,
   VStack,
   useDisclosure,
+  Text,
   FormControl,
   HStack,
-  IconButton,
   Input,
   InputGroup,
   Modal,
@@ -20,15 +19,18 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
-  Tag,
-  Divider,
+  Flex,
+  Container,
 } from "@chakra-ui/react";
-import { AddIcon } from "@chakra-ui/icons";
-import { useHashParamJson } from "@metapages/hash-query";
-import { useFormik } from "formik";
+import { Plus, File } from '@phosphor-icons/react';
+import { useHashParamJson } from "@metapages/hash-query"  ;
+import { useFormik } from "formik"  ;
 import * as yup from "yup";
-import { ButtonDeleteWithConfirm } from "./generic/ButtonDeleteWithConfirm";
-import { ButtonModalEditor } from "./generic/ButtonModalEditor";
+import { ButtonDeleteWithConfirm } from "../generic/ButtonDeleteWithConfirm";
+
+import { ButtonModalEditor } from "../generic/ButtonModalEditor";
+import { PanelHeader } from '../generic/PanelHeader';
+import PanelContainer from '../generic/PanelContainer';
 
 export type JobInputs = { [key: string]: string };
 
@@ -65,32 +67,31 @@ export const PanelInputs: React.FC = () => {
   const names: string[] = jobInputs ? Object.keys(jobInputs).sort() : [];
 
   return (
-    <VStack width="100%" p={2} alignItems="flex-start">
-      <HStack width="100%" justifyContent="flex-begin">
-        <AddInputButtonAndModal add={addNewInput} />
+    <PanelContainer>
+      <PanelHeader title={'Inputs'} />
+      <HStack px={4} width="100%" justifyContent="space-between">
+        <Text>Input Files</Text>
+        <AddInputButtonAndModal add={addNewInput} showText={false} />
       </HStack>
-      <Divider />
-      <Table variant="simple">
-        <Thead>
-          <Tr>
-            <Th textAlign="left">Name</Th>
-            <Th textAlign="right">Edit</Th>
-            <Th textAlign="right">Delete</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {names.map((name) => (
-            <InputRow
-              key={name}
-              name={name}
-              content={jobInputs?.[name] ?? ""}
-              onDelete={deleteInput}
-              onUpdate={updateInput}
-            />
-          ))}
-        </Tbody>
-      </Table>
-    </VStack>
+      <Container>
+        <Table variant="simple">
+          <Tbody>
+            {names.map((name) => (
+              <InputRow
+                key={name}
+                name={name}
+                content={jobInputs?.[name] ?? ""}
+                onDelete={deleteInput}
+                onUpdate={updateInput}
+              />
+            ))}
+          </Tbody>
+        </Table>
+      </Container>
+      <HStack as={Button} bg={'none'} _hover={{bg: 'none'}}>
+        <AddInputButtonAndModal showText={true} add={addNewInput} />
+      </HStack>
+    </PanelContainer>
   );
 };
 
@@ -108,13 +109,16 @@ export const InputRow: React.FC<{
   return (
     <Tr>
       <Td>
-        <Tag>{name}</Tag>
+        <HStack gap={3}>
+          <Icon as={File}></Icon>
+          <Text>{name}</Text>
+        </HStack>
       </Td>
-      <Td textAlign="right">
-        <ButtonModalEditor content={content} onUpdate={onUpdateMemoized} />
-      </Td>
-      <Td textAlign="right">
-        <ButtonDeleteWithConfirm callback={() => onDelete(name)} />
+      <Td>
+        <Flex align={'center'} justify={'flex-end'} gap={3}>
+          <ButtonModalEditor fileName={name} content={content} onUpdate={onUpdateMemoized} />
+          <ButtonDeleteWithConfirm callback={() => onDelete(name)} />
+        </Flex>
       </Td>
     </Tr>
   );
@@ -127,7 +131,8 @@ interface FormType extends yup.InferType<typeof validationSchema> {}
 
 export const AddInputButtonAndModal: React.FC<{
   add: (input: string) => void;
-}> = ({ add }) => {
+  showText: boolean;
+}> = ({ add, showText }) => {
   const { isOpen, onClose, onToggle } = useDisclosure();
 
   const onSubmit = useCallback(
@@ -156,18 +161,20 @@ export const AddInputButtonAndModal: React.FC<{
 
   return (
     <>
-      <IconButton
-        size="md"
-        onClick={onToggle}
-        colorScheme="blue"
-        aria-label="add input"
-        icon={<AddIcon />}
-      />
+      <HStack onClick={onToggle} aria-label="add input"
+      >
+        <Icon as={Plus} 
+          boxSize={'1.3rem'} />
+        {
+          showText &&
+          <Text size={'med'}>New File</Text>
+        }
+      </HStack>
 
       <Modal isOpen={isOpen} onClose={closeAndClear}>
-        <ModalOverlay />
+        <ModalOverlay sx={{right: 0, width: '50%'}} />
         <ModalContent>
-          <ModalHeader>New input (file) name:</ModalHeader>
+          <ModalHeader><Text>New input (file) name</Text></ModalHeader>
           <form onSubmit={formik.handleSubmit}>
             <ModalBody>
               <FormControl>
@@ -176,7 +183,7 @@ export const AddInputButtonAndModal: React.FC<{
                     id="value"
                     name="value"
                     type="text"
-                    variant="filled"
+                    variant="outline"
                     onChange={formik.handleChange}
                     value={formik.values.value}
                   />
@@ -185,7 +192,7 @@ export const AddInputButtonAndModal: React.FC<{
             </ModalBody>
 
             <ModalFooter>
-              <Button type="submit" colorScheme="green" mr={3}>
+              <Button type="submit" colorScheme="blackAlpha" mr={3}>
                 Add
               </Button>
             </ModalFooter>

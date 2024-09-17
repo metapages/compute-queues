@@ -8,12 +8,15 @@ import {
   ModalFooter,
   ModalBody,
   ModalCloseButton,
-  IconButton,
+  Icon,
   useDisclosure,
+  Text,
+  Container,
+  HStack,
 } from "@chakra-ui/react";
-import { DeleteIcon } from "@chakra-ui/icons";
+import { TrashSimple } from "@phosphor-icons/react";
 
-// Delete button with a confirmation modal
+// Delete icon with a confirmation modal
 export const ButtonDeleteWithConfirm: React.FC<{
   callback: (_?: any) => any;
   result?: { loading?: boolean; error?: any; data?: any };
@@ -36,71 +39,34 @@ export const ButtonDeleteWithConfirm: React.FC<{
 
   return (
     <>
-
-
-
-
-    <IconButton size="md" colorScheme="blue" aria-label='delete' onClick={onOpen} icon={<DeleteIcon/>}></IconButton>
-
-    {/* <Button onClick={onOpen}>Open Modal</Button> */}
+      <Icon as={TrashSimple}
+        aria-label='delete' 
+        onClick={onOpen} />
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
-          {/* <ModalHeader>{modalHeader}</ModalHeader> */}
           <ModalCloseButton />
           <ModalBody>
-          {modalHeader}
+            <Container
+              height={'4rem'}
+              pt={'1rem'}
+              >
+              <Text fontSize={'1rem'} align={'center'}>{modalHeader}</Text>
+            </Container>
           </ModalBody>
-
           <ModalFooter>
-            <Button colorScheme='grey' mr={3} onClick={onClose}>
-            Cancel
-            </Button>
-            <Button  colorScheme='red' onClick={onClickDelete}><DeleteIcon/> {` `}OK</Button>
+            <HStack>
+              <Button colorScheme='gray' onClick={onClose} size="sm">
+                Cancel
+              </Button>
+              <Button  colorScheme='red' onClick={onClickDelete}size="sm">
+                Delete
+              </Button>
+            </HStack>
           </ModalFooter>
         </ModalContent>
       </Modal>
-
-
-
-      {/* {modalOpen ? (
-        <Modal
-          open={modalOpen}
-          onClose={() => setModalOpen(!modalOpen)}
-          // this is rubbish
-          onActionClick={async (
-            e: React.MouseEvent<HTMLElement, MouseEvent>,
-            data: ModalProps
-          ) => {
-            e.preventDefault();
-            if (e.currentTarget.innerText === "Yes") {
-            }
-          }}
-        >
-          <Header icon="archive" />
-          <Modal.Content>
-            <p>{modalHeader}</p>
-          </Modal.Content>
-          <Modal.Actions>
-            <Button color="blue" onClick={() => setModalOpen(false)}>
-              Cancel
-            </Button>
-            <ButtonReactive
-              text="Yes"
-              color="red"
-              icon="delete"
-              result={result}
-              props={{ negative: true }}
-              onClick={onClickDelete}
-            />
-          </Modal.Actions>
-        </Modal>
-      ) : null}
-
-      <Button icon onClick={() => setModalOpen(true)}>
-        <Icon name="delete" />
-      </Button> */}
     </>
   );
 };

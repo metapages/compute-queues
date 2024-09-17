@@ -1,14 +1,15 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
 } from 'react';
 
-import { EditIcon } from '@chakra-ui/icons';
 import {
   Box,
   Button,
   HStack,
+  Icon,
   IconButton,
   IconButtonProps,
   Modal,
@@ -16,35 +17,47 @@ import {
   ModalHeader,
   ModalOverlay,
   useDisclosure,
+  Text,
 } from '@chakra-ui/react';
 import { MetaframeStandaloneComponent } from '@metapages/metapage-embed-react';
+import { defaultBorder, headerHeight } from '/@/styles/theme';
+import { Check } from '@phosphor-icons/react';
+import { encodeOptions } from '/@/shared';
 
 export interface EditorJsonProps {
   content: string;
   onUpdate: (s: string) => void;
   button?: IconButtonProps;
+  fileName?: string;
 }
 
 export const ButtonModalEditor: React.FC<EditorJsonProps> = ({
   content,
   onUpdate,
   button,
+  fileName,
 }) => {
-  // console.log('content', content);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [value, setValue] = useState(content);
-  // const valueInitialOnce = useRef({ text: content });
-  // const valueInitialOnceLoaded = useRef(false);
+  const options = useRef('');
+  useEffect(() => {
+    setValue(content);
+  }, [content]);
 
   useEffect(() => {
     setValue(content);
+    const fileExtension = fileName?.split('.').pop();
+    options.current = encodeOptions({
+      autosend: true, 
+      hidemenuififrame: true, 
+      mode: fileExtension || 'sh', 
+      theme: "mf-default",
+    });
   }, [content]);
 
   const onSave = useCallback(() => {
     onUpdate(value);
     onClose();
-    // valueInitialOnce.current = undefined;
-    // valueInitialOnceLoaded.current = false;
   }, [value, onUpdate, onClose]);
 
   const onOutputs = useCallback(
@@ -54,49 +67,57 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({
       }
       const newValue = outputs["text"];
       setValue(newValue);
-      // onUpdate(newValue);
-      // onClose();
     },
     [onUpdate, onClose]
   );
-
-  // if (valueInitialOnceLoaded.current) {
-  //   // valueInitialOnceLoaded.current = true;
-  //   valueInitialOnce.current = undefined;
-  // } else {
-  //   valueInitialOnceLoaded.current = true;
-  //   valueInitialOnce.current = { text: content }; 
-  // }
 
   return (
     <>
       <IconButton
         size="md"
-        colorScheme="blue"
-        // aria-label="edit"
+        fontWeight={400}
+        variant={'unstyled'}
         onClick={onOpen}
-        icon={<EditIcon />}
         {...button}
-      ></IconButton>
-
-      <Modal isOpen={isOpen} onClose={onClose} size="full">
-        <ModalOverlay />
-        <ModalContent maxW="70rem">
-          <ModalHeader>
-            <HStack w="100%" justifyContent="space-between"><Box>Edit</Box> <Button colorScheme='green' mr={3} onClick={onSave}>
-              Save
-            </Button></HStack>
+      >
+        <Text>
+            Edit    
+        </Text>
+      </IconButton>
+      <Modal id={'edit-modal-right'} isOpen={isOpen} onClose={onClose} size="full">
+        <ModalOverlay backdropFilter='blur(1px)'/>
+        <ModalContent maxW="50%">
+          <ModalHeader p={0} h={headerHeight} borderBottom={defaultBorder}>
+            <HStack w="100%" justifyContent="space-between">
+              <Text px={'2rem'} fontWeight={400}>
+                {fileName}
+              </Text>
+              <Button
+                w={'8rem'}
+                bg={'black.10'}
+                px={'2rem'}
+                borderLeft={defaultBorder} 
+                borderRadius={0} 
+                leftIcon={
+                  <Icon color='green' pb={'0.2rem'} boxSize={'1.5rem'} as={Check}/>
+                } 
+                variant={'unstyled'} 
+                onClick={onSave}
+                display={'flex'}
+                >
+                <Text pr={'1rem'} display={'flex'} color='green'>Save</Text>
+              </Button>
+            </HStack>
             </ModalHeader>
             
           <div>
             <MetaframeStandaloneComponent
-              url="https://editor.mtfm.io/#?hm=disabled&options=JTdCJTIyYXV0b3NlbmQlMjIlM0F0cnVlJTJDJTIyaGlkZW1lbnVpZmlmcmFtZSUyMiUzQXRydWUlMkMlMjJtb2RlJTIyJTNBJTIyc2glMjIlN0Q="
+              url={`https://editor.mtfm.io/#?hm=disabled&options=${options.current}`}
               inputs={{text: value}}
               onOutputs={onOutputs as any}
             />
           </div>
         </ModalContent>
-          {/* <ModalCloseButton /> */}
       </Modal>
     </>
   );

@@ -4,6 +4,8 @@ import {
   TabPanel,
   TabPanels,
   Tabs,
+  Text,
+  VStack,
 } from '@chakra-ui/react';
 
 import { PanelContainerFromUrlParams } from './PanelContainerFromUrlParams';
@@ -13,20 +15,22 @@ export const PanelImageAndContainer: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
   return (
-    <Tabs w="50%">
-      <TabList>
-        <Tab>Container</Tab>
-        <Tab>Image</Tab>
-      </TabList>
+    <VStack w="100%" alignItems="stretch">
+      <Tabs isFitted={true}>
+        <TabList mb='1em'>
+          <Tab><Text>Configure Job</Text></Tab>
+          <Tab><Text>Docker Image</Text></Tab>
+        </TabList>
 
-      <TabPanels>
-        <TabPanel>
-          <PanelContainerFromUrlParams onSave={onSave} />
-        </TabPanel>
-        <TabPanel>
-          <PanelImageBuildFromUrlParams onSave={onSave} />
-        </TabPanel>
-      </TabPanels>
-    </Tabs>
+        <TabPanels>
+          <TabPanel>
+            <PanelContainerFromUrlParams onSave={onSave} />
+          </TabPanel>
+          <TabPanel>
+            <PanelImageBuildFromUrlParams onSave={onSave} />
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+    </VStack>
   );
 };

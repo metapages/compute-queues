@@ -1,6 +1,7 @@
 import {
   ReactNode,
   useCallback,
+  useState,
 } from 'react';
 
 import { DockerJobDefinitionParamsInUrlHash } from '/@/shared';
@@ -15,16 +16,21 @@ import {
   FormControl,
   FormLabel,
   HStack,
+  Icon,
   IconButton,
   Input,
   InputGroup,
   Link,
+  Radio,
+  RadioGroup,
   Text,
   VStack,
 } from '@chakra-ui/react';
 import { useHashParamJson } from '@metapages/hash-query';
 
-import { ButtonModalEditor } from '../generic/ButtonModalEditor';
+import { ButtonModalEditor } from '/@/components/generic/ButtonModalEditor';
+import { FormLink } from '/@/components/generic/FormLink';
+import { TrashSimple } from '@phosphor-icons/react';
 
 const validationSchema = yup.object({
   buildArgs: yup.string().optional(),
@@ -36,12 +42,32 @@ const validationSchema = yup.object({
 });
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
+const linkMap = {
+  image: "https://hub.docker.com/",
+  command: "https://docs.docker.com/reference/dockerfile/#cmd",                           
+  dockerfile: "https://docs.docker.com/build/building/packaging/#dockerfile",
+  context: "https://docs.docker.com/build/building/context/#git-repositories",
+  filename: "https://docs.docker.com/build/building/packaging/#filenames",
+  target: "https://docs.docker.com/build/building/multi-stage/#stop-at-a-specific-build-stage",
+  buildArgs: "https://docs.docker.com/reference/cli/docker/buildx/build/#build-arg",
+}
+
+const labelMap = {
+  image: "docker image name",
+  context: "Git Repo URL",
+  filename: "Dockerfile Name",
+  buildArgs: "Build Args",
+}
+const labelSubMap = {
+  buildArgs: "Comma Separated",
+}
 export const PanelImageBuildFromUrlParams: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
+  const [value, setValue] = useState('useExisting')
   const [jobDefinitionBlob, setJobDefinitionBlob] =
     useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
-
+  
   const onSubmit = useCallback(
     (values: FormType) => {
 
@@ -152,6 +178,7 @@ export const PanelImageBuildFromUrlParams: React.FC<{
       delete newJobDefinitionBlob.image;
       setJobDefinitionBlob(newJobDefinitionBlob);
       onSave?.();
+      console.log(newJobDefinitionBlob.image)
     },
     [formik, jobDefinitionBlob, onSave, setJobDefinitionBlob]
   );
@@ -164,126 +191,81 @@ export const PanelImageBuildFromUrlParams: React.FC<{
     !!formik.values.filename ||
     !!formik.values.target;
 
-  return (
-    <VStack
-      borderWidth="1px"
-      p={4}
-      borderRadius="lg"
-      alignItems="stretch"
-      width="100%"
-      // spacing="4px"
-    >
-      <form onSubmit={formik.handleSubmit}>
-        {[
-          "image",
-          "dockerfile",
+  const existingImageInputs = () => {
+    return <FormControl  pl={'1rem'} key={'image'}>
+      {/* <FormLabel htmlFor={'image'}>
+        <FormLink href={linkMap['image']} label={labelMap['image']}/>
+      </FormLabel> */}
+      <InputGroup>
+        <Input
+          width="100%"
+          size={'sm'}
+          id={'image'}
+          name={'image'}
+          type="text"
+          variant="outline"
+          onChange={formik.handleChange}
+          value={(formik.values as any)['image'] || ""}
+        />
+      </InputGroup>
+    </FormControl>
+  }
+
+
+  const externalImageInputs = () => {
+    return <VStack pl={'1rem'} gap={'1.5rem'} w={'100%'}>
+      <FormControl>
+        <Box key={'dockerfile'}>
+          <HStack w="100%" justifyContent="space-between" alignContent={'flex-start'}>
+            <VStack gap={0} alignItems={'flex-start'}>
+              <FormLabel h={'1rem'}>
+                <FormLink href={linkMap["dockerfile"]} label={'dockerfile'}/>
+              </FormLabel>
+              <Text fontSize={'xs'} color="gray.400">{jobDefinitionBlob?.build?.dockerfile?.split("\n").find(s => s.startsWith("FROM "))}</Text>
+            </VStack>
+            <HStack>
+              <ButtonModalEditor
+                content={jobDefinitionBlob?.build?.dockerfile}
+                onUpdate={updateDockerfile}
+                button={{isDisabled: isImageSet, ["aria-label"]: "edit dockerfile"}}
+                />
+              {jobDefinitionBlob?.build?.dockerfile ? <Icon
+                  size="md"
+                  aria-label="delete dockerfile"
+                  onClick={deleteDockerfile}
+                  as={TrashSimple}
+                ></Icon> : null
+              }
+            </HStack>
+          </HStack>
+        </Box>
+      </FormControl>
+      {[
           "context",
           "filename",
           "target",
-          "buildArgs",
+          "buildArgs"
         ].map((key) => {
-          if (key === "dockerfile") {
-            return (
-              <Box key={key}>
-                <FormLabel><Link
-                  isExternal
-                  href="https://docs.docker.com/build/building/packaging/#dockerfile"
-                >
-                  Dockerfile:
-                </Link></FormLabel>
-                <HStack w="100%" justifyContent="space-between">
-                <HStack w="100%" >
-                <ButtonModalEditor
-                    content={jobDefinitionBlob?.build?.dockerfile}
-                    onUpdate={updateDockerfile}
-                    button={{isDisabled: isImageSet, ["aria-label"]: "edit dockerfile"}}
-                    />
-                  <Text bg="lightgrey">{jobDefinitionBlob?.build?.dockerfile?.split("\n").find(s => s.startsWith("FROM "))}</Text>
-                  </HStack>
-                  <HStack>
-                    {jobDefinitionBlob?.build?.dockerfile ? <IconButton
-                    size="md"
-                    colorScheme="red"
-                    aria-label="delete dockerfile"
-                    onClick={deleteDockerfile}
-                    icon={<DeleteIcon />}
-                  ></IconButton> : null}
-                  
-                  
-                  </HStack>
-                </HStack>
-              </Box>
-            );
-          }
-
-          let labelJsx: ReactNode = key;
-          switch (key) {
-            case "image":
-              labelJsx = (
-                <Link isExternal href="https://hub.docker.com/">
-                  Docker image name
-                </Link>
-              );
-              break;
-            case "context":
-              labelJsx = (
-                <Link
-                  isExternal
-                  href="https://docs.docker.com/build/building/context/#git-repositories"
-                >
-                  git repository url context
-                </Link>
-              );
-              break;
-
-            case "filename":
-              labelJsx = (
-                <Link
-                  isExternal
-                  href="https://docs.docker.com/build/building/packaging/#filenames"
-                >
-                  Dockerfile name
-                </Link>
-              );
-              break;
-
-            case "target":
-              labelJsx = (
-                <Link
-                  isExternal
-                  href="https://docs.docker.com/build/building/multi-stage/#stop-at-a-specific-build-stage"
-                >
-                  target
-                </Link>
-              );
-              break;
-
-            case "buildArgs":
-              labelJsx = (
-                <Link
-                  isExternal
-                  href="https://docs.docker.com/reference/cli/docker/buildx/build/#build-arg"
-                >
-                  build args, comma separated
-                </Link>
-              );
-
-            default:
-            // TODO: add the others
-          }
-
+          let labelJsx: ReactNode = <FormLink href={linkMap[key]} label={labelMap[key] || key} />;
           return (
             <VStack w="100%" key={key}>
               <FormControl key={key}>
-                <FormLabel htmlFor={key}>{labelJsx}:</FormLabel>
+                <FormLabel htmlFor={key}>
+                    {labelJsx}
+                    {
+                      labelSubMap[key] && 
+                      <Text fontSize={'xs'} color="gray.400">{labelSubMap[key]}</Text>
+                    }
+                </FormLabel>
                 <HStack>
                 <InputGroup>
                   <Input
                     width="100%"
                     id={key}
                     name={key}
+                    size={'sm'}
                     type="text"
-                    variant="filled"
+                    variant="outline"
                     isDisabled={
                       (key !== "image" && isImageSet) ||
                       (key === "image" && isBuildSet && !formik.values.image)
@@ -292,32 +274,40 @@ export const PanelImageBuildFromUrlParams: React.FC<{
                     value={(formik.values as any)[key] || ""}
                   />
                 </InputGroup>
-                {key === "image" ? (
-                <IconButton
-                    size="md"
-                    colorScheme="red"
-                    aria-label="delete image"
-                    onClick={deleteImage}
-                    icon={<DeleteIcon />}
-                    isDisabled={!isImageSet}
-                  ></IconButton>) : null}
                   </HStack>
               </FormControl>
-              {key === "image" ? (
-                <>
-                  <Divider key={key + "divider"} />
-                  <FormLabel key={key + "formlabel"}>
-                    Or build the image:
-                  </FormLabel>
-                </>
-              ) : null}
             </VStack>
           );
         })}
-        <Button alignSelf="flex-end" type="submit" colorScheme="green" mr={3}>
-          ✅ OK
-        </Button>
-      </form>
     </VStack>
+  }
+
+  const onSetValue = (val) => {
+    if (val === 'fromRepo') deleteImage();
+    setValue(val)
+  };
+
+  return (
+    <form onSubmit={formik.handleSubmit}>
+      <VStack gap={'2rem'}>
+        <FormControl>
+          <RadioGroup onChange={onSetValue} value={value}>
+            <VStack align={'flex-start'} gap={5}>
+              <Radio value='useExisting' colorScheme={'blackAlpha'}>
+                <Text>Use Existing Image</Text>
+              </Radio>
+              {value === 'useExisting' && existingImageInputs()}
+              <Radio value='fromRepo' colorScheme={'blackAlpha'}>
+                <Text>Build Image from Repo</Text>
+              </Radio>
+              {value === 'fromRepo' && externalImageInputs()}
+            </VStack>
+          </RadioGroup>
+        </FormControl>
+        <Button alignSelf="center" type="submit" colorScheme="green" size="sm">
+          Save
+        </Button>
+      </VStack>
+    </form>
   );
 };

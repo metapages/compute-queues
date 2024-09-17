@@ -12,17 +12,18 @@ import {
   Button,
   FormControl,
   FormLabel,
-  Heading,
   Input,
   InputGroup,
-  Link,
   Switch,
   VStack,
+  Text,
+  Divider,
 } from '@chakra-ui/react';
 import {
   useHashParamBoolean,
   useHashParamJson,
 } from '@metapages/hash-query';
+import { FormLink } from '/@/components/generic/FormLink';
 
 const validationSchema = yup.object({
   command: yup.string().optional(),
@@ -32,6 +33,12 @@ const validationSchema = yup.object({
   workdir: yup.string().optional(),
 });
 interface FormType extends yup.InferType<typeof validationSchema> {}
+
+const linkMap = {
+  workdir: "https://docs.docker.com/reference/dockerfile/#workdir",
+  entrypoint: "https://docs.docker.com/reference/dockerfile/#entrypoint",    
+  command: "https://docs.docker.com/reference/dockerfile/#cmd",                           
+}
 
 export const PanelContainerFromUrlParams: React.FC<{
   onSave?: () => void;
@@ -89,65 +96,26 @@ export const PanelContainerFromUrlParams: React.FC<{
   return (
     <VStack w="100%" alignItems="stretch">
       <form onSubmit={formik.handleSubmit}>
-        <Heading size="sm">Configure docker batch job </Heading>
-
-        <VStack alignItems="stretch" width="100%" spacing="4px" pt="9px">
+        <VStack alignItems="stretch" width="100%" pb={'2rem'}>
           <VStack
-            borderWidth="1px"
-            p={4}
-            borderRadius="lg"
+            p={2}
             alignItems="stretch"
             width="100%"
-            // spacing="4px"
+            gap={'1.5rem'}
           >
-            <Heading size="xs">Docker container</Heading>
-
             {["command", "entrypoint", "workdir"].map((key) => {
-              let labelJsx: ReactNode;
-              switch (key) {
-                
-                case "command":
-                  labelJsx = (
-                    <Link
-                      isExternal
-                      href="https://docs.docker.com/reference/dockerfile/#cmd"
-                    >
-                      command
-                    </Link>
-                  );
-                  break;
-                case "entrypoint":
-                  labelJsx = (
-                    <Link
-                      isExternal
-                      href="https://docs.docker.com/reference/dockerfile/#entrypoint"
-                    >
-                      entrypoint
-                    </Link>
-                  );
-                  break;
-                case "workdir":
-                  labelJsx = (
-                    <Link
-                      isExternal
-                      href="https://docs.docker.com/reference/dockerfile/#workdir"
-                    >
-                      workdir
-                    </Link>
-                  );
-                  break;
-              }
-
+              const labelJsx: ReactNode = <FormLink href={linkMap[key]} label={key} />;                
               return (
                 <FormControl key={key}>
-                  <FormLabel htmlFor={key}>{labelJsx}:</FormLabel>
+                  <FormLabel htmlFor={key}>{labelJsx}</FormLabel>
                   <InputGroup>
                     <Input
                       width="100%"
+                      size={'sm'}
                       id={key}
                       name={key}
                       type="text"
-                      variant="filled"
+                      variant="outline"
                       onChange={formik.handleChange}
                       value={(formik.values as any)[key] || ""}
                     />
@@ -158,7 +126,7 @@ export const PanelContainerFromUrlParams: React.FC<{
 
             <FormControl>
               <FormLabel htmlFor="gpu">
-                GPU (if worker supported, equavalent to "--gpus all")
+                <Text>GPU (if worker supported, equavalent to "--gpus all")</Text>
               </FormLabel>
 
               <Switch
@@ -168,24 +136,11 @@ export const PanelContainerFromUrlParams: React.FC<{
                 isChecked={formik.values.gpu}
               />
             </FormControl>
-          </VStack>
-
-          <br />
-          {/* <Divider /> */}
-
-          <VStack
-            borderWidth="1px"
-            p={4}
-            borderRadius="lg"
-            alignItems="stretch"
-            width="100%"
-            spacing="4px"
-          >
-            <Heading size="xs">Misc</Heading>
-            <br />
-
+            <Divider/>
             <FormControl>
-              <FormLabel htmlFor="debug">Debug</FormLabel>
+              <FormLabel htmlFor="debug">
+                <Text>Debug</Text>
+              </FormLabel>
               <Switch
                 id="debug"
                 name="debug"
@@ -194,12 +149,10 @@ export const PanelContainerFromUrlParams: React.FC<{
               />
             </FormControl>
           </VStack>
-
-          <Button alignSelf="flex-end" type="submit" colorScheme="green" mr={3}>
-            ✅ OK
+          <Button alignSelf="center" type="submit" colorScheme="green" size="sm">
+            Save
           </Button>
         </VStack>
-
         {/* {error ? <Message type="error" message={error} /> : null} */}
       </form>
     </VStack>

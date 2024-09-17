@@ -80,6 +80,12 @@ interface MainStore {
   runLogs: ConsoleLogLine[] | null;
   setRunLogs: (logs: ConsoleLogLine[] | null) => void;
   appendRunLogs: (logs: ConsoleLogLine[] | null) => void;
+
+  setRightPanelContext: (context: string | null) => void;
+  rightPanelContext: string | null;
+
+  setMainInputFile: (context: string | null) => void;
+  mainInputFile: string | null;
 }
 
 /**
@@ -231,5 +237,16 @@ export const useStore = create<MainStore>((set, get) => ({
     }
     set((state) => ({ runLogs: [...get().runLogs || [], ...logs] }));
   },
-  
+
+  setRightPanelContext: (rightPanelContext: string | null) => {
+    set((state) => ({ rightPanelContext }));
+  },    
+  rightPanelContext: null,
+
+
+  setMainInputFile: (mainInputFile: string | null) => {
+    set((state) => ({ mainInputFile }));
+  },    
+  mainInputFile: null,
 }));
+
