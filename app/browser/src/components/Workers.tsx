@@ -37,6 +37,7 @@ export const Workers: React.FC = () => {
           {workers?.workers?.map((worker) => (
             <WorkerComponent
               key={worker.id}
+              gpus={worker.gpus}
               cpus={worker.cpus}
               workerId={worker.id}
               jobs={jobs}
@@ -51,8 +52,9 @@ export const Workers: React.FC = () => {
 const WorkerComponent: React.FC<{
   workerId: string;
   cpus: number;
+  gpus: number;
   jobs: JobsStateMap;
-}> = ({ workerId, cpus, jobs }) => {
+}> = ({ workerId, cpus, gpus, jobs }) => {
   // How many jobs is this worker running
   const jobCount = !jobs
     ? 0
@@ -76,7 +78,7 @@ const WorkerComponent: React.FC<{
     <Tr>
       <Td>{workerId.substring(0, 6)}</Td>
       <Td>{cpus}</Td>
-      <Td>0</Td>
+      <Td>{gpus || 0}</Td>
       <Td>{jobCount}</Td>
     </Tr>
   );
