@@ -108,8 +108,7 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({
                 <Text pr={'1rem'} display={'flex'} color='green'>Save</Text>
               </Button>
             </HStack>
-            </ModalHeader>
-            
+          </ModalHeader>
           <div>
             <MetaframeStandaloneComponent
               url={`https://editor.mtfm.io/#?hm=disabled&options=${options.current}`}

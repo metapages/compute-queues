@@ -25,7 +25,7 @@ import {
   Tr,
 } from '@chakra-ui/react';
 
-import { useStore } from '../store';
+import { useStore } from '/@/store';
 
 export const Jobs: React.FC = () => {
   const jobs = useStore((state) => state.jobStates);

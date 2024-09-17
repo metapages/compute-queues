@@ -4,11 +4,10 @@ import {
   useState,
 } from 'react';
 
-import { DisplayLogs } from '/@/components/DisplayLogs';
+import { DisplayLogs } from '/@/components/sections/DisplayLogs';
 import { PanelInputs } from '../components/sections/PanelInputs';
 import { PanelSettings } from '../components/sections/PanelSettings';
 import { PanelOutputs } from '../components/sections/PanelOutputs';
-import { PanelQueue } from '/@/components/PanelQueue';
 import {
   convertJobOutputDataRefsToExpectedFormat,
   DockerJobState,
@@ -175,8 +174,8 @@ export const Main: React.FC = () => {
     inputs: <PanelInputs />,
     outputs: <PanelOutputs />,
     settings: <PanelSettings />,
-    queue: <PanelQueue />,
     editScript: <PanelEditor />,
+    stdErr: <DisplayLogs mode={"stderr"} />
   }
   let rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
 

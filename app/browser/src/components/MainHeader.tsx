@@ -38,6 +38,7 @@ export const MainHeader: React.FC = () => {
 
   {/* <ButtonCancelOrRetry job={ourConfiguredJob} /> */}
   const icon = (svg, context) => {
+    const toggleValue = rightPanelContext === context ? null : context;
     return <Tooltip label={`${context[0].toUpperCase() + context.slice(1,context.length)}`}>
       <Icon 
         _hover={{ bg: 'black.10' }} 
@@ -46,11 +47,12 @@ export const MainHeader: React.FC = () => {
         borderRadius={5} 
         as={svg} 
         boxSize="7" 
-        onClick={() => setRightPanelContext(context)}
+        onClick={() => setRightPanelContext(toggleValue)}
         />
       </Tooltip>
   }
 
+  const editorShown = rightPanelContext === 'editScript';
   return (
     <Flex w={'100%'} h={headerHeight} bg={'black.3'} borderBottom={defaultBorder} >
       <HStack justify={'space-between'} px={2} w={`calc(100% - 11rem)`}>
@@ -62,8 +64,10 @@ export const MainHeader: React.FC = () => {
         <HStack>
           { mainInputFile && <Button 
               variant={'ghost'} 
-              onClick={() => setRightPanelContext('editScript')}
-              _hover={{bg: 'none'}}
+              bg={editorShown ? 'black.10' : 'none'}
+              onClick={() => setRightPanelContext(editorShown ? null : 'editScript')}
+              _hover={{bg: editorShown ? 'black.10' : 'none' }}
+
               >
               <HStack gap={2}>
                 <Icon as={PencilSimple}/>

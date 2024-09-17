@@ -3,7 +3,8 @@ import { List, QuestionMark } from "@phosphor-icons/react";
 import { DockerJobDefinitionRow } from "../shared";
 import { useStore } from "../store";
 import { defaultBorder, footerHeight } from "../styles/theme";
-import JobStatus from "./JobStatus";
+import JobStatus from "./footer/JobStatus";
+import { QueueButtonAndModal } from "./sections/queue/QueueButtonAndModal";
 
 export const MainFooter: React.FC<{
   job: DockerJobDefinitionRow | undefined;
@@ -20,17 +21,7 @@ export const MainFooter: React.FC<{
         <JobStatus job={job} />
         <Spacer/>
         <HStack gap={3}>
-          <Tooltip label={'Queue'}>            
-            <Icon 
-              as={List} 
-              _hover={{ bg: 'black.10' }} 
-              bg={queueModalShown ? 'black.10' : 'none'}
-              p={'3px'} 
-              borderRadius={5} 
-              boxSize="6" 
-              onClick={() =>  setRightPanelContext(queueModalShown ? null : 'queue')}
-              />
-          </Tooltip>
+          <QueueButtonAndModal />
           <Tooltip label={'Help'}>
             <Icon 
               bg={helpPanelShown ? 'black.10' : 'none'}
