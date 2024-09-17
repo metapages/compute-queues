@@ -6,7 +6,6 @@ import {
 } from '/@/shared';
 import { useStore } from '/@/store';
 
-
 import {
   Table,
   Tbody,
@@ -14,42 +13,27 @@ import {
   Text,
   Center,
   Tr,
-  VStack,
   Container,
   HStack,
   Icon,
 } from '@chakra-ui/react';
 import { PanelHeader } from '/@/components/generic/PanelHeader';
-import { contentHeight } from '/@/styles/theme';
+import PanelContainer from '/@/components/generic/PanelContainer';
 import { ArrowDown } from '@phosphor-icons/react'
-import { UPLOAD_DOWNLOAD_BASE_URL } from '/@/config';
-import { convertJobOutputDataRefsToExpectedFormat } from '/@/shared/dataref';
+// import { UPLOAD_DOWNLOAD_BASE_URL } from '/@/config';
 import { useRef } from 'react';
-export const PanelOutputs: React.FC> = () => {
+
+export const PanelOutputs: React.FC = () => {
   const src = useRef<null | string>(null)
   const job = useStore((state) => state.jobState);
   const outputs = getOutputs(job);
 
   const downloadFile = async (name: string, outPut: DataRef) => {
-    const res = await convertJobOutputDataRefsToExpectedFormat(outputs, UPLOAD_DOWNLOAD_BASE_URL)
-    console.log(res)
-    if (res) {
-      for (let obj of Object.keys(res)) {
-        console.log(obj, res[obj].value)
-        src.current = window.URL.createObjectURL(new Blob([res[obj].value]))
-        console.log(src.current)
-        // const url = window.URL.createObjectURL(new Blob([res[obj].value]))
-        // const a = document.createElement("a");
-        // // document.body.appendChild(a);
-        // a.href = url;
-        // a.download = obj;
-        // a.click();
-        // window.URL.revokeObjectURL(url);
-      }
-    }
+    // TODO: add download functionality
+    // use dataRefToBuffer?
   }
   return (
-    <VStack w={'100%'} minHeight={contentHeight} bg={'black.3'} >
+    <PanelContainer>
       <PanelHeader title={'Outputs'} />
       {src.current && <img src={src.current} />}
       <Center px={4} width="100%">
@@ -72,7 +56,7 @@ export const PanelOutputs: React.FC> = () => {
           </Tbody>
         </Table>
       </Container>
-    </VStack>
+    </PanelContainer>
   );
 };
 

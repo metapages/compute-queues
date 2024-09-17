@@ -31,3 +31,13 @@ export const fetchRobust = fetchRetry(fetch, {
   },
 });
 
+export const encodeOptions = (options) => {
+  const text = JSON.stringify(options);
+  var b64 = btoa(encodeURIComponent(text));
+  return b64;
+};
+
+export const capitalize = (str: string): string => {
+  if (!str.length) return str;
+  return str[0].toUpperCase() + str.slice(1, str.length);
+}
