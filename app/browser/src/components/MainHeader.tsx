@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { DockerJobDefinitionParamsInUrlHash } from "../shared";
 import { useStore } from "../store";
 import { headerHeight, defaultBorder } from "../styles/theme";
-import { JobInputs } from "./tabs/PanelInputs";
+import { JobInputs } from "./sections/PanelInputs";
 
 export const MainHeader: React.FC = () => {
   const [jobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");

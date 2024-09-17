@@ -5,16 +5,12 @@ import {
 } from 'react';
 
 import { DisplayLogs } from '/@/components/DisplayLogs';
-import { PanelInputs } from '/@/components/tabs/PanelInputs';
-import { PanelJob } from '/@/components/tabs/PanelJob';
-import { PanelSettings } from '/@/components/tabs/PanelSettings';
-import { PanelOutputs } from '/@/components/tabs/PanelOutputs';
-import { PanelQueue } from '/@/components/tabs/PanelQueue';
-import { TabLabelQueue } from '/@/components/tabs/queue/TabLabelQueue';
-import { useDockerJobDefinition } from '/@/hooks/jobDefinitionHook';
+import { PanelInputs } from '../components/sections/PanelInputs';
+import { PanelSettings } from '../components/sections/PanelSettings';
+import { PanelOutputs } from '../components/sections/PanelOutputs';
+import { PanelQueue } from '/@/components/PanelQueue';
 import {
   convertJobOutputDataRefsToExpectedFormat,
-  DockerJobDefinitionRow,
   DockerJobState,
   shaObject,
   StateChange,
@@ -40,7 +36,7 @@ import { MainFooter } from '/@/components/MainFooter';
 import { useStore } from '../store';
 
 import { defaultBorder, contentHeight } from '../styles/theme';
-import { PanelEditor } from '/@/components/tabs/PanelEditor';
+import { PanelEditor } from '../components/sections/PanelEditor';
 export const Main: React.FC = () => {
   // this is where two complex hooks are threaded together (also in the store):
   // 1. get the job definition

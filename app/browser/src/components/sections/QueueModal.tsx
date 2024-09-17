@@ -8,8 +8,8 @@ import {
   Tabs,
 } from "@chakra-ui/react";
 import { QueueButtonAndLabel } from "./queue/QueueButtonAndLabel";
-import { Jobs } from "../Jobs";
-import { Workers } from "../Workers";
+import { Jobs } from "/@/components/sections/queue/Jobs";
+import { Workers } from "/@/components/sections/queue/Workers";
 import { useActiveJobsCount } from "/@/hooks/useActiveJobsCount";
 import { useWorkersCount } from "/@/hooks/useWorkersCount";
 import { QuestionIcon } from "@chakra-ui/icons";

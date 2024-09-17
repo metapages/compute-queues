@@ -23,7 +23,7 @@ import {
 } from '@chakra-ui/react';
 import { useHashParamBoolean } from '@metapages/hash-query';
 
-import { useStore } from '../store';
+import { useStore } from '../../store';
 
 interface ButtonCancelOrRetryProps {
   job?: DockerJobDefinitionRow;
