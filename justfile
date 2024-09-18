@@ -80,3 +80,8 @@ alias app := _app
 alias worker := _worker
 @_worker +args="":
     just app/worker/{{args}}
+
+# app subdirectory commands
+alias browser := _browser
+@_browser +args="":
+    just app/browser/{{args}}
