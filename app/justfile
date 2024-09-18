@@ -9,6 +9,13 @@ green            := "\\e[32m"
 
 @_help:
     just --list --unsorted --list-heading $'Commands: (all services)\n'
+    echo -e ""
+    echo -e "    Sub-commands (e.g. just browser dev):"
+    echo -e "       {{green}}browser{{normal}}       -> just browser"
+    echo -e "       {{green}}worker{{normal}}        -> just worker"
+    echo -e "       {{green}}api{{normal}}           -> just api"
+
+
 
 # Develop: open the browser and start the dev stack
 dev +args="": _ensure-all open (up args)
@@ -115,3 +122,8 @@ alias browser := _browser
 alias worker := _worker
 @_worker +args="":
     just worker/{{args}}
+
+# app subdirectory commands
+alias api := _api
+@_api +args="":
+    just api/{{args}}
