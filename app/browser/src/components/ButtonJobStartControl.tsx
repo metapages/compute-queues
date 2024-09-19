@@ -27,6 +27,7 @@ export const ButtonJobStartControl: React.FC = () => {
   const jobDefinition = useStore(
     (state) => state.newJobDefinition
   );
+  // The state (from the server) of the job
   const jobState = useStore(
     (state) => state.jobState
   );
@@ -36,7 +37,11 @@ export const ButtonJobStartControl: React.FC = () => {
   const sendClientStateChange = useStore(
     (state) => state.sendClientStateChange
   );
+  const cancelJob = useStore(
+    (state) => state.cancelJob
+  );
 
+  
   const [isLargerThan800] = useMediaQuery("(min-width: 800px)");
 
 
@@ -44,19 +49,11 @@ export const ButtonJobStartControl: React.FC = () => {
 
 
   const onClickCancel = useCallback(() => {
-    // if (jobDefinition) {
-    //   setClicked(true);
-    //   sendClientStateChange({
-    //     tag: "",
-    //     state: DockerJobState.Finished,
-    //     job: jobDefinition.hash,
-    //     value: {
-    //       reason: DockerJobFinishedReason.Cancelled,
-    //       time: Date.now(),
-    //     },
-    //   } as StateChange);
-    // }
-  }, [jobState, sendClientStateChange]);
+    if (jobDefinition) {
+      setClicked(true);
+      cancelJob();
+    }
+  }, [cancelJob]);
 
   const onClickRetry = useCallback(() => {
     // if (jobDefinition) {

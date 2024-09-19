@@ -15,6 +15,7 @@ import {
   ConsoleLogLine,
   DockerJobDefinitionMetadata,
   DockerJobDefinitionRow,
+  DockerJobFinishedReason,
   JobStatusPayload,
   StateChangeValueWorkerFinished,
   WebsocketMessageServerBroadcast,
@@ -48,6 +49,7 @@ interface MainStore {
   /* The server sends job states, we get our current job state from this */
   jobStates: JobsStateMap;
   setJobStates: (jobStates: JobsStateMap) => void;
+  cancelJob: () => void;
 
   /* To display all the workers */
   workers: BroadcastWorkers | undefined;
@@ -181,6 +183,23 @@ export const useStore = create<MainStore>((set, get) => ({
     });
   },
 
+  cancelJob: () => {
+    const jobState = get().jobState;
+    if (!jobState) {
+      return;
+    }
+    const stateChange: StateChange = {
+      tag: "",
+      state: DockerJobState.Finished,
+      job: jobState.hash,
+      value: {
+        reason: DockerJobFinishedReason.Cancelled,
+        time: Date.now(),
+      },
+    }
+    get().sendClientStateChange(stateChange);
+  },
+  
   jobStates: {},
   setJobStates: (jobStates: JobsStateMap) => {
     // blind merge update
@@ -270,12 +289,12 @@ export const useStore = create<MainStore>((set, get) => ({
 
   setRightPanelContext: (rightPanelContext: string | null) => {
     set((state) => ({ rightPanelContext }));
-  },    
+  },
   rightPanelContext: null,
 
   setMainInputFile: (mainInputFile: string | null) => {
     set((state) => ({ mainInputFile }));
-  },    
+  },
   mainInputFile: null,
 }));
 
