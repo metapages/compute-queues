@@ -1,6 +1,7 @@
 {
   "files.exclude": {
     "**/app/api/assets": true,
+    "**/deno.lock": true,
     "**/dist": true
   },
   "search.exclude": {

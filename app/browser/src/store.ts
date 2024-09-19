@@ -113,7 +113,11 @@ export const useStore = create<MainStore>((set, get) => ({
       return;
     }
     if (get().newJobDefinition?.hash === job.hash) {
-      // no change
+      // no change. 
+      // But we update the state anyway, in case the job state changed
+      set((state) => ({
+        jobState: get().jobStates[job.hash],
+      }));
       return;
     }
 
