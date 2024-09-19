@@ -21,7 +21,8 @@ export const isDataRef = (value: any): boolean => {
   return !!(
     value &&
     typeof value === "object" &&
-    DataRefTypesSet.has((value as DataRef)?.type) &&
+    (value as DataRef)?.type &&
+    DataRefTypesSet.has((value as DataRef).type!) &&
     (value as DataRef)?.value
   );
 };

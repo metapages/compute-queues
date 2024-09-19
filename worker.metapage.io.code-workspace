@@ -5,7 +5,7 @@
 		}
 	],
 	"settings": {
-		"deno.enable": true,
+		"deno.enable": false,
 		"files.exclude": {
 			"**/.cache": true,
 			"**/.deno": true,

@@ -4,7 +4,10 @@ import { JobControlButton } from '/@/components/header/JobControlButton';
 import {
   useOptionJobsStartAutomatically,
 } from '/@/hooks/useOptionJobsStartAutomatically';
-import { DockerJobDefinitionParamsInUrlHash } from '/@/shared';
+import {
+  DockerJobDefinitionParamsInUrlHash,
+  JobInputs,
+} from '/@/shared';
 import { useStore } from '/@/store';
 import {
   defaultBorder,

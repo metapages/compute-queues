@@ -1,6 +1,8 @@
 export type IsStdErr = boolean;
 export type ConsoleLogLine = [string, number, IsStdErr] | [string, number];
 
+export type JobInputs = { [key: string]: string };
+
 // represents a way of getting a blob of data (inputs/outputs)
 export enum DataRefType {
   base64 = "base64", //default, value is a base64 encoded bytes
