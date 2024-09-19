@@ -10,10 +10,15 @@ cyan               := "\\e[36m"
   echo ""
   just --list --unsorted --list-heading $'Commands: (all services)\n'
   echo -e ""
+  echo -e "    Sub-commands (e.g. just browser dev):"
+  echo -e "       {{green}}app{{normal}}            -> just app"
+  echo -e "       {{green}}browser{{normal}}        -> just app/browser"
+  echo -e "       {{green}}worker{{normal}}         -> just app/worker"
+  echo -e "       {{green}}api{{normal}}            -> just app/api"
+  echo -e ""
   echo -e "    Current worker version: {{cyan}}$(cat app/worker/mod.json | jq -r '.version'){{normal}}"
   echo -e ""
   echo -e "    Quick links:"
-  
   echo -e "       api local:             {{green}}https://worker-metaframe.localhost/{{normal}}"
   echo -e "       api production:        {{green}}https://container.mtfm.io{{normal}}"
   echo -e "       github repo:           {{green}}https://github.com/metapages/compute-queues{{normal}}"
@@ -80,3 +85,13 @@ alias app := _app
 alias worker := _worker
 @_worker +args="":
     just app/worker/{{args}}
+
+# app subdirectory commands
+alias browser := _browser
+@_browser +args="":
+    just app/browser/{{args}}
+
+# app subdirectory commands
+alias api := _api
+@_api +args="":
+    just app/api/{{args}}
