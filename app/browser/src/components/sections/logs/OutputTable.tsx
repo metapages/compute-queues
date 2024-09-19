@@ -12,6 +12,7 @@ import {
   Icon,
   Box,
   VStack,
+  Center,
 } from '@chakra-ui/react';
 import { ArrowDown } from '@phosphor-icons/react'
 import { defaultBorder } from '/@/styles/theme';
@@ -30,6 +31,8 @@ export const OutputTable: React.FC = () => {
     // TODO: add download functionality
     // use dataRefToBuffer?
   };
+
+  if (Object.keys(outputs).length === 0) return <></>;
   return (
     <Box m={3} 
       maxWidth={'25rem'}  
@@ -41,17 +44,27 @@ export const OutputTable: React.FC = () => {
       overflow={'hidden'}
     >
       <VStack gap={0}>
-        <HStack width={'100%'} bg={'black.3'} borderBottom={defaultBorder} p={2} justifyContent={'space-between'}>
-          <Text fontWeight={600}>Outputs</Text>
-          <HStack>
-            <Text>Download All ({outputCount})</Text>
-            <Icon onClick={downloadAll} boxSize={'1.1rem'} as={ArrowDown}></Icon>
+        <Center p={0} w={'100%'} bg={'black.3'} borderBottom={defaultBorder} >
+          <HStack 
+            width={'calc(100% - 1rem)'} 
+            p={1.5} 
+            justifyContent={'space-between'}>
+            <Text fontWeight={600}>Outputs</Text>
+            <HStack>
+              <Text>Download All ({outputCount})</Text>
+              <Icon onClick={downloadAll} boxSize={'1.1rem'} as={ArrowDown}></Icon>
+            </HStack>
           </HStack>
-        </HStack>
+        </Center>
         <VStack width={'100%'} bg={'black.10'}>
           {Object.keys(outputs).map((name, i) => {
             const lastRow = Object.keys(outputs).length - 1 === i;
-            return <HStack key={`${name}-${i}`} width={'calc(100% - 1rem)'} p={2} borderBottom={lastRow ? 'none' : defaultBorder} justifyContent={'space-between'}>
+            return <HStack 
+              key={`${name}-${i}`} 
+              width={'calc(100% - 1rem)'} 
+              p={1.5} 
+              borderBottom={lastRow ? 'none' : defaultBorder} 
+              justifyContent={'space-between'}>
               <Text>{name}</Text>
               <Icon onClick={() => downloadFile(name, outputs[name])} boxSize={'1.1rem'} as={ArrowDown}></Icon>
             </HStack>

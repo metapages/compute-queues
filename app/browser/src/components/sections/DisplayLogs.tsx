@@ -99,7 +99,7 @@ const JustLogs: React.FC<{
     });
   }
   return (
-    <Stack spacing={3} p={'1rem'}>
+    <Stack spacing={1} p={'0.5rem'}>
       {logsNewlineHandled.map((line, i) => (
         <Code bg={'none'} key={i}>
           {line}
