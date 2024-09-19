@@ -1,10 +1,10 @@
 import { Tr, Td, HStack, Icon, Flex, Text } from "@chakra-ui/react";
 import { File } from "@phosphor-icons/react";
 import { useCallback } from "react";
-import ButtonDeleteWithConfirm from "/@/components/generic/ButtonDeleteWithConfirm";
-import ButtonModalEditor from "/@/components/generic/ButtonModalEditor";
+import { ButtonDeleteWithConfirm } from "/@/components/generic/ButtonDeleteWithConfirm";
+import { ButtonModalEditor } from "/@/components/generic/ButtonModalEditor";
 
-const InputRow: React.FC<{
+export const InputRow: React.FC<{
   name: string;
   content: string;
   onDelete: (name: string) => void;
@@ -32,5 +32,3 @@ const InputRow: React.FC<{
     </Tr>
   );
 };
-
-export default InputRow;

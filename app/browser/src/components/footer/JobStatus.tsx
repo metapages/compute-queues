@@ -22,7 +22,7 @@ import {
 import { useStore } from '/@/store';
 
 const STATUS_ICON_SIZE = 6;
-const JobStatus: React.FC = () => {
+export const JobStatus: React.FC = () => {
   const [queue] = useHashParam("queue");
   if (!queue || queue === "") return <></>
   const workers = useStore((state) => state.workers);
@@ -134,6 +134,4 @@ const getJobStateValues = (job, state, workerCount): {
       break; 
     }
   return {text, icon, desc, exitCode, jobId, showExitCodeRed};
-}
-
-export default JobStatus
+};

@@ -10,11 +10,11 @@ import { useHashParamJson } from '@metapages/hash-query';
 import { useStore } from '/@/store';
 import { encodeOptions, JobInputs } from '/@/shared';
 
-import PanelContainer from '/@/components/generic/PanelContainer';
-import PanelHeader from '../generic/PanelHeader';
+import { PanelContainer } from '/@/components/generic/PanelContainer';
+import { PanelHeader } from '/@/components/generic/PanelHeader';
 
 
-const Editor: React.FC = () => {
+export const PanelEditor: React.FC = () => {
   const [value, setValue] = useState(null);
   const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>(
     "inputs"
@@ -71,5 +71,3 @@ const Editor: React.FC = () => {
     </PanelContainer>
   );
 };
-
-export default Editor;

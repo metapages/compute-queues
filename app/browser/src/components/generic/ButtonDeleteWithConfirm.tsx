@@ -17,7 +17,7 @@ import {
 import { TrashSimple } from "@phosphor-icons/react";
 
 // Delete icon with a confirmation modal
-const ButtonDeleteWithConfirm: React.FC<{
+export const ButtonDeleteWithConfirm: React.FC<{
   callback: (_?: any) => any;
   result?: { loading?: boolean; error?: any; data?: any };
   modalHeader?: string;
@@ -70,5 +70,3 @@ const ButtonDeleteWithConfirm: React.FC<{
     </>
   );
 };
-
-export default ButtonDeleteWithConfirm;

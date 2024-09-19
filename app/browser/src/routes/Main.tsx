@@ -27,19 +27,19 @@ import {
   MetaframeInputMap,
 } from '@metapages/metapage';
 
-import Logs from '/@/components/sections/Logs';
-import PanelInputs from '/@/components/sections/PanelInputs';
-import PanelSettings from '../components/sections/PanelSettings';
-import PanelOutputs from '../components/sections/PanelOutputs';
-import MainHeader from '/@/components/MainHeader';
-import MainFooter from '/@/components/MainFooter';
-import PanelEditor from '/@/components/sections/PanelEditor';
-import ConsoleHeader from '/@/components/generic/ConsoleHeader';
+import { DisplayLogs } from '/@/components/sections/DisplayLogs';
+import { PanelInputs } from '/@/components/sections/PanelInputs';
+import { PanelSettings } from '../components/sections/PanelSettings';
+import { PanelOutputs } from '../components/sections/PanelOutputs';
+import { MainHeader } from '/@/components/MainHeader';
+import { MainFooter } from '/@/components/MainFooter';
+import { PanelEditor } from '/@/components/sections/PanelEditor';
+import { ConsoleHeader } from '/@/components/generic/ConsoleHeader';
 
 import { contentHeight, defaultBorder } from '../styles/theme';
 import { useStore}  from '../store';
 
-const Main: React.FC = () => {
+export const Main: React.FC = () => {
   // this is where two complex hooks are threaded together (also in the store):
   // 1. get the job definition
   // 2. send the job definition if changed
@@ -185,7 +185,7 @@ const Main: React.FC = () => {
         showSplit={false} 
         showCombine={true} 
       />
-      <Logs mode={'stderr'} />
+      <DisplayLogs mode={'stderr'} />
     </Container>
   }
   const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
@@ -199,7 +199,7 @@ const Main: React.FC = () => {
               showSplit={!showStdErr} 
               showCombine={false}
             />
-            <Logs mode={showStdErr ? 'build+stdout' : 'build+stdout+stderr'} />
+            <DisplayLogs mode={showStdErr ? 'build+stdout' : 'build+stdout+stderr'} />
           </Container>
         </Box>
         <Box minW={rightContent ? '50%' : '0%'} minHeight={contentHeight} borderLeft={rightContent && defaultBorder}>
@@ -210,5 +210,3 @@ const Main: React.FC = () => {
     </VStack>
   );
 };
-
-export default Main;

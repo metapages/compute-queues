@@ -11,7 +11,7 @@ interface ConsoleHeaderProps {
     showCombine: boolean
 }
 
-const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, showCombine}) => {
+export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, showCombine}) => {
   const setRightPanelContext = useStore((state) => state.setRightPanelContext);
   const setRunLogs = useStore((state) => state.setRunLogs);
 
@@ -32,5 +32,3 @@ const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, showComb
     </HStack>
   </Flex>
 };
-
-export default ConsoleHeader;

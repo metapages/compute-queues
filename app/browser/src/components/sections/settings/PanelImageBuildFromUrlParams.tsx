@@ -25,8 +25,8 @@ import {
 import { TrashSimple } from '@phosphor-icons/react';
 import { useHashParamJson } from '@metapages/hash-query';
 
-import ButtonModalEditor from '/@/components/generic/ButtonModalEditor';
-import FormLink from '/@/components/generic/FormLink';
+import { ButtonModalEditor } from '/@/components/generic/ButtonModalEditor';
+import { FormLink } from '/@/components/generic/FormLink';
 
 const validationSchema = yup.object({
   buildArgs: yup.string().optional(),
@@ -58,7 +58,7 @@ const labelSubMap = {
   buildArgs: "Comma Separated",
 }
 
-const PanelImageBuildFromUrlParams: React.FC<{
+export const PanelImageBuildFromUrlParams: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
   const [value, setValue] = useState('useExisting')
@@ -306,5 +306,3 @@ const PanelImageBuildFromUrlParams: React.FC<{
     </form>
   );
 };
-
-export default PanelImageBuildFromUrlParams;

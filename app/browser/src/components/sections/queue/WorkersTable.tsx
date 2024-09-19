@@ -17,7 +17,7 @@ import {
 
 import { useStore } from '/@/store';
 
-const WorkersTable: React.FC = () => {
+export const WorkersTable: React.FC = () => {
   const workers = useStore((state) => state.workers);
   const jobs = useStore((state) => state.jobStates);
 
@@ -83,5 +83,3 @@ const WorkerRow: React.FC<{
     </Tr>
   );
 };
-
-export default WorkersTable;

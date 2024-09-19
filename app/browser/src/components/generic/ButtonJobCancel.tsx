@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { DockerJobDefinitionRow, DockerJobState, DockerJobFinishedReason, StateChange } from "/@/shared";
 import { useStore } from "/@/store";
 
-const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({
+export const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({
   job,
 }) => {
   const [clicked, setClicked] = useState<boolean>(false);
@@ -52,5 +52,3 @@ const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({
       return null;
   }
 };
-
-export default ButtonJobCancel

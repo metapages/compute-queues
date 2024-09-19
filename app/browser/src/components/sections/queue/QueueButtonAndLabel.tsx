@@ -25,7 +25,7 @@ const validationSchema = yup.object({
 });
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
-const QueueButtonAndLabel: React.FC = () => {
+export const QueueButtonAndLabel: React.FC = () => {
   const [queue, setQueue] = useHashParam("queue", "");
   const [showInput, setShowInput] = useState(false);
   const isServerConnected = useStore((state) => state.isServerConnected);
@@ -97,5 +97,3 @@ const QueueButtonAndLabel: React.FC = () => {
     </HStack>
   );
 };
-
-export default QueueButtonAndLabel;

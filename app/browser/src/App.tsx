@@ -1,6 +1,6 @@
 import { useDockerJobDefinition } from './hooks/jobDefinitionHook';
 import { serverWebsocket } from './hooks/serverWebsocket';
-import Main from "/@/routes/Main";
+import { Main } from "/@/routes/Main";
 
 export const App: React.FC = () => {
   // This creates the server websocket connection and gets/sets state on the store

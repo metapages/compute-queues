@@ -16,9 +16,9 @@ import {
 } from '@chakra-ui/react';
 
 import { useStore } from '/@/store';
-import ButtonJobCancel from '../../generic/ButtonJobCancel';
+import { ButtonJobCancel } from '/@/components/generic/ButtonJobCancel';
 
-const JobsTable: React.FC = () => {
+export const JobsTable: React.FC = () => {
   const jobs = useStore((state) => state.jobStates);
 
   const jobIds = jobs ? Object.keys(jobs) : [];
@@ -88,5 +88,3 @@ const JobComponent: React.FC<{
     </Tr>
   );
 };
-
-export default JobsTable;

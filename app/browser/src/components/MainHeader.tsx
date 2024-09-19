@@ -4,12 +4,12 @@ import { useHashParamJson } from "@metapages/hash-query";
 import { Terminal, PencilSimple, Gear, UploadSimple, DownloadSimple } from "@phosphor-icons/react";
 import { JobInputs } from "/@/shared/types";
 import { DockerJobDefinitionParamsInUrlHash } from "/@/shared";
-import { useStore } from "../store";
+import { useStore } from "/@/store";
 import { headerHeight, defaultBorder } from "/@/styles/theme";
 
-import JobControlButton from "/@/components/header/JobControlButton";
+import { JobControlButton } from "/@/components/header/JobControlButton";
 
-const MainHeader: React.FC = () => {
+export const MainHeader: React.FC = () => {
   const [jobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [jobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
 
@@ -88,5 +88,3 @@ const MainHeader: React.FC = () => {
     </Flex>
   )
 };
-
-export default MainHeader;

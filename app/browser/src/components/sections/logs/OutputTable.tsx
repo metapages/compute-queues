@@ -12,7 +12,6 @@ import {
   Td,
   Text,
   Tr,
-  Container,
   HStack,
   Icon,
   Thead,
@@ -20,10 +19,8 @@ import {
 } from '@chakra-ui/react';
 import { ArrowDown } from '@phosphor-icons/react'
 // import { UPLOAD_DOWNLOAD_BASE_URL } from '/@/config';
-import { useRef } from 'react';
-import { defaultBorder } from '/@/styles/theme';
 
-const OutputTable: React.FC = () => {
+export const OutputTable: React.FC = () => {
   const job = useStore((state) => state.jobState);
   const outputs = getOutputs(job);
   const outputCount = Object.keys(outputs).length;
@@ -85,5 +82,3 @@ export const getOutputs = (job?: DockerJobDefinitionRow) => {
   }
   return {};
 };
-
-export default OutputTable;

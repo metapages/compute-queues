@@ -31,7 +31,7 @@ export interface EditorJsonProps {
   fileName?: string;
 }
 
-const ButtonModalEditor: React.FC<EditorJsonProps> = ({
+export const ButtonModalEditor: React.FC<EditorJsonProps> = ({
   content,
   onUpdate,
   button,
@@ -122,5 +122,3 @@ const ButtonModalEditor: React.FC<EditorJsonProps> = ({
     </>
   );
 };
-
-export default ButtonModalEditor;

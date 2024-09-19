@@ -96,5 +96,3 @@ export const AddInputButtonAndModal: React.FC<{
     </>
   );
 };
-
-export default AddInputButtonAndModal;

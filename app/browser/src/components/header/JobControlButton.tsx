@@ -1,7 +1,7 @@
 import {
   useCallback,
   useEffect,
-  useState,
+  // useState,
 } from 'react';
 
 import {
@@ -167,5 +167,3 @@ const HeaderButton: React.FC<{
     <Text color={color || 'gray.35'} fontWeight={500} fontSize={'0.9rem'}>{text}</Text>
   </Button>
 };
-
-export default JobControlButton;

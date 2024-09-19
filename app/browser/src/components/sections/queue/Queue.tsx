@@ -11,11 +11,11 @@ import { useActiveJobsCount } from "/@/hooks/useActiveJobsCount";
 import { useWorkersCount } from "/@/hooks/useWorkersCount";
 import { QuestionIcon } from "@chakra-ui/icons";
 
-import JobsTable from "/@/components/sections/queue/JobsTable";
-import WorkersTable from "/@/components/sections/queue/WorkersTable";
-import QueueButtonAndLabel from "./QueueButtonAndLabel";
+import { JobsTable } from "/@/components/sections/queue/JobsTable";
+import { WorkersTable } from "/@/components/sections/queue/WorkersTable";
+import { QueueButtonAndLabel } from "./QueueButtonAndLabel";
 
-const Queue: React.FC = () => {
+export const Queue: React.FC = () => {
   const activeJobsCount = useActiveJobsCount();
   const workerCount = useWorkersCount();
 
@@ -45,5 +45,3 @@ const Queue: React.FC = () => {
     </VStack>
   );
 };
-
-export default Queue;

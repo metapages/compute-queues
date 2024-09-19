@@ -10,7 +10,7 @@ import {
 } from "@chakra-ui/react"
 import { headerHeight, defaultBorder } from "/@/styles/theme";
 import { Queue as QueueIcon } from "@phosphor-icons/react";
-import Queue from "/@/components/sections/queue/Queue";
+import { Queue } from "/@/components/sections/queue/Queue";
 
 
 export const QueueIconAndModal: React.FC = () => {
@@ -40,5 +40,3 @@ export const QueueIconAndModal: React.FC = () => {
       </Modal>
   </>
 };
-
-export default QueueIconAndModal;

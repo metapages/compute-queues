@@ -4,7 +4,7 @@ import PanelHeader from '/@/components/generic/PanelHeader';
 import PanelImageAndContainer from '/@/components/sections/settings/PanelImageAndContainer';
 import PanelContainer from '/@/components/generic/PanelContainer';
 
-export const Settings: React.FC = () => {
+export const PanelSettings: React.FC = () => {
   return (
     <PanelContainer gap={0}>
       <PanelHeader title={'Job Settings'}/>
@@ -12,6 +12,3 @@ export const Settings: React.FC = () => {
     </PanelContainer>
   );
 };
-
-export default Settings;
-

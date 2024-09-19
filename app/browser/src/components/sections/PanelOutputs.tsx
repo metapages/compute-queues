@@ -24,7 +24,7 @@ import PanelHeader from '/@/components/generic/PanelHeader';
 import PanelContainer from '/@/components/generic/PanelContainer';
 // import { UPLOAD_DOWNLOAD_BASE_URL } from '/@/config';
 
-const Outputs: React.FC = () => {
+export const PanelOutputs: React.FC = () => {
   const job = useStore((state) => state.jobState);
   const outputs = getOutputs(job);
 

@@ -3,10 +3,10 @@ import { QuestionMark } from "@phosphor-icons/react";
 import { useStore } from "/@/store";
 import { defaultBorder, footerHeight } from "/@/styles/theme";
 
-import JobStatus from "/@/components/footer/JobStatus";
-import QueueIconAndModal from "/@/components/sections/queue/QueueIconAndModal";
+import { JobStatus } from "/@/components/footer/JobStatus";
+import { QueueIconAndModal } from "/@/components/sections/queue/QueueIconAndModal";
 
-const MainFooter: React.FC = () => {
+export const MainFooter: React.FC = () => {
   const setRightPanelContext = useStore((state) => state.setRightPanelContext);
   const rightPanelContext = useStore((state) => state.rightPanelContext);
   const helpPanelShown = rightPanelContext === 'help'
