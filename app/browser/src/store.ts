@@ -243,7 +243,6 @@ export const useStore = create<MainStore>((set, get) => ({
   },    
   rightPanelContext: null,
 
-
   setMainInputFile: (mainInputFile: string | null) => {
     set((state) => ({ mainInputFile }));
   },    

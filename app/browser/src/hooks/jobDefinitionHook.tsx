@@ -23,9 +23,9 @@ import {
   Metaframe,
 } from '@metapages/metapage';
 
-import { JobInputs } from '../components/PanelInputs';
 import { UPLOAD_DOWNLOAD_BASE_URL } from '../config';
 import { useStore } from '../store';
+import { JobInputs } from '../components/sections/PanelInputs';
 
 /**
  * Gets the configuration from the URL hash parameters and the metaframe inputs

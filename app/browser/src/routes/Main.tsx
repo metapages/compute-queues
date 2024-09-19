@@ -34,8 +34,11 @@ import { MainHeader } from '/@/components/MainHeader';
 import { MainFooter } from '/@/components/MainFooter';
 import { useStore } from '../store';
 
-import { defaultBorder, contentHeight } from '../styles/theme';
+import { contentHeight, defaultBorder } from '../styles/theme';
 import { PanelEditor } from '../components/sections/PanelEditor';
+import { PanelHeader } from '../components/generic/PanelHeader';
+import { ConsoleHeader } from '../components/generic/ConsoleHeader';
+
 export const Main: React.FC = () => {
   // this is where two complex hooks are threaded together (also in the store):
   // 1. get the job definition
@@ -45,10 +48,11 @@ export const Main: React.FC = () => {
   const dockerJob = useStore((state) => state.newJobDefinition);
   const jobs = useStore((state) => state.jobStates);
   const connected = useStore((state) => state.isServerConnected);
+  const rightPanelContext = useStore((state) => state.rightPanelContext);
+
   const sendClientStateChange = useStore(
     (state) => state.sendClientStateChange
   );
-  const rightPanelContext = useStore((state) => state.rightPanelContext);
 
   const [jobHashCurrentOutputs, setJobHashCurrentOutputs] = useState<
     string | undefined
@@ -166,33 +170,43 @@ export const Main: React.FC = () => {
     jobHashCurrentOutputs,
   ]);
 
+  const showStdErr = rightPanelContext === 'stderr'; 
   const rightPanelOptions = {
-    help: <iframe
-      style={{ width: "100%", height: contentHeight }}
-      src={`https://markdown.mtfm.io/#?url=${window.location.origin}${window.location.pathname}/README.md`}
-    />,
     inputs: <PanelInputs />,
     outputs: <PanelOutputs />,
     settings: <PanelSettings />,
     editScript: <PanelEditor />,
-    stdErr: <DisplayLogs mode={"stderr"} />
+    help: <iframe
+      style={{ width: "100%", height: contentHeight }}
+      src={`https://markdown.mtfm.io/#?url=${window.location.origin}${window.location.pathname}/README.md`}
+    />,
+    stderr: <Container p={0} minW={'100%'}>
+      <ConsoleHeader title={'stderr'} 
+        showSplit={false} 
+        showCombine={true} 
+      />
+      <DisplayLogs mode={'stderr'} />
+    </Container>
   }
-  let rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
-
+  const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
   return (
-    <VStack gap={0} minHeight="100vh" minWidth={'40rem'}>
+    <VStack gap={0} minHeight="100vh" minWidth={'40rem'} overflow={'hide'}>
       <MainHeader />
-      <HStack gap={0} minWidth="100vw" minHeight={contentHeight}>
-        <Box w="50%" minHeight={contentHeight}>
-          <Container p={5}>
-            <DisplayLogs mode={"stdout"} />
+      <HStack gap={0} width={'100%'} minWidth="100vw" minHeight={contentHeight}>
+        <Box minW={rightContent ? '50%' : '100%'} minHeight={contentHeight}>
+          <Container p={0} minW={'100%'}>
+            <ConsoleHeader title={showStdErr ? 'stdout' : 'console'} 
+              showSplit={!showStdErr} 
+              showCombine={false}
+            />
+            <DisplayLogs mode={showStdErr ? 'stdout' : 'stdout+stderr'} />
           </Container>
         </Box>
-        <Box w="50%" minHeight={contentHeight} borderLeft={rightContent && defaultBorder}>
+        <Box minW={rightContent ? '50%' : '0%'} minHeight={contentHeight} borderLeft={rightContent && defaultBorder}>
           {rightContent}
         </Box>
       </HStack>
-      <MainFooter job={ourConfiguredJob}/>
+      <MainFooter />
     </VStack>
   );
 };

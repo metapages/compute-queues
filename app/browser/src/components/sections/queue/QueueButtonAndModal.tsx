@@ -8,7 +8,6 @@ import {
   ModalOverlay,
   Container,
 } from "@chakra-ui/react"
-import { List } from "@phosphor-icons/react"
 import { headerHeight, defaultBorder } from "/@/styles/theme";
 import { Queue as QueueIcon } from "@phosphor-icons/react";
 import { Queue } from "./Queue";
@@ -31,7 +30,7 @@ export const QueueButtonAndModal: React.FC = () => {
     </Tooltip>
     <Modal isOpen={isOpen} onClose={onClose} size={'100%'}>
         <ModalOverlay backdropFilter='blur(1px)'/>
-        <ModalContent h={'80%'} w={'80%'}>
+        <ModalContent h={'90%'} w={'90%'}>
           <ModalHeader p={0} h={headerHeight} borderBottom={defaultBorder}>
           </ModalHeader>
           <Container p={3} m={0} overflow={'scroll'} minWidth={'100%'} h={'100%'}>

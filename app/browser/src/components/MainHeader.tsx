@@ -6,6 +6,7 @@ import { DockerJobDefinitionParamsInUrlHash } from "../shared";
 import { useStore } from "../store";
 import { headerHeight, defaultBorder } from "../styles/theme";
 import { JobInputs } from "./sections/PanelInputs";
+import { JobControlButton } from "./header/JobControlButton";
 
 export const MainHeader: React.FC = () => {
   const [jobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
@@ -36,7 +37,6 @@ export const MainHeader: React.FC = () => {
     }
   }, [jobInputs, jobDefinitionBlob])
 
-  {/* <ButtonCancelOrRetry job={ourConfiguredJob} /> */}
   const icon = (svg, context) => {
     const toggleValue = rightPanelContext === context ? null : context;
     return <Tooltip label={`${context[0].toUpperCase() + context.slice(1,context.length)}`}>
@@ -76,13 +76,7 @@ export const MainHeader: React.FC = () => {
               </HStack>
             </Button>
           }
-          <Button variant={'ghost'} _hover={{bg: 'none'}}>
-            <HStack gap={2}>
-              <Play weight='duotone' color='green' size={'1.2rem'} />
-              <Spacer />
-            </HStack>
-            <Text color={'green.600'} fontWeight={500} fontSize={'0.9rem'}>Run Job</Text>
-          </Button>
+          <JobControlButton />
         </HStack>
       </HStack>
       <HStack borderLeft={defaultBorder} px={4} bg={'black.3'} justifyContent={'space-around'} w={'11rem'}>

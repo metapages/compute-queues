@@ -3,7 +3,6 @@
   opacity: 0.8;
 }
 
-
 .chakra-stack:has(#mf-editor) {
   gap: 0;
 }

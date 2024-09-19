@@ -15,7 +15,6 @@ import {
   HourglassMedium,
 } from "@phosphor-icons/react";
 import {
-  DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
   StateChangeValueWorkerFinished,
@@ -23,14 +22,17 @@ import {
 import { useStore } from '/@/store';
 
 const STATUS_ICON_SIZE = 6;
-const JobStatus: React.FC<{
-  job: DockerJobDefinitionRow | undefined;
-}> = ({ job }) => {
+const JobStatus: React.FC = () => {
   const [queue] = useHashParam("queue");
   if (!queue || queue === "") return <></>
   const workers = useStore((state) => state.workers);
+  const job = useStore((state) => state.jobState);
 
   const state = job?.state;
+
+  if (!state) {
+    return <></>
+  }
 
   const { icon, text, exitCode, desc, jobId, showExitCodeRed } = getJobStateValues(
     job, 
@@ -70,10 +72,6 @@ const getJobStateValues = (job, state, workerCount): {
   if (!job) {
     text = "No job started"
     icon = <Icon as={Prohibit} boxSize={STATUS_ICON_SIZE} />
-  }
-
-  if (!state) {
-    return <></>
   }
   
   switch (state) {

@@ -4,7 +4,7 @@ import {
   useState,
 } from 'react';
 
-import { ConsoleLogLine } from '/@/shared';
+import { ConsoleLogLine } from '/@/shared/types';
 import { useStore } from '/@/store';
 
 import {
@@ -87,9 +87,9 @@ const JustLogs: React.FC<{
     });
   }
   return (
-    <Stack spacing={1}>
+    <Stack spacing={3} p={'1rem'}>
       {logsNewlineHandled.map((line, i) => (
-        <Code key={i} fontSize={10}>
+        <Code bg={'none'} key={i} fontSize={12} fontWeight={500}>
           {line}
         </Code>
       ))}

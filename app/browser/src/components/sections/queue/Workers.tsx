@@ -22,15 +22,15 @@ export const Workers: React.FC = () => {
   const jobs = useStore((state) => state.jobStates);
 
   return (
-    <Box width="100%" p={2}>
-      <Table width="100%" variant="simple">
+    <Box p={2}>
+      <Table variant="simple">
         <TableCaption>(will run jobs)</TableCaption>
         <Thead>
           <Tr>
-            <Th>ID</Th>
-            <Th>CPUs</Th>
-            <Th>GPUs</Th>
-            <Th>Jobs</Th>
+            <Th w={'10%'}>ID</Th>
+            <Th w={'10%'}>CPUs</Th>
+            <Th w={'10%'}>GPUs</Th>
+            <Th w={'10%'}>Jobs</Th>
           </Tr>
         </Thead>
         <Tbody>

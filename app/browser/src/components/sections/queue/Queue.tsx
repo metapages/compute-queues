@@ -24,7 +24,6 @@ export const Queue: React.FC = () => {
   return (
     <VStack width="100%" justifyContent="flex-start" alignItems="flex-start">
       <QueueButtonAndLabel />
-
       <HStack width="100%" justifyContent="flex-start" alignItems="stretch">
         <Tabs isFitted={true} width="100%" variant="enclosed">
           <TabList>
@@ -32,12 +31,11 @@ export const Queue: React.FC = () => {
             <Tab>Workers (total {workerCount}) &nbsp; {maybeHelpForNoWorkers}</Tab>
             {/* {maybeHelpForNoWorkers} */}
           </TabList>
-
           <TabPanels>
-            <TabPanel>
+            <TabPanel px={0}>
               <Jobs />
             </TabPanel>
-            <TabPanel>
+            <TabPanel px={0}>
               <Workers />
             </TabPanel>
           </TabPanels>

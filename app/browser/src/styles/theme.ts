@@ -12,6 +12,7 @@ export const theme = extendTheme(
   {
     fonts: {
       body: `'JetBrains Mono Variable', monospace`,
+      mono: `'JetBrains Mono Variable', monospace`,
     },
     colors: {
       gray: {
@@ -96,6 +97,15 @@ export const theme = extendTheme(
             },
           }
         },
+      },
+      Table: {
+        variants: {
+          simple: {
+            td: {
+              fontSize: '0.8rem'
+            }
+          }
+        }
       }
     }
   },

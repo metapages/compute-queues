@@ -18,6 +18,7 @@ import {
   Box,
   Button,
   Table,
+  TableContainer,
   Tbody,
   Td,
   Th,
@@ -51,24 +52,26 @@ export const Jobs: React.FC = () => {
   });
 
   return (
-    <Box width="100%" p={2}>
-      <Table variant="simple">
-        <Thead>
-          <Tr>
-            <Th>Id</Th>
-            <Th>image</Th>
-            <Th>command</Th>
-            <Th>Time</Th>
-            <Th>State</Th>
-            <Th>Cancel</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {jobIds.map((jobHash) => (
-            <JobComponent key={jobHash} jobId={jobHash} jobs={jobs} />
-          ))}
-        </Tbody>
-      </Table>
+    <Box p={2}>
+      <TableContainer whiteSpace={'wrap'} fontSize={'0.7rem'}>
+        <Table layout={'fixed'} size={'sm'} width={'100%'} variant="simple">
+          <Thead>
+            <Tr>
+              <Th w={'15%'}>Id</Th>
+              <Th w={'20%'}>image</Th>
+              <Th w={'20%'}>command</Th>
+              <Th w={'15%'}>Time</Th>
+              <Th w={'15%'}>State</Th>
+              <Th w={'15%'}>Cancel</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {jobIds.map((jobHash) => (
+              <JobComponent key={jobHash} jobId={jobHash} jobs={jobs} />
+            ))}
+          </Tbody>
+        </Table>
+      </TableContainer>
     </Box>
   );
 };
@@ -86,7 +89,7 @@ const JobComponent: React.FC<{
   return (
     <Tr>
       <Td>{jobId.substring(0, 6)}</Td>
-      <Td>{definition.image}</Td>
+      <Td style={{ wordBreak: "break-word" }}>{definition.image}</Td>
       <Td>{definition.command}</Td>
       <Td>TBD</Td>
       <Td>{jobBlob.state}</Td>
