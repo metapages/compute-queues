@@ -7,7 +7,6 @@ import {
   ModalContent, 
   ModalHeader, 
   ModalBody, 
-  InputGroup, 
   Input, 
   ModalFooter, 
   Button,
@@ -20,7 +19,7 @@ import { useCallback } from "react";
 import * as yup from "yup";
 
 const validationSchema = yup.object({
-  value: yup.string(),
+  fileName: yup.string(),
 });
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
@@ -32,8 +31,8 @@ export const AddInputButtonAndModal: React.FC<{
 
   const onSubmit = useCallback(
     (values: FormType) => {
-      if (values.value) {
-        add(values.value);
+      if (values.fileName) {
+        add(values.fileName);
       }
       formik.resetForm();
       onClose();
@@ -43,7 +42,7 @@ export const AddInputButtonAndModal: React.FC<{
 
   const formik = useFormik({
     initialValues: {
-      value: "",
+      fileName: "",
     },
     onSubmit,
     validationSchema,
@@ -72,19 +71,14 @@ export const AddInputButtonAndModal: React.FC<{
           <ModalHeader><Text>New input (file) name</Text></ModalHeader>
           <form onSubmit={formik.handleSubmit}>
             <ModalBody>
-              <FormControl name={"value"}>
-                <InputGroup>
-                  <Input
-                    id="value"
-                    name="value"
-                    type="text"
-                    onChange={formik.handleChange}
-                    value={formik.values.value}
-                  />
-                </InputGroup>
-              </FormControl>
+              <Input
+                id="fileName"
+                name="fileName"
+                type="text"
+                onChange={formik.handleChange}
+                value={formik.values.fileName}
+              />
             </ModalBody>
-
             <ModalFooter>
               <Button type="submit" colorScheme="blackAlpha" mr={3}>
                 Add
