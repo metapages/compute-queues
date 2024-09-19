@@ -24,4 +24,4 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({title, onSave, preserve
          </HStack>
       </HStack>
     </Flex>
-}
+};

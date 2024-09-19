@@ -11,5 +11,6 @@
   "deno.enable": false,
   "files.watcherExclude": {
     "**/dist": true
-  }
+  },
+  "typescript.enablePromptUseWorkspaceTsdk": true
 }

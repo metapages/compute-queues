@@ -1,5 +1,16 @@
 import { useEffect } from 'react';
 
+import { JobControlButton } from '/@/components/header/JobControlButton';
+import {
+  useOptionJobsStartAutomatically,
+} from '/@/hooks/useOptionJobsStartAutomatically';
+import { DockerJobDefinitionParamsInUrlHash } from '/@/shared';
+import { useStore } from '/@/store';
+import {
+  defaultBorder,
+  headerHeight,
+} from '/@/styles/theme';
+
 import {
   Button,
   Flex,
@@ -17,16 +28,6 @@ import {
   Terminal,
   UploadSimple,
 } from '@phosphor-icons/react';
-
-import { DockerJobDefinitionParamsInUrlHash } from '../shared';
-import { useStore } from '../store';
-import {
-  defaultBorder,
-  headerHeight,
-} from '../styles/theme';
-import { JobControlButton } from './header/JobControlButton';
-import { JobInputs } from './sections/PanelInputs';
-import { useOptionJobsStartAutomatically } from '../hooks/useOptionJobsStartAutomatically';
 
 export const MainHeader: React.FC = () => {
   const [jobsStartAutomatically] = useOptionJobsStartAutomatically();
@@ -107,4 +108,4 @@ export const MainHeader: React.FC = () => {
       </HStack>
     </Flex>
   )
-}
+};

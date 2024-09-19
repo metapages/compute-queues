@@ -1,8 +1,7 @@
-import { Main } from '/@/routes/Main';
-
-import { serverWebsocket } from './hooks/serverWebsocket';
-import { useDockerJobDefinition } from './hooks/useDockerJobDefinition';
-import { useSendJobOutputs } from './hooks/useSendJobOutputs';
+import { serverWebsocket } from '/@/hooks/serverWebsocket';
+import { useDockerJobDefinition } from '/@/hooks/useDockerJobDefinition';
+import { useSendJobOutputs } from '/@/hooks/useSendJobOutputs';
+import { Main } from "/@/routes/Main";
 
 export const App: React.FC = () => {
   // Get the job definition from the URL and metaframe inputs, set in the store

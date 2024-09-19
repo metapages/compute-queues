@@ -1,9 +1,9 @@
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from 'react';
+import { useCallback } from 'react';
 
+import { useJobSubmissionHook } from '/@/hooks/useJobSubmissionHook';
+import {
+  useOptionJobsStartAutomatically,
+} from '/@/hooks/useOptionJobsStartAutomatically';
 import {
   DockerJobFinishedReason,
   DockerJobState,
@@ -21,18 +21,22 @@ import {
   useMediaQuery,
 } from '@chakra-ui/react';
 import { useHashParamBoolean } from '@metapages/hash-query';
+import {
+  Lock,
+  Play,
+  Repeat,
+  Stop,
+} from '@phosphor-icons/react';
 
 import { useStore } from '../../store';
-import { Play, Repeat, Stop, Lock } from '@phosphor-icons/react';
-import { useJobSubmissionHook } from '/@/hooks/useJobSubmissionHook';
-import { useOptionJobsStartAutomatically } from '/@/hooks/useOptionJobsStartAutomatically';
 
 export const JobControlButton: React.FC = () => {
-  
+
   const [jobsStartAutomatically] = useOptionJobsStartAutomatically();
   const clientJobDefinition = useStore((state) => state.newJobDefinition);
   const serverJobState = useStore((state) => state.jobState);
-  const [isLargerThan800] = useMediaQuery("(min-width: 800px)");
+  const [isLargerThan600] = useMediaQuery("(min-width: 600px)");
+
   
   const {submitJob, loading} = useJobSubmissionHook();
   const cancelJob = useStore(
@@ -41,15 +45,11 @@ export const JobControlButton: React.FC = () => {
   const deleteJobCache = useStore(
     (state) => state.deleteJobCache
   );
-  
+
   const sendClientStateChange = useStore(
     (state) => state.sendClientStateChange
   );
   const [debug] = useHashParamBoolean("debug");
-
-  // useEffect(() => {
-  //   setClicked(false);
-  // }, [sendClientStateChange]);
 
   const state = serverJobState?.state;
 
@@ -59,8 +59,6 @@ export const JobControlButton: React.FC = () => {
 
   const onClickRetry = useCallback(() => {
     if (serverJobState) {
-      // setClicked(true);
-
       const value: StateChangeValueQueued = {
         definition: (serverJobState.history[0].value as StateChangeValueQueued).definition,
         time: Date.now(),
@@ -79,7 +77,7 @@ export const JobControlButton: React.FC = () => {
   const disabledButton = (
     <HeaderButton
       ariaLabel="Disabled"
-      text={isLargerThan800 ? 'Disabled' : ''}
+      text={isLargerThan600 ? 'Disabled' : ''}
       icon={<Icon as={Lock} size={'1.2rem'} />}
     />
   );
@@ -89,7 +87,7 @@ export const JobControlButton: React.FC = () => {
       ariaLabel="Stop-job"
       icon={<Stop weight='duotone' color='red' size={'1.2rem'} />}
       onClick={onClickCancel}
-      text={isLargerThan800 ? "Stop Job" : ""}
+      text={isLargerThan600 ? "Stop Job" : ""}
       color={'red'}
     />
   );
@@ -99,7 +97,7 @@ export const JobControlButton: React.FC = () => {
       ariaLabel="Re-queue"
       icon={<Icon as={Repeat} size={'1.2rem'} />}
       onClick={onClickRetry}
-      text={isLargerThan800 ? "Re-queue" : ""}
+      text={isLargerThan600 ? "Re-queue" : ""}
     />
   );
 
@@ -108,7 +106,7 @@ export const JobControlButton: React.FC = () => {
       ariaLabel="Run-job"
       icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
       onClick={submitJob}
-      text={isLargerThan800 ? "Run Job" : ""}
+      text={isLargerThan600 ? "Run Job" : ""}
       color={'green'}
     />
   );
@@ -117,7 +115,7 @@ export const JobControlButton: React.FC = () => {
     <HeaderButton
       ariaLabel="Run-job"
       icon={<Play weight='duotone' color='gray' size={'1.2rem'} />}
-      text={isLargerThan800 ? "Run Job" : ""}
+      text={isLargerThan600 ? "Run Job" : ""}
       color={'gray'}
     />
   );
@@ -171,4 +169,4 @@ const HeaderButton: React.FC<{
     </HStack>
     <Text color={color || 'gray.35'} fontWeight={500} fontSize={'0.9rem'}>{text}</Text>
   </Button>
-}
+};

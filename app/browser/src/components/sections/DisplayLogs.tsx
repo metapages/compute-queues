@@ -10,9 +10,11 @@ import { useStore } from '/@/store';
 import {
   Code,
   Stack,
+  VStack,
 } from '@chakra-ui/react';
+import { OutputTable } from './logs/OutputTable';
 
-export type LogsMode = "stdout+stderr" | "stdout" | "stderr" | "build";
+export type LogsMode = "build+stdout+stderr" | "build+stdout" | "stdout+stderr" | "stdout" | "stderr" | "build";
 
 const EMPTY_ARRAY: ConsoleLogLine[] = [];
 
@@ -48,6 +50,12 @@ export const DisplayLogs: React.FC<{
 
     let currentLogs: ConsoleLogLine[] = EMPTY_ARRAY;
     switch (mode) {
+      case "build+stdout+stderr":
+        currentLogs = (buildLogs || EMPTY_ARRAY).concat(runLogs || EMPTY_ARRAY);
+        break;
+      case "build+stdout":
+        currentLogs = (buildLogs || EMPTY_ARRAY).concat(runLogs?.filter((l) => !l[2]) || EMPTY_ARRAY);
+        break;
       case "stdout+stderr":
         currentLogs = runLogs || EMPTY_ARRAY;
         break;
@@ -69,8 +77,12 @@ export const DisplayLogs: React.FC<{
   if (!jobId) {
     return <JustLogs logs={undefined} />;
   }
-
-  return <JustLogs logs={logs} />;
+  const showOutputs = mode.includes('stdout')
+  return <VStack alignItems={'flex-start'}>
+    <JustLogs logs={logs} />
+    {showOutputs && <OutputTable />}
+  </VStack>
+  ;
 };
 
 const JustLogs: React.FC<{
@@ -89,7 +101,7 @@ const JustLogs: React.FC<{
   return (
     <Stack spacing={3} p={'1rem'}>
       {logsNewlineHandled.map((line, i) => (
-        <Code bg={'none'} key={i} fontSize={12} fontWeight={500}>
+        <Code bg={'none'} key={i}>
           {line}
         </Code>
       ))}

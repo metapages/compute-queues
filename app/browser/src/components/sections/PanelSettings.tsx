@@ -1,8 +1,8 @@
 import React from 'react';
 
 import { PanelHeader } from '/@/components/generic/PanelHeader';
-import { PanelImageAndContainer } from './settings/PanelImageAndContainer';
-import PanelContainer from '../generic/PanelContainer';
+import { PanelImageAndContainer } from '/@/components/sections/settings/PanelImageAndContainer';
+import { PanelContainer } from '/@/components/generic/PanelContainer';
 
 export const PanelSettings: React.FC = () => {
   return (
@@ -12,5 +12,3 @@ export const PanelSettings: React.FC = () => {
     </PanelContainer>
   );
 };
-
-

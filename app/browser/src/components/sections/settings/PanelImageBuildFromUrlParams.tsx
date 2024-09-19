@@ -8,29 +8,25 @@ import { DockerJobDefinitionParamsInUrlHash } from '/@/shared';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 
-import { DeleteIcon } from '@chakra-ui/icons';
 import {
   Box,
   Button,
-  Divider,
   FormControl,
   FormLabel,
   HStack,
   Icon,
-  IconButton,
   Input,
   InputGroup,
-  Link,
   Radio,
   RadioGroup,
   Text,
   VStack,
 } from '@chakra-ui/react';
+import { TrashSimple } from '@phosphor-icons/react';
 import { useHashParamJson } from '@metapages/hash-query';
 
 import { ButtonModalEditor } from '/@/components/generic/ButtonModalEditor';
 import { FormLink } from '/@/components/generic/FormLink';
-import { TrashSimple } from '@phosphor-icons/react';
 
 const validationSchema = yup.object({
   buildArgs: yup.string().optional(),
@@ -61,6 +57,7 @@ const labelMap = {
 const labelSubMap = {
   buildArgs: "Comma Separated",
 }
+
 export const PanelImageBuildFromUrlParams: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
@@ -155,8 +152,6 @@ export const PanelImageBuildFromUrlParams: React.FC<{
     },
     [jobDefinitionBlob, onSave, setJobDefinitionBlob]
   );
-
-  
 
   const formik = useFormik({
     initialValues: {

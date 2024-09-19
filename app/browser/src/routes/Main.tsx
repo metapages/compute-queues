@@ -1,8 +1,9 @@
-
-import { PanelInputs } from '../components/sections/PanelInputs';
-import { PanelOutputs } from '../components/sections/PanelOutputs';
-import { PanelSettings } from '../components/sections/PanelSettings';
+import { ConsoleHeader } from '/@/components/generic/ConsoleHeader';
+import { MainFooter } from '/@/components/MainFooter';
+import { MainHeader } from '/@/components/MainHeader';
 import { DisplayLogs } from '/@/components/sections/DisplayLogs';
+import { PanelEditor } from '/@/components/sections/PanelEditor';
+import { PanelInputs } from '/@/components/sections/PanelInputs';
 
 import {
   Box,
@@ -10,13 +11,14 @@ import {
   HStack,
   VStack,
 } from '@chakra-ui/react';
-import { useStore } from '../store';
-import { MainFooter } from '/@/components/MainFooter';
-import { MainHeader } from '/@/components/MainHeader';
 
-import { ConsoleHeader } from '../components/generic/ConsoleHeader';
-import { PanelEditor } from '../components/sections/PanelEditor';
-import { contentHeight, defaultBorder } from '../styles/theme';
+import { PanelOutputs } from '../components/sections/PanelOutputs';
+import { PanelSettings } from '../components/sections/PanelSettings';
+import { useStore } from '../store';
+import {
+  contentHeight,
+  defaultBorder,
+} from '../styles/theme';
 
 export const Main: React.FC = () => {
 
@@ -51,7 +53,7 @@ export const Main: React.FC = () => {
               showSplit={!showStdErr} 
               showCombine={false}
             />
-            <DisplayLogs mode={showStdErr ? 'stdout' : 'stdout+stderr'} />
+            <DisplayLogs mode={showStdErr ? 'build+stdout' : 'build+stdout+stderr'} />
           </Container>
         </Box>
         <Box minW={rightContent ? '50%' : '0%'} minHeight={contentHeight} borderLeft={rightContent && defaultBorder}>

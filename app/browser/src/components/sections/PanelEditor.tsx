@@ -6,12 +6,12 @@ import {
 } from 'react';
 
 import { MetaframeStandaloneComponent } from '@metapages/metapage-embed-react';
-import PanelContainer from '/@/components/generic/PanelContainer';
-import { PanelHeader } from '../generic/PanelHeader';
 import { useHashParamJson } from '@metapages/hash-query';
 import { useStore } from '/@/store';
-import { JobInputs } from './PanelInputs';
-import { encodeOptions } from '/@/shared';
+import { encodeOptions, JobInputs } from '/@/shared';
+
+import { PanelContainer } from '/@/components/generic/PanelContainer';
+import { PanelHeader } from '/@/components/generic/PanelHeader';
 
 
 export const PanelEditor: React.FC = () => {

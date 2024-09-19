@@ -1,31 +1,22 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 import { useStore } from '/@/store';
 import { useFormik } from 'formik';
-import {
-  RiSignalWifiErrorLine,
-  RiSignalWifiFill,
-} from 'react-icons/ri';
+
+import { WifiHigh, WifiSlash } from '@phosphor-icons/react';
 import * as yup from 'yup';
 
 import {
   Alert,
   AlertIcon,
-  Box,
   Button,
   FormControl,
   HStack,
-  IconButton,
+  Icon,
   Input,
   InputGroup,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
   Tag,
-  useDisclosure,
+  Text,
 } from '@chakra-ui/react';
 import { useHashParam } from '@metapages/hash-query';
 
@@ -35,17 +26,20 @@ const validationSchema = yup.object({
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
 export const QueueButtonAndLabel: React.FC = () => {
-  const { isOpen, onClose, onToggle } = useDisclosure();
   const [queue, setQueue] = useHashParam("queue", "");
+  const [showInput, setShowInput] = useState(false);
   const isServerConnected = useStore((state) => state.isServerConnected);
 
   const onSubmit = useCallback(
     (values: FormType) => {
       setQueue(values.queue);
       formik.setFieldValue("queue", values.queue);
-      onClose();
+      // commenting this out because it makes the initial value persist 
+      // uncomment to return to this behavior
+      // formik.resetForm();
+      setShowInput(false);
     },
-    [onClose, setQueue]
+    [setQueue]
   );
 
   const formik = useFormik({
@@ -56,61 +50,43 @@ export const QueueButtonAndLabel: React.FC = () => {
     validationSchema,
   });
 
-  const closeAndClear = useCallback(() => {
-    formik.resetForm();
-    onClose();
-  }, [formik, onClose]);
-
   return (
     <HStack width="100%">
-      <IconButton
+      <Icon as={queue && isServerConnected ? WifiHigh : WifiSlash}
         size="lg"
-        onClick={onToggle}
-        colorScheme="blue"
+        color={!(queue && isServerConnected) && 'red'}
         aria-label="edit docker job queue"
-        icon={
-          queue && isServerConnected ? (
-            <RiSignalWifiFill />
-          ) : (
-            <RiSignalWifiErrorLine />
-          )
-        }
-        // isLoading={!!queue && !serverState.connected}
       />
-
-      <Box p={2}>
-        {`Queue key:`} {queue ? <Tag>{queue}</Tag> : null}{" "}
-      </Box>
-
-      <Modal isOpen={isOpen} onClose={closeAndClear}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Job queue key:</ModalHeader>
+      <Text p={2}>
+        Queue key:
+      </Text>
+      { showInput ? 
+        <>
           <form onSubmit={formik.handleSubmit}>
-            <ModalBody>
+            <HStack>
               <FormControl>
                 <InputGroup>
                   <Input
                     id="queue"
                     name="queue"
                     type="text"
-                    variant="filled"
                     onChange={formik.handleChange}
                     value={formik.values.queue}
-                  />
+                    />
                 </InputGroup>
               </FormControl>
-            </ModalBody>
-
-            <ModalFooter>
-              <Button type="submit" colorScheme="green" mr={3}>
+              <Button type="submit" colorScheme="green" size={'sm'} mr={0}>
                 Add
               </Button>
-            </ModalFooter>
+            </HStack>
             {/* {error ? <Message type="error" message={error} /> : null} */}
           </form>
-        </ModalContent>
-      </Modal>
+        </> :
+        <HStack gap={5}>
+          {queue ? <Tag>{queue}</Tag> : null}{" "}
+          <Text onClick={() => setShowInput(true)}>Edit</Text>
+        </HStack>
+      }
 
       {!queue || queue === "" ? (
         <Alert status="error">

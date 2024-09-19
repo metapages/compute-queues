@@ -16,7 +16,7 @@ import {
   Tr,
 } from '@chakra-ui/react';
 
-export const Workers: React.FC = () => {
+export const WorkersTable: React.FC = () => {
   const workers = useStore((state) => state.workers);
   const jobs = useStore((state) => state.jobStates);
 
@@ -35,7 +35,7 @@ export const Workers: React.FC = () => {
         </Thead>
         <Tbody>
           {workers?.workers?.map((worker) => (
-            <WorkerComponent
+            <WorkerRow
               key={worker.id}
               gpus={worker.gpus}
               cpus={worker.cpus}
@@ -49,7 +49,7 @@ export const Workers: React.FC = () => {
   );
 };
 
-const WorkerComponent: React.FC<{
+const WorkerRow: React.FC<{
   workerId: string;
   cpus: number;
   gpus: number;

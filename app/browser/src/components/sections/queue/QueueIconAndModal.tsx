@@ -10,10 +10,10 @@ import {
 } from "@chakra-ui/react"
 import { headerHeight, defaultBorder } from "/@/styles/theme";
 import { Queue as QueueIcon } from "@phosphor-icons/react";
-import { Queue } from "./Queue";
+import { Queue } from "/@/components/sections/queue/Queue";
 
 
-export const QueueButtonAndModal: React.FC = () => {
+export const QueueIconAndModal: React.FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   return <>
@@ -39,4 +39,4 @@ export const QueueButtonAndModal: React.FC = () => {
         </ModalContent>
       </Modal>
   </>
-}
+};

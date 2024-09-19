@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import {
   DataRef,
   DockerJobDefinitionRow,
@@ -17,14 +18,13 @@ import {
   HStack,
   Icon,
 } from '@chakra-ui/react';
-import { PanelHeader } from '/@/components/generic/PanelHeader';
-import PanelContainer from '/@/components/generic/PanelContainer';
 import { ArrowDown } from '@phosphor-icons/react'
+
+import { PanelHeader } from '/@/components/generic/PanelHeader';
+import { PanelContainer } from '/@/components/generic/PanelContainer';
 // import { UPLOAD_DOWNLOAD_BASE_URL } from '/@/config';
-import { useRef } from 'react';
 
 export const PanelOutputs: React.FC = () => {
-  const src = useRef<null | string>(null)
   const job = useStore((state) => state.jobState);
   const outputs = getOutputs(job);
 
@@ -35,7 +35,6 @@ export const PanelOutputs: React.FC = () => {
   return (
     <PanelContainer>
       <PanelHeader title={'Outputs'} />
-      {src.current && <img src={src.current} />}
       <Center px={4} width="100%">
         <Text fontSize={'0.9rem'}>Output Items</Text>
       </Center>
