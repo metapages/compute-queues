@@ -10,12 +10,12 @@ import {
 import { useHashParamJson } from "@metapages/hash-query"  ;
 import { JobInputs } from "/@/shared/types";
 
-import PanelHeader from '/@/components/generic/PanelHeader';
-import PanelContainer from '/@/components/generic/PanelContainer';
-import AddInputButtonAndModal from "/@/components/sections/inputs/AddInputButtonAndModal";
-import InputRow from "/@/components/sections/inputs/InputRow";
+import { PanelHeader } from '/@/components/generic/PanelHeader';
+import { PanelContainer } from '/@/components/generic/PanelContainer';
+import { AddInputButtonAndModal } from "/@/components/sections/inputs/AddInputButtonAndModal";
+import { InputRow } from "/@/components/sections/inputs/InputRow";
 
-const Inputs: React.FC = () => {
+export const PanelInputs: React.FC = () => {
   const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>(
     "inputs"
   );
@@ -75,5 +75,3 @@ const Inputs: React.FC = () => {
     </PanelContainer>
   );
 };
-
-export default Inputs;

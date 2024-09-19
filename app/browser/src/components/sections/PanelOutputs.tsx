@@ -20,8 +20,8 @@ import {
 } from '@chakra-ui/react';
 import { ArrowDown } from '@phosphor-icons/react'
 
-import PanelHeader from '/@/components/generic/PanelHeader';
-import PanelContainer from '/@/components/generic/PanelContainer';
+import { PanelHeader } from '/@/components/generic/PanelHeader';
+import { PanelContainer } from '/@/components/generic/PanelContainer';
 // import { UPLOAD_DOWNLOAD_BASE_URL } from '/@/config';
 
 export const PanelOutputs: React.FC = () => {
@@ -69,5 +69,3 @@ export const getOutputs = (job?: DockerJobDefinitionRow) => {
   }
   return {};
 };
-
-export default Outputs;

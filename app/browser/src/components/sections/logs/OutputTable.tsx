@@ -7,17 +7,14 @@ import {
 import { useStore } from '/@/store';
 
 import {
-  Table,
-  Tbody,
-  Td,
   Text,
-  Tr,
   HStack,
   Icon,
-  Thead,
   Box,
+  VStack,
 } from '@chakra-ui/react';
 import { ArrowDown } from '@phosphor-icons/react'
+import { defaultBorder } from '/@/styles/theme';
 // import { UPLOAD_DOWNLOAD_BASE_URL } from '/@/config';
 
 export const OutputTable: React.FC = () => {
@@ -43,31 +40,24 @@ export const OutputTable: React.FC = () => {
       width={'80%'}
       overflow={'hidden'}
     >
-      <Table variant="simple">
-        <Thead bg={'black.3'}>
-          <HStack p={2} justifyContent={'space-between'}>
-            <Text fontWeight={600}>Outputs</Text>
-            <HStack>
-              <Text>Download All ({outputCount})</Text>
-              <Icon onClick={downloadAll} boxSize={'1.1rem'} as={ArrowDown}></Icon>
-            </HStack>
+      <VStack gap={0}>
+        <HStack width={'100%'} bg={'black.3'} borderBottom={defaultBorder} p={2} justifyContent={'space-between'}>
+          <Text fontWeight={600}>Outputs</Text>
+          <HStack>
+            <Text>Download All ({outputCount})</Text>
+            <Icon onClick={downloadAll} boxSize={'1.1rem'} as={ArrowDown}></Icon>
           </HStack>
-          
-        </Thead>
-        <Tbody bg={'black.10'}>
+        </HStack>
+        <VStack width={'100%'} bg={'black.10'}>
           {Object.keys(outputs).map((name, i) => {
             const lastRow = Object.keys(outputs).length - 1 === i;
-            return <Tr key={name} justifyContent={'space-between'}>
-              <Td p={2} borderBottom={lastRow ? 'none' : undefined} mx={5}>
-                <HStack justifyContent={'space-between'}>
-                  <Text>{name}</Text>
-                  <Icon onClick={() => downloadFile(name, outputs[name])} boxSize={'1.1rem'} as={ArrowDown}></Icon>
-                </HStack>
-              </Td>
-            </Tr>
+            return <HStack key={`${name}-${i}`} width={'calc(100% - 1rem)'} p={2} borderBottom={lastRow ? 'none' : defaultBorder} justifyContent={'space-between'}>
+              <Text>{name}</Text>
+              <Icon onClick={() => downloadFile(name, outputs[name])} boxSize={'1.1rem'} as={ArrowDown}></Icon>
+            </HStack>
           })}
-        </Tbody>
-      </Table>
+        </VStack>
+      </VStack>
     </Box>
   );
 };

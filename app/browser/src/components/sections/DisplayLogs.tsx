@@ -12,14 +12,14 @@ import {
   Stack,
   VStack,
 } from '@chakra-ui/react';
-import OutputTable from './logs/OutputTable';
+import { OutputTable } from './logs/OutputTable';
 
 export type LogsMode = "build+stdout+stderr" | "build+stdout" | "stdout+stderr" | "stdout" | "stderr" | "build";
 
 const EMPTY_ARRAY: ConsoleLogLine[] = [];
 
 // show e.g. running, or exit code, or error
-export const Logs: React.FC<{
+export const DisplayLogs: React.FC<{
   mode: LogsMode;
 }> = ({ mode }) => {
   const logsRef = useRef<string[]>([]);
@@ -108,5 +108,3 @@ const JustLogs: React.FC<{
     </Stack>
   );
 };
-
-export default Logs;
