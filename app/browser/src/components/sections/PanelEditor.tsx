@@ -35,9 +35,9 @@ export const PanelEditor: React.FC = () => {
 
   const updateInput = useCallback(
     (content: string) => {
-      const newJobDefinitionBlob = { ...jobInputs };
-      newJobDefinitionBlob[mainInputFile] = content;
-      setJobInputs(newJobDefinitionBlob);
+      const newJobInputsBlob = { ...jobInputs };
+      newJobInputsBlob[mainInputFile] = content;
+      setJobInputs(newJobInputsBlob);
     },
     [jobInputs, setJobInputs, mainInputFile]
   );

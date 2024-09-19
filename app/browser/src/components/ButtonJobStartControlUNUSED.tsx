@@ -21,7 +21,7 @@ import {
 } from '../hooks/useOptionJobsStartAutomatically';
 import { useStore } from '../store';
 
-export const ButtonJobStartControl: React.FC = () => {
+export const ButtonJobStartControlUNUSED: React.FC = () => {
 
   // Our currently configured job definition
   const jobDefinition = useStore(
@@ -34,9 +34,7 @@ export const ButtonJobStartControl: React.FC = () => {
 
   const [jobsStartAutomatically] = useOptionJobsStartAutomatically();
   const {submitJob, loading} = useJobSubmissionHook();
-  const sendClientStateChange = useStore(
-    (state) => state.sendClientStateChange
-  );
+
   const cancelJob = useStore(
     (state) => state.cancelJob
   );
@@ -50,7 +48,7 @@ export const ButtonJobStartControl: React.FC = () => {
 
   const onClickCancel = useCallback(() => {
     if (jobDefinition) {
-      setClicked(true);
+      // setClicked(true);
       cancelJob();
     }
   }, [cancelJob]);
@@ -72,7 +70,7 @@ export const ButtonJobStartControl: React.FC = () => {
     //     value,
     //   } as StateChange);
     // }
-  }, [jobDefinition, sendClientStateChange]);
+  }, [jobDefinition]);
 
   switch (jobState.state) {
     case DockerJobState.Queued:

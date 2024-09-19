@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 
-import { getFinishedJob } from './cache';
+import {
+  deleteFinishedJob,
+  getFinishedJob,
+} from './cache';
 import {
   BroadcastWorkers,
   DockerJobState,
@@ -50,6 +53,7 @@ interface MainStore {
   jobStates: JobsStateMap;
   setJobStates: (jobStates: JobsStateMap) => void;
   cancelJob: () => void;
+  deleteJobCache: () => boolean;
 
   /* To display all the workers */
   workers: BroadcastWorkers | undefined;
@@ -159,6 +163,7 @@ export const useStore = create<MainStore>((set, get) => ({
     // check if it's queued and an existing finished job exists.
     // If so, set the job state to finished, with the cached finished state
     // This means the state change doesn't reach the server+worker
+    console.log('sendClientStateChange',  clientStateChange)
     if (clientStateChange.state === DockerJobState.Queued) {
       const queueState = clientStateChange.value as StateChangeValueQueued;
       const existingFinishedJob = await getFinishedJob(clientStateChange.job);
@@ -198,6 +203,27 @@ export const useStore = create<MainStore>((set, get) => ({
       },
     }
     get().sendClientStateChange(stateChange);
+  },
+
+  deleteJobCache: () => {
+    const client = get().newJobDefinition;
+    if (!client?.hash) {
+      return false;
+    }
+    // send a cancel message to the server
+    const stateChange: StateChange = {
+      tag: "",
+      state: DockerJobState.Finished,
+      job: client.hash,
+      value: {
+        reason: DockerJobFinishedReason.Cancelled,
+        time: Date.now(),
+      },
+    }
+    get().sendClientStateChange(stateChange);
+    // delete the finished job from the local cache
+    deleteFinishedJob(client.hash);
+    return true;
   },
   
   jobStates: {},

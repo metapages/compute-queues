@@ -26,8 +26,10 @@ import {
 } from '../styles/theme';
 import { JobControlButton } from './header/JobControlButton';
 import { JobInputs } from './sections/PanelInputs';
+import { useOptionJobsStartAutomatically } from '../hooks/useOptionJobsStartAutomatically';
 
 export const MainHeader: React.FC = () => {
+  const [jobsStartAutomatically] = useOptionJobsStartAutomatically();
   const [jobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [jobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
 

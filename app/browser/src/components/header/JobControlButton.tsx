@@ -24,38 +24,45 @@ import { useHashParamBoolean } from '@metapages/hash-query';
 
 import { useStore } from '../../store';
 import { Play, Repeat, Stop, Lock } from '@phosphor-icons/react';
+import { useJobSubmissionHook } from '/@/hooks/useJobSubmissionHook';
+import { useOptionJobsStartAutomatically } from '/@/hooks/useOptionJobsStartAutomatically';
 
 export const JobControlButton: React.FC = () => {
-  const job = useStore((state) => state.jobState);
+  
+  const [jobsStartAutomatically] = useOptionJobsStartAutomatically();
+  const clientJobDefinition = useStore((state) => state.newJobDefinition);
+  const serverJobState = useStore((state) => state.jobState);
   const [isLargerThan800] = useMediaQuery("(min-width: 800px)");
-  const [clicked, setClicked] = useState<boolean>(false);
+  
+  const {submitJob, loading} = useJobSubmissionHook();
   const cancelJob = useStore(
     (state) => state.cancelJob
   );
+  const deleteJobCache = useStore(
+    (state) => state.deleteJobCache
+  );
+  
   const sendClientStateChange = useStore(
     (state) => state.sendClientStateChange
   );
   const [debug] = useHashParamBoolean("debug");
 
-  useEffect(() => {
-    setClicked(false);
-  }, [sendClientStateChange]);
+  // useEffect(() => {
+  //   setClicked(false);
+  // }, [sendClientStateChange]);
 
-  const state = job?.state;
+  const state = serverJobState?.state;
 
   const onClickCancel = useCallback(() => {
-    if (job) {
-      setClicked(true);
-      cancelJob();
-    }
-  }, [job, cancelJob]);
+    cancelJob();
+  }, [cancelJob]);
 
   const onClickRetry = useCallback(() => {
-    if (job) {
-      setClicked(true);
+    if (serverJobState) {
+      // setClicked(true);
 
       const value: StateChangeValueQueued = {
-        definition: (job.history[0].value as StateChangeValueQueued).definition,
+        definition: (serverJobState.history[0].value as StateChangeValueQueued).definition,
         time: Date.now(),
         debug,
       };
@@ -63,11 +70,11 @@ export const JobControlButton: React.FC = () => {
       sendClientStateChange({
         tag: "",
         state: DockerJobState.Queued,
-        job: job.hash,
+        job: serverJobState.hash,
         value,
       } as StateChange);
     }
-  }, [job, sendClientStateChange, debug]);
+  }, [serverJobState, sendClientStateChange, debug]);
 
   const disabledButton = (
     <HeaderButton
@@ -100,7 +107,7 @@ export const JobControlButton: React.FC = () => {
     <HeaderButton
       ariaLabel="Run-job"
       icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
-      onClick={() => {}}
+      onClick={submitJob}
       text={isLargerThan800 ? "Run Job" : ""}
       color={'green'}
     />
@@ -115,6 +122,9 @@ export const JobControlButton: React.FC = () => {
     />
   );
 
+  if (!state) {
+    return runButton;
+  }
 
   switch (state) {
     case DockerJobState.Queued:
@@ -122,7 +132,7 @@ export const JobControlButton: React.FC = () => {
       return cancelButton;
     case DockerJobState.Finished:
       const value: StateChangeValueWorkerFinished | undefined =
-        job?.value as StateChangeValueWorkerFinished;
+        serverJobState?.value as StateChangeValueWorkerFinished;
       if (value) {
         switch (value.reason) {
           case DockerJobFinishedReason.Error:

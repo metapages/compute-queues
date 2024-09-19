@@ -28,7 +28,7 @@ interface ButtonDeleteCacheProps {
   job?: DockerJobDefinitionRow;
 }
 
-export const ButtonDeleteCache: React.FC<ButtonDeleteCacheProps> = ({
+export const ButtonDeleteCacheUNUSED: React.FC<ButtonDeleteCacheProps> = ({
   job,
 }) => {
   const toast = useToast();
