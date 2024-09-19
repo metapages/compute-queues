@@ -7,16 +7,20 @@ export enum DataRefType {
   url = "url", // request the data at this URL
   utf8 = "utf8",
   json = "json",
-  // Inline = "inline", // string or JSON as the actual final input/output data. binary is hard here, so use others when needed
-  key = "key", // the internal system can get this data blob given the key address (stored in the value)
-  hash = "hash", //temporary workaround
+  // the internal system can get this data blob given the key address (stored in the value)
+  // this is typically the sha256 hash of the data
+  key = "key",
 }
+
+const DataRefTypeKeys :string[] = Object.keys(DataRefType).filter(key => isNaN(Number(key)));
+export const DataRefTypesSet = new Set(DataRefTypeKeys);
 
 export const DataRefTypeDefault = DataRefType.utf8;
 
 export type DataRef<T = string> = {
   value: T;
   type?: DataRefType;
+  hash?: string;
 };
 
 export type Image = string;
@@ -39,10 +43,11 @@ export type DockerJobImageBuild = {
 export type DockerJobDefinitionInputsBase64 = {
   // the docker image OR git repository URL
   image?: Image;
-
+  // docker image build configuration
   build?: DockerJobImageBuild;
-
+  // docker command
   command?: Command;
+  // docker env vars, not currently implemented on the client
   env?: Env;
   // entrypoint?: string[];
   entrypoint?: string;

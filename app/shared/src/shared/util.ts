@@ -31,8 +31,8 @@ export const fetchRobust = fetchRetry(fetch, {
   },
 });
 
-export const encodeOptions = (options) => {
-  const text = JSON.stringify(options);
+export const encodeOptions = (options :any) :string => {
+  const text :string = stringify(options) || "";
   var b64 = btoa(encodeURIComponent(text));
   return b64;
 };

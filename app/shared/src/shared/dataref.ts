@@ -2,6 +2,7 @@ import {
   DataRef,
   DataRefType,
   DataRefTypeDefault,
+  DataRefTypesSet,
   decodeBase64,
   fetchRobust as fetch,
   InputsRefs,
@@ -16,29 +17,37 @@ import {
 
 export const ENV_VAR_DATA_ITEM_LENGTH_MAX = 200;
 
+export const isDataRef = (value: any): boolean => {
+  return !!(
+    value &&
+    typeof value === "object" &&
+    DataRefTypesSet.has((value as DataRef)?.type) &&
+    (value as DataRef)?.value
+  );
+};
 
 export const dataRefToBuffer = async (ref: DataRef): Promise<Uint8Array> => {
-  switch(ref.type) {
-      case DataRefType.base64:
-          return decodeBase64(ref.value as string)
-          // return Buffer.from(ref.value as string, 'base64');
-      case DataRefType.utf8:
-          return new TextEncoder().encode(ref.value as string)
-          // return Buffer.from(ref.value as string, 'utf8');
-      case DataRefType.url:
-// TODO: HERE
-          throw 'Not yet implemented: DataRef.type === DataRefType.Url';
-      default: // undefined assume DataRefType.Base64
-          throw 'Not yet implemented: DataRef.type === undefined or unknown';
+  switch (ref.type) {
+    case DataRefType.base64:
+      return decodeBase64(ref.value as string);
+    // return Buffer.from(ref.value as string, 'base64');
+    case DataRefType.utf8:
+      return new TextEncoder().encode(ref.value as string);
+    // return Buffer.from(ref.value as string, 'utf8');
+    case DataRefType.url:
+      // TODO: HERE
+      throw "Not yet implemented: DataRef.type === DataRefType.Url";
+    default: // undefined assume DataRefType.Base64
+      throw "Not yet implemented: DataRef.type === undefined or unknown";
   }
-}
+};
 
 // Takes map of DataRefs and checks if any are too big, if so
 // uploads the data to the cloud, and replaces the data ref
 // with a DataRef pointing to the cloud blob
 export const copyLargeBlobsToCloud = async (
   inputs: InputsRefs | undefined,
-  address:string
+  address: string
 ): Promise<InputsRefs | undefined> => {
   if (!inputs || Object.keys(inputs).length === 0) {
     return;
@@ -62,18 +71,14 @@ export const copyLargeBlobsToCloud = async (
           }
           break;
         case DataRefType.utf8:
-          if (
-            inputs?.[name]?.value?.length > ENV_VAR_DATA_ITEM_LENGTH_MAX
-          ) {
+          if (inputs?.[name]?.value?.length > ENV_VAR_DATA_ITEM_LENGTH_MAX) {
             uint8ArrayIfBig = utf8ToBuffer(inputs[name].value);
           }
           break;
         // base64 is the default if unrecognized
         case DataRefType.base64:
         default:
-          if (
-            inputs?.[name]?.value.length > ENV_VAR_DATA_ITEM_LENGTH_MAX
-          ) {
+          if (inputs?.[name]?.value.length > ENV_VAR_DATA_ITEM_LENGTH_MAX) {
             uint8ArrayIfBig = decodeBase64(inputs[name].value);
           }
           break;
@@ -135,10 +140,7 @@ export const convertJobOutputDataRefsToExpectedFormat = async (
           newOutputs[name] = internalBlobRefFromBase64;
           break;
         case DataRefType.key:
-          arrayBuffer = await fetchBlobFromHash(
-            outputs[name].value,
-            address
-          );
+          arrayBuffer = await fetchBlobFromHash(outputs[name].value, address);
           arrayBuffer = new Uint8Array(arrayBuffer);
 
           const internalBlobRefFromHash: DataRefSerializedBlob = {
@@ -156,10 +158,7 @@ export const convertJobOutputDataRefsToExpectedFormat = async (
         case DataRefType.url:
           arrayBuffer = await fetchBlobFromUrl(outputs[name].value);
           // newOutputs[name] = Unibabel.bufferToBase64(arrayBuffer);
-          arrayBuffer = await fetchBlobFromHash(
-            outputs[name].value,
-            address
-          );
+          arrayBuffer = await fetchBlobFromHash(outputs[name].value, address);
           const internalBlobRefFromUrl: DataRefSerializedBlob = {
             _s: true,
             _c: Blob.name,
@@ -199,7 +198,10 @@ export const fetchJsonFromUrl = async <T>(url: string): Promise<T> => {
   return json;
 };
 
-const fetchBlobFromHash = async (hash: string, address:string): Promise<ArrayBuffer> => {
+const fetchBlobFromHash = async (
+  hash: string,
+  address: string
+): Promise<ArrayBuffer> => {
   const resp = await fetch(`${address}/download/${hash}`);
   const json: { url: string; ref: DataRef } = await resp.json();
   const arrayBuffer = await fetchBlobFromUrl(json.url);
@@ -209,14 +211,12 @@ const fetchBlobFromHash = async (hash: string, address:string): Promise<ArrayBuf
 const _encoder = new TextEncoder();
 export const utf8ToBuffer = (str: string): Uint8Array => {
   return _encoder.encode(str);
-}
+};
 
 const _decoder = new TextDecoder();
 export const bufferToUtf8 = (buffer: Uint8Array): string => {
   return _decoder.decode(buffer);
-}
-
-
+};
 
 /**
  * Decodes a base64-encoded string.
@@ -244,16 +244,17 @@ export const bufferToUtf8 = (buffer: Uint8Array): string => {
 // }
 
 // 👍
-export function bufferToBinaryString(buffer: ArrayBuffer) :string {
-  var base64Str = Array.prototype.map.call(buffer, function (ch:number) {
-    return String.fromCharCode(ch);
-  }).join('');
+export function bufferToBinaryString(buffer: ArrayBuffer): string {
+  var base64Str = Array.prototype.map
+    .call(buffer, function (ch: number) {
+      return String.fromCharCode(ch);
+    })
+    .join("");
   return base64Str;
 }
 
 // 👍
-export const bufferToBase64 = (buffer: ArrayBuffer) :string => {
+export const bufferToBase64 = (buffer: ArrayBuffer): string => {
   var binstr = bufferToBinaryString(buffer);
   return btoa(binstr);
-}
-
+};

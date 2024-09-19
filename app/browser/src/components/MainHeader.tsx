@@ -1,12 +1,31 @@
-import { Tooltip, Icon, Flex, HStack, Spacer, Button, Text, } from "@chakra-ui/react";
-import { useHashParamJson } from "@metapages/hash-query";
-import { Terminal, PencilSimple, Play, Gear, UploadSimple, DownloadSimple } from "@phosphor-icons/react";
-import { useEffect } from "react";
-import { DockerJobDefinitionParamsInUrlHash } from "../shared";
-import { useStore } from "../store";
-import { headerHeight, defaultBorder } from "../styles/theme";
-import { JobInputs } from "./sections/PanelInputs";
-import { JobControlButton } from "./header/JobControlButton";
+import { useEffect } from 'react';
+
+import {
+  Button,
+  Flex,
+  HStack,
+  Icon,
+  Spacer,
+  Text,
+  Tooltip,
+} from '@chakra-ui/react';
+import { useHashParamJson } from '@metapages/hash-query';
+import {
+  DownloadSimple,
+  Gear,
+  PencilSimple,
+  Terminal,
+  UploadSimple,
+} from '@phosphor-icons/react';
+
+import { DockerJobDefinitionParamsInUrlHash } from '../shared';
+import { useStore } from '../store';
+import {
+  defaultBorder,
+  headerHeight,
+} from '../styles/theme';
+import { JobControlButton } from './header/JobControlButton';
+import { JobInputs } from './sections/PanelInputs';
 
 export const MainHeader: React.FC = () => {
   const [jobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
@@ -20,10 +39,10 @@ export const MainHeader: React.FC = () => {
 
   useEffect(() => {
     // check to see if the run command points to a file in inputs
-    const fileNames = Object.keys(jobInputs).sort();
-    const command = jobDefinitionBlob.command;
+    const fileNames = jobInputs ? Object.keys(jobInputs).sort() : [];
+    const command = jobDefinitionBlob?.command;
     let mainFile = null;
-    if (fileNames.length && command.length) {
+    if (fileNames.length && command?.length) {
       for (let file of fileNames) {
         if (command.includes(file)) {
           // if there's a file that matches the command, set that as the editable file
@@ -58,7 +77,7 @@ export const MainHeader: React.FC = () => {
       <HStack justify={'space-between'} px={2} w={`calc(100% - 11rem)`}>
         <HStack>
           <Icon as={Terminal} color={'gray.39'} boxSize="4" />
-          <Text fontWeight={400} color={'gray.39'}>{jobDefinitionBlob.command}</Text>
+          <Text fontWeight={400} color={'gray.39'}>{jobDefinitionBlob?.command}</Text>
         </HStack>
         <Spacer/>
         <HStack>

@@ -1,13 +1,17 @@
-import { useDockerJobDefinition } from './hooks/jobDefinitionHook';
+import { Main } from '/@/routes/Main';
+
 import { serverWebsocket } from './hooks/serverWebsocket';
-// import { TabMenu } from './routes/TabMenu';
-import { Main } from "/@/routes/Main";
+import { useDockerJobDefinition } from './hooks/useDockerJobDefinition';
+import { useSendJobOutputs } from './hooks/useSendJobOutputs';
 
 export const App: React.FC = () => {
-  // This creates the server websocket connection and gets/sets state on the store
-  serverWebsocket();
   // Get the job definition from the URL and metaframe inputs, set in the store
   useDockerJobDefinition();
+  // This creates the server websocket connection and gets/sets state on the store
+  serverWebsocket();
+  // if a job is finished, send the outputs to the metaframe
+  useSendJobOutputs();
+
   return (
     <Main />
   );

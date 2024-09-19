@@ -1,15 +1,8 @@
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from 'react';
+import { useCallback } from 'react';
 
 import {
-  DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
-  StateChange,
-  StateChangeValueQueued,
   StateChangeValueWorkerFinished,
 } from '/@/shared/types';
 
@@ -21,65 +14,70 @@ import {
   Button,
   useMediaQuery,
 } from '@chakra-ui/react';
-import { useHashParamBoolean } from '@metapages/hash-query';
 
+import { useJobSubmissionHook } from '../hooks/useJobSubmissionHook';
+import {
+  useOptionJobsStartAutomatically,
+} from '../hooks/useOptionJobsStartAutomatically';
 import { useStore } from '../store';
 
-interface ButtonCancelOrRetryProps {
-  job?: DockerJobDefinitionRow;
-}
+export const ButtonJobStartControl: React.FC = () => {
 
-export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
-  job,
-}) => {
-  const [clicked, setClicked] = useState<boolean>(false);
+  // Our currently configured job definition
+  const jobDefinition = useStore(
+    (state) => state.newJobDefinition
+  );
+  const jobState = useStore(
+    (state) => state.jobState
+  );
+
+  const [jobsStartAutomatically] = useOptionJobsStartAutomatically();
+  const {submitJob, loading} = useJobSubmissionHook();
   const sendClientStateChange = useStore(
     (state) => state.sendClientStateChange
   );
-  const [debug, setDebug] = useHashParamBoolean("debug");
+
   const [isLargerThan800] = useMediaQuery("(min-width: 800px)");
 
-  useEffect(() => {
-    setClicked(false);
-  }, [sendClientStateChange]);
 
-  const state = job?.state;
+
+
 
   const onClickCancel = useCallback(() => {
-    if (job) {
-      setClicked(true);
-      sendClientStateChange({
-        tag: "",
-        state: DockerJobState.Finished,
-        job: job.hash,
-        value: {
-          reason: DockerJobFinishedReason.Cancelled,
-          time: Date.now(),
-        },
-      } as StateChange);
-    }
-  }, [job, sendClientStateChange]);
+    // if (jobDefinition) {
+    //   setClicked(true);
+    //   sendClientStateChange({
+    //     tag: "",
+    //     state: DockerJobState.Finished,
+    //     job: jobDefinition.hash,
+    //     value: {
+    //       reason: DockerJobFinishedReason.Cancelled,
+    //       time: Date.now(),
+    //     },
+    //   } as StateChange);
+    // }
+  }, [jobState, sendClientStateChange]);
 
   const onClickRetry = useCallback(() => {
-    if (job) {
-      setClicked(true);
+    // if (jobDefinition) {
+    //   setClicked(true);
 
-      const value: StateChangeValueQueued = {
-        definition: (job.history[0].value as StateChangeValueQueued).definition,
-        time: Date.now(),
-        debug,
-      };
+    //   const value: StateChangeValueQueued = {
+    //     definition: (job.history[0].value as StateChangeValueQueued).definition,
+    //     time: Date.now(),
+    //     debug,
+    //   };
 
-      sendClientStateChange({
-        tag: "",
-        state: DockerJobState.Queued,
-        job: job.hash,
-        value,
-      } as StateChange);
-    }
-  }, [job, sendClientStateChange, debug]);
+    //   sendClientStateChange({
+    //     tag: "",
+    //     state: DockerJobState.Queued,
+    //     job: job.hash,
+    //     value,
+    //   } as StateChange);
+    // }
+  }, [jobDefinition, sendClientStateChange]);
 
-  switch (state) {
+  switch (jobState.state) {
     case DockerJobState.Queued:
     case DockerJobState.Running:
       return (
@@ -87,7 +85,7 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
           aria-label="Cancel"
           leftIcon={<CloseIcon />}
           onClick={onClickCancel}
-          isActive={!clicked}
+          // isActive={!clicked}
           size="lg"
         >
           {isLargerThan800 ? "Cancel job" : ""}
@@ -95,7 +93,7 @@ export const ButtonCancelOrRetry: React.FC<ButtonCancelOrRetryProps> = ({
       );
     case DockerJobState.Finished:
       const value: StateChangeValueWorkerFinished | undefined =
-        job?.value as StateChangeValueWorkerFinished;
+      jobState?.value as StateChangeValueWorkerFinished;
 
       if (value) {
         switch (value.reason) {

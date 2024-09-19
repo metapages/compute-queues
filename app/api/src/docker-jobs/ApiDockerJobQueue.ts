@@ -1358,8 +1358,14 @@ export class ApiDockerJobQueue {
             6
           )} because it's missing`
         );
-        const index = this.workers.myWorkers.indexOf(worker);
-        this.workers.myWorkers.splice(index, 1);
+        
+        let index = 0;
+        while (index > -1) {
+          index = this.workers.myWorkers.indexOf(worker);
+          this.workers.myWorkers.splice(index, 1);
+        }
+
+        
         isMyWorkersChanged = true;
       }
     }
@@ -1470,22 +1476,33 @@ export class ApiDockerJobQueue {
   }
 
   createWebsocketBroadcastWorkersRegistrationMessage(): string {
-    const workersRegistration: BroadcastWorkers = { workers: [] };
+    const workers: WorkerRegistration[] = [];
+    const workersRegistration: BroadcastWorkers = { workers };
     const message: WebsocketMessageServerBroadcast = {
       type: WebsocketMessageTypeServerBroadcast.Workers,
       payload: workersRegistration,
     };
-    // console.log('createWebsocketBroadcastWorkersRegistrationMessage this.workers', this.workers);
-    workersRegistration.workers = workersRegistration.workers.concat(
-      this.workers.myWorkers.map((w) => w.registration)
-    );
+
+    const alreadyAdded = new Set<string>();
+    this.workers.myWorkers.forEach((w) => {
+      if (alreadyAdded.has(w.registration.id)) {
+        return;
+      }
+      workers.push(w.registration);
+      alreadyAdded.add(w.registration.id);
+    });
 
     for (const [
       _,
-      workerRegistrations,
+      otherWorkerRegistrations,
     ] of this.workers.otherWorkers.entries()) {
-      workersRegistration.workers =
-        workersRegistration.workers.concat(workerRegistrations);
+      otherWorkerRegistrations.forEach((w :WorkerRegistration) => {
+        if (alreadyAdded.has(w.id)) {
+          return;
+        }
+        workers.push(w);
+        alreadyAdded.add(w.id);
+      });
     }
     const messageString = JSON.stringify(message);
     return messageString;

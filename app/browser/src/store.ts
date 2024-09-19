@@ -121,7 +121,7 @@ export const useStore = create<MainStore>((set, get) => ({
       return;
     }
 
-    // update the jobId, and reset the logs
+    // new job definition!: update the jobId, and reset the logs
     set((state) => ({
       newJobDefinition: job,
       jobState: get().jobStates[job.hash],
