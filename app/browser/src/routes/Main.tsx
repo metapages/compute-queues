@@ -4,10 +4,6 @@ import {
   useState,
 } from 'react';
 
-import { DisplayLogs } from '/@/components/sections/DisplayLogs';
-import { PanelInputs } from '../components/sections/PanelInputs';
-import { PanelSettings } from '../components/sections/PanelSettings';
-import { PanelOutputs } from '../components/sections/PanelOutputs';
 import {
   convertJobOutputDataRefsToExpectedFormat,
   DockerJobState,
@@ -30,16 +26,20 @@ import {
   isIframe,
   MetaframeInputMap,
 } from '@metapages/metapage';
-import { MainHeader } from '/@/components/MainHeader';
-import { MainFooter } from '/@/components/MainFooter';
-import { useStore } from '../store';
+
+import Logs from '/@/components/sections/Logs';
+import PanelInputs from '/@/components/sections/PanelInputs';
+import PanelSettings from '../components/sections/PanelSettings';
+import PanelOutputs from '../components/sections/PanelOutputs';
+import MainHeader from '/@/components/MainHeader';
+import MainFooter from '/@/components/MainFooter';
+import PanelEditor from '/@/components/sections/PanelEditor';
+import ConsoleHeader from '/@/components/generic/ConsoleHeader';
 
 import { contentHeight, defaultBorder } from '../styles/theme';
-import { PanelEditor } from '../components/sections/PanelEditor';
-import { PanelHeader } from '../components/generic/PanelHeader';
-import { ConsoleHeader } from '../components/generic/ConsoleHeader';
+import { useStore}  from '../store';
 
-export const Main: React.FC = () => {
+const Main: React.FC = () => {
   // this is where two complex hooks are threaded together (also in the store):
   // 1. get the job definition
   // 2. send the job definition if changed
@@ -185,7 +185,7 @@ export const Main: React.FC = () => {
         showSplit={false} 
         showCombine={true} 
       />
-      <DisplayLogs mode={'stderr'} />
+      <Logs mode={'stderr'} />
     </Container>
   }
   const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
@@ -199,7 +199,7 @@ export const Main: React.FC = () => {
               showSplit={!showStdErr} 
               showCombine={false}
             />
-            <DisplayLogs mode={showStdErr ? 'stdout' : 'stdout+stderr'} />
+            <Logs mode={showStdErr ? 'build+stdout' : 'build+stdout+stderr'} />
           </Container>
         </Box>
         <Box minW={rightContent ? '50%' : '0%'} minHeight={contentHeight} borderLeft={rightContent && defaultBorder}>
@@ -210,3 +210,5 @@ export const Main: React.FC = () => {
     </VStack>
   );
 };
+
+export default Main;

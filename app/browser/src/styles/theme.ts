@@ -1,5 +1,4 @@
-import { extendTheme } from "@chakra-ui/react";
-import { tabsTheme } from './components/tabs';
+import { border, defineStyle, defineStyleConfig, extendTheme } from "@chakra-ui/react";
 
 export const defaultBorder = '1px solid var(--chakra-colors-black-10)';
 const headerHeightVal = 3
@@ -7,6 +6,26 @@ const footerHeightVal = 3.5;
 export const contentHeight = `calc(100vh - ${headerHeightVal + footerHeightVal}rem)`;
 export const headerHeight = `${headerHeightVal}rem`;
 export const footerHeight = `${footerHeightVal}rem`;
+
+
+export const inputTheme = defineStyleConfig({
+  defaultProps: {
+      size: 'sm',
+      variant: 'outline',
+  },
+});
+
+export const buttonTheme = defineStyleConfig({
+  defaultProps: {
+      size: 'sm',
+      variant: 'solid',
+  },
+});
+
+export const codeTheme = defineStyle({
+  fontSize: '0.9rem',
+  fontWeight: 500,
+});
 
 export const theme = extendTheme(
   {
@@ -48,11 +67,13 @@ export const theme = extendTheme(
         },
       },
       Input: {
+        ...inputTheme,
         variants: {
           outline: {
             field: {
               bg: '#ECECEC !important',
               border: "1px solid",
+              borderRadius: '5px',
               borderColor: 'gray.87',
               _hover: {
                 borderColor: 'gray.87',
@@ -65,6 +86,9 @@ export const theme = extendTheme(
             }
           }
         },
+      },
+      Code: {
+        variants: {subtle: codeTheme},
       },
       PanelContainer: {
         baseStyle: {
@@ -102,9 +126,24 @@ export const theme = extendTheme(
         variants: {
           simple: {
             td: {
-              fontSize: '0.8rem'
-            }
+              fontSize: '0.8rem',
+              borderColor: 'gray.87',
+            },
+            thead: {
+              borderBottom: '1px solid var(--chakra-colors-gray-87)',
+            },
           }
+        }
+      },
+      Button: {
+        ...buttonTheme,
+        variants: {
+          solid: (props) => {
+            return {
+              fontSize: props.fontSize || '0.9rem',
+              fontWeight: props.fontWeight || 400,
+            }
+          },
         }
       }
     }

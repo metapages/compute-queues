@@ -1,22 +1,11 @@
 import {
-  useCallback,
-  useEffect,
-  useState,
-} from 'react';
-
-import {
-  DockerJobDefinitionRow,
-  DockerJobFinishedReason,
   DockerJobState,
   JobsStateMap,
-  StateChange,
   StateChangeValueQueued,
 } from '/@/shared';
 
-import { CloseIcon } from '@chakra-ui/icons';
 import {
   Box,
-  Button,
   Table,
   TableContainer,
   Tbody,
@@ -27,8 +16,9 @@ import {
 } from '@chakra-ui/react';
 
 import { useStore } from '/@/store';
+import ButtonJobCancel from '../../generic/ButtonJobCancel';
 
-export const Jobs: React.FC = () => {
+const JobsTable: React.FC = () => {
   const jobs = useStore((state) => state.jobStates);
 
   const jobIds = jobs ? Object.keys(jobs) : [];
@@ -82,7 +72,6 @@ const JobComponent: React.FC<{
 }> = ({ jobId, jobs }) => {
   // How many jobs is this worker running
   const jobBlob = jobs[jobId];
-  // console.log('jobBlob', jobBlob);
   const definition = (jobBlob!.history[0]!.value as StateChangeValueQueued)
     .definition;
 
@@ -100,52 +89,4 @@ const JobComponent: React.FC<{
   );
 };
 
-const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({
-  job,
-}) => {
-  const [clicked, setClicked] = useState<boolean>(false);
-  const sendClientStateChange = useStore(
-    (state) => state.sendClientStateChange
-  );
-
-  useEffect(() => {
-    setClicked(false);
-  }, [sendClientStateChange]);
-
-  const state = job?.state;
-
-  const onClickCancel = useCallback(() => {
-    if (job) {
-      setClicked(true);
-      sendClientStateChange({
-        tag: "",
-        state: DockerJobState.Finished,
-        job: job.hash,
-        value: {
-          reason: DockerJobFinishedReason.Cancelled,
-          time: Date.now(),
-        },
-      } as StateChange);
-    }
-  }, [job, sendClientStateChange]);
-
-  switch (state) {
-    case DockerJobState.Queued:
-    case DockerJobState.ReQueued:
-    case DockerJobState.Running:
-      return (
-        <Button
-          aria-label="Cancel"
-          // @ts-ignore
-          leftIcon={<CloseIcon />}
-          onClick={onClickCancel}
-          isActive={!clicked}
-          size="sm"
-        ></Button>
-      );
-    case DockerJobState.Finished:
-      return null;
-    default:
-      return null;
-  }
-};
+export default JobsTable;

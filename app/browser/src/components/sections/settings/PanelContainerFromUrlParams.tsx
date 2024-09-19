@@ -23,7 +23,7 @@ import {
   useHashParamBoolean,
   useHashParamJson,
 } from '@metapages/hash-query';
-import { FormLink } from '/@/components/generic/FormLink';
+import FormLink from '/@/components/generic/FormLink';
 
 const validationSchema = yup.object({
   command: yup.string().optional(),
@@ -40,7 +40,7 @@ const linkMap = {
   command: "https://docs.docker.com/reference/dockerfile/#cmd",                           
 }
 
-export const PanelContainerFromUrlParams: React.FC<{
+const PanelContainerFromUrlParams: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
   const [jobDefinitionBlob, setJobDefinitionBlob] =
@@ -158,3 +158,5 @@ export const PanelContainerFromUrlParams: React.FC<{
     </VStack>
   );
 };
+
+export default PanelContainerFromUrlParams;

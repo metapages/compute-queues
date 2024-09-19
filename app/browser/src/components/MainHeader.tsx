@@ -1,14 +1,15 @@
+import { useEffect } from "react";
 import { Tooltip, Icon, Flex, HStack, Spacer, Button, Text, } from "@chakra-ui/react";
 import { useHashParamJson } from "@metapages/hash-query";
-import { Terminal, PencilSimple, Play, Gear, UploadSimple, DownloadSimple } from "@phosphor-icons/react";
-import { useEffect } from "react";
-import { DockerJobDefinitionParamsInUrlHash } from "../shared";
+import { Terminal, PencilSimple, Gear, UploadSimple, DownloadSimple } from "@phosphor-icons/react";
+import { JobInputs } from "/@/shared/types";
+import { DockerJobDefinitionParamsInUrlHash } from "/@/shared";
 import { useStore } from "../store";
-import { headerHeight, defaultBorder } from "../styles/theme";
-import { JobInputs } from "./sections/PanelInputs";
-import { JobControlButton } from "./header/JobControlButton";
+import { headerHeight, defaultBorder } from "/@/styles/theme";
 
-export const MainHeader: React.FC = () => {
+import JobControlButton from "/@/components/header/JobControlButton";
+
+const MainHeader: React.FC = () => {
   const [jobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [jobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
 
@@ -86,4 +87,6 @@ export const MainHeader: React.FC = () => {
       </HStack>
     </Flex>
   )
-}
+};
+
+export default MainHeader;

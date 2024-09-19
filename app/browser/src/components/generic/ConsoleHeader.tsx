@@ -1,8 +1,7 @@
 import React from 'react';
 import {
-    HStack, Text, Icon, Flex,
+    HStack, Text, Flex,
 } from '@chakra-ui/react';
-import { X } from '@phosphor-icons/react';
 import { useStore } from '../../store';
 import { defaultBorder } from '../../styles/theme';
 
@@ -12,7 +11,7 @@ interface ConsoleHeaderProps {
     showCombine: boolean
 }
 
-export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, showCombine}) => {
+const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, showCombine}) => {
   const setRightPanelContext = useStore((state) => state.setRightPanelContext);
   const setRunLogs = useStore((state) => state.setRunLogs);
 
@@ -32,4 +31,6 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, s
         </HStack>
     </HStack>
   </Flex>
-}
+};
+
+export default ConsoleHeader;

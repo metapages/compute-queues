@@ -12,7 +12,7 @@ interface PanelHeaderProps {
     preserveCase?: boolean;
 }
 
-export const PanelHeader: React.FC<PanelHeaderProps> = ({title, onSave, preserveCase}) => {
+const PanelHeader: React.FC<PanelHeaderProps> = ({title, onSave, preserveCase}) => {
     const setRightPanelContext = useStore((state) => state.setRightPanelContext);
     const titleText = preserveCase ? title : title.toUpperCase();
     return <Flex zIndex={2} w={'100%'} h={'1.5rem'} borderBottom={defaultBorder} >
@@ -25,3 +25,5 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({title, onSave, preserve
       </HStack>
     </Flex>
 }
+
+export default PanelHeader;

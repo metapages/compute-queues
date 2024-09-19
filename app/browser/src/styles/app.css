@@ -2,11 +2,3 @@
   justify-content: flex-end !important;
   opacity: 0.8;
 }
-
-.chakra-stack:has(#mf-editor) {
-  gap: 0;
-}
-
-.context-view.monaco-menu-container {
-  background: #43527a;
-}

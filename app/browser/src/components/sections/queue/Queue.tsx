@@ -7,14 +7,15 @@ import {
   TabPanels,
   Tabs,
 } from "@chakra-ui/react";
-import { QueueButtonAndLabel } from "./QueueButtonAndLabel";
-import { Jobs } from "/@/components/sections/queue/Jobs";
-import { Workers } from "/@/components/sections/queue/Workers";
 import { useActiveJobsCount } from "/@/hooks/useActiveJobsCount";
 import { useWorkersCount } from "/@/hooks/useWorkersCount";
 import { QuestionIcon } from "@chakra-ui/icons";
 
-export const Queue: React.FC = () => {
+import JobsTable from "/@/components/sections/queue/JobsTable";
+import WorkersTable from "/@/components/sections/queue/WorkersTable";
+import QueueButtonAndLabel from "./QueueButtonAndLabel";
+
+const Queue: React.FC = () => {
   const activeJobsCount = useActiveJobsCount();
   const workerCount = useWorkersCount();
 
@@ -27,16 +28,16 @@ export const Queue: React.FC = () => {
       <HStack width="100%" justifyContent="flex-start" alignItems="stretch">
         <Tabs isFitted={true} width="100%" variant="enclosed">
           <TabList>
-            <Tab>Jobs (active total: {activeJobsCount})</Tab>
-            <Tab>Workers (total {workerCount}) &nbsp; {maybeHelpForNoWorkers}</Tab>
+            <Tab fontSize={'0.9rem'}>Jobs (active total: {activeJobsCount})</Tab>
+            <Tab fontSize={'0.9rem'}>Workers (total {workerCount}) &nbsp; {maybeHelpForNoWorkers}</Tab>
             {/* {maybeHelpForNoWorkers} */}
           </TabList>
           <TabPanels>
             <TabPanel px={0}>
-              <Jobs />
+              <JobsTable />
             </TabPanel>
             <TabPanel px={0}>
-              <Workers />
+              <WorkersTable />
             </TabPanel>
           </TabPanels>
         </Tabs>
@@ -44,3 +45,5 @@ export const Queue: React.FC = () => {
     </VStack>
   );
 };
+
+export default Queue;
