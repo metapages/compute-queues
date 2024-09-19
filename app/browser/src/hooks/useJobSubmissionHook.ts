@@ -50,7 +50,6 @@ export const useJobSubmissionHook = () => {
   // when we get the correct job state, it's straightforward to just show it
   const submitJob = useCallback(() => {
     if (!connected || !dockerJobClient?.definition) {
-      // console.log('❔ not connected');
       setLoading(false);
       return;
     }
@@ -123,6 +122,8 @@ export const useJobSubmissionHook = () => {
       }
     };
   }, [connected, dockerJobClient, sendClientStateChangeDeBounced]);
+
+  
   useEffect(() => {
     if (areJobsStartingAutomatically) {
       submitJob();
