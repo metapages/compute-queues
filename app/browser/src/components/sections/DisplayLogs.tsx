@@ -3,6 +3,8 @@ import {
   useRef,
   useState,
 } from 'react';
+import * as linkify from 'linkifyjs';
+import linkifyHtml from 'linkify-html';
 import { AnsiUp } from 'ansi_up';
 import { ConsoleLogLine } from '/@/shared/types';
 import { useStore } from '/@/store';
@@ -17,7 +19,7 @@ import { OutputTable } from './logs/OutputTable';
 export type LogsMode = "stdout+stderr" | "stdout" | "stderr" | "build";
 
 const EMPTY_ARRAY: ConsoleLogLine[] = [];
-
+const options = { defaultProtocol: 'https' };
 // show e.g. running, or exit code, or error
 export const DisplayLogs: React.FC<{
   mode: LogsMode;
@@ -63,7 +65,6 @@ export const DisplayLogs: React.FC<{
         currentLogs = buildLogs || [];
         break;
     }
-    console.log(currentLogs)
     logsRef.current = currentLogs?.map((l) => l[0]);
     setLogs(logsRef.current);
   }, [mode, jobState, jobId, buildLogs, runLogs]);
@@ -97,9 +98,8 @@ const JustLogs: React.FC<{
   return (
     <Stack spacing={1} p={'0.5rem'}>
       {logsNewlineHandled.map((line, i) => {
-        let html = ansi_up.ansi_to_html(line);
-        console.log(html)
-        return <Code bg={'none'} key={i} dangerouslySetInnerHTML={{ __html: html }}>
+        let formattedLog = linkifyHtml(ansi_up.ansi_to_html(line), options);
+        return <Code bg={'none'} key={i} dangerouslySetInnerHTML={{ __html: formattedLog }}>
         </Code>;
     })}
     </Stack>
