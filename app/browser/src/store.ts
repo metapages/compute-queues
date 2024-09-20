@@ -199,8 +199,6 @@ export const useStore = create<MainStore>((set, get) => ({
       return;
     }
 
-    console.log('jobState', jobState);
-
     set((state) => ({ jobState }));
     if (
       jobState?.state === DockerJobState.Queued ||
