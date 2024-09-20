@@ -97,14 +97,14 @@ export const useSendJobOutputs = () => {
     }
 
     if (jobHashOutputsLastSent.current === dockerJobServer.hash) {
-      console.log(`💔 NOT sending outputs to metaframe, did it already`);
+      // console.log(`💔 NOT sending outputs to metaframe, did it already`);
       return;
     }
 
     if (resolveDataRefs) {
       (async () => {
         // TODO: use a local cache to avoid re-downloading the same outputs
-        console.log(`💚 💖 Resolving data refs for metaframe`);
+        // console.log(`💚 💖 Resolving data refs for metaframe`);
         const metaframeOutputs: MetaframeInputMap | undefined =
           await convertJobOutputDataRefsToExpectedFormat(
             outputs,
@@ -117,7 +117,7 @@ export const useSendJobOutputs = () => {
           // previously we sent the job status code, logs etc, but just send the outputs
           // If you want to send the other stuff, you can on your own
           // metaframeObj.setOutputs!({ ...keysToUrlsOutputs, ...theRest });
-          console.log(`💚 Sending outputs to metaframe`, keysToUrlsOutputs);
+          // console.log(`💚 Sending outputs to metaframe`, keysToUrlsOutputs);
           metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
         } catch (err) {
           console.error("Failed to send metaframe outputs", err);
@@ -125,7 +125,7 @@ export const useSendJobOutputs = () => {
         jobHashOutputsLastSent.current = dockerJobServer.hash;
       })();
     } else {
-      console.log(`💚 Sending outputs to metaframe`, outputs);
+      // console.log(`💚 Sending outputs to metaframe`, outputs);
       const keysToUrlsOutputs = outputs ? convertMetaframeOutputKeysToUrls(outputs) : outputs;
       metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
       jobHashOutputsLastSent.current = dockerJobServer.hash;
