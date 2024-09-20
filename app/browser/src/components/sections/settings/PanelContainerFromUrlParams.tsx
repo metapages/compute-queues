@@ -4,26 +4,30 @@ import {
   useCallback,
 } from 'react';
 
+import { FormLink } from '/@/components/generic/FormLink';
+import {
+  useOptionJobStartAutomatically,
+} from '/@/hooks/useOptionJobStartAutomatically';
 import { DockerJobDefinitionParamsInUrlHash } from '/@/shared';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 
 import {
   Button,
+  Divider,
   FormControl,
   FormLabel,
   Input,
   InputGroup,
+  Link,
   Switch,
-  VStack,
   Text,
-  Divider,
+  VStack,
 } from '@chakra-ui/react';
 import {
   useHashParamBoolean,
   useHashParamJson,
 } from '@metapages/hash-query';
-import { FormLink } from '/@/components/generic/FormLink';
 
 const validationSchema = yup.object({
   command: yup.string().optional(),
@@ -31,6 +35,7 @@ const validationSchema = yup.object({
   entrypoint: yup.string().optional(),
   gpu: yup.boolean().optional(),
   workdir: yup.string().optional(),
+  jobStartAutomatically: yup.boolean().optional(),
 });
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
@@ -40,12 +45,11 @@ const linkMap = {
   command: "https://docs.docker.com/reference/dockerfile/#cmd",                           
 }
 
-export const PanelContainerFromUrlParams: React.FC<{
-  onSave?: () => void;
-}> = ({ onSave }) => {
+export const PanelContainerFromUrlParams: React.FC = () => {
   const [jobDefinitionBlob, setJobDefinitionBlob] =
     useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [debug, setDebug] = useHashParamBoolean("debug");
+  const [jobStartAutomatically, toggleJobStartAutomatically] = useOptionJobStartAutomatically();
 
   const onSubmit = useCallback(
     (values: FormType) => {
@@ -60,24 +64,20 @@ export const PanelContainerFromUrlParams: React.FC<{
       newJobDefinitionBlob.entrypoint = values.entrypoint;
       newJobDefinitionBlob.gpu = values.gpu;
 
-      // console.log('PanelContainerFromUrlParams newJobDefinitionBlob', newJobDefinitionBlob);
-
       setJobDefinitionBlob(newJobDefinitionBlob);
-      setDebug(values.debug!!);
-      if (onSave) {
-        onSave();
-      }
+      setDebug(!!values.debug);
     },
-    [jobDefinitionBlob, onSave, setJobDefinitionBlob, setDebug]
+    [jobDefinitionBlob, setJobDefinitionBlob, setDebug, toggleJobStartAutomatically]
   );
 
   const formik = useFormik({
     initialValues: {
       command: jobDefinitionBlob?.command,
-      debug,
+      debug: !!debug,
       entrypoint: jobDefinitionBlob?.entrypoint,
       gpu: jobDefinitionBlob?.gpu,
       workdir: jobDefinitionBlob?.workdir,
+      jobStartAutomatically,
     },
     onSubmit,
     validationSchema,
@@ -103,6 +103,8 @@ export const PanelContainerFromUrlParams: React.FC<{
             width="100%"
             gap={'1.5rem'}
           >
+            <Text align="center" fontWeight="bold">Container Settings</Text>
+            
             {["command", "entrypoint", "workdir"].map((key) => {
               const labelJsx: ReactNode = <FormLink href={linkMap[key]} label={key} />;                
               return (
@@ -126,7 +128,7 @@ export const PanelContainerFromUrlParams: React.FC<{
 
             <FormControl>
               <FormLabel htmlFor="gpu">
-                <Text>GPU (if worker supported, equavalent to "--gpus all")</Text>
+                <Text>GPU <Link href="https://docs.docker.com/engine/containers/resource_constraints/#access-an-nvidia-gpu">(if worker supported, roughly equivalent to "--gpus '"device=0"'")</Link></Text>
               </FormLabel>
 
               <Switch
@@ -137,6 +139,7 @@ export const PanelContainerFromUrlParams: React.FC<{
               />
             </FormControl>
             <Divider/>
+            <Text align="center" fontWeight="bold">UI Settings</Text>
             <FormControl>
               <FormLabel htmlFor="debug">
                 <Text>Debug</Text>
@@ -145,7 +148,23 @@ export const PanelContainerFromUrlParams: React.FC<{
                 id="debug"
                 name="debug"
                 onChange={handleSwitchChange}
-                isChecked={formik.values.debug}
+                isChecked={debug}
+              />
+            </FormControl>
+            
+
+            <Divider/>
+            <Text align="center" fontWeight="bold">Misc Settings</Text>
+
+            <FormControl>
+              <FormLabel htmlFor="jobStartAutomatically">
+                <Text>Run Job Automatically</Text>
+              </FormLabel>
+              <Switch
+                id="jobStartAutomatically"
+                name="jobStartAutomatically"
+                onChange={toggleJobStartAutomatically}
+                isChecked={jobStartAutomatically}
               />
             </FormControl>
           </VStack>

@@ -1,19 +1,5 @@
-import React from "react";
-import { useHashParam } from '@metapages/hash-query';
+import React from 'react';
 
-import {
-  Text,
-  Icon,
-  HStack,
-  Spinner,
-  VStack,
-} from "@chakra-ui/react";
-import {
-  Prohibit,
-  WarningCircle,
-  Check,
-  HourglassMedium,
-} from "@phosphor-icons/react";
 import {
   DockerJobFinishedReason,
   DockerJobState,
@@ -21,10 +7,25 @@ import {
 } from '/@/shared';
 import { useStore } from '/@/store';
 
+import {
+  HStack,
+  Icon,
+  Spinner,
+  Text,
+  VStack,
+} from '@chakra-ui/react';
+import { useHashParam } from '@metapages/hash-query';
+import {
+  Check,
+  HourglassMedium,
+  Prohibit,
+  WarningCircle,
+} from '@phosphor-icons/react';
+
 const STATUS_ICON_SIZE = 6;
 export const JobStatus: React.FC = () => {
   const [queue] = useHashParam("queue");
-  if (!queue || queue === "") return <></>
+  
   const workers = useStore((state) => state.workers);
   const job = useStore((state) => state.jobState);
 
@@ -33,6 +34,8 @@ export const JobStatus: React.FC = () => {
   if (!state) {
     return <></>
   }
+
+  if (!queue || queue === "") return <></>
 
   const { icon, text, exitCode, desc, jobId, showExitCodeRed } = getJobStateValues(
     job, 

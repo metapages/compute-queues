@@ -6,7 +6,6 @@ import { useEffect } from 'react';
 import {
   BroadcastJobStates,
   BroadcastWorkers,
-  DockerJobState,
   JobStatusPayload,
   WebsocketMessageClientToServer,
   WebsocketMessageServerBroadcast,
@@ -28,32 +27,18 @@ import {
 export const serverWebsocket = (): void => {
   const [address] = useHashParam("queue");
 
-  const setIsServerConnected = useStore(
-    (state) => state.setIsServerConnected
-  );
+  const setIsServerConnected = useStore((state) => state.setIsServerConnected);
 
-  const setJobStates = useStore(
-    (state) => state.setJobStates
-  );
+  const setJobStates = useStore((state) => state.setJobStates);
 
-  const setWorkers = useStore(
-    (state) => state.setWorkers
-  );
+  const setWorkers = useStore((state) => state.setWorkers);
 
-  const setSendMessage = useStore(
-    (state) => state.setSendMessage
-  );
+  const setSendMessage = useStore((state) => state.setSendMessage);
 
-  const setRawMessage = useStore(
-    (state) => state.setRawMessage
-  );
+  const setRawMessage = useStore((state) => state.setRawMessage);
 
-  const appendBuildLogs = useStore(
-    (state) => state.appendBuildLogs
-  );
-
-  const appendRunLogs = useStore(
-    (state) => state.appendRunLogs
+  const handleJobStatusPayload = useStore(
+    (state) => state.handleJobStatusPayload
   );
 
   useEffect(() => {
@@ -128,26 +113,11 @@ export const serverWebsocket = (): void => {
             break;
           case WebsocketMessageTypeServerBroadcast.ClearJobCacheConfirm:
             // We asked for this now we have a response
-            // TODO: do something with this
+            // But we don't currently have a specific use for this
             break;
           case WebsocketMessageTypeServerBroadcast.JobStatusPayload:
             const jobLogs = possibleMessage.payload as JobStatusPayload;
-            switch (jobLogs.step) {
-              case "docker image push":
-                // TODO: do something with the push logs?
-                break;
-              case "docker image pull":
-              case "cloning repo":
-              case "docker build":
-                appendBuildLogs(jobLogs.logs);
-                break;
-              case `${DockerJobState.Running}`:
-                appendRunLogs(jobLogs.logs);
-                break;
-              default:
-                console.error(`❌ Unknown job step:`, jobLogs.step);
-                break;
-            }
+            handleJobStatusPayload(jobLogs);
             break;
           default:
             //ignored
@@ -162,7 +132,7 @@ export const serverWebsocket = (): void => {
       }
     };
 
-    const sender = (message :WebsocketMessageClientToServer) => {
+    const sender = (message: WebsocketMessageClientToServer) => {
       // console.log(`❔ sending from browser to server:`, message);
       rws.send(JSON.stringify(message));
     };

@@ -5,14 +5,16 @@ import {
   useState,
 } from 'react';
 
-import { MetaframeStandaloneComponent } from '@metapages/metapage-embed-react';
-import { useHashParamJson } from '@metapages/hash-query';
-import { useStore } from '/@/store';
-import { encodeOptions, JobInputs } from '/@/shared';
-
 import { PanelContainer } from '/@/components/generic/PanelContainer';
 import { PanelHeader } from '/@/components/generic/PanelHeader';
+import {
+  encodeOptions,
+  JobInputs,
+} from '/@/shared';
+import { useStore } from '/@/store';
 
+import { useHashParamJson } from '@metapages/hash-query';
+import { MetaframeStandaloneComponent } from '@metapages/metapage-embed-react';
 
 export const PanelEditor: React.FC = () => {
   const [value, setValue] = useState(null);
@@ -20,9 +22,19 @@ export const PanelEditor: React.FC = () => {
     "inputs"
   );
   const mainInputFile = useStore((state) => state.mainInputFile);
+  const setMainInputFileContent = useStore((state) => state.setMainInputFileContent);
+  
+  // clear the main input file content on unmount
+  useEffect(() => {
+    return () => {
+      setMainInputFileContent(null);
+    }
+  }, [setMainInputFileContent]);
+  
   const options = useRef('')
 
   useEffect(() => {
+    if (!mainInputFile) return;
     const fileExtension = mainInputFile.split('.').pop();
     options.current = encodeOptions({
       autosend: true, 
@@ -35,15 +47,16 @@ export const PanelEditor: React.FC = () => {
 
   const updateInput = useCallback(
     (content: string) => {
-      const newJobDefinitionBlob = { ...jobInputs };
-      newJobDefinitionBlob[mainInputFile] = content;
-      setJobInputs(newJobDefinitionBlob);
+      const newJobInputsBlob = { ...jobInputs };
+      newJobInputsBlob[mainInputFile] = content;
+      setJobInputs(newJobInputsBlob);
     },
     [jobInputs, setJobInputs, mainInputFile]
   );
 
   const onSave = useCallback(() => {
     updateInput(value);
+    setMainInputFileContent(null);
   }, [value, updateInput]);
 
   const onOutputs = useCallback(
@@ -52,9 +65,14 @@ export const PanelEditor: React.FC = () => {
         return;
       }
       const newValue = outputs["text"];
+      if (jobInputs?.[mainInputFile] === newValue) {
+        return;
+      }
+      console.log(`🍔 onOutputs jobInputs?.[mainInputFile]:${jobInputs?.[mainInputFile]} newValue:${newValue}`);
       setValue(newValue);
+      setMainInputFileContent(newValue);
     },
-    []
+    [mainInputFile, jobInputs, setMainInputFileContent]
   );
 
   if (!options.current) return <></>;

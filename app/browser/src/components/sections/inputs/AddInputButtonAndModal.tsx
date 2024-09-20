@@ -1,22 +1,23 @@
-import { 
-  useDisclosure, 
-  HStack, 
-  Icon, 
-  Modal, 
-  ModalOverlay, 
-  ModalContent, 
-  ModalHeader, 
-  ModalBody, 
-  Input, 
-  ModalFooter, 
+import { useCallback } from 'react';
+
+import { useFormik } from 'formik';
+import * as yup from 'yup';
+
+import {
   Button,
+  HStack,
+  Icon,
+  Input,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Text,
-} from "@chakra-ui/react";
-import { Plus } from "@phosphor-icons/react";
-import { useFormik } from "formik";
-import { FormControl } from "formik-chakra-ui";
-import { useCallback } from "react";
-import * as yup from "yup";
+  useDisclosure,
+} from '@chakra-ui/react';
+import { Plus } from '@phosphor-icons/react';
 
 const validationSchema = yup.object({
   fileName: yup.string(),
@@ -34,7 +35,7 @@ export const AddInputButtonAndModal: React.FC<{
       if (values.fileName) {
         add(values.fileName);
       }
-      formik.resetForm();
+      // formik.resetForm();
       onClose();
     },
     [onClose, add]
@@ -60,8 +61,9 @@ export const AddInputButtonAndModal: React.FC<{
         <Icon as={Plus} 
           boxSize={'1.3rem'} />
         {
-          showText &&
+          showText ?
           <Text size={'med'}>New File</Text>
+          : null
         }
       </HStack>
 

@@ -1,14 +1,13 @@
 import {
   useCallback,
   useEffect,
-  // useState,
+  useState,
 } from 'react';
 
+import { useJobSubmissionHook } from '/@/hooks/useJobSubmissionHook';
 import {
   DockerJobFinishedReason,
   DockerJobState,
-  StateChange,
-  StateChangeValueQueued,
   StateChangeValueWorkerFinished,
 } from '/@/shared/types';
 
@@ -20,60 +19,64 @@ import {
   Text,
   useMediaQuery,
 } from '@chakra-ui/react';
-import { useHashParamBoolean } from '@metapages/hash-query';
+import {
+  Lock,
+  Play,
+  Repeat,
+  Stop,
+} from '@phosphor-icons/react';
 
 import { useStore } from '../../store';
-import { Play, Repeat, Stop, Lock } from '@phosphor-icons/react';
 
 export const JobControlButton: React.FC = () => {
-  const job = useStore((state) => state.jobState);
+
+  const serverJobState = useStore((state) => state.jobState);
   const [isLargerThan600] = useMediaQuery("(min-width: 600px)");
-  // Question: do we need this?
-  // const [clicked, setClicked] = useState<boolean>(false);
-  const sendClientStateChange = useStore(
-    (state) => state.sendClientStateChange
-  );
-  const [debug] = useHashParamBoolean("debug");
+  const [isJobRequeued, setIsJobRequeued] = useState(false);
 
+  const mainInputFileContent = useStore((state) => state.mainInputFileContent);
+  const setUserClickedRun = useStore((state) => state.setUserClickedRun);
+  const [temporarilyForceShowQueued, setTemporarilyForceShowQueued] = useState(false);
+
+  // If we get a new job state, we are not in the process of requeueing
   useEffect(() => {
-    // setClicked(false);
-  }, [sendClientStateChange]);
+    if (serverJobState) {
+      setIsJobRequeued(false);
+    }
+  }, [serverJobState]);
 
-  const state = job?.state;
+  const {submitJob, loading} = useJobSubmissionHook();
+  const cancelJob = useStore(
+    (state) => state.cancelJob
+  );
+  const saveInputFileAndRun = useStore(
+    (state) => state.saveInputFileAndRun
+  );
+  const resubmitJob = useStore(
+    (state) => state.resubmitJob
+  );
+
+  const state = serverJobState?.state;
 
   const onClickCancel = useCallback(() => {
-    if (job) {
-      // setClicked(true);
-      sendClientStateChange({
-        tag: "",
-        state: DockerJobState.Finished,
-        job: job.hash,
-        value: {
-          reason: DockerJobFinishedReason.Cancelled,
-          time: Date.now(),
-        },
-      } as StateChange);
-    }
-  }, [job, sendClientStateChange]);
+    cancelJob();
+  }, [cancelJob]);
 
   const onClickRetry = useCallback(() => {
-    if (job) {
-      // setClicked(true);
+    setUserClickedRun(true);
+    setIsJobRequeued(true);
+    resubmitJob();
+    
+  }, [resubmitJob, setUserClickedRun]);
 
-      const value: StateChangeValueQueued = {
-        definition: (job.history[0].value as StateChangeValueQueued).definition,
-        time: Date.now(),
-        debug,
-      };
-
-      sendClientStateChange({
-        tag: "",
-        state: DockerJobState.Queued,
-        job: job.hash,
-        value,
-      } as StateChange);
-    }
-  }, [job, sendClientStateChange, debug]);
+  const onClickSaveAndRun = useCallback(() => {
+    setUserClickedRun(true);
+    saveInputFileAndRun();
+    setTemporarilyForceShowQueued(true);
+    setTimeout(() => {
+      setTemporarilyForceShowQueued(false);
+    }, 1000);
+  }, [saveInputFileAndRun, setUserClickedRun]);
 
   const disabledButton = (
     <HeaderButton
@@ -93,11 +96,30 @@ export const JobControlButton: React.FC = () => {
     />
   );
 
+  const saveAndRunButton = (
+    <HeaderButton
+      ariaLabel="Save-and-run"
+      icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
+      onClick={onClickSaveAndRun}
+      text={isLargerThan600 ? "Save+Run" : ""}
+    />
+  );
+
+  const savedAndRunButton = (
+    <HeaderButton
+      ariaLabel="Save-and-run"
+      icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
+      onClick={() => {}}
+      text={isLargerThan600 ? "queued..." : ""}
+    />
+  );
+
   const requeueButton = (
     <HeaderButton
       ariaLabel="Re-queue"
-      icon={<Icon as={Repeat} size={'1.2rem'} />}
+      icon={<Icon as={Repeat} weight='duotone' color='green' size={'1.2rem'} />}
       onClick={onClickRetry}
+      loading={isJobRequeued}
       text={isLargerThan600 ? "Re-queue" : ""}
     />
   );
@@ -106,7 +128,7 @@ export const JobControlButton: React.FC = () => {
     <HeaderButton
       ariaLabel="Run-job"
       icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
-      onClick={() => {}}
+      onClick={() => {submitJob(); setUserClickedRun(true);}}
       text={isLargerThan600 ? "Run Job" : ""}
       color={'green'}
     />
@@ -121,13 +143,29 @@ export const JobControlButton: React.FC = () => {
     />
   );
 
+
+  if (temporarilyForceShowQueued) {
+    return savedAndRunButton;
+  }
+
+  if (!state) {
+    return runButton;
+  }
+
+  
+  
+
+  if (mainInputFileContent) { 
+    return saveAndRunButton;
+  }
+
   switch (state) {
     case DockerJobState.Queued:
     case DockerJobState.Running:
       return cancelButton;
     case DockerJobState.Finished:
       const value: StateChangeValueWorkerFinished | undefined =
-        job?.value as StateChangeValueWorkerFinished;
+        serverJobState?.value as StateChangeValueWorkerFinished;
       if (value) {
         switch (value.reason) {
           case DockerJobFinishedReason.Error:
@@ -151,7 +189,8 @@ const HeaderButton: React.FC<{
   onClick?: () => void, 
   icon?: any,
   color?: string,
-}> = ({text, ariaLabel, onClick, icon, color}) => {
+  loading?: boolean,
+}> = ({text, ariaLabel, onClick, icon, color, loading}) => {
   return <Button disabled={true}
     width={'7.5rem'}
     aria-label={ariaLabel}
@@ -159,6 +198,7 @@ const HeaderButton: React.FC<{
     _hover={{bg: 'none'}}
     onClick={onClick}
     cursor={onClick ? 'pointer' : 'not-allowed'}
+    isLoading={loading}
   >
     <HStack gap={2}>
       {icon}

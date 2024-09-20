@@ -1,22 +1,28 @@
 export type IsStdErr = boolean;
 export type ConsoleLogLine = [string, number, IsStdErr] | [string, number];
 
+export type JobInputs = { [key: string]: string };
+
 // represents a way of getting a blob of data (inputs/outputs)
 export enum DataRefType {
   base64 = "base64", //default, value is a base64 encoded bytes
   url = "url", // request the data at this URL
   utf8 = "utf8",
   json = "json",
-  // Inline = "inline", // string or JSON as the actual final input/output data. binary is hard here, so use others when needed
-  key = "key", // the internal system can get this data blob given the key address (stored in the value)
-  hash = "hash", //temporary workaround
+  // the internal system can get this data blob given the key address (stored in the value)
+  // this is typically the sha256 hash of the data
+  key = "key",
 }
+
+const DataRefTypeKeys :string[] = Object.keys(DataRefType).filter(key => isNaN(Number(key)));
+export const DataRefTypesSet = new Set(DataRefTypeKeys);
 
 export const DataRefTypeDefault = DataRefType.utf8;
 
 export type DataRef<T = string> = {
   value: T;
   type?: DataRefType;
+  hash?: string;
 };
 
 export type Image = string;
@@ -39,10 +45,11 @@ export type DockerJobImageBuild = {
 export type DockerJobDefinitionInputsBase64 = {
   // the docker image OR git repository URL
   image?: Image;
-
+  // docker image build configuration
   build?: DockerJobImageBuild;
-
+  // docker command
   command?: Command;
+  // docker env vars, not currently implemented on the client
   env?: Env;
   // entrypoint?: string[];
   entrypoint?: string;
@@ -208,10 +215,16 @@ export type WebsocketMessageSenderWorker = (
 export enum WebsocketMessageTypeClientToServer {
   StateChange = "StateChange",
   ClearJobCache = "ClearJobCache",
+  ResubmitJob = "ResubmitJob",
 }
 export interface PayloadClearJobCache {
   jobId: string;
+  // why do we need the definition here?
   definition: DockerJobDefinitionInputRefs;
+}
+
+export interface PayloadResubmitJob {
+  jobId: string;
 }
 
 export interface PayloadClearJobCacheConfirm {
@@ -224,7 +237,7 @@ export interface PayloadClearJobOnWorker {
 
 export interface WebsocketMessageClientToServer {
   type: WebsocketMessageTypeClientToServer;
-  payload: StateChange | PayloadClearJobCache;
+  payload: StateChange | PayloadClearJobCache | PayloadResubmitJob;
 }
 export type WebsocketMessageSenderClient = (
   message: WebsocketMessageClientToServer

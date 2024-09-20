@@ -3,6 +3,7 @@ import {
   JobsStateMap,
   StateChangeValueRunning,
 } from '/@/shared';
+import { useStore } from '/@/store';
 
 import {
   Box,
@@ -15,12 +16,11 @@ import {
   Tr,
 } from '@chakra-ui/react';
 
-import { useStore } from '/@/store';
-
 export const WorkersTable: React.FC = () => {
   const workers = useStore((state) => state.workers);
   const jobs = useStore((state) => state.jobStates);
 
+  
   return (
     <Box p={2}>
       <Table variant="simple">

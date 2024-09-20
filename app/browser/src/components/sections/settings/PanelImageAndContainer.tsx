@@ -11,9 +11,8 @@ import {
 import { PanelContainerFromUrlParams } from '/@/components/sections/settings/PanelContainerFromUrlParams';
 import { PanelImageBuildFromUrlParams } from '/@/components/sections/settings/PanelImageBuildFromUrlParams';
 
-export const PanelImageAndContainer: React.FC<{
-  onSave?: () => void;
-}> = ({ onSave }) => {
+export const PanelImageAndContainer: React.FC = () => {
+
   return (
     <VStack w="100%" alignItems="stretch">
       <Tabs isFitted={true}>
@@ -24,10 +23,10 @@ export const PanelImageAndContainer: React.FC<{
 
         <TabPanels>
           <TabPanel>
-            <PanelContainerFromUrlParams onSave={onSave} />
+            <PanelContainerFromUrlParams />
           </TabPanel>
           <TabPanel>
-            <PanelImageBuildFromUrlParams onSave={onSave} />
+            <PanelImageBuildFromUrlParams />
           </TabPanel>
         </TabPanels>
       </Tabs>
