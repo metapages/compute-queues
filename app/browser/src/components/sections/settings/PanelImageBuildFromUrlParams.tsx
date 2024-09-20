@@ -1,6 +1,7 @@
 import {
   ReactNode,
   useCallback,
+  useEffect,
   useState,
 } from 'react';
 
@@ -61,13 +62,18 @@ const labelSubMap = {
 export const PanelImageBuildFromUrlParams: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
-  const [value, setValue] = useState('useExisting')
+  const [tab, setTab] = useState(null)
   const [jobDefinitionBlob, setJobDefinitionBlob] =
     useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   
+  useEffect(() => {
+    if (!tab && jobDefinitionBlob) {
+      setTab(jobDefinitionBlob?.image ? 'useExisting' : "fromRepo")
+    }
+  }, [tab, jobDefinitionBlob])
+
   const onSubmit = useCallback(
     (values: FormType) => {
-
       const newJobDefinitionBlob = { ...jobDefinitionBlob };
 
       if (!values.image) {
@@ -133,7 +139,6 @@ export const PanelImageBuildFromUrlParams: React.FC<{
       }
       setJobDefinitionBlob(newJobDefinitionBlob);
       onSave?.();
-      console.log(newJobDefinitionBlob)
     },
     [jobDefinitionBlob, onSave, setJobDefinitionBlob]
   );
@@ -174,7 +179,6 @@ export const PanelImageBuildFromUrlParams: React.FC<{
       delete newJobDefinitionBlob.image;
       setJobDefinitionBlob(newJobDefinitionBlob);
       onSave?.();
-      console.log(newJobDefinitionBlob.image)
     },
     [formik, jobDefinitionBlob, onSave, setJobDefinitionBlob]
   );
@@ -226,7 +230,6 @@ export const PanelImageBuildFromUrlParams: React.FC<{
                 button={{isDisabled: isImageSet, ["aria-label"]: "edit dockerfile"}}
                 />
               {jobDefinitionBlob?.build?.dockerfile ? <Icon
-                  size="md"
                   aria-label="delete dockerfile"
                   onClick={deleteDockerfile}
                   as={TrashSimple}
@@ -278,31 +281,31 @@ export const PanelImageBuildFromUrlParams: React.FC<{
     </VStack>
   }
 
-  const onSetValue = (val) => {
-    if (val === 'fromRepo') {
+  const onSetValue = (tab) => {
+    if (tab === 'fromRepo') {
       localStorage.setItem('dockerImage', formik.values.image);
       deleteImage();
     } else {
-      const prevImage = localStorage.getItem('dockerImage');
+      const prevImage = localStorage.getItem('dockerImage') || '';
       formik.setFieldValue("image", prevImage);
     }
-    setValue(val)
+    setTab(tab)
   };
 
   return (
     <form onSubmit={formik.handleSubmit}>
       <VStack gap={'2rem'}>
         <FormControl>
-          <RadioGroup onChange={onSetValue} value={value}>
+          <RadioGroup onChange={onSetValue} value={tab}>
             <VStack align={'flex-start'} gap={5}>
               <Radio value='useExisting' colorScheme={'blackAlpha'}>
                 <Text>Use Existing Image</Text>
               </Radio>
-              {value === 'useExisting' && existingImageInputs()}
+              {tab === 'useExisting' && existingImageInputs()}
               <Radio value='fromRepo' colorScheme={'blackAlpha'}>
                 <Text>Build Image from Repo</Text>
               </Radio>
-              {value === 'fromRepo' && externalImageInputs()}
+              {tab === 'fromRepo' && externalImageInputs()}
             </VStack>
           </RadioGroup>
         </FormControl>

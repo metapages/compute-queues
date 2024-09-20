@@ -34,9 +34,9 @@ export const WorkersTable: React.FC = () => {
           </Tr>
         </Thead>
         <Tbody>
-          {workers?.workers?.map((worker) => (
+          {workers?.workers?.map((worker, i) => (
             <WorkerRow
-              key={worker.id}
+              key={worker.id + i}
               gpus={worker.gpus}
               cpus={worker.cpus}
               workerId={worker.id}

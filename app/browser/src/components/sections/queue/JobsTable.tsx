@@ -56,8 +56,8 @@ export const JobsTable: React.FC = () => {
             </Tr>
           </Thead>
           <Tbody>
-            {jobIds.map((jobHash) => (
-              <JobComponent key={jobHash} jobId={jobHash} jobs={jobs} />
+            {jobIds.map((jobHash, i) => (
+              <JobComponent key={jobHash + i} jobId={jobHash} jobs={jobs} />
             ))}
           </Tbody>
         </Table>

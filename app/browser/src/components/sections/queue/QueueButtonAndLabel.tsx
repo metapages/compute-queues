@@ -51,11 +51,11 @@ export const QueueButtonAndLabel: React.FC = () => {
   });
 
   return (
-    <HStack width="100%">
+    <HStack width="100%" pl={'1rem'}>
       <Icon as={queue && isServerConnected ? WifiHigh : WifiSlash}
-        size="lg"
         color={!(queue && isServerConnected) && 'red'}
         aria-label="edit docker job queue"
+        boxSize="7"
       />
       <Text p={2}>
         Queue key:

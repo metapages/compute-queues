@@ -43,7 +43,6 @@ export const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({
           icon={<CloseIcon boxSize={3}/>}
           onClick={onClickCancel}
           isActive={!clicked}
-          size="sm"
         ></IconButton>
       );
     case DockerJobState.Finished:
