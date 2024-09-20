@@ -94,7 +94,10 @@ export const useSendJobOutputs = () => {
     }
     const stateFinished =
       dockerJobServer.value as StateChangeValueWorkerFinished;
-    const result: DockerRunResultWithOutputs = stateFinished.result || {};
+    const result: DockerRunResultWithOutputs = stateFinished.result;
+    if (!result) {
+      return;
+    }
     const { outputs, ...theRest } = result;
     if (!outputs || Object.keys(outputs).length === 0) {
       // console.log(`💔 NOT sending outputs there are none`);
