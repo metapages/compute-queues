@@ -8,6 +8,7 @@ import { FormLink } from '/@/components/generic/FormLink';
 import {
   useOptionJobStartAutomatically,
 } from '/@/hooks/useOptionJobStartAutomatically';
+import { useOptionResolveDataRefs } from '/@/hooks/useOptionResolveDataRefs';
 import { DockerJobDefinitionParamsInUrlHash } from '/@/shared';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -45,11 +46,12 @@ const linkMap = {
   command: "https://docs.docker.com/reference/dockerfile/#cmd",                           
 }
 
-export const PanelContainerFromUrlParams: React.FC = () => {
+export const PanelConfigurationAndContainerFromUrlParams: React.FC = () => {
   const [jobDefinitionBlob, setJobDefinitionBlob] =
     useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [debug, setDebug] = useHashParamBoolean("debug");
   const [jobStartAutomatically, toggleJobStartAutomatically] = useOptionJobStartAutomatically();
+  const [resolveDataRefs, toggleResolveDataRefs] = useOptionResolveDataRefs();
 
   const onSubmit = useCallback(
     (values: FormType) => {
@@ -165,6 +167,18 @@ export const PanelContainerFromUrlParams: React.FC = () => {
                 name="jobStartAutomatically"
                 onChange={toggleJobStartAutomatically}
                 isChecked={jobStartAutomatically}
+              />
+            </FormControl>
+
+            <FormControl>
+              <FormLabel htmlFor="jobStartAutomatically">
+                <Text>Resolve [data references] ▶️ [data] (send big data directly)</Text>
+              </FormLabel>
+              <Switch
+                id="resolveDataRefs"
+                name="resolveDataRefs"
+                onChange={toggleResolveDataRefs}
+                isChecked={resolveDataRefs}
               />
             </FormControl>
           </VStack>

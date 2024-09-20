@@ -185,6 +185,22 @@ export const useStore = create<MainStore>((set, get) => ({
 
   jobState: undefined,
   setJobState: (jobState: DockerJobDefinitionRow | undefined) => {
+    
+    if (!jobState) {
+      set((state) => ({
+        jobState: undefined,
+        buildLogs: null,
+        runLogs: null,
+      }));
+      return;
+    }
+
+    if (get().jobState && get().jobState.hash === jobState.hash && get().jobState.history.length === jobState.history.length) {
+      return;
+    }
+
+    console.log('jobState', jobState);
+
     set((state) => ({ jobState }));
     if (
       jobState?.state === DockerJobState.Queued ||
@@ -210,14 +226,13 @@ export const useStore = create<MainStore>((set, get) => ({
     // check if it's queued and an existing finished job exists.
     // If so, set the job state to finished, with the cached finished state
     // This means the state change doesn't reach the server+worker
-    console.log('sendClientStateChange',  clientStateChange)
     if (clientStateChange.state === DockerJobState.Queued) {
       const queueState = clientStateChange.value as StateChangeValueQueued;
       const existingFinishedJob = await getFinishedJob(clientStateChange.job);
       if (existingFinishedJob) {
-        console.log(
-          `✅ 🐼 Found existing finished job for ${clientStateChange.job}`
-        );
+        // console.log(
+        //   `✅ 🐼 Found existing finished job for ${clientStateChange.job}`
+        // );
         const currentJobStates = get().jobStates;
         const newJobStates = {
           ...currentJobStates,
@@ -317,15 +332,16 @@ export const useStore = create<MainStore>((set, get) => ({
 
   // the initial sendMessage just caches the messages to send later
   sendMessage: (message: WebsocketMessageClientToServer) => {
-    console.log(`❔ CACHING:`, message);
-    _cachedMessages.push(message);
+    console.log(`❗ websocket not connected, dropping message:`, message);
+    // console.log(`❔ CACHING:`, message);
+    // _cachedMessages.push(message);
   },
   setSendMessage: (sendMessage: WebsocketMessageSenderClient) => {
     // Send the cached messages
-    while (_cachedMessages.length > 0) {
-      console.log(`❔ 💘 SENDING CACHed:`, _cachedMessages[0]);
-      sendMessage(_cachedMessages.shift());
-    }
+    // while (_cachedMessages.length > 0) {
+    //   console.log(`❔ 💘 SENDING CACHed:`, _cachedMessages[0]);
+    //   sendMessage(_cachedMessages.shift());
+    // }
     set((state) => ({ sendMessage }));
   },
 

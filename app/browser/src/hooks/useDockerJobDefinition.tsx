@@ -41,7 +41,7 @@ export const useDockerJobDefinition = () => {
     DockerJobDefinitionParamsInUrlHash | undefined
   >("job");
   // input text files are stored in the URL hash
-  const [jobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
+  const [jobInputsFromUrl] = useHashParamJson<JobInputs | undefined>("inputs");
 
   // this changes when the metaframe inputs change
   const metaframeBlob = useMetaframeAndInput();
@@ -71,13 +71,13 @@ export const useDockerJobDefinition = () => {
 
     // These are inputs set in the metaframe and stored in the url hash params. They
     // are always type: DataRefType.utf8 because they come from the text editor
-    definition.inputs = !jobInputs
+    definition.inputs = !jobInputsFromUrl
       ? {}
       : Object.fromEntries(
-          Object.keys(jobInputs).map((key) => {
+          Object.keys(jobInputsFromUrl).map((key) => {
             return [
               key,
-              { type: DataRefType.utf8, value: jobInputs[key] as string },
+              { type: DataRefType.utf8, value: jobInputsFromUrl[key] as string },
             ];
           })
         );
@@ -172,5 +172,5 @@ export const useDockerJobDefinition = () => {
         cancelled = true;
       };
     })();
-  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputs, debug]);
+  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, debug]);
 };

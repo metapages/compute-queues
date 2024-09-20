@@ -8,7 +8,7 @@ import {
   VStack,
 } from '@chakra-ui/react';
 
-import { PanelContainerFromUrlParams } from '/@/components/sections/settings/PanelContainerFromUrlParams';
+import { PanelConfigurationAndContainerFromUrlParams } from '/@/components/sections/settings/PanelConfigurationAndContainerFromUrlParams';
 import { PanelImageBuildFromUrlParams } from '/@/components/sections/settings/PanelImageBuildFromUrlParams';
 
 export const PanelImageAndContainer: React.FC = () => {
@@ -23,7 +23,7 @@ export const PanelImageAndContainer: React.FC = () => {
 
         <TabPanels>
           <TabPanel>
-            <PanelContainerFromUrlParams />
+            <PanelConfigurationAndContainerFromUrlParams />
           </TabPanel>
           <TabPanel>
             <PanelImageBuildFromUrlParams />

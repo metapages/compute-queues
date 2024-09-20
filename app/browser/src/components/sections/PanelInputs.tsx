@@ -51,7 +51,7 @@ export const PanelInputs: React.FC = () => {
     <PanelContainer>
       <PanelHeader title={'Inputs'} />
       <HStack px={4} width="100%" justifyContent="space-between">
-        <Text>Input Files</Text>
+        <Text>{"/inputs/<files>"}</Text>
         <AddInputButtonAndModal add={addNewInput} showText={false} />
       </HStack>
       <Container>

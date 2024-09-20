@@ -68,7 +68,6 @@ export const PanelEditor: React.FC = () => {
       if (jobInputs?.[mainInputFile] === newValue) {
         return;
       }
-      console.log(`🍔 onOutputs jobInputs?.[mainInputFile]:${jobInputs?.[mainInputFile]} newValue:${newValue}`);
       setValue(newValue);
       setMainInputFileContent(newValue);
     },

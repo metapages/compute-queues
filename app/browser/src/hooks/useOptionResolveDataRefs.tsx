@@ -1,6 +1,12 @@
 import { useHashParamBoolean } from '@metapages/hash-query';
+import { ChangeEvent, useCallback } from 'react';
 
-export const useOptionResolveDataRefs = () => {
+export const useOptionResolveDataRefs = (): [boolean, (event?: ChangeEvent<HTMLInputElement>) => void] => {
   const [resolveDatarefs, setResolveDatarefs] = useHashParamBoolean("resolverefs");
-  return[ resolveDatarefs, setResolveDatarefs ];
+  const toggleResolveDataRefs = useCallback((event: ChangeEvent<HTMLInputElement>) :void => {
+    setResolveDatarefs(!resolveDatarefs);
+  }, [
+    resolveDatarefs, setResolveDatarefs
+  ]);
+  return[ resolveDatarefs, toggleResolveDataRefs ];
 };

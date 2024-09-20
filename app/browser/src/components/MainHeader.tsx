@@ -97,7 +97,7 @@ export const MainHeader: React.FC = () => {
               <HStack gap={2}>
                 <Icon as={PencilSimple}/>
                 <Spacer />
-                <Text>Edit Script</Text>
+                <Text>{`/inputs/${mainInputFile}`}</Text>
               </HStack>
             </Button>
           }

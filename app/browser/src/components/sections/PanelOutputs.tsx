@@ -35,8 +35,12 @@ export const PanelOutputs: React.FC = () => {
   return (
     <PanelContainer>
       <PanelHeader title={'Outputs'} />
+      <HStack px={4} width="100%" justifyContent="space-between">
+        <Text>{"/outputs/<files>"}</Text>
+        
+      </HStack>
       <Center px={4} width="100%">
-        <Text fontSize={'0.9rem'}>Output Items</Text>
+        <Text fontSize={'0.9rem'}>Output Files</Text>
       </Center>
       <Container>
         <Table px={5} variant="simple">
