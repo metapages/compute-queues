@@ -133,7 +133,7 @@ const getJobStateValues = (job, state, workerCount): {
     case DockerJobState.Running:
       text = "Job Running";
       icon = <Spinner color={'orange'} boxSize={STATUS_ICON_SIZE} />;
-      desc = `${workerCount} Worker${workerCount > 1 && 's'}`;
+      desc = `${workerCount} Worker${workerCount > 1 ? 's' : ''}`;
       break; 
     }
   return {text, icon, desc, exitCode, jobId, showExitCodeRed};

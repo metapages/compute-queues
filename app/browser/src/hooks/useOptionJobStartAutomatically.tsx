@@ -7,7 +7,7 @@ import { useHashParamBoolean } from '@metapages/hash-query';
 
 export const useOptionJobStartAutomatically = () :[boolean, (event: ChangeEvent<HTMLInputElement>) => void] => {
   const [jobStartAutomatically, setJobStartAutomatically] = useHashParamBoolean("autostart");
-  const toggleJobStartAutomatically = useCallback((event: ChangeEvent<HTMLInputElement>) :void => {
+  const toggleJobStartAutomatically = useCallback((_: ChangeEvent<HTMLInputElement>) :void => {
     setJobStartAutomatically(!jobStartAutomatically);
   }, [
     jobStartAutomatically, setJobStartAutomatically

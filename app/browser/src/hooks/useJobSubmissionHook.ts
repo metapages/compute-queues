@@ -25,13 +25,7 @@ export const useJobSubmissionHook = () => {
     dockerJobServerRef.current = dockerJobServer;
   }, [dockerJobServer]);
 
-  
-
-
   const connected = useStore((state) => state.isServerConnected);
-  const sendClientStateChange = useStore(
-    (state) => state.sendClientStateChange
-  );
   const submitJobFromStore = useStore(
     (state) => state.submitJob
   );
@@ -47,15 +41,6 @@ export const useJobSubmissionHook = () => {
       submitJobFromStore();
     }
   }, [dockerJobClient, isJobStartingAutomatically, submitJobFromStore]);
-
-
-  // const sendClientStateChangeDeBounced = useCallback(
-  //   pDebounce((payload: StateChange) => {
-  //     // console.log("🍔 ACTUALLY debounced sending payload", payload);
-  //     sendClientStateChange(payload);
-  //   }, 200),
-  //   [sendClientStateChange]
-  // );
 
   // track the job state that matches our job definition (created by URL query params and inputs)
   // when we get the correct job state, it's straightforward to just show it
@@ -80,29 +65,8 @@ export const useJobSubmissionHook = () => {
         return;
       }
 
-      // const sendQueuedStateChange = () => {
-      //   console.log(`🍔🍔 sendQueuedStateChange id=${jobHashCurrent}`);
-      //   // inputs are already minified (fat blobs uploaded to the cloud)
-      //   const value: StateChangeValueQueued = {
-      //     definition: dockerJobClient!.definition!,
-      //     time: Date.now(),
-      //   };
-      //   if (dockerJobClient.debug) {
-      //     value.debug = true;
-      //   }
-      //   const payload: StateChange = {
-      //     state: DockerJobState.Queued,
-      //     value,
-      //     job: jobHashCurrent,
-      //     tag: "", // document the meaning of this. It's the worker claim. Might be unneccesary due to history
-      //   };
-
-      //   sendClientStateChangeDeBounced(payload);
-      // };
-
       setLoading(true);
       submitJobFromStore();
-      // sendQueuedStateChange();
 
       loadingCheckInterval = setInterval(() => {
         if (dockerJobServerRef.current?.hash === jobHashCurrent) {

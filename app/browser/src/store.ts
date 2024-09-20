@@ -30,12 +30,14 @@ import {
   WebsocketMessageServerBroadcast,
 } from './shared/types';
 
-const _cachedMessages: any[] = [];
+let _cachedMostRecentSubmit: WebsocketMessageClientToServer | undefined;
 
 export const cacheInsteadOfSendMessages = (
   message: WebsocketMessageClientToServer
 ) => {
-  _cachedMessages.push(message);
+  if (message.type === WebsocketMessageTypeClientToServer.StateChange && (message.payload as StateChange).state === DockerJobState.Queued) {
+    _cachedMostRecentSubmit = message;
+  }
 };
 
 interface MainStore {
@@ -194,8 +196,8 @@ export const useStore = create<MainStore>((set, get) => ({
       }));
       return;
     }
-
-    if (get().jobState && get().jobState.hash === jobState.hash && get().jobState.history.length === jobState.history.length) {
+    const existingJobState = get().jobState;
+    if (existingJobState && existingJobState.hash === jobState.hash && existingJobState.history.length === jobState.history.length) {
       return;
     }
 
@@ -329,17 +331,15 @@ export const useStore = create<MainStore>((set, get) => ({
   },
 
   // the initial sendMessage just caches the messages to send later
-  sendMessage: (message: WebsocketMessageClientToServer) => {
-    console.log(`❗ websocket not connected, dropping message:`, message);
-    // console.log(`❔ CACHING:`, message);
-    // _cachedMessages.push(message);
-  },
+  sendMessage: cacheInsteadOfSendMessages,
+
   setSendMessage: (sendMessage: WebsocketMessageSenderClient) => {
     // Send the cached messages
-    // while (_cachedMessages.length > 0) {
-    //   console.log(`❔ 💘 SENDING CACHed:`, _cachedMessages[0]);
-    //   sendMessage(_cachedMessages.shift());
-    // }
+    if (sendMessage !== cacheInsteadOfSendMessages) {
+      const msg = _cachedMostRecentSubmit;
+      _cachedMostRecentSubmit = undefined
+      sendMessage(msg);
+    }
     set((state) => ({ sendMessage }));
   },
 

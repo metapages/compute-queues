@@ -22,6 +22,7 @@ import {
 import {
   Lock,
   Play,
+  Queue as QueueIcon,
   Repeat,
   Stop,
 } from '@phosphor-icons/react';
@@ -29,14 +30,14 @@ import {
 import { useStore } from '../../store';
 
 export const JobControlButton: React.FC = () => {
-
   const serverJobState = useStore((state) => state.jobState);
   const [isLargerThan600] = useMediaQuery("(min-width: 600px)");
   const [isJobRequeued, setIsJobRequeued] = useState(false);
 
   const mainInputFileContent = useStore((state) => state.mainInputFileContent);
   const setUserClickedRun = useStore((state) => state.setUserClickedRun);
-  const [temporarilyForceShowQueued, setTemporarilyForceShowQueued] = useState(false);
+  const [temporarilyForceShowQueued, setTemporarilyForceShowQueued] =
+    useState(false);
 
   // If we get a new job state, we are not in the process of requeueing
   useEffect(() => {
@@ -45,16 +46,10 @@ export const JobControlButton: React.FC = () => {
     }
   }, [serverJobState]);
 
-  const {submitJob, loading} = useJobSubmissionHook();
-  const cancelJob = useStore(
-    (state) => state.cancelJob
-  );
-  const saveInputFileAndRun = useStore(
-    (state) => state.saveInputFileAndRun
-  );
-  const resubmitJob = useStore(
-    (state) => state.resubmitJob
-  );
+  const { submitJob, loading } = useJobSubmissionHook();
+  const cancelJob = useStore((state) => state.cancelJob);
+  const saveInputFileAndRun = useStore((state) => state.saveInputFileAndRun);
+  const resubmitJob = useStore((state) => state.resubmitJob);
 
   const state = serverJobState?.state;
 
@@ -66,7 +61,6 @@ export const JobControlButton: React.FC = () => {
     setUserClickedRun(true);
     setIsJobRequeued(true);
     resubmitJob();
-    
   }, [resubmitJob, setUserClickedRun]);
 
   const onClickSaveAndRun = useCallback(() => {
@@ -78,37 +72,43 @@ export const JobControlButton: React.FC = () => {
     }, 1000);
   }, [saveInputFileAndRun, setUserClickedRun]);
 
+  const onClickRun = useCallback(() => {
+    submitJob();
+    setUserClickedRun(true);
+  }, [submitJob, setUserClickedRun]);
+
   const disabledButton = (
     <HeaderButton
       ariaLabel="Disabled"
-      text={isLargerThan600 ? 'Disabled' : ''}
-      icon={<Icon as={Lock} size={'1.2rem'} />}
+      text={isLargerThan600 ? "Disabled" : ""}
+      icon={<Icon as={Lock} size={"1.2rem"} />}
     />
   );
 
   const cancelButton = (
     <HeaderButton
       ariaLabel="Stop-job"
-      icon={<Stop weight='duotone' color='red' size={'1.2rem'} />}
+      icon={<Stop weight="duotone" color="red" size={"1.2rem"} />}
       onClick={onClickCancel}
       text={isLargerThan600 ? "Stop Job" : ""}
-      color={'red'}
+      color={"red"}
     />
   );
 
   const saveAndRunButton = (
     <HeaderButton
       ariaLabel="Save-and-run"
-      icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
+      icon={<Play weight="duotone" color="green" size={"1.2rem"} />}
       onClick={onClickSaveAndRun}
       text={isLargerThan600 ? "Save+Run" : ""}
+      loading={loading}
     />
   );
 
-  const savedAndRunButton = (
+  const queuedButton = (
     <HeaderButton
-      ariaLabel="Save-and-run"
-      icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
+      ariaLabel="Queued"
+      icon={<QueueIcon weight="duotone" color="green" size={"1.2rem"} />}
       onClick={() => {}}
       text={isLargerThan600 ? "queued..." : ""}
     />
@@ -117,45 +117,42 @@ export const JobControlButton: React.FC = () => {
   const requeueButton = (
     <HeaderButton
       ariaLabel="Re-queue"
-      icon={<Icon as={Repeat} weight='duotone' color='green' size={'1.2rem'} />}
+      icon={<Icon as={Repeat} weight="duotone" color="green" size={"1.2rem"} />}
       onClick={onClickRetry}
       loading={isJobRequeued}
-      text={isLargerThan600 ? "Re-queue" : ""}
+      text={isLargerThan600 ? "Run Again" : ""}
+      color={"green"}
     />
   );
 
   const runButton = (
     <HeaderButton
       ariaLabel="Run-job"
-      icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
-      onClick={() => {submitJob(); setUserClickedRun(true);}}
+      icon={<Play weight="duotone" color="green" size={"1.2rem"} />}
+      onClick={onClickRun}
       text={isLargerThan600 ? "Run Job" : ""}
-      color={'green'}
+      color={"green"}
     />
   );
 
   const runButtonDisabled = (
     <HeaderButton
       ariaLabel="Run-job"
-      icon={<Play weight='duotone' color='gray' size={'1.2rem'} />}
+      icon={<Play weight="duotone" color="gray" size={"1.2rem"} />}
       text={isLargerThan600 ? "Run Job" : ""}
-      color={'gray'}
+      color={"gray"}
     />
   );
 
-
   if (temporarilyForceShowQueued) {
-    return savedAndRunButton;
+    return queuedButton;
   }
 
   if (!state) {
     return runButton;
   }
 
-  
-  
-
-  if (mainInputFileContent) { 
+  if (mainInputFileContent) {
     return saveAndRunButton;
   }
 
@@ -184,26 +181,31 @@ export const JobControlButton: React.FC = () => {
 };
 
 const HeaderButton: React.FC<{
-  text: string, 
-  ariaLabel: string, 
-  onClick?: () => void, 
-  icon?: any,
-  color?: string,
-  loading?: boolean,
-}> = ({text, ariaLabel, onClick, icon, color, loading}) => {
-  return <Button disabled={true}
-    width={'7.5rem'}
-    aria-label={ariaLabel}
-    variant={'ghost'} 
-    _hover={{bg: 'none'}}
-    onClick={onClick}
-    cursor={onClick ? 'pointer' : 'not-allowed'}
-    isLoading={loading}
-  >
-    <HStack gap={2}>
-      {icon}
-      <Spacer />
-    </HStack>
-    <Text color={color || 'gray.35'} fontWeight={500} fontSize={'0.9rem'}>{text}</Text>
-  </Button>
+  text: string;
+  ariaLabel: string;
+  onClick?: () => void;
+  icon?: any;
+  color?: string;
+  loading?: boolean;
+}> = ({ text, ariaLabel, onClick, icon, color, loading }) => {
+  return (
+    <Button
+      disabled={true}
+      width={"7.5rem"}
+      aria-label={ariaLabel}
+      variant={"ghost"}
+      _hover={{ bg: "none" }}
+      onClick={onClick}
+      cursor={onClick ? "pointer" : "not-allowed"}
+      isLoading={loading}
+    >
+      <HStack gap={2}>
+        {icon}
+        <Spacer />
+      </HStack>
+      <Text color={color || "gray.35"} fontWeight={500} fontSize={"0.9rem"}>
+        {text}
+      </Text>
+    </Button>
+  );
 };
