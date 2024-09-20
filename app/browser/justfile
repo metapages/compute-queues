@@ -36,14 +36,12 @@ dev target="": _mkcert _install
     #!/usr/bin/env bash
     set -eo pipefail
 
-    if [ "${VITE_SERVER_ORIGIN}" = "" ]; then
-        export VITE_SERVER_ORIGIN="https://worker-metaframe.localhost"
-    fi
+    # default
+    export VITE_SERVER_ORIGIN="https://worker-metaframe.localhost"
     if [ "{{target}}" = "local" ]; then
         export VITE_SERVER_ORIGIN="https://{{APP_FQDN}}:{{APP_PORT}}"
     elif [ "{{target}}" != "" ]; then
         export VITE_SERVER_ORIGIN="{{target}}"
-
     fi
     echo "Browser development pointing to: ${VITE_SERVER_ORIGIN}"
     if [ ! -f /.dockerenv ]; then

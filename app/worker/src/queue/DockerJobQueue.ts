@@ -397,9 +397,9 @@ export class DockerJobQueue {
                     reason: DockerJobFinishedReason.Error,
                     worker: this.workerId,
                     time: Date.now(),
-                    
                     result: ({
                         error: `${err}`,
+                        logs: [[`💥 ${err}`, Date.now(), true]],
                     } as DockerRunResultWithOutputs),
                 };
 
@@ -464,6 +464,8 @@ export class DockerJobQueue {
                 let valueFinished: StateChangeValueWorkerFinished | undefined;
                 if (result.error) {
                     // no outputs on error
+                    resultWithOutputs.logs = resultWithOutputs.logs || [];
+                    resultWithOutputs.logs = [[`💥 ${result.error}`, Date.now(), true]],
                     valueFinished = {
                         reason: DockerJobFinishedReason.Error,
                         worker: this.workerId,
@@ -484,6 +486,8 @@ export class DockerJobQueue {
                         };
                     } catch (err) {
                         console.log(`[${this.workerIdShort}] [${jobBlob.hash.substring(0,6)}] 💥 failed to getOutputs ${err}`);
+                        resultWithOutputs.logs = resultWithOutputs.logs || [];
+                        resultWithOutputs.logs.push([`💥 failed to get job outputs`, Date.now(), true], [`${err}`, Date.now(), true]);
                         valueFinished = {
                             reason: DockerJobFinishedReason.Error,
                             worker: this.workerId,
@@ -521,6 +525,7 @@ export class DockerJobQueue {
                     time: Date.now(),
                     result: ({
                         error: err,
+                        logs: [[`💥 Job Error`, Date.now(), true], [`${err}`, Date.now(), true]],
                     } as DockerRunResultWithOutputs),
                 };
 

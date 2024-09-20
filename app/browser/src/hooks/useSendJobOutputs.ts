@@ -8,6 +8,7 @@ import {
   DataRef,
   DataRefType,
   DockerJobState,
+  fetchJsonFromUrl,
   StateChangeValueWorkerFinished,
 } from '/@/shared';
 
@@ -25,10 +26,13 @@ import {
 } from './useOptionJobStartAutomatically';
 import { useOptionResolveDataRefs } from './useOptionResolveDataRefs';
 
-const datarefKeyToUrl = (ref: DataRef): DataRef => {
+const datarefKeyToUrl = async (ref: DataRef): Promise<DataRef> => {
   if (ref.type === DataRefType.key) {
+    const { url } = await fetchJsonFromUrl<{ url: string }>(
+      `${UPLOAD_DOWNLOAD_BASE_URL}/download/${ref.value}`
+    );
     return {
-      value: `${UPLOAD_DOWNLOAD_BASE_URL}/download/${ref.value}`,
+      value: url,
       type: DataRefType.url,
     };
   } else {
@@ -36,13 +40,15 @@ const datarefKeyToUrl = (ref: DataRef): DataRef => {
   }
 };
 
-const convertMetaframeOutputKeysToUrls = (outputs: MetaframeInputMap): MetaframeInputMap => {
+const convertMetaframeOutputKeysToUrls = async (
+  outputs: MetaframeInputMap
+): Promise<MetaframeInputMap> => {
   const newOutputs: MetaframeInputMap = {};
-  Object.keys(outputs).forEach((key) => {
-    newOutputs[key] = datarefKeyToUrl(outputs[key]);
-  });
+  for (const [key, value] of Object.entries(outputs)) {
+    newOutputs[key] = await datarefKeyToUrl(outputs[key]);
+  }
   return newOutputs;
-}
+};
 
 /**
  * Automatically send the finished job outputs to the metaframe
@@ -70,7 +76,6 @@ export const useSendJobOutputs = () => {
 
   // only maybe update metaframe outputs if the job updates and is finished (with outputs)
   useEffect(() => {
-
     if (!jobStartsAutomatically && !userClickedRun) {
       return;
     }
@@ -89,20 +94,21 @@ export const useSendJobOutputs = () => {
     }
     const stateFinished =
       dockerJobServer.value as StateChangeValueWorkerFinished;
-    const result: DockerRunResultWithOutputs = stateFinished.result;
+    const result: DockerRunResultWithOutputs = stateFinished.result || {};
     const { outputs, ...theRest } = result;
     if (!outputs || Object.keys(outputs).length === 0) {
+      // console.log(`💔 NOT sending outputs there are none`);
       jobHashOutputsLastSent.current = undefined;
       return;
     }
 
-    if (jobHashOutputsLastSent.current === dockerJobServer.hash) {
-      // console.log(`💔 NOT sending outputs to metaframe, did it already`);
-      return;
-    }
+    // if (jobHashOutputsLastSent.current === dockerJobServer.hash) {
+    //   console.log(`💔 NOT sending outputs to metaframe, did it already`);
+    //   return;
+    // }
 
-    if (resolveDataRefs) {
-      (async () => {
+    (async () => {
+      if (resolveDataRefs) {
         // TODO: use a local cache to avoid re-downloading the same outputs
         // console.log(`💚 💖 Resolving data refs for metaframe`);
         const metaframeOutputs: MetaframeInputMap | undefined =
@@ -111,24 +117,36 @@ export const useSendJobOutputs = () => {
             UPLOAD_DOWNLOAD_BASE_URL
           );
 
-        const keysToUrlsOutputs = metaframeOutputs ? convertMetaframeOutputKeysToUrls(metaframeOutputs) : metaframeOutputs;
-        
+        const keysToUrlsOutputs = metaframeOutputs
+          ? await convertMetaframeOutputKeysToUrls(metaframeOutputs)
+          : metaframeOutputs;
+
         try {
           // previously we sent the job status code, logs etc, but just send the outputs
           // If you want to send the other stuff, you can on your own
           // metaframeObj.setOutputs!({ ...keysToUrlsOutputs, ...theRest });
-          // console.log(`💚 Sending outputs to metaframe`, keysToUrlsOutputs);
+          // console.log(
+          //   `💚 resolveDataRefs=true Sending outputs to metaframe`,
+          //   keysToUrlsOutputs
+          // );
           metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
         } catch (err) {
           console.error("Failed to send metaframe outputs", err);
         }
         jobHashOutputsLastSent.current = dockerJobServer.hash;
-      })();
-    } else {
-      // console.log(`💚 Sending outputs to metaframe`, outputs);
-      const keysToUrlsOutputs = outputs ? convertMetaframeOutputKeysToUrls(outputs) : outputs;
-      metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
-      jobHashOutputsLastSent.current = dockerJobServer.hash;
-    }
-  }, [dockerJobServer, metaframeBlob?.metaframe, userClickedRun, jobStartsAutomatically]);
+      } else {
+        // console.log(`💚 Sending outputs to metaframe`, outputs);
+        const keysToUrlsOutputs = outputs
+          ? await convertMetaframeOutputKeysToUrls(outputs)
+          : outputs;
+        metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
+        jobHashOutputsLastSent.current = dockerJobServer.hash;
+      }
+    })();
+  }, [
+    dockerJobServer,
+    metaframeBlob?.metaframe,
+    userClickedRun,
+    jobStartsAutomatically,
+  ]);
 };

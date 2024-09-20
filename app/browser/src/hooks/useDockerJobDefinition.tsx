@@ -40,6 +40,7 @@ export const useDockerJobDefinition = () => {
   const [definitionParamsInUrl] = useHashParamJson<
     DockerJobDefinitionParamsInUrlHash | undefined
   >("job");
+
   // input text files are stored in the URL hash
   const [jobInputsFromUrl] = useHashParamJson<JobInputs | undefined>("inputs");
 
@@ -81,8 +82,6 @@ export const useDockerJobDefinition = () => {
             ];
           })
         );
-
-    // console.log("🍔 useEffect definition", definition);
 
     if (!definition.image && !definition.build) {
       return;
@@ -163,12 +162,10 @@ export const useDockerJobDefinition = () => {
         definition,
         debug,
       };
-      // console.log(`🍔 setDefinitionMeta`, newJobDefinition)
 
       setNewJobDefinition(newJobDefinition);
 
       return () => {
-        // console.log("🍔😞 useEffect cancelled");
         cancelled = true;
       };
     })();

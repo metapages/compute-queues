@@ -24,6 +24,16 @@ export type DataRef<T = string> = {
   hash?: string;
 };
 
+export const isDataRef = (value: any): boolean => {
+  return !!(
+    value &&
+    typeof value === "object" &&
+    (value as DataRef)?.type &&
+    DataRefTypesSet.has((value as DataRef).type!) &&
+    (value as DataRef)?.value
+  );
+};
+
 export type Image = string;
 export type Command = string;
 export type Env = { [name in string]: string } | undefined;

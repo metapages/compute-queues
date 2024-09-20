@@ -326,6 +326,14 @@ const checkForDockerImage = async (args: {
   if (CACHED_DOCKER_IMAGES[image]) {
     // console.log(`👀 ensureDockerImage: ${image} FOUND IMAGE IN MY FAKE CACHE`)
     // console.log('FOUND IMAGE IN MY FAKE CACHE')
+    (async () => {
+      // But I am going to check out of band, just in case
+      const existsOutOfBand = await hasImage(image);
+      if (!existsOutOfBand) {
+        delete CACHED_DOCKER_IMAGES[image];
+        console.log(`❗ out-of-band check: image ${image} does not exist, so removing it my record`);
+      }
+    })();
     return true;
   }
 
