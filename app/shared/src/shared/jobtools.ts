@@ -3,6 +3,7 @@ import { dirname } from 'https://deno.land/std@0.224.0/path/mod.ts';
 import { retryAsync } from 'https://deno.land/x/retry@v2.0.0/mod.ts';
 import { crypto } from 'jsr:@std/crypto@1.0.3';
 import { encodeHex } from 'jsr:@std/encoding@1.0.3';
+import { LRUCache } from 'npm:lru-cache@11.0.1';
 
 import { decodeBase64 } from './base64.ts';
 import { ENV_VAR_DATA_ITEM_LENGTH_MAX } from './dataref.ts';
@@ -21,6 +22,11 @@ import {
   fetchRobust as fetch,
   shaObject,
 } from './util.ts';
+
+const FileHashesUploaded = new LRUCache<string, boolean>({
+  max: 10000,
+  ttl: 1000 * 60 * 60 * 24 * 6, // 6 days, less than the time (one week) that the server will keep the file
+});
 
 /**
  * If two workers claim a job, this function will resolve which worker should take the job.
@@ -74,6 +80,8 @@ export const bufferToBase64Ref = async (
     type: DataRefType.base64,
   };
 };
+
+
 /**
  * Uses streams to upload files to the bucket
  * @param file 
@@ -88,6 +96,15 @@ export const fileToDataref = async (
   const hash = await hashFileOnDisk(file);
 
   if (size > ENV_VAR_DATA_ITEM_LENGTH_MAX) {
+
+    if (FileHashesUploaded.has(hash)) {
+      const existsRef :DataRef = {
+          value: hash,
+          type: DataRefType.key,
+      }
+      return existsRef;
+    }
+
     const urlGetUpload = `${address}/upload/${hash}`;
     const resp = await fetch(urlGetUpload);
     if (!resp.ok) {
@@ -95,6 +112,7 @@ export const fileToDataref = async (
         `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`
       );
     }
+
     const json: { url: string; ref: DataRef } = await resp.json();
 
     // https://github.com/metapages/compute-queues/issues/46
@@ -113,6 +131,7 @@ export const fileToDataref = async (
         );
       }
     }, {delay: 1000, maxTry: 5});
+    FileHashesUploaded.set(hash, true);
 
     return json.ref; // the server gave us this ref to use
   } else {
@@ -221,7 +240,7 @@ export const dataRefToFile = async (
 const hashFileOnDisk = async (filePath: string): Promise<string> => {
   const file = await Deno.open(filePath, { read: true });
   const readableStream = file.readable;
-  const fileHashBuffer = await crypto.subtle.digest("SHA-1", readableStream);
+  const fileHashBuffer = await crypto.subtle.digest("SHA-256", readableStream);
   const fileHash = encodeHex(fileHashBuffer);
   return fileHash;
 };

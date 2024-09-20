@@ -9,10 +9,11 @@
       "npm:@aws-sdk/client-s3@3.582.0": "npm:@aws-sdk/client-s3@3.582.0_@aws-sdk+client-sts@3.582.0__@aws-sdk+client-sso-oidc@3.582.0___@aws-sdk+client-sts@3.582.0_@aws-sdk+client-sso-oidc@3.582.0__@aws-sdk+client-sts@3.582.0___@aws-sdk+client-sso-oidc@3.582.0",
       "npm:@aws-sdk/client-s3@3.600.0": "npm:@aws-sdk/client-s3@3.600.0_@aws-sdk+client-sts@3.600.0__@aws-sdk+client-sso-oidc@3.600.0___@aws-sdk+client-sts@3.600.0_@aws-sdk+client-sso-oidc@3.600.0__@aws-sdk+client-sts@3.600.0___@aws-sdk+client-sso-oidc@3.600.0",
       "npm:@aws-sdk/s3-request-presigner": "npm:@aws-sdk/s3-request-presigner@3.582.0",
-      "npm:@metapages/metapage@0.15.0": "npm:@metapages/metapage@0.15.0",
+      "npm:@metapages/metapage@0.16.0": "npm:@metapages/metapage@0.16.0",
       "npm:crypto-random-string@5.0.0": "npm:crypto-random-string@5.0.0",
       "npm:fast-deep-equal": "npm:fast-deep-equal@3.1.3",
       "npm:fetch-retry@5.0.6": "npm:fetch-retry@5.0.6",
+      "npm:lru-cache@11.0.1": "npm:lru-cache@11.0.1",
       "npm:minio@8.0.0": "npm:minio@8.0.0",
       "npm:nanoevents@9.0.0": "npm:nanoevents@9.0.0",
       "npm:object-hash@3.0.0": "npm:object-hash@3.0.0",
@@ -1599,8 +1600,8 @@
           "tslib": "tslib@2.6.2"
         }
       },
-      "@metapages/metapage@0.15.0": {
-        "integrity": "sha512-gk1oIkMvan8QXPIXIOaFFZsFg+8ycjL7d7DO1olrc4Ns51yAJ5Y9vQQ0kZTlkcOoPrnbEd1ivN/CrBl4hr99yw==",
+      "@metapages/metapage@0.16.0": {
+        "integrity": "sha512-CM36NBYkuq6/DkMRKft9xZsCN1RSkFrwGqRoyTbHII5CX7lHNt7iEdwt/FwSfTcRw+icmxx6+wbfCCQs/I8n9w==",
         "dependencies": {
           "base64-arraybuffer": "base64-arraybuffer@1.0.2",
           "compare-versions": "compare-versions@4.1.4",
@@ -2637,6 +2638,10 @@
         "integrity": "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==",
         "dependencies": {}
       },
+      "lru-cache@11.0.1": {
+        "integrity": "sha512-CgeuL5uom6j/ZVrg7G/+1IXqRY8JXX4Hghfy5YE0EhoYQWvndP1kufu58cmZLNIDKnRhZrXfdS9urVWx98AipQ==",
+        "dependencies": {}
+      },
       "mime-db@1.52.0": {
         "integrity": "sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==",
         "dependencies": {}
@@ -3385,7 +3390,7 @@
     "dependencies": [
       "jsr:@metapages/deno-redis-broadcastchannel@^0.2.0",
       "npm:@metapages/hash-query@0.4.8",
-      "npm:@metapages/metapage@0.15.0",
+      "npm:@metapages/metapage@0.16.0",
       "npm:fast-deep-equal",
       "npm:fetch-retry@5.0.6",
       "npm:nanoevents@9.0.0",

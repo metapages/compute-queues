@@ -1,6 +1,6 @@
 {
   "imports": {
-    "@metapages/metapage": "npm:@metapages/metapage@0.15.0",
+    "@metapages/metapage": "npm:@metapages/metapage@0.16.0",
     "/@/shared": "./src/shared/mod.ts",
     "fetch-retry": "npm:fetch-retry@5.0.6",
     "ms": "https://deno.land/x/ms@v0.1.0/ms.ts",

@@ -18,7 +18,7 @@ import {
 import { Volume } from './DockerJob.ts';
 
 // const TMPDIR = process.env.XDG_RUNTIME_DIR || process.env.TMPDIR || '/tmp';
-const TMPDIR = "/tmp/asman";
+const TMPDIR = "/tmp/worker-metapage-io";
 
 /**
  *
@@ -74,6 +74,12 @@ export const convertIOToVolumeMounts = async (
   return result;
 };
 
+/**
+ * Converts file outputs to datarefs (small JSON references to files in the cloud)
+ * @param job 
+ * @param workerId 
+ * @returns 
+ */
 export const getOutputs = async (job: DockerJobDefinitionRow, workerId:string
   
 ): Promise<InputsRefs> => {
@@ -87,10 +93,8 @@ export const getOutputs = async (job: DockerJobDefinitionRow, workerId:string
   const files = await getFiles(outputsDir);
 
   for (const file of files) {
-    // TODO: handle BIG blobs
+    // This will send big blobs to the cloud
     const ref = await fileToDataref(file, config.server);
-    // const fileBuffer: Buffer = await fse.readFile(file);
-    // const ref: DataRef = await bufferToBase64Ref(fileBuffer);
     outputs[file.replace(`${outputsDir}/`, "")] = ref;
   }
 

@@ -4,7 +4,7 @@
     "@korkje/wsi": "jsr:@korkje/wsi@^0.3.2",
     "@metapages/deno-redis-broadcastchannel": "jsr:@metapages/deno-redis-broadcastchannel@^0.2.0",
     "@metapages/hash-query": "npm:@metapages/hash-query@0.4.8",
-    "@metapages/metapage": "npm:@metapages/metapage@0.15.0",
+    "@metapages/metapage": "npm:@metapages/metapage@0.16.0",
     "fast-deep-equal/es6": "npm:fast-deep-equal/es6/index.js",
     "object-hash" : "npm:object-hash@3.0.0",
     "fetch-retry": "npm:fetch-retry@5.0.6",

@@ -65,15 +65,14 @@ export const jobAwait = new Command()
             }
 
             if (jobState.state === DockerJobState.Finished) {
-              if (jobState.state === DockerJobState.Finished) {
-                const finishedState = jobState.value as StateChangeValueWorkerFinished;
-                (async () => {
-                  await finishedJobOutputsToFiles(finishedState, outputs as string, address);
-                  resolved = true;
-                  resolve(finishedState);
-                })();
-              }
+              const finishedState = jobState.value as StateChangeValueWorkerFinished;
+              (async () => {
+                await finishedJobOutputsToFiles(finishedState, outputs as string, address);
+                resolved = true;
+                resolve(finishedState);
+              })();
             }
+            
             break;
           default:
             //ignored

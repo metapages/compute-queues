@@ -16,7 +16,6 @@ export enum DataRefType {
 
 const DataRefTypeKeys :string[] = Object.keys(DataRefType).filter(key => isNaN(Number(key)));
 export const DataRefTypesSet = new Set(DataRefTypeKeys);
-
 export const DataRefTypeDefault = DataRefType.utf8;
 
 export type DataRef<T = string> = {

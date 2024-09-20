@@ -5,10 +5,11 @@
       "jsr:@std/crypto@1.0.3": "jsr:@std/crypto@1.0.3",
       "jsr:@std/encoding@1.0.3": "jsr:@std/encoding@1.0.3",
       "jsr:@std/io": "jsr:@std/io@0.224.1",
-      "npm:@metapages/metapage@0.15.0": "npm:@metapages/metapage@0.15.0",
+      "npm:@metapages/metapage@0.16.0": "npm:@metapages/metapage@0.16.0",
       "npm:dockerode@4.0.2": "npm:dockerode@4.0.2",
       "npm:fetch-retry@5.0.6": "npm:fetch-retry@5.0.6",
       "npm:klaw@4.1.0": "npm:klaw@4.1.0",
+      "npm:lru-cache@11.0.1": "npm:lru-cache@11.0.1",
       "npm:object-hash@3.0.0": "npm:object-hash@3.0.0",
       "npm:reconnecting-websocket@4.4.0": "npm:reconnecting-websocket@4.4.0",
       "npm:safe-stable-stringify@2.4.3": "npm:safe-stable-stringify@2.4.3",
@@ -30,8 +31,8 @@
         "integrity": "sha512-wMue2Sy4GAVTk6Ic4tJVcnfdau+gx2EnG7S+uAEe+TWJFqE4YoWN4/H8MSLj4eYJKxGg26lZwboEniNiNwZQ6Q==",
         "dependencies": {}
       },
-      "@metapages/metapage@0.15.0": {
-        "integrity": "sha512-gk1oIkMvan8QXPIXIOaFFZsFg+8ycjL7d7DO1olrc4Ns51yAJ5Y9vQQ0kZTlkcOoPrnbEd1ivN/CrBl4hr99yw==",
+      "@metapages/metapage@0.16.0": {
+        "integrity": "sha512-CM36NBYkuq6/DkMRKft9xZsCN1RSkFrwGqRoyTbHII5CX7lHNt7iEdwt/FwSfTcRw+icmxx6+wbfCCQs/I8n9w==",
         "dependencies": {
           "base64-arraybuffer": "base64-arraybuffer@1.0.2",
           "compare-versions": "compare-versions@4.1.4",
@@ -159,6 +160,10 @@
       },
       "klaw@4.1.0": {
         "integrity": "sha512-1zGZ9MF9H22UnkpVeuaGKOjfA2t6WrfdrJmGjy16ykcjnKQDmHVX+KI477rpbGevz/5FD4MC3xf1oxylBgcaQw==",
+        "dependencies": {}
+      },
+      "lru-cache@11.0.1": {
+        "integrity": "sha512-CgeuL5uom6j/ZVrg7G/+1IXqRY8JXX4Hghfy5YE0EhoYQWvndP1kufu58cmZLNIDKnRhZrXfdS9urVWx98AipQ==",
         "dependencies": {}
       },
       "mkdirp-classic@0.5.3": {
@@ -845,7 +850,7 @@
   },
   "workspace": {
     "dependencies": [
-      "npm:@metapages/metapage@0.15.0",
+      "npm:@metapages/metapage@0.16.0",
       "npm:fetch-retry@5.0.6",
       "npm:object-hash@3.0.0",
       "npm:safe-stable-stringify@2.4.3"

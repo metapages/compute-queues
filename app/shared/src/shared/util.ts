@@ -4,10 +4,14 @@ import stringify from 'safe-stable-stringify';
 export const shaObject = async (obj :any) :Promise<string> => { 
     const orderedStringFromObject = stringify(obj);
     const msgBuffer = new TextEncoder().encode(orderedStringFromObject);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
+    return sha256Buffer(msgBuffer);
+}
+
+export const sha256Buffer = async (buffer :Uint8Array) :Promise<string> => { 
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
 }
 
 export const fetchRobust = fetchRetry(fetch, {

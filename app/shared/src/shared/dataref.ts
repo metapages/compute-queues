@@ -6,9 +6,8 @@ import {
   decodeBase64,
   fetchRobust as fetch,
   InputsRefs,
+  sha256Buffer,
 } from '/@/shared';
-// helpers to upload large input blobs to the cloud, when required
-import objectHash from 'object-hash';
 
 import {
   DataRefSerializedBlob,
@@ -46,6 +45,9 @@ export const dataRefToBuffer = async (ref: DataRef): Promise<Uint8Array> => {
 // Takes map of DataRefs and checks if any are too big, if so
 // uploads the data to the cloud, and replaces the data ref
 // with a DataRef pointing to the cloud blob
+// We assume (roughly) immutable uploads based on hash
+// so we keep a tally of already uploaded blobs
+const AlreadyUploaded: { [hash: string]: boolean } = {};
 export const copyLargeBlobsToCloud = async (
   inputs: InputsRefs | undefined,
   address: string
@@ -59,9 +61,10 @@ export const copyLargeBlobsToCloud = async (
     Object.keys(inputs).map(async (name) => {
       const type: DataRefType = inputs[name]?.type || DataRefTypeDefault;
       let uint8ArrayIfBig: Uint8Array | undefined;
+
       switch (type) {
         case DataRefType.key:
-          // this is already cloud storage. weird. or really advanced? who knows, but trust it anyway,
+          // this is already cloud storage. no need to re-upload
           break;
         case DataRefType.json:
           if (inputs?.[name]?.value) {
@@ -87,24 +90,34 @@ export const copyLargeBlobsToCloud = async (
 
       if (uint8ArrayIfBig) {
         // upload and replace the dataref
-        const hash = objectHash.sha1(uint8ArrayIfBig);
-        const urlGetUpload = `${address}/upload/${hash}`;
-        // console.log('urlGetUpload', urlGetUpload);
-        const resp = await fetch(urlGetUpload);
-        if (!resp.ok) {
-          throw new Error(
-            `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`
-          );
+
+        const hash = await sha256Buffer(uint8ArrayIfBig);
+        // but not if we already have, since these files are immutable
+        if (!AlreadyUploaded[hash]) {
+          const urlGetUpload = `${address}/upload/${hash}`;
+          // console.log('urlGetUpload', urlGetUpload);
+          const resp = await fetch(urlGetUpload);
+          if (!resp.ok) {
+            throw new Error(
+              `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`
+            );
+          }
+          const json: { url: string; ref: DataRef } = await resp.json();
+          const responseUpload = await fetch(json.url, {
+            method: "PUT",
+            redirect: "follow",
+            body: uint8ArrayIfBig,
+            headers: { "Content-Type": "application/octet-stream" },
+          });
+          await responseUpload.text();
+          result[name] = json.ref; // the server gave us this ref to use
+          AlreadyUploaded[hash] = true;
+        } else {
+          result[name] = {
+            value: hash,
+            type: DataRefType.key,
+          }
         }
-        const json: { url: string; ref: DataRef } = await resp.json();
-        const responseUpload = await fetch(json.url, {
-          method: "PUT",
-          redirect: "follow",
-          body: uint8ArrayIfBig,
-          headers: { "Content-Type": "application/octet-stream" },
-        });
-        await responseUpload.text();
-        result[name] = json.ref; // the server gave us this ref to use
       } else {
         result[name] = inputs[name];
       }
@@ -217,32 +230,7 @@ export const utf8ToBuffer = (str: string): Uint8Array => {
 const _decoder = new TextDecoder();
 export const bufferToUtf8 = (buffer: Uint8Array): string => {
   return _decoder.decode(buffer);
-};
-
-/**
- * Decodes a base64-encoded string.
- *
- * @see {@link https://datatracker.ietf.org/doc/html/rfc4648#section-4}
- *
- * @param b64 The base64-encoded string to decode.
- * @returns The decoded data.
- *
- * @example
- * ```ts
- * import { decodeBase64 } from "https://deno.land/std@$STD_VERSION/encoding/base64.ts";
- *
- * decodeBase64("Zm9vYmFy"); // Uint8Array(6) [ 102, 111, 111, 98, 97, 114 ]
- * ```
- */
-// export function base64ToBuffer(str:string) :Uint8Array {
-//   const binaryString = atob(str);
-//   const len = binaryString.length;
-//   const bytes = new Uint8Array(len);
-//   for (let i = 0; i < len; i++) {
-//       bytes[i] = binaryString.charCodeAt(i);
-//   }
-//   return bytes;
-// }
+}
 
 // 👍
 export function bufferToBinaryString(buffer: ArrayBuffer): string {
@@ -258,4 +246,4 @@ export function bufferToBinaryString(buffer: ArrayBuffer): string {
 export const bufferToBase64 = (buffer: ArrayBuffer): string => {
   var binstr = bufferToBinaryString(buffer);
   return btoa(binstr);
-};
+}
