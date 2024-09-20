@@ -4,6 +4,8 @@ import {
   useState,
 } from 'react';
 
+import { ButtonModalEditor } from '/@/components/generic/ButtonModalEditor';
+import { FormLink } from '/@/components/generic/FormLink';
 import { DockerJobDefinitionParamsInUrlHash } from '/@/shared';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -22,11 +24,8 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { TrashSimple } from '@phosphor-icons/react';
 import { useHashParamJson } from '@metapages/hash-query';
-
-import { ButtonModalEditor } from '/@/components/generic/ButtonModalEditor';
-import { FormLink } from '/@/components/generic/FormLink';
+import { TrashSimple } from '@phosphor-icons/react';
 
 const validationSchema = yup.object({
   buildArgs: yup.string().optional(),
@@ -58,12 +57,15 @@ const labelSubMap = {
   buildArgs: "Comma Separated",
 }
 
+type ValueType = "useExisting" | "fromRepo";
+
 export const PanelImageBuildFromUrlParams: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
-  const [value, setValue] = useState('useExisting')
+  
   const [jobDefinitionBlob, setJobDefinitionBlob] =
     useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
+  const [value, setValue] = useState<ValueType>(jobDefinitionBlob?.image ? "useExisting" : "fromRepo")
   
   const onSubmit = useCallback(
     (values: FormType) => {

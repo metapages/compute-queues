@@ -4,28 +4,30 @@ import {
   useCallback,
 } from 'react';
 
+import { FormLink } from '/@/components/generic/FormLink';
+import {
+  useOptionJobStartAutomatically,
+} from '/@/hooks/useOptionJobStartAutomatically';
 import { DockerJobDefinitionParamsInUrlHash } from '/@/shared';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 
 import {
   Button,
+  Divider,
   FormControl,
   FormLabel,
   Input,
   InputGroup,
-  Switch,
-  VStack,
-  Text,
-  Divider,
   Link,
+  Switch,
+  Text,
+  VStack,
 } from '@chakra-ui/react';
 import {
   useHashParamBoolean,
   useHashParamJson,
 } from '@metapages/hash-query';
-import { FormLink } from '/@/components/generic/FormLink';
-import { useOptionJobsStartAutomatically } from '/@/hooks/useOptionJobsStartAutomatically';
 
 const validationSchema = yup.object({
   command: yup.string().optional(),
@@ -33,7 +35,7 @@ const validationSchema = yup.object({
   entrypoint: yup.string().optional(),
   gpu: yup.boolean().optional(),
   workdir: yup.string().optional(),
-  jobsStartAutomatically: yup.boolean().optional(),
+  jobStartAutomatically: yup.boolean().optional(),
 });
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
@@ -47,7 +49,7 @@ export const PanelContainerFromUrlParams: React.FC = () => {
   const [jobDefinitionBlob, setJobDefinitionBlob] =
     useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [debug, setDebug] = useHashParamBoolean("debug");
-  const [jobsStartAutomatically, toggleJobsStartAutomatically] = useOptionJobsStartAutomatically();
+  const [jobStartAutomatically, toggleJobStartAutomatically] = useOptionJobStartAutomatically();
 
   const onSubmit = useCallback(
     (values: FormType) => {
@@ -65,7 +67,7 @@ export const PanelContainerFromUrlParams: React.FC = () => {
       setJobDefinitionBlob(newJobDefinitionBlob);
       setDebug(!!values.debug);
     },
-    [jobDefinitionBlob, setJobDefinitionBlob, setDebug, toggleJobsStartAutomatically]
+    [jobDefinitionBlob, setJobDefinitionBlob, setDebug, toggleJobStartAutomatically]
   );
 
   const formik = useFormik({
@@ -75,7 +77,7 @@ export const PanelContainerFromUrlParams: React.FC = () => {
       entrypoint: jobDefinitionBlob?.entrypoint,
       gpu: jobDefinitionBlob?.gpu,
       workdir: jobDefinitionBlob?.workdir,
-      jobsStartAutomatically,
+      jobStartAutomatically,
     },
     onSubmit,
     validationSchema,
@@ -155,14 +157,14 @@ export const PanelContainerFromUrlParams: React.FC = () => {
             <Text align="center" fontWeight="bold">Misc Settings</Text>
 
             <FormControl>
-              <FormLabel htmlFor="jobsStartAutomatically">
-                <Text>Start Jobs Automatically</Text>
+              <FormLabel htmlFor="jobStartAutomatically">
+                <Text>Run Job Automatically</Text>
               </FormLabel>
               <Switch
-                id="jobsStartAutomatically"
-                name="jobsStartAutomatically"
-                onChange={toggleJobsStartAutomatically}
-                isChecked={jobsStartAutomatically}
+                id="jobStartAutomatically"
+                name="jobStartAutomatically"
+                onChange={toggleJobStartAutomatically}
+                isChecked={jobStartAutomatically}
               />
             </FormControl>
           </VStack>

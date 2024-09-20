@@ -1,4 +1,10 @@
+import pDebounce from 'p-debounce';
 import { create } from 'zustand';
+
+import {
+  getHashParamValueJsonFromWindow,
+  setHashParamJsonInWindow,
+} from '@metapages/hash-query';
 
 import {
   deleteFinishedJob,
@@ -39,6 +45,7 @@ interface MainStore {
    */
   newJobDefinition: DockerJobDefinitionMetadata | undefined;
   setNewJobDefinition: (job: DockerJobDefinitionMetadata) => void;
+  submitJob: () => void;
 
   /**
    * This is the state of our current job, sent from the server.
@@ -54,6 +61,7 @@ interface MainStore {
   setJobStates: (jobStates: JobsStateMap) => void;
   cancelJob: () => void;
   deleteJobCache: () => boolean;
+  resubmitJob: () => void;
 
   /* To display all the workers */
   workers: BroadcastWorkers | undefined;
@@ -92,8 +100,15 @@ interface MainStore {
   setRightPanelContext: (context: string | null) => void;
   rightPanelContext: string | null;
 
-  setMainInputFile: (context: string | null) => void;
   mainInputFile: string | null;
+  setMainInputFile: (context: string | null) => void;
+  mainInputFileContent: string | null;
+  setMainInputFileContent: (mainInputFileContent: string | null) => void;
+
+  saveInputFileAndRun: () => void;
+
+  userClickedRun: boolean;
+  setUserClickedRun: (userClickedRun: boolean) => void;
 }
 
 /**
@@ -104,6 +119,15 @@ interface MainStore {
  * 4. If the current job is finished, send the outputs (once)
  */
 export const useStore = create<MainStore>((set, get) => ({
+
+  // This is only used to figure out if the job outputs should
+  // be sent to the metaframe outputs when the metaframe starts
+  // The hash param jobStartsAutomatically is also checked.
+  userClickedRun: false,
+  setUserClickedRun: (userClickedRun: boolean) => {
+    set((state) => ({ userClickedRun }));
+  },
+
   // Stores the latest job definition + inputs
   newJobDefinition: undefined,
   setNewJobDefinition: async (job: DockerJobDefinitionMetadata) => {
@@ -135,6 +159,29 @@ export const useStore = create<MainStore>((set, get) => ({
       runLogs: null,
     }));
   },
+
+  
+  submitJob: pDebounce(() => {
+    const definitionBlob = get().newJobDefinition;
+    if (!definitionBlob) {
+      return;
+    }
+    // inputs are already minified (fat blobs uploaded to the cloud)
+    const value: StateChangeValueQueued = {
+      definition: definitionBlob.definition,
+      time: Date.now(),
+    };
+    if (definitionBlob.debug) {
+      value.debug = true;
+    }
+    const payload: StateChange = {
+      state: DockerJobState.Queued,
+      value,
+      job: definitionBlob.hash,
+      tag: "", // document the meaning of this. It's the worker claim. Might be unneccesary due to history
+    };
+    get().sendClientStateChange(payload);
+  }, 200),
 
   jobState: undefined,
   setJobState: (jobState: DockerJobDefinitionRow | undefined) => {
@@ -205,11 +252,29 @@ export const useStore = create<MainStore>((set, get) => ({
     get().sendClientStateChange(stateChange);
   },
 
+  resubmitJob: () => {
+    const jobState = get().jobState;
+    if (!jobState) {
+      return;
+    }
+    get().setJobState(undefined);
+    // delete the finished job from the local cache
+    deleteFinishedJob(jobState.hash);
+    const messageClientToServer: WebsocketMessageClientToServer = {
+      type: WebsocketMessageTypeClientToServer.ResubmitJob,
+      payload: {
+        jobId: jobState.hash,
+      }
+    }
+    get().sendMessage(messageClientToServer);
+  },
+
   deleteJobCache: () => {
     const client = get().newJobDefinition;
     if (!client?.hash) {
       return false;
     }
+
     // send a cancel message to the server
     const stateChange: StateChange = {
       tag: "",
@@ -225,7 +290,7 @@ export const useStore = create<MainStore>((set, get) => ({
     deleteFinishedJob(client.hash);
     return true;
   },
-  
+
   jobStates: {},
   setJobStates: (jobStates: JobsStateMap) => {
     // blind merge update
@@ -318,9 +383,32 @@ export const useStore = create<MainStore>((set, get) => ({
   },
   rightPanelContext: null,
 
+  mainInputFile: null,
   setMainInputFile: (mainInputFile: string | null) => {
     set((state) => ({ mainInputFile }));
   },
-  mainInputFile: null,
+
+  mainInputFileContent: null,
+  setMainInputFileContent: (mainInputFileContent: string | null) => {
+    set((state) => ({ mainInputFileContent }));
+  },
+
+  saveInputFileAndRun: () => {
+    if (!get().mainInputFile || !get().mainInputFileContent) {
+      return;
+    }
+    const currentJobId = get().newJobDefinition?.hash;
+    const unsubscribe = useStore.subscribe(state => {
+      if (state.newJobDefinition?.hash !== currentJobId) {
+        unsubscribe();
+        get().submitJob();
+      }
+    });
+    const inputs:Record<string,string> = getHashParamValueJsonFromWindow('inputs') || {};
+    inputs[get().mainInputFile] = get().mainInputFileContent;
+    setHashParamJsonInWindow('inputs', inputs);
+    get().setMainInputFileContent(null);
+  }
+
 }));
 

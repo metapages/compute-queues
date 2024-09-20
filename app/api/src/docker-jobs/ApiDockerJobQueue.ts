@@ -22,6 +22,7 @@ import {
   JobStates,
   JobStatusPayload,
   PayloadClearJobCache,
+  PayloadResubmitJob,
   resolvePreferredWorker,
   StateChange,
   StateChangeValueQueued,
@@ -1202,6 +1203,37 @@ export class ApiDockerJobQueue {
                   } as WebsocketMessageServerBroadcast)
                 );
               }
+            })();
+            break;
+          case WebsocketMessageTypeClientToServer.ResubmitJob:
+            (async () => {
+              // Send a message to our local workers to clear their respective caches
+              const jobId = (possibleMessage.payload as PayloadResubmitJob)
+                .jobId;
+              const job = this.state.jobs[jobId];
+              const isCleared = await this.broadcastAndDeleteCachedJob(jobId);
+              if (isCleared) {
+                connection.socket.send(
+                  JSON.stringify({
+                    type: WebsocketMessageTypeServerBroadcast.ClearJobCacheConfirm,
+                    payload: possibleMessage.payload,
+                  } as WebsocketMessageServerBroadcast)
+                );
+              }
+              if (!job) {
+                return;
+              }
+              // now submit the job
+              const resubmitStateChange: StateChange = {
+                tag: this.serverId,
+                state: DockerJobState.Queued,
+                job: jobId,
+                value: {
+                  ...job.history[0].value,
+                  time: Date.now(),
+                } as StateChangeValueQueued,
+              };
+              this.stateChange(resubmitStateChange);
             })();
             break;
           default:

@@ -215,10 +215,16 @@ export type WebsocketMessageSenderWorker = (
 export enum WebsocketMessageTypeClientToServer {
   StateChange = "StateChange",
   ClearJobCache = "ClearJobCache",
+  ResubmitJob = "ResubmitJob",
 }
 export interface PayloadClearJobCache {
   jobId: string;
+  // why do we need the definition here?
   definition: DockerJobDefinitionInputRefs;
+}
+
+export interface PayloadResubmitJob {
+  jobId: string;
 }
 
 export interface PayloadClearJobCacheConfirm {
@@ -231,7 +237,7 @@ export interface PayloadClearJobOnWorker {
 
 export interface WebsocketMessageClientToServer {
   type: WebsocketMessageTypeClientToServer;
-  payload: StateChange | PayloadClearJobCache;
+  payload: StateChange | PayloadClearJobCache | PayloadResubmitJob;
 }
 export type WebsocketMessageSenderClient = (
   message: WebsocketMessageClientToServer

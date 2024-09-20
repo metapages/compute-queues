@@ -18,12 +18,17 @@ import {
 import { UPLOAD_DOWNLOAD_BASE_URL } from '../config';
 import { DockerRunResultWithOutputs } from '../shared';
 import { useStore } from '../store';
+import {
+  useOptionJobStartAutomatically,
+} from './useOptionJobStartAutomatically';
 import { useOptionResolveDataRefs } from './useOptionResolveDataRefs';
 
 /**
  * Automatically send the finished job outputs to the metaframe
  */
 export const useSendJobOutputs = () => {
+  const [jobStartsAutomatically] = useOptionJobStartAutomatically();
+  const userClickedRun = useStore((state) => state.userClickedRun);
   // You usually don't want this on, that means big blobs
   // are going to move around your system
   const [resolveDataRefs] = useOptionResolveDataRefs();
@@ -44,6 +49,11 @@ export const useSendJobOutputs = () => {
 
   // only maybe update metaframe outputs if the job updates and is finished (with outputs)
   useEffect(() => {
+
+    if (!jobStartsAutomatically && !userClickedRun) {
+      return;
+    }
+
     const metaframeObj = metaframeBlob?.metaframe;
 
     if (
@@ -86,5 +96,5 @@ export const useSendJobOutputs = () => {
     } else {
       metaframeObj.setOutputs!({ ...outputs });
     }
-  }, [dockerJobServer, metaframeBlob?.metaframe]);
+  }, [dockerJobServer, metaframeBlob?.metaframe, userClickedRun, jobStartsAutomatically]);
 };

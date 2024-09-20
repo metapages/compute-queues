@@ -1,14 +1,13 @@
-import { useCallback } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
 import { useJobSubmissionHook } from '/@/hooks/useJobSubmissionHook';
 import {
-  useOptionJobsStartAutomatically,
-} from '/@/hooks/useOptionJobsStartAutomatically';
-import {
   DockerJobFinishedReason,
   DockerJobState,
-  StateChange,
-  StateChangeValueQueued,
   StateChangeValueWorkerFinished,
 } from '/@/shared/types';
 
@@ -20,7 +19,6 @@ import {
   Text,
   useMediaQuery,
 } from '@chakra-ui/react';
-import { useHashParamBoolean } from '@metapages/hash-query';
 import {
   Lock,
   Play,
@@ -32,24 +30,31 @@ import { useStore } from '../../store';
 
 export const JobControlButton: React.FC = () => {
 
-  const [jobsStartAutomatically] = useOptionJobsStartAutomatically();
-  const clientJobDefinition = useStore((state) => state.newJobDefinition);
   const serverJobState = useStore((state) => state.jobState);
   const [isLargerThan600] = useMediaQuery("(min-width: 600px)");
+  const [isJobRequeued, setIsJobRequeued] = useState(false);
 
-  
+  const mainInputFileContent = useStore((state) => state.mainInputFileContent);
+  const setUserClickedRun = useStore((state) => state.setUserClickedRun);
+  const [temporarilyForceShowQueued, setTemporarilyForceShowQueued] = useState(false);
+
+  // If we get a new job state, we are not in the process of requeueing
+  useEffect(() => {
+    if (serverJobState) {
+      setIsJobRequeued(false);
+    }
+  }, [serverJobState]);
+
   const {submitJob, loading} = useJobSubmissionHook();
   const cancelJob = useStore(
     (state) => state.cancelJob
   );
-  const deleteJobCache = useStore(
-    (state) => state.deleteJobCache
+  const saveInputFileAndRun = useStore(
+    (state) => state.saveInputFileAndRun
   );
-
-  const sendClientStateChange = useStore(
-    (state) => state.sendClientStateChange
+  const resubmitJob = useStore(
+    (state) => state.resubmitJob
   );
-  const [debug] = useHashParamBoolean("debug");
 
   const state = serverJobState?.state;
 
@@ -58,21 +63,20 @@ export const JobControlButton: React.FC = () => {
   }, [cancelJob]);
 
   const onClickRetry = useCallback(() => {
-    if (serverJobState) {
-      const value: StateChangeValueQueued = {
-        definition: (serverJobState.history[0].value as StateChangeValueQueued).definition,
-        time: Date.now(),
-        debug,
-      };
+    setUserClickedRun(true);
+    setIsJobRequeued(true);
+    resubmitJob();
+    
+  }, [resubmitJob, setUserClickedRun]);
 
-      sendClientStateChange({
-        tag: "",
-        state: DockerJobState.Queued,
-        job: serverJobState.hash,
-        value,
-      } as StateChange);
-    }
-  }, [serverJobState, sendClientStateChange, debug]);
+  const onClickSaveAndRun = useCallback(() => {
+    setUserClickedRun(true);
+    saveInputFileAndRun();
+    setTemporarilyForceShowQueued(true);
+    setTimeout(() => {
+      setTemporarilyForceShowQueued(false);
+    }, 1000);
+  }, [saveInputFileAndRun, setUserClickedRun]);
 
   const disabledButton = (
     <HeaderButton
@@ -92,11 +96,30 @@ export const JobControlButton: React.FC = () => {
     />
   );
 
+  const saveAndRunButton = (
+    <HeaderButton
+      ariaLabel="Save-and-run"
+      icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
+      onClick={onClickSaveAndRun}
+      text={isLargerThan600 ? "Save+Run" : ""}
+    />
+  );
+
+  const savedAndRunButton = (
+    <HeaderButton
+      ariaLabel="Save-and-run"
+      icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
+      onClick={() => {}}
+      text={isLargerThan600 ? "queued..." : ""}
+    />
+  );
+
   const requeueButton = (
     <HeaderButton
       ariaLabel="Re-queue"
-      icon={<Icon as={Repeat} size={'1.2rem'} />}
+      icon={<Icon as={Repeat} weight='duotone' color='green' size={'1.2rem'} />}
       onClick={onClickRetry}
+      loading={isJobRequeued}
       text={isLargerThan600 ? "Re-queue" : ""}
     />
   );
@@ -105,7 +128,7 @@ export const JobControlButton: React.FC = () => {
     <HeaderButton
       ariaLabel="Run-job"
       icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
-      onClick={submitJob}
+      onClick={() => {submitJob(); setUserClickedRun(true);}}
       text={isLargerThan600 ? "Run Job" : ""}
       color={'green'}
     />
@@ -120,8 +143,20 @@ export const JobControlButton: React.FC = () => {
     />
   );
 
+
+  if (temporarilyForceShowQueued) {
+    return savedAndRunButton;
+  }
+
   if (!state) {
     return runButton;
+  }
+
+  
+  
+
+  if (mainInputFileContent) { 
+    return saveAndRunButton;
   }
 
   switch (state) {
@@ -154,7 +189,8 @@ const HeaderButton: React.FC<{
   onClick?: () => void, 
   icon?: any,
   color?: string,
-}> = ({text, ariaLabel, onClick, icon, color}) => {
+  loading?: boolean,
+}> = ({text, ariaLabel, onClick, icon, color, loading}) => {
   return <Button disabled={true}
     width={'7.5rem'}
     aria-label={ariaLabel}
@@ -162,6 +198,7 @@ const HeaderButton: React.FC<{
     _hover={{bg: 'none'}}
     onClick={onClick}
     cursor={onClick ? 'pointer' : 'not-allowed'}
+    isLoading={loading}
   >
     <HStack gap={2}>
       {icon}

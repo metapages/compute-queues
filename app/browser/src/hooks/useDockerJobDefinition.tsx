@@ -11,6 +11,7 @@ import {
   DockerJobDefinitionMetadata,
   DockerJobDefinitionParamsInUrlHash,
   isDataRef,
+  JobInputs,
   shaObject,
 } from '/@/shared';
 
@@ -26,7 +27,6 @@ import {
 
 import { UPLOAD_DOWNLOAD_BASE_URL } from '../config';
 import { useStore } from '../store';
-import { JobInputs } from '/@/shared';
 
 /**
  * Gets the configuration from 1) the URL hash parameters and 2) the metaframe inputs,
@@ -58,6 +58,8 @@ export const useDockerJobDefinition = () => {
 
   // When all the things are updated, set the new job definition
   const setNewJobDefinition = useStore((state) => state.setNewJobDefinition);
+  
+  
 
   // if the URL inputs change, or the metaframe inputs change, maybe update the store.newJobDefinition
   useEffect(() => {

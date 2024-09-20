@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 
 import { JobControlButton } from '/@/components/header/JobControlButton';
 import {
-  useOptionJobsStartAutomatically,
-} from '/@/hooks/useOptionJobsStartAutomatically';
+  useOptionJobStartAutomatically,
+} from '/@/hooks/useOptionJobStartAutomatically';
 import {
   DockerJobDefinitionParamsInUrlHash,
   JobInputs,
@@ -33,7 +33,7 @@ import {
 } from '@phosphor-icons/react';
 
 export const MainHeader: React.FC = () => {
-  const [jobsStartAutomatically] = useOptionJobsStartAutomatically();
+  const [jobsStartAutomatically] = useOptionJobStartAutomatically();
   const [jobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [jobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
 

@@ -113,7 +113,7 @@ export const serverWebsocket = (): void => {
             break;
           case WebsocketMessageTypeServerBroadcast.ClearJobCacheConfirm:
             // We asked for this now we have a response
-            // TODO: do something with this
+            // But we don't currently have a specific use for this
             break;
           case WebsocketMessageTypeServerBroadcast.JobStatusPayload:
             const jobLogs = possibleMessage.payload as JobStatusPayload;
