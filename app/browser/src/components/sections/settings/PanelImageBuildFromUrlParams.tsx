@@ -75,7 +75,6 @@ export const PanelImageBuildFromUrlParams: React.FC<{
   const onSubmit = useCallback(
     (values: FormType) => {
       const newJobDefinitionBlob = { ...jobDefinitionBlob };
-
       if (!values.image) {
         delete newJobDefinitionBlob.image;
       }
@@ -137,6 +136,7 @@ export const PanelImageBuildFromUrlParams: React.FC<{
       } else {
         delete newJobDefinitionBlob.build.dockerfile;
       }
+      formik.setFieldValue("dockerfile", content);
       setJobDefinitionBlob(newJobDefinitionBlob);
       onSave?.();
     },
