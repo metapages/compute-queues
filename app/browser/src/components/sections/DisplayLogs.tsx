@@ -3,7 +3,7 @@ import {
   useRef,
   useState,
 } from 'react';
-
+import { AnsiUp } from 'ansi_up';
 import { ConsoleLogLine } from '/@/shared/types';
 import { useStore } from '/@/store';
 
@@ -14,7 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { OutputTable } from './logs/OutputTable';
 
-export type LogsMode = "build+stdout+stderr" | "build+stdout" | "stdout+stderr" | "stdout" | "stderr" | "build";
+export type LogsMode = "stdout+stderr" | "stdout" | "stderr" | "build";
 
 const EMPTY_ARRAY: ConsoleLogLine[] = [];
 
@@ -50,17 +50,11 @@ export const DisplayLogs: React.FC<{
 
     let currentLogs: ConsoleLogLine[] = EMPTY_ARRAY;
     switch (mode) {
-      case "build+stdout+stderr":
+      case "stdout+stderr":
         currentLogs = (buildLogs || EMPTY_ARRAY).concat(runLogs || EMPTY_ARRAY);
         break;
-      case "build+stdout":
-        currentLogs = (buildLogs || EMPTY_ARRAY).concat(runLogs?.filter((l) => !l[2]) || EMPTY_ARRAY);
-        break;
-      case "stdout+stderr":
-        currentLogs = runLogs || EMPTY_ARRAY;
-        break;
       case "stdout":
-        currentLogs = runLogs?.filter((l) => !l[2]) || EMPTY_ARRAY;
+        currentLogs = (buildLogs || EMPTY_ARRAY).concat(runLogs?.filter((l) => !l[2]) || EMPTY_ARRAY);
         break;
       case "stderr":
         currentLogs = runLogs?.filter((l) => l[2]) || EMPTY_ARRAY;
@@ -69,7 +63,7 @@ export const DisplayLogs: React.FC<{
         currentLogs = buildLogs || [];
         break;
     }
-
+    console.log(currentLogs)
     logsRef.current = currentLogs?.map((l) => l[0]);
     setLogs(logsRef.current);
   }, [mode, jobState, jobId, buildLogs, runLogs]);
@@ -89,6 +83,8 @@ const JustLogs: React.FC<{
   logs?: string[];
 }> = ({ logs }) => {
   let logsNewlineHandled: string[] = [];
+  const ansi_up = new AnsiUp();
+  ansi_up.escape_html = false;
   if (logs) {
     logs.forEach((line) => {
       if (!line) {
@@ -100,11 +96,12 @@ const JustLogs: React.FC<{
   }
   return (
     <Stack spacing={1} p={'0.5rem'}>
-      {logsNewlineHandled.map((line, i) => (
-        <Code bg={'none'} key={i}>
-          {line}
-        </Code>
-      ))}
+      {logsNewlineHandled.map((line, i) => {
+        let html = ansi_up.ansi_to_html(line);
+        console.log(html)
+        return <Code bg={'none'} key={i} dangerouslySetInnerHTML={{ __html: html }}>
+        </Code>;
+    })}
     </Stack>
   );
 };

@@ -23,6 +23,7 @@
     "@phosphor-icons/react": "^2.1.7",
     "@popperjs/core": "^2.11.6",
     "@react-typed-hooks/use-key-press": "^1.0.5",
+    "ansi_up": "^6.0.2",
     "dexie": "^4.0.7",
     "fetch-retry": "^5.0.6",
     "formik": "^2.4.6",

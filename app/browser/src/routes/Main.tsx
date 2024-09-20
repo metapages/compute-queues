@@ -180,7 +180,7 @@ export const Main: React.FC = () => {
       style={{ width: "100%", height: contentHeight }}
       src={`https://markdown.mtfm.io/#?url=${window.location.origin}${window.location.pathname}/README.md`}
     />,
-    stderr: <Container p={0} minW={'100%'}>
+    stderr: <Container minHeight={contentHeight} height={contentHeight} p={0} minW={'100%'} overflow={'scroll'} bg={'white'}>
       <ConsoleHeader title={'stderr'} 
         showSplit={false} 
         showCombine={true} 
@@ -194,12 +194,12 @@ export const Main: React.FC = () => {
       <MainHeader />
       <HStack gap={0} width={'100%'} minWidth="100vw" minHeight={contentHeight}>
         <Box minW={rightContent ? '50%' : '100%'} minHeight={contentHeight}>
-          <Container p={0} minW={'100%'}>
+          <Container minHeight={contentHeight} height={contentHeight} p={0} minW={'100%'} overflow={'scroll'} bg={'white'}>
             <ConsoleHeader title={showStdErr ? 'stdout' : 'console'} 
               showSplit={!showStdErr} 
               showCombine={false}
             />
-            <DisplayLogs mode={showStdErr ? 'build+stdout' : 'build+stdout+stderr'} />
+            <DisplayLogs mode={showStdErr ? 'stdout' : 'stdout+stderr'} />
           </Container>
         </Box>
         <Box minW={rightContent ? '50%' : '0%'} minHeight={contentHeight} borderLeft={rightContent && defaultBorder}>

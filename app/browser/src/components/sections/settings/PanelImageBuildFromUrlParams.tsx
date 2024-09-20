@@ -133,6 +133,7 @@ export const PanelImageBuildFromUrlParams: React.FC<{
       }
       setJobDefinitionBlob(newJobDefinitionBlob);
       onSave?.();
+      console.log(newJobDefinitionBlob)
     },
     [jobDefinitionBlob, onSave, setJobDefinitionBlob]
   );
@@ -278,7 +279,13 @@ export const PanelImageBuildFromUrlParams: React.FC<{
   }
 
   const onSetValue = (val) => {
-    if (val === 'fromRepo') deleteImage();
+    if (val === 'fromRepo') {
+      localStorage.setItem('dockerImage', formik.values.image);
+      deleteImage();
+    } else {
+      const prevImage = localStorage.getItem('dockerImage');
+      formik.setFieldValue("image", prevImage);
+    }
     setValue(val)
   };
 
