@@ -1,21 +1,26 @@
-import { useCallback } from "react";
+import { useCallback } from 'react';
+
+import { PanelContainer } from '/@/components/generic/PanelContainer';
+import { PanelHeader } from '/@/components/generic/PanelHeader';
+import {
+  AddInputButtonAndModal,
+} from '/@/components/sections/inputs/AddInputButtonAndModal';
+import { InputRow } from '/@/components/sections/inputs/InputRow';
+import { JobInputs } from '/@/shared/types';
+import { useStore } from '/@/store';
+
 import {
   Button,
+  Container,
+  HStack,
   Table,
   Tbody,
   Text,
-  HStack,
-  Container,
-} from "@chakra-ui/react";
-import { useHashParamJson } from "@metapages/hash-query"  ;
-import { JobInputs } from "/@/shared/types";
-
-import { PanelHeader } from '/@/components/generic/PanelHeader';
-import { PanelContainer } from '/@/components/generic/PanelContainer';
-import { AddInputButtonAndModal } from "/@/components/sections/inputs/AddInputButtonAndModal";
-import { InputRow } from "/@/components/sections/inputs/InputRow";
+} from '@chakra-ui/react';
+import { useHashParamJson } from '@metapages/hash-query';
 
 export const PanelInputs: React.FC = () => {
+  const clientJobDefinition = useStore((state) => state.newJobDefinition); 
   const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>(
     "inputs"
   );
@@ -46,12 +51,13 @@ export const PanelInputs: React.FC = () => {
   );
 
   const names: string[] = jobInputs ? Object.keys(jobInputs).sort() : [];
+  const incomingInputsCount = clientJobDefinition?.definition?.inputs ? Object.keys(clientJobDefinition.definition.inputs).length - (jobInputs ? Object.keys(jobInputs).length : 0) : 0;
 
   return (
     <PanelContainer>
-      <PanelHeader title={'Inputs'} />
+      <PanelHeader title={`Inputs (${incomingInputsCount})`} />
       <HStack px={4} width="100%" justifyContent="space-between">
-        <Text>{"/inputs/<files>"}</Text>
+        <Text>{"/inputs/<scripts>"}</Text>
         <AddInputButtonAndModal add={addNewInput} showText={false} />
       </HStack>
       <Container>

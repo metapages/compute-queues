@@ -1,4 +1,5 @@
-import { useRef } from 'react';
+import { PanelContainer } from '/@/components/generic/PanelContainer';
+import { PanelHeader } from '/@/components/generic/PanelHeader';
 import {
   DataRef,
   DockerJobDefinitionRow,
@@ -8,20 +9,17 @@ import {
 import { useStore } from '/@/store';
 
 import {
+  Container,
+  HStack,
+  Icon,
   Table,
   Tbody,
   Td,
   Text,
-  Center,
   Tr,
-  Container,
-  HStack,
-  Icon,
 } from '@chakra-ui/react';
-import { ArrowDown } from '@phosphor-icons/react'
+import { ArrowDown } from '@phosphor-icons/react';
 
-import { PanelHeader } from '/@/components/generic/PanelHeader';
-import { PanelContainer } from '/@/components/generic/PanelContainer';
 // import { UPLOAD_DOWNLOAD_BASE_URL } from '/@/config';
 
 export const PanelOutputs: React.FC = () => {
@@ -34,14 +32,14 @@ export const PanelOutputs: React.FC = () => {
   }
   return (
     <PanelContainer>
-      <PanelHeader title={'Outputs'} />
+      <PanelHeader title={`Outputs (${outputs ? Object.keys(outputs).length : 0})`} />
       <HStack px={4} width="100%" justifyContent="space-between">
         <Text>{"/outputs/<files>"}</Text>
         
       </HStack>
-      <Center px={4} width="100%">
+      {/* <Center px={4} width="100%">
         <Text fontSize={'0.9rem'}>Output Files</Text>
-      </Center>
+      </Center> */}
       <Container>
         <Table px={5} variant="simple">
           <Tbody>
