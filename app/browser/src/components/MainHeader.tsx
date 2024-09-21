@@ -102,8 +102,8 @@ export const MainHeader: React.FC = () => {
       </HStack>
       <HStack borderLeft={defaultBorder} px={4} bg={'black.3'} justifyContent={'space-around'} w={'11rem'}>
         {icon(Gear, 'settings')}
-        {icon(UploadSimple, 'inputs')}
-        {icon(DownloadSimple, 'outputs')}
+        {icon(DownloadSimple, 'inputs')}
+        {icon(UploadSimple, 'outputs')}
       </HStack>
     </Flex>
   )
