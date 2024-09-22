@@ -323,25 +323,29 @@ const checkForDockerImage = async (args: {
   sender: WebsocketMessageSenderWorker;
 }): Promise<boolean> => {
   const { image, sender, jobId } = args;
-  if (CACHED_DOCKER_IMAGES[image]) {
-    // console.log(`👀 ensureDockerImage: ${image} FOUND IMAGE IN MY FAKE CACHE`)
-    // console.log('FOUND IMAGE IN MY FAKE CACHE')
-    (async () => {
-      // But I am going to check out of band, just in case
-      const existsOutOfBand = await hasImage(image);
-      if (!existsOutOfBand) {
-        delete CACHED_DOCKER_IMAGES[image];
-        console.log(`❗ out-of-band check: image ${image} does not exist, so removing it my record`);
-      }
-    })();
-    return true;
-  }
+  // https://github.com/metapages/compute-queues/issues/59
+  // if (CACHED_DOCKER_IMAGES[image]) {
+  //   // console.log(`👀 ensureDockerImage: ${image} FOUND IMAGE IN MY FAKE CACHE`)
+  //   // console.log('FOUND IMAGE IN MY FAKE CACHE')
+  //   (async () => {
+  //     // But I am going to check out of band, just in case
+  //     const existsOutOfBand = await hasImage(image);
+  //     if (!existsOutOfBand) {
+  //       delete CACHED_DOCKER_IMAGES[image];
+  //       console.log(`❗ out-of-band check: image ${image} does not exist, so removing it my record`);
+  //     }
+  //   })();
+  //   return true;
+  // }
 
   const imageExists = await hasImage(image);
   // console.log(`👀 ensureDockerImage: ${image} imageExists=${imageExists}`)
   // console.log('imageExists', imageExists);
   if (imageExists) {
     CACHED_DOCKER_IMAGES[image] = true;
+  }
+  if (imageExists) {
+    return imageExists;
   }
 
   try {
