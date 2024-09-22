@@ -44,14 +44,14 @@ export const MainHeader: React.FC = () => {
     const fileNames = jobInputs ? Object.keys(jobInputs).sort() : [];
     const command = jobDefinitionBlob?.command;
     let mainFile = null;
-    if (fileNames.length && command?.length) {
-      for (let file of fileNames) {
-        if (command.includes(file)) {
-          // if there's a file that matches the command, set that as the editable file
-          setMainInputFile(file);
-        }
-      }
-    }
+    // if (fileNames.length && command?.length) {
+    //   for (let file of fileNames) {
+    //     if (command.includes(file)) {
+    //       // if there's a file that matches the command, set that as the editable file
+    //       setMainInputFile(file);
+    //     }
+    //   }
+    // }
     // if no file matches the command, set the editable file to the first input
     if (!mainFile && fileNames.length) {
       setMainInputFile(fileNames[0]);
@@ -79,11 +79,27 @@ export const MainHeader: React.FC = () => {
       <HStack justify={'space-between'} px={2} w={`calc(100% - 11rem)`}>
         <HStack>
           <Icon as={Terminal} color={'gray.39'} boxSize="4" />
-          <Text fontWeight={400} color={'gray.39'}>{jobDefinitionBlob?.command}</Text>
+          {/* <Text fontWeight={400} color={'gray.39'}>{jobDefinitionBlob?.command}</Text> */}
+          {/* <Text>{`/inputs/${mainInputFile}`}</Text> */}
+          <Text>{`${mainInputFile}`}</Text>
+          { mainInputFile && <Button 
+              variant={'ghost'} 
+              bg={editorShown ? 'black.10' : 'none'}
+              onClick={() => setRightPanelContext(editorShown ? null : 'editScript')}
+              _hover={{bg: editorShown ? 'black.10' : 'none' }}
+
+              >
+              <HStack gap={2}>
+                <Icon as={PencilSimple}/>
+                {/* <Spacer /> */}
+                {/* <Text>{`/inputs/${mainInputFile}`}</Text> */}
+              </HStack>
+            </Button>
+          }
         </HStack>
         <Spacer/>
         <HStack>
-          { mainInputFile && <Button 
+          {/* { mainInputFile && <Button 
               variant={'ghost'} 
               bg={editorShown ? 'black.10' : 'none'}
               onClick={() => setRightPanelContext(editorShown ? null : 'editScript')}
@@ -96,7 +112,7 @@ export const MainHeader: React.FC = () => {
                 <Text>{`/inputs/${mainInputFile}`}</Text>
               </HStack>
             </Button>
-          }
+          } */}
           <JobControlButton />
         </HStack>
       </HStack>
