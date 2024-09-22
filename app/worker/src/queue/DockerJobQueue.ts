@@ -10,6 +10,7 @@ import {
   DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
+  DockerRunResult,
   DockerRunResultWithOutputs,
   StateChangeValueQueued,
   StateChangeValueRunning,
@@ -24,7 +25,6 @@ import {
   DockerJobArgs,
   dockerJobExecute,
   DockerJobExecution,
-  DockerRunResult,
   Volume,
 } from './DockerJob.ts';
 import {
@@ -449,13 +449,16 @@ export class DockerJobQueue {
             this.queue[jobBlob.hash].execution = dockerExecution;
 
             dockerExecution.finish.then(async (result: DockerRunResult) => {
-                // console.log(`[${jobBlob.hash.substring(0, 6)}] result ${JSON.stringify(result, null, '  ').substring(0, 200)}`);
-                if (result.error) {
-                    console.log(`[${this.workerIdShort}] [${jobBlob.hash.substring(0, 6)}] 💥 error: ${result.error}`);
-                }
+                console.log(`[${jobBlob.hash.substring(0, 6)}] result ${JSON.stringify(result, null, '  ').substring(0, 200)}`);
+                result.logs = result.logs || [];
                 if (result.StatusCode !== 0) {
+                    result.logs.push([`💥 StatusCode: ${result.StatusCode}`, Date.now(), true]);
                     console.log(`[${this.workerIdShort}] [${jobBlob.hash.substring(0, 6)}] 💥 StatusCode: ${result.StatusCode}`);
                     console.log(`[${this.workerIdShort}] [${jobBlob.hash.substring(0, 6)}] 💥 stderr: ${result.logs?.join("\n")?.substring(0, 200)}`);
+                }
+                if (result.error) {
+                    result.logs.push([`💥 ${result.error}`, Date.now(), true]);
+                    console.log(`[${this.workerIdShort}] [${jobBlob.hash.substring(0, 6)}] 💥 error: ${result.error}`);
                 }
                 
                 const resultWithOutputs: DockerRunResultWithOutputs = result as DockerRunResultWithOutputs;
@@ -463,9 +466,6 @@ export class DockerJobQueue {
 
                 let valueFinished: StateChangeValueWorkerFinished | undefined;
                 if (result.error) {
-                    // no outputs on error
-                    resultWithOutputs.logs = resultWithOutputs.logs || [];
-                    resultWithOutputs.logs = [[`💥 ${result.error}`, Date.now(), true]],
                     valueFinished = {
                         reason: DockerJobFinishedReason.Error,
                         worker: this.workerId,

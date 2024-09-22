@@ -9,7 +9,6 @@ import Docker from 'npm:dockerode@4.0.2';
 import * as StreamTools from '../docker/streamtools.ts';
 import { DockerJobSharedVolumeName } from '../docker/volume.ts';
 import {
-  ConsoleLogLine,
   DockerApiDeviceRequest,
   DockerJobImageBuild,
   DockerJobState,
@@ -88,12 +87,6 @@ if (!existsSync("/var/run/docker.sock")) {
     'You must give access to the local docker daemon via: " -v /var/run/docker.sock:/var/run/docker.sock"'
   );
   Deno.exit(1);
-}
-
-export interface DockerRunResult {
-  StatusCode?: number;
-  logs: ConsoleLogLine[];
-  error?: any;
 }
 
 export const JobCacheDirectory = "/job-cache";

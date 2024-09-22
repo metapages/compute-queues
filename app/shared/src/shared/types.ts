@@ -80,10 +80,14 @@ export type DockerJobDefinitionInputRefs = Omit<
   inputs?: InputsRefs;
 };
 
-export interface DockerRunResultWithOutputs {
+
+export interface DockerRunResult {
   StatusCode?: number;
-  logs?: ConsoleLogLine[];
+  logs: ConsoleLogLine[];
   error?: any;
+}
+
+export interface DockerRunResultWithOutputs extends DockerRunResult {
   outputs: InputsRefs;
 }
 
