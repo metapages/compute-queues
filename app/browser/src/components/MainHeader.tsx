@@ -30,7 +30,8 @@ import {
 } from '@phosphor-icons/react';
 
 export const MainHeader: React.FC = () => {
-  const [jobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
+  const [jobDefinitionBlob] =
+    useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [jobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
 
   // only show the edit button if the command points to a script in the inputs
@@ -56,48 +57,80 @@ export const MainHeader: React.FC = () => {
     if (!mainFile && fileNames.length) {
       setMainInputFile(fileNames[0]);
     }
-  }, [jobInputs, jobDefinitionBlob])
+  }, [jobInputs, jobDefinitionBlob]);
 
   const icon = (svg, context) => {
     const toggleValue = rightPanelContext === context ? null : context;
-    return <Tooltip label={`${context[0].toUpperCase() + context.slice(1,context.length)}`}>
-      <Icon 
-        _hover={{ bg: 'black.10' }} 
-        bg={context === rightPanelContext ? 'black.10' : 'none'}
-        p={'3px'} 
-        borderRadius={5} 
-        as={svg} 
-        boxSize="7" 
-        onClick={() => setRightPanelContext(toggleValue)}
+    return (
+      <Tooltip
+        label={`${context[0].toUpperCase() + context.slice(1, context.length)}`}
+      >
+        <Icon
+          _hover={{ bg: "black.10" }}
+          bg={context === rightPanelContext ? "black.10" : "none"}
+          p={"3px"}
+          borderRadius={5}
+          as={svg}
+          boxSize="7"
+          onClick={() => setRightPanelContext(toggleValue)}
         />
       </Tooltip>
-  }
+    );
+  };
 
-  const editorShown = rightPanelContext === 'editScript';
+  const editorShown = rightPanelContext === "editScript";
   return (
-    <Flex w={'100%'} h={headerHeight} bg={'black.3'} borderBottom={defaultBorder} >
-      <HStack justify={'space-between'} px={2} w={`calc(100% - 11rem)`}>
+    <Flex
+      w={"100%"}
+      h={headerHeight}
+      bg={"black.3"}
+      borderBottom={defaultBorder}
+    >
+      <HStack justify={"space-between"} px={2} w={`calc(100% - 11rem)`}>
         <HStack>
-          <Icon as={Terminal} color={'gray.39'} boxSize="4" />
-          {/* <Text fontWeight={400} color={'gray.39'}>{jobDefinitionBlob?.command}</Text> */}
-          {/* <Text>{`/inputs/${mainInputFile}`}</Text> */}
-          <Text>{`${mainInputFile}`}</Text>
-          { mainInputFile && <Button 
-              variant={'ghost'} 
-              bg={editorShown ? 'black.10' : 'none'}
-              onClick={() => setRightPanelContext(editorShown ? null : 'editScript')}
-              _hover={{bg: editorShown ? 'black.10' : 'none' }}
+          <Icon as={Terminal} color={"gray.39"} boxSize="4" />
 
-              >
+          {!mainInputFile ? (
+            <Text fontWeight={400} color={"gray.39"}>
+              {jobDefinitionBlob?.command}
+            </Text>
+          ) : (
+            <Button
+              variant={"ghost"}
+              bg={editorShown ? "black.10" : "none"}
+              onClick={() =>
+                setRightPanelContext(editorShown ? null : "editScript")
+              }
+              _hover={{ bg: editorShown ? "black.10" : "none" }}
+            >
               <HStack gap={2}>
-                <Icon as={PencilSimple}/>
+                <Text>{`${mainInputFile}`}</Text>
+                <Icon as={PencilSimple} />
                 {/* <Spacer /> */}
-                {/* <Text>{`/inputs/${mainInputFile}`}</Text> */}
+                
               </HStack>
             </Button>
-          }
+          )}
+
+          {/* <Text fontWeight={400} color={'gray.39'}>{jobDefinitionBlob?.command}</Text> */}
+          {/* <Text>{`/inputs/${mainInputFile}`}</Text> */}
+          {/* <Text>{`${mainInputFile}`}</Text>
+          {mainInputFile && (
+            <Button
+              variant={"ghost"}
+              bg={editorShown ? "black.10" : "none"}
+              onClick={() =>
+                setRightPanelContext(editorShown ? null : "editScript")
+              }
+              _hover={{ bg: editorShown ? "black.10" : "none" }}
+            >
+              <HStack gap={2}>
+                <Icon as={PencilSimple} />
+              </HStack>
+            </Button>
+          )} */}
         </HStack>
-        <Spacer/>
+        <Spacer />
         <HStack>
           {/* { mainInputFile && <Button 
               variant={'ghost'} 
@@ -116,11 +149,17 @@ export const MainHeader: React.FC = () => {
           <JobControlButton />
         </HStack>
       </HStack>
-      <HStack borderLeft={defaultBorder} px={4} bg={'black.3'} justifyContent={'space-around'} w={'11rem'}>
-        {icon(Gear, 'settings')}
-        {icon(DownloadSimple, 'inputs')}
-        {icon(UploadSimple, 'outputs')}
+      <HStack
+        borderLeft={defaultBorder}
+        px={4}
+        bg={"black.3"}
+        justifyContent={"space-around"}
+        w={"11rem"}
+      >
+        {icon(Gear, "settings")}
+        {icon(DownloadSimple, "inputs")}
+        {icon(UploadSimple, "outputs")}
       </HStack>
     </Flex>
-  )
+  );
 };
