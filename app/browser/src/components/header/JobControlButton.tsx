@@ -108,7 +108,7 @@ export const JobControlButton: React.FC = () => {
   const queuedButton = (
     <HeaderButton
       ariaLabel="Queued"
-      icon={<QueueIcon weight="duotone" color="green" size={"1.2rem"} />}
+      icon={<QueueIcon color="green" size={"1.2rem"} />}
       onClick={() => {}}
       text={isLargerThan600 ? "queued..." : ""}
     />
@@ -117,7 +117,7 @@ export const JobControlButton: React.FC = () => {
   const requeueButton = (
     <HeaderButton
       ariaLabel="Re-queue"
-      icon={<Icon as={Repeat} weight="duotone" color="green" size={"1.2rem"} />}
+      icon={<Icon as={Repeat} color="green" size={"1.2rem"} />}
       onClick={onClickRetry}
       loading={isJobRequeued}
       text={isLargerThan600 ? "Run Again" : ""}

@@ -33,29 +33,24 @@ export const PanelOutputs: React.FC = () => {
   return (
     <PanelContainer>
       <PanelHeader title={`Outputs (${outputs ? Object.keys(outputs).length : 0})`} />
-      <HStack px={4} width="100%" justifyContent="space-between">
-        <Text>{"/outputs/<files>"}</Text>
-        
-      </HStack>
-      {/* <Center px={4} width="100%">
-        <Text fontSize={'0.9rem'}>Output Files</Text>
-      </Center> */}
-      <Container>
-        <Table px={5} variant="simple">
-          <Tbody>
-            {Object.keys(outputs).map((name) => {
-              
-              return <Tr key={name} justifyContent={'space-between'}>
-                <Td>
-                  <HStack justifyContent={'space-between'}>
-                    <Text>{name}</Text>
-                    <Icon onClick={() => downloadFile(name, outputs[name])} boxSize={'1.4rem'} as={ArrowDown}></Icon>
-                  </HStack>
-                </Td>
-              </Tr>
-            })}
-          </Tbody>
-        </Table>
+      <Container width="100%" overflow={'scroll'} p={0}>
+        <Text px={4}>{"/outputs/<files>"}</Text>
+        <Container>
+          <Table px={5} variant="simple">
+            <Tbody>
+              {Object.keys(outputs).map((name) => {
+                return <Tr key={name} justifyContent={'space-between'}>
+                  <Td>
+                    <HStack p={2} justifyContent={'space-between'}>
+                      <Text>{name}</Text>
+                      <Icon onClick={() => downloadFile(name, outputs[name])} boxSize={'1.4rem'} as={ArrowDown}></Icon>
+                    </HStack>
+                  </Td>
+                </Tr>
+              })}
+            </Tbody>
+          </Table>
+        </Container>
       </Container>
     </PanelContainer>
   );

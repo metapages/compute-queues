@@ -3,7 +3,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import * as linkify from 'linkifyjs';
 import linkifyHtml from 'linkify-html';
 import { AnsiUp } from 'ansi_up';
 import { ConsoleLogLine } from '/@/shared/types';
@@ -14,7 +13,7 @@ import {
   Stack,
   VStack,
 } from '@chakra-ui/react';
-import { OutputTable } from './logs/OutputTable';
+import { OutputTable } from './OutputTable';
 
 export type LogsMode = "stdout+stderr" | "stdout" | "stderr" | "build";
 

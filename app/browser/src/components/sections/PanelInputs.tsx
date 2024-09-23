@@ -10,7 +10,7 @@ import { JobInputs } from '/@/shared/types';
 import { useStore } from '/@/store';
 
 import {
-  Button,
+  Center,
   Container,
   HStack,
   Table,
@@ -56,28 +56,30 @@ export const PanelInputs: React.FC = () => {
   return (
     <PanelContainer>
       <PanelHeader title={`Inputs (${incomingInputsCount})`} />
-      <HStack px={4} width="100%" justifyContent="space-between">
-        <Text>{"/inputs/<scripts>"}</Text>
-        <AddInputButtonAndModal add={addNewInput} showText={false} />
-      </HStack>
-      <Container>
-        <Table variant="simple">
-          <Tbody>
-            {names.map((name) => (
-              <InputRow
-                key={name}
-                name={name}
-                content={jobInputs?.[name] ?? ""}
-                onDelete={deleteInput}
-                onUpdate={updateInput}
-              />
-            ))}
-          </Tbody>
-        </Table>
+      <Container width="100%" overflow={'scroll'} p={0}>
+        <HStack px={4} width="100%" justifyContent="space-between">
+          <Text>{"/inputs/<scripts>"}</Text>
+          <AddInputButtonAndModal add={addNewInput} showText={false} />
+        </HStack>
+        <Container>
+          <Table px={5} variant="simple">
+            <Tbody>
+              {names.map((name) => (
+                <InputRow
+                  key={name}
+                  name={name}
+                  content={jobInputs?.[name] ?? ""}
+                  onDelete={deleteInput}
+                  onUpdate={updateInput}
+                />
+              ))}
+            </Tbody>
+          </Table>
+        </Container>
+        <Center pt={3}>
+          <AddInputButtonAndModal showText={true} add={addNewInput} />
+        </Center>
       </Container>
-      <HStack as={Button} bg={'none'} _hover={{bg: 'none'}}>
-        <AddInputButtonAndModal showText={true} add={addNewInput} />
-      </HStack>
     </PanelContainer>
   );
 };

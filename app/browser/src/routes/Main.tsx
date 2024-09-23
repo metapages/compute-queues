@@ -1,17 +1,14 @@
-import { ConsoleHeader } from '/@/components/generic/ConsoleHeader';
-import { MainFooter } from '/@/components/MainFooter';
-import { MainHeader } from '/@/components/MainHeader';
-import { DisplayLogs } from '/@/components/sections/DisplayLogs';
-import { PanelEditor } from '/@/components/sections/PanelEditor';
-import { PanelInputs } from '/@/components/sections/PanelInputs';
-
 import {
   Box,
-  Container,
   HStack,
   VStack,
 } from '@chakra-ui/react';
 
+import { MainFooter } from '/@/components/MainFooter';
+import { MainHeader } from '/@/components/MainHeader';
+import { PanelLogs } from '/@/components/sections/PanelLogs';
+import { PanelEditor } from '/@/components/sections/PanelEditor';
+import { PanelInputs } from '/@/components/sections/PanelInputs';
 import { PanelOutputs } from '../components/sections/PanelOutputs';
 import { PanelSettings } from '../components/sections/PanelSettings';
 import { useStore } from '../store';
@@ -34,13 +31,7 @@ export const Main: React.FC = () => {
       style={{ width: "100%", height: contentHeight }}
       src={`https://markdown.mtfm.io/#?url=${window.location.origin}${window.location.pathname}/README.md`}
     />,
-    stderr: <Container minHeight={contentHeight} height={contentHeight} p={0} minW={'100%'} overflow={'scroll'} bg={'white'}>
-      <ConsoleHeader title={'stderr'} 
-        showSplit={false} 
-        showCombine={true} 
-      />
-      <DisplayLogs mode={'stderr'} />
-    </Container>
+    stderr: <PanelLogs title={'stderr'} showSplit={false} showCombine={true} mode={'stderr'} />,
   }
   const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
   return (
@@ -48,15 +39,13 @@ export const Main: React.FC = () => {
       <MainHeader />
       <HStack gap={0} width={'100%'} minWidth="100vw" minHeight={contentHeight}>
         <Box minW={rightContent ? '50%' : '100%'} minHeight={contentHeight}>
-          <Container minHeight={contentHeight} height={contentHeight} p={0} minW={'100%'} overflow={'scroll'} bg={'white'}>
-            <ConsoleHeader title={showStdErr ? 'stdout' : 'console'} 
-              showSplit={!showStdErr} 
-              showCombine={false}
-            />
-            <DisplayLogs mode={showStdErr ? 'stdout' : 'stdout+stderr'} />
-          </Container>
+          <PanelLogs title={showStdErr ? 'stdout' : 'console'} 
+            mode={showStdErr ? 'stdout' : 'stdout+stderr'} 
+            showCombine={false} showSplit={!showStdErr} />
         </Box>
-        <Box minW={rightContent ? '50%' : '0%'} minHeight={contentHeight} borderLeft={rightContent && defaultBorder}>
+        <Box minW={rightContent ? '50%' : '0%'} 
+          minHeight={contentHeight} 
+          borderLeft={rightContent && defaultBorder}>
           {rightContent}
         </Box>
       </HStack>

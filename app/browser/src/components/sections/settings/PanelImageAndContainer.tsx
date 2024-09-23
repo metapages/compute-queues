@@ -14,7 +14,7 @@ import { PanelImageBuildFromUrlParams } from '/@/components/sections/settings/Pa
 export const PanelImageAndContainer: React.FC = () => {
 
   return (
-    <VStack w="100%" alignItems="stretch">
+    <VStack w="100%" alignItems="stretch" overflow={'scroll'}>
       <Tabs isFitted={true}>
         <TabList mb='1em'>
           <Tab><Text>Configure Job</Text></Tab>
