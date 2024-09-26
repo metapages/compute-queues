@@ -191,7 +191,7 @@ const HeaderButton: React.FC<{
   return (
     <Button
       disabled={true}
-      width={"7.5rem"}
+      w={text.length ? '7.5rem' : '3rem'}
       aria-label={ariaLabel}
       variant={"ghost"}
       _hover={{ bg: "none" }}
@@ -201,7 +201,7 @@ const HeaderButton: React.FC<{
     >
       <HStack gap={2}>
         {icon}
-        <Spacer />
+        {text.length && <Spacer />}
       </HStack>
       <Text color={color || "gray.35"} fontWeight={500} fontSize={"0.9rem"}>
         {text}

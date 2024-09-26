@@ -1,5 +1,6 @@
 import {
   Box,
+  Container,
   HStack,
   useMediaQuery,
   VStack,
@@ -17,11 +18,13 @@ import {
   contentHeight,
   defaultBorder,
 } from '../styles/theme';
+import { JobControlButton } from '../components/header/JobControlButton';
+import { JobStatus } from '../components/footer/JobStatus';
 
 export const Main: React.FC = () => {
-  const [isLargerThan700] = useMediaQuery("(min-width: 700px)");
-
   const rightPanelContext = useStore((state) => state.rightPanelContext);
+  const [isWiderThan1000] = useMediaQuery("(min-width: 1000px)");
+  const [isTallerThan200] = useMediaQuery("(min-height: 200px)");
 
   const editorShown = rightPanelContext === 'editScript';
   const stdErrShown = rightPanelContext === 'stderr'; 
@@ -34,18 +37,24 @@ export const Main: React.FC = () => {
       style={{ width: "100%", height: contentHeight }}
       src={`https://markdown.mtfm.io/#?url=${window.location.origin}${window.location.pathname}/README.md`}
     />,
-    // TODO make panel logs take a mode and have the mode inform the title internally
     stderr: <PanelLogs mode={'stderr'} />,
   }
   const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
   const rightWidth = rightPanelContext ?
-    (editorShown && !isLargerThan700 ? '100%' : '50%') :
+    (editorShown && !isWiderThan1000 ? '100%' : '50%') :
     '0%';
-  const leftWidth = rightPanelContext ?
-    (editorShown && !isLargerThan700 ? '0%' : '50%') :
-    '100%';
+  const leftWidth = `calc(100% - ${rightWidth})`;
+
+  if (!isTallerThan200) {
+    return <Container m={0} bg={'black.10'} minW={'100%'} minH={'100%'} h={'100vh'} w={'100vw'}>
+      <HStack justifyContent={'space-around'} minH={'100%'}>
+        <JobStatus />
+        <JobControlButton />
+      </HStack>
+    </Container>
+  }
   return (
-    <VStack gap={0} minHeight="100vh">
+    <VStack gap={0} minWidth={'200px'} minHeight="100vh">
       <MainHeader />
       <HStack gap={0} w={'100%'} minW="100vw" minH={contentHeight}>
         <Box minW={leftWidth} minH={contentHeight}>

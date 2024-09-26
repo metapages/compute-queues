@@ -108,7 +108,7 @@ export const DisplayLogs: React.FC<{
 
   const getItemSize = (index) => {
     if (index === logs.length - 1) return (OUTPUT_TABLE_ROW_HEIGHT * (outputCount + 1)) + LINE_HEIGHT;
-    return logs[index].length ? LINE_HEIGHT : 0;
+    return LINE_HEIGHT;
   }
 
   const Row = ({ index, style }) => {

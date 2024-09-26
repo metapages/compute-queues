@@ -66,7 +66,6 @@ export const JobStatus: React.FC = () => {
 
   }
 
-  // Question: should the jobId be click to copy? - yes
   return <HStack h={'100%'} gap={5} alignItems='center' justifyContent={'center'}>
       {icon}
       <VStack gap={0.2} alignItems={"flex-start"}>
