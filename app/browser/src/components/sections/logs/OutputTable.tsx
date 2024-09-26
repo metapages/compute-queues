@@ -37,12 +37,12 @@ export const OutputTable: React.FC = () => {
   if (Object.keys(outputs).length === 0) return <></>;
   return (
     <Box mt={3}
-      maxWidth={'25rem'}  
-      minWidth={'15rem'} 
+      maxW={'25rem'}  
+      minW={'15rem'} 
       border="1px solid" 
       borderColor="gray.87" 
       borderRadius="md" 
-      width={'80%'}
+      w={'80%'}
       overflow={'hidden'}
     >
       <VStack gap={0}>

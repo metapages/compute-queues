@@ -15,7 +15,7 @@ import {
   Code,
   VStack,
 } from '@chakra-ui/react';
-import { OutputTable } from './OutputTable';
+import { OUTPUT_TABLE_ROW_HEIGHT, OutputTable } from './OutputTable';
 
 export type LogsMode = "stdout+stderr" | "stdout" | "stderr" | "build";
 
@@ -107,8 +107,7 @@ export const DisplayLogs: React.FC<{
   }
 
   const getItemSize = (index) => {
-    // rough calculation to make space for the output table, apologies for the magic number
-    if (index === logs.length - 1) return (35 * (outputCount + 1)) + LINE_HEIGHT;
+    if (index === logs.length - 1) return (OUTPUT_TABLE_ROW_HEIGHT * (outputCount + 1)) + LINE_HEIGHT;
     return logs[index].length ? LINE_HEIGHT : 0;
   }
 
