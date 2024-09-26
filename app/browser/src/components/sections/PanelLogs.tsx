@@ -3,12 +3,25 @@ import { ConsoleHeader } from "/@/components/generic/ConsoleHeader"
 import { DisplayLogs, LogsMode } from "/@/components/sections/logs/DisplayLogs"
 import { contentHeight } from "/@/styles/theme"
 
+const titleByMode = (mode: LogsMode): string => {
+  switch (mode) {
+    case 'stdout':
+      return 'stdout';
+    case 'stdout+stderr':
+      return 'console';
+    case 'stderr':
+      return 'stderr';
+    default:
+      return '';
+  }
+}
 export const PanelLogs: React.FC<{
-  title: string,
-  showCombine: boolean,
-  showSplit: boolean,
   mode: LogsMode,
-}> = ({title, showCombine, showSplit, mode}) => {
+}> = ({mode}) => {
+  const title = titleByMode(mode)
+  const showSplit = mode === 'stdout+stderr';
+  const showCombine = mode === 'stderr';
+
   return <Container 
     minH={contentHeight} 
     h={contentHeight} 

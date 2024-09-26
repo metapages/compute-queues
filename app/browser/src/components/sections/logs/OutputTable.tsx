@@ -26,7 +26,6 @@ export const OutputTable: React.FC = () => {
   const outputCount = Object.keys(outputs).length;
   const downloadFile = async (name: string, outPut: DataRef) => {
     // TODO: add download functionality
-    // use dataRefToBuffer?
   };
 
   const downloadAll = async () => {
@@ -38,7 +37,7 @@ export const OutputTable: React.FC = () => {
   return (
     <Box mt={3}
       maxW={'25rem'}  
-      minW={'15rem'} 
+      minW={'20rem'} 
       border="1px solid" 
       borderColor="gray.87" 
       borderRadius="md" 

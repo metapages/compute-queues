@@ -1,6 +1,7 @@
 import {
   Box,
   HStack,
+  useMediaQuery,
   VStack,
 } from '@chakra-ui/react';
 
@@ -18,10 +19,12 @@ import {
 } from '../styles/theme';
 
 export const Main: React.FC = () => {
+  const [isLargerThan700] = useMediaQuery("(min-width: 700px)");
 
   const rightPanelContext = useStore((state) => state.rightPanelContext);
 
-  const showStdErr = rightPanelContext === 'stderr'; 
+  const editorShown = rightPanelContext === 'editScript';
+  const stdErrShown = rightPanelContext === 'stderr'; 
   const rightPanelOptions = {
     inputs: <PanelInputs />,
     outputs: <PanelOutputs />,
@@ -32,19 +35,23 @@ export const Main: React.FC = () => {
       src={`https://markdown.mtfm.io/#?url=${window.location.origin}${window.location.pathname}/README.md`}
     />,
     // TODO make panel logs take a mode and have the mode inform the title internally
-    stderr: <PanelLogs title={'stderr'} showSplit={false} showCombine={showStdErr} mode={'stderr'} />,
+    stderr: <PanelLogs mode={'stderr'} />,
   }
   const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
+  const rightWidth = rightPanelContext ?
+    (editorShown && !isLargerThan700 ? '100%' : '50%') :
+    '0%';
+  const leftWidth = rightPanelContext ?
+    (editorShown && !isLargerThan700 ? '0%' : '50%') :
+    '100%';
   return (
-    <VStack gap={0} minHeight="100vh" minW={'40rem'} overflow={'hide'}>
+    <VStack gap={0} minHeight="100vh">
       <MainHeader />
       <HStack gap={0} w={'100%'} minW="100vw" minH={contentHeight}>
-        <Box minW={rightContent ? '50%' : '100%'} minH={contentHeight}>
-          <PanelLogs title={showStdErr ? 'stdout' : 'console'} 
-            mode={showStdErr ? 'stdout' : 'stdout+stderr'} 
-            showCombine={false} showSplit={!showStdErr} />
+        <Box minW={leftWidth} minH={contentHeight}>
+          <PanelLogs mode={stdErrShown ? 'stdout' : 'stdout+stderr'} />
         </Box>
-        <Box minW={rightContent ? '50%' : '0%'} 
+        <Box minW={rightWidth} 
           minH={contentHeight} 
           borderLeft={rightContent && defaultBorder}>
           {rightContent}
