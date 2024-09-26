@@ -12,6 +12,7 @@ import {
   DockerApiDeviceRequest,
   DockerJobImageBuild,
   DockerJobState,
+  DockerRunResult,
   JobStatusPayload,
   WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
