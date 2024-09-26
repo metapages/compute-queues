@@ -51,7 +51,7 @@ export const JobStatus: React.FC = () => {
         <HStack gap={2}>
           {desc && <Text fontSize={'0.7rem'}>{desc}</Text>}
           {jobId && <Text fontSize={'0.7rem'}>Job Id: {jobId.slice(0, 5)}</Text>}
-          {exitCode !== null && <Text color={showExitCodeRed && 'red'} fontSize={'0.7rem'}>Exit Code: {exitCode}</Text>}
+          {exitCode !== null && <Text color={showExitCodeRed ? 'red' : undefined} fontSize={'0.7rem'}>Exit Code: {exitCode}</Text>}
         </HStack>
       </VStack>
   </HStack>

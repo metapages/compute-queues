@@ -9,12 +9,20 @@ export const PanelLogs: React.FC<{
   showSplit: boolean,
   mode: LogsMode,
 }> = ({title, showCombine, showSplit, mode}) => {
-  return <Container minHeight={contentHeight} height={contentHeight} maxHeight={contentHeight} p={0} minW={'100%'} overflow={'scroll'} bg={'white'}>
+  return <Container 
+    minH={contentHeight} 
+    h={contentHeight} 
+    maxH={contentHeight} 
+    p={0} 
+    minW={'100%'} 
+    overflow={'scroll'} 
+    bg={'white'}
+  >
   <ConsoleHeader title={title} 
     showSplit={showSplit} 
-    showCombine={false}
+    showCombine={showCombine}
   />
-  <Container height={'calc(100% - 1.5rem)'} p={0} minW={'100%'} overflow={'scroll'}>
+  <Container h={'calc(100% - 1.5rem)'} p={0} minW={'100%'} overflow={'scroll'}>
     <DisplayLogs mode={mode} />
   </Container>
 </Container>

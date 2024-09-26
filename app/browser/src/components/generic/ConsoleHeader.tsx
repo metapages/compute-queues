@@ -21,7 +21,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, s
   const onCombine = () => {
     setRightPanelContext(null);
   }
-  return <Flex zIndex={2} w={'100%'} h={'1.5rem'} borderBottom={defaultBorder} backgroundColor={'black.3'} >
+  return <Flex zIndex={2} w={'100%'} h={'1.5rem'} borderBottom={defaultBorder} bgColor={'black.3'} >
     <HStack justify={'space-between'} px={3} w={'100%'}>
         <Text color={'gray.39'} fontSize={'0.7rem'}>{title.toUpperCase()}</Text>
         <HStack>

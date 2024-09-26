@@ -33,7 +33,7 @@ export const QueueIconAndModal: React.FC = () => {
         <ModalContent h={'90%'} w={'90%'}>
           <ModalHeader p={0} h={headerHeight} borderBottom={defaultBorder}>
           </ModalHeader>
-          <Container p={3} m={0} overflow={'scroll'} minWidth={'100%'} h={'100%'}>
+          <Container p={3} m={0} overflow={'scroll'} minW={'100%'} h={'100%'}>
             <Queue />
           </Container>
         </ModalContent>

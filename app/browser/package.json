@@ -39,6 +39,8 @@
     "react": "^18.2.0",
     "react-icons": "^4.4.0",
     "react-router-dom": "^6.3.0",
+    "react-virtualized-auto-sizer": "^1.0.24",
+    "react-window": "^1.8.10",
     "reconnecting-websocket": "^4.4.0",
     "safe-stable-stringify": "^2.4.3",
     "unibabel": "^2.1.8",

@@ -44,7 +44,7 @@ export const JobsTable: React.FC = () => {
   return (
     <Box p={2}>
       <TableContainer whiteSpace={'wrap'} fontSize={'0.7rem'}>
-        <Table layout={'fixed'} size={'sm'} width={'100%'} variant="simple">
+        <Table layout={'fixed'} size={'sm'} w={'100%'} variant="simple">
           <Thead>
             <Tr>
               <Th w={'15%'}>Id</Th>

@@ -31,20 +31,21 @@ export const Main: React.FC = () => {
       style={{ width: "100%", height: contentHeight }}
       src={`https://markdown.mtfm.io/#?url=${window.location.origin}${window.location.pathname}/README.md`}
     />,
-    stderr: <PanelLogs title={'stderr'} showSplit={false} showCombine={true} mode={'stderr'} />,
+    // TODO make panel logs take a mode and have the mode inform the title internally
+    stderr: <PanelLogs title={'stderr'} showSplit={false} showCombine={showStdErr} mode={'stderr'} />,
   }
   const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
   return (
-    <VStack gap={0} minHeight="100vh" minWidth={'40rem'} overflow={'hide'}>
+    <VStack gap={0} minHeight="100vh" minW={'40rem'} overflow={'hide'}>
       <MainHeader />
-      <HStack gap={0} width={'100%'} minWidth="100vw" minHeight={contentHeight}>
-        <Box minW={rightContent ? '50%' : '100%'} minHeight={contentHeight}>
+      <HStack gap={0} w={'100%'} minW="100vw" minH={contentHeight}>
+        <Box minW={rightContent ? '50%' : '100%'} minH={contentHeight}>
           <PanelLogs title={showStdErr ? 'stdout' : 'console'} 
             mode={showStdErr ? 'stdout' : 'stdout+stderr'} 
             showCombine={false} showSplit={!showStdErr} />
         </Box>
         <Box minW={rightContent ? '50%' : '0%'} 
-          minHeight={contentHeight} 
+          minH={contentHeight} 
           borderLeft={rightContent && defaultBorder}>
           {rightContent}
         </Box>
