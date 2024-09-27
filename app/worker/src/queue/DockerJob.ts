@@ -207,13 +207,15 @@ export const dockerJobExecute = async (
     try {
       createOptions.image = await ensureDockerImage({jobId: id, image, build: args.build, sender});
     } catch (err) {
+      result.logs = err.logs ? err.logs : [];
       if (err instanceof DockerBuildError) {
-        result.error = err.message;
-        result.logs = err.logs ? err.logs : [];
+        result.error = "Error building image";
+        result.logs.push([`${err.message}`, Date.now(), true]);
         return result;
       } else {
         console.error('💥 ensureDockerImage error', err);
-        result.error = `Failure to pull or build the docker image:  ${err?.message}`;
+        result.logs.push([`Failure to pull or build the docker image:  ${err?.message}`, Date.now(), true]);
+        result.error = "Error";
         return result;
       }
     }
