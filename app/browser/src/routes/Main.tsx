@@ -40,9 +40,20 @@ export const Main: React.FC = () => {
     stderr: <PanelLogs mode={'stderr'} />,
   }
   const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
-  const rightWidth = rightPanelContext ?
-    (editorShown && !isWiderThan1000 ? '100%' : '50%') :
-    '0%';
+  let rightWidth = '0%';
+  if (rightPanelContext) {
+    if (!isWiderThan1000) {
+      if (editorShown) {
+        rightWidth = '100%';   
+      } else if (stdErrShown) {
+        rightWidth = '50%';
+      } else {
+        rightWidth = '80%';
+      }
+    } else {
+      rightWidth = '50%';
+    }
+  }
   const leftWidth = `calc(100% - ${rightWidth})`;
 
   if (!isTallerThan200) {

@@ -51,6 +51,11 @@ export const DisplayLogs: React.FC<{
     }
   }
 
+  // if the logs change, or if the ref changes, scroll to the bottom
+  useEffect(() => {
+    if (myref.current) showRef();
+  }, [myref.current, logsRef.current]);
+
   // new jobId? reset the local logs ref
   useEffect(() => {
     logsRef.current = [];
@@ -74,19 +79,29 @@ export const DisplayLogs: React.FC<{
       return;
     }
 
+    const allLogs = (buildLogs || EMPTY_ARRAY).concat(runLogs || EMPTY_ARRAY);
     let currentLogs: ConsoleLogLine[] = EMPTY_ARRAY;
+    const stdOutLogs = [];
+    const stdErrLogs = [];
+    for (let log of allLogs) {
+      if (log[2]) {
+        stdErrLogs.push(log)
+      } else {
+        stdOutLogs.push(log)
+      }
+    }
     switch (mode) {
       case "stdout+stderr":
-        currentLogs = (buildLogs || EMPTY_ARRAY).concat(runLogs || EMPTY_ARRAY);
+        currentLogs = allLogs;
         break;
       case "stdout":
-        currentLogs = (buildLogs || EMPTY_ARRAY).concat(runLogs?.filter((l) => !l[2]) || EMPTY_ARRAY);
+        currentLogs = stdOutLogs;
         break;
       case "stderr":
-        currentLogs = runLogs?.filter((l) => l[2]) || EMPTY_ARRAY;
+        currentLogs = stdErrLogs;
         break;
       case "build":
-        currentLogs = buildLogs || [];
+        currentLogs = buildLogs || EMPTY_ARRAY;
         break;
     }
     let logsNewlineHandled: any[] = [];
@@ -97,37 +112,34 @@ export const DisplayLogs: React.FC<{
       const lines = line[0]?.split("\n");
       logsNewlineHandled = logsNewlineHandled.concat(lines);
     });
-    logsRef.current = logsNewlineHandled;
+    logsRef.current = outputCount ? [...logsNewlineHandled, "OUTPUT_TABLE_PLACEHOLDER"] : logsNewlineHandled;
     setLogs(logsRef.current);
-    showRef();
-  }, [mode, jobState, jobId, buildLogs, runLogs, showOutputTable]);
+  }, [mode, jobState, jobId, buildLogs, runLogs, showOutputTable, outputCount]);
 
   if (!jobId) {
     return <VStack alignItems={'flex-start'} h={'100%'} pl={3}></VStack>
   }
 
   const getItemSize = (index) => {
-    if (index === logs.length - 1) return (OUTPUT_TABLE_ROW_HEIGHT * (outputCount + 1)) + LINE_HEIGHT;
+    if (logs[index] === "OUTPUT_TABLE_PLACEHOLDER") return (OUTPUT_TABLE_ROW_HEIGHT * (outputCount + 1)) + LINE_HEIGHT;
     return LINE_HEIGHT;
   }
 
   const Row = ({ index, style }) => {
-    let formattedLog = linkifyHtml(ansi_up.ansi_to_html(logs[index]), options);
-    const codeEl = <Code 
-      style={style} 
-      sx={{display: 'block', textWrap: 'nowrap'}} 
-      bg={'none'} 
-      dangerouslySetInnerHTML={{ __html: formattedLog }} 
-      />
     // if this is the last log in the list, add the output table
-    // this will allow the table to scroll naturally
-    if (index === logs.length - 1) {
+    // this will allow the table to scroll with the other log content
+    if (logs[index] === "OUTPUT_TABLE_PLACEHOLDER") {
       return <Box style={style}>
-        {codeEl}
         <OutputTable />
       </Box>;
     }
-    return codeEl;
+    let formattedLog = linkifyHtml(ansi_up.ansi_to_html(logs[index]), options);
+    return <Code 
+      style={style} 
+      sx={{display: 'block', textWrap: 'nowrap'}} 
+      bg={'none'} 
+      dangerouslySetInnerHTML={{ __html: formattedLog }}
+      />
   };
 
   return <VStack alignItems={'flex-start'} h={'100%'} pl={3}>
@@ -138,7 +150,7 @@ export const DisplayLogs: React.FC<{
           itemSize={getItemSize}
           itemCount={logsRef.current.length}
           width={width}
-          ref={myref}
+          ref={(el) => {myref.current = el}}
         >
           {Row}
         </List>

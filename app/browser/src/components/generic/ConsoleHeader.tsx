@@ -14,6 +14,7 @@ interface ConsoleHeaderProps {
 export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, showCombine}) => {
   const setRightPanelContext = useStore((state) => state.setRightPanelContext);
   const setRunLogs = useStore((state) => state.setRunLogs);
+  const setBuildLogs = useStore((state) => state.setBuildLogs);
 
   const onSplit = () => {
     setRightPanelContext('stderr');
@@ -21,13 +22,18 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, s
   const onCombine = () => {
     setRightPanelContext(null);
   }
+
+  const clearLogs = () => {
+    setBuildLogs(null);
+    setRunLogs(null);
+  }
   return <Flex zIndex={2} w={'100%'} h={'1.5rem'} borderBottom={defaultBorder} bgColor={'black.3'} >
     <HStack justify={'space-between'} px={3} w={'100%'}>
         <Text color={'gray.39'} fontSize={'0.7rem'}>{title.toUpperCase()}</Text>
         <HStack>
           { showSplit && <Text cursor={'pointer'} color={'gray.39'} fontSize={'0.7rem'} onClick={onSplit}>Split</Text> }
           { showCombine && <Text cursor={'pointer'} color={'gray.39'} fontSize={'0.7rem'} onClick={onCombine}>Combine</Text> }
-          <Text cursor={'pointer'} color={'gray.39'} fontSize={'0.7rem'} onClick={() => setRunLogs(null)}>Clear</Text>
+          <Text cursor={'pointer'} color={'gray.39'} fontSize={'0.7rem'} onClick={clearLogs}>Clear</Text>
         </HStack>
     </HStack>
   </Flex>
