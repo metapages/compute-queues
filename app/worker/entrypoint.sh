@@ -1,8 +1,8 @@
 #!/bin/sh
 
 if [ "$METAPAGE_WORKER_RUN_STANDALONE" = "true" ]; then
-    # Run podman's API service in the background, making a docker-compatible socket available
-    podman system service --time=0 unix:///var/run/docker.sock &
+    # Run docker daemon for environments that don't provide access to one
+    dockerd -p /var/run/docker.pid &
 fi
 
 if [ -z "$METAPAGE_WORKER_CPUS" ]; then
@@ -17,6 +17,13 @@ else
     # Run the command provided by the user
     CMD="$@"
 fi
+
+# Use dockerd's dummy endpoint to check if it's running yet.
+# It takes some seconds to start.
+while (! curl -s --unix-socket /var/run/docker.sock http/_ping 2>&1 >/dev/null); do
+  echo "Waiting for docker daemon to start..."
+  sleep 1
+done
 
 deno run \
     --allow-sys \

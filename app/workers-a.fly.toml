@@ -4,7 +4,9 @@ app = 'metapage-workers-a'
 primary_region = 'iad'
 
 [build]
+#  image = 'metapage/metaframe-docker-worker:0.25.0'
   dockerfile = './worker/Dockerfile'
+  build-target = 'worker-standalone'
 
 [[vm]]
   memory = '2gb'

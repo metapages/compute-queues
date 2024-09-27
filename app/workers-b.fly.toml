@@ -4,7 +4,9 @@ app = 'metapage-workers-b'
 primary_region = 'iad'
 
 [build]
+#  image = 'metapage/metaframe-docker-worker:0.25.0'
   dockerfile = './worker/Dockerfile'
+  build-target = 'worker-standalone'
 
 [[vm]]
   memory = '4gb'
@@ -17,7 +19,7 @@ primary_region = 'iad'
 
 [[metrics]]
   port = 8000
-  path = '/metrics'
+  path = "/metrics"
 
 [[restart]]
   policy = "on-failure"
