@@ -94,7 +94,7 @@ export const copyLargeBlobsToCloud = async (
         if (!AlreadyUploaded[hash]) {
           const urlGetUpload = `${address}/upload/${hash}`;
           // console.log('urlGetUpload', urlGetUpload);
-          const resp = await fetch(urlGetUpload);
+          const resp = await fetch(urlGetUpload, {redirect: "follow"});
           if (!resp.ok) {
             throw new Error(
               `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`
@@ -221,7 +221,7 @@ const fetchBlobFromHash = async (
   hash: string,
   address: string
 ): Promise<ArrayBuffer> => {
-  const resp = await fetch(`${address}/download/${hash}`);
+  const resp = await fetch(`${address}/download/${hash}`, {redirect: "follow"});
   const json: { url: string; ref: DataRef } = await resp.json();
   const arrayBuffer = await fetchBlobFromUrl(json.url);
   return arrayBuffer;

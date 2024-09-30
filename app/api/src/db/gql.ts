@@ -11,6 +11,7 @@ const fetchGraphQL = async (
 ) => {
   return fetch(url, {
     method: "POST",
+    redirect: "follow",
     headers,
     body: JSON.stringify({
       query: operationsDoc,

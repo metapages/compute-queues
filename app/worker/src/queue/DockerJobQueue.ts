@@ -458,6 +458,7 @@ export class DockerJobQueue {
                 }
                 if (result.error) {
                     result.logs.push([`💥 ${result.error}`, Date.now(), true]);
+                    result.error = "Error"
                     console.log(`[${this.workerIdShort}] [${jobBlob.hash.substring(0, 6)}] 💥 error: ${result.error}`);
                 }
                 

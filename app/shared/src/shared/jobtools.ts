@@ -106,7 +106,7 @@ export const fileToDataref = async (
     }
 
     const urlGetUpload = `${address}/upload/${hash}`;
-    const resp = await fetch(urlGetUpload);
+    const resp = await fetch(urlGetUpload, {redirect: "follow"});
     if (!resp.ok) {
       throw new Error(
         `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`
@@ -211,7 +211,7 @@ export const dataRefToFile = async (
     case DataRefType.key:
       // we know how to get this internal cloud referenced
       const cloudRefUrl = `${address}/download/${ref.value}`;
-      const responseHash = await fetch(cloudRefUrl);
+      const responseHash = await fetch(cloudRefUrl, {redirect: "follow"});
 
       const json: { url: string; ref: DataRef } = await responseHash.json();
       const responseHashUrl = await fetch(json.url, { redirect: "follow" });
