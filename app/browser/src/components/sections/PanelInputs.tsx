@@ -18,6 +18,7 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { useHashParamJson } from '@metapages/hash-query';
+import { getInputsCount } from './util';
 
 export const PanelInputs: React.FC = () => {
   const clientJobDefinition = useStore((state) => state.newJobDefinition); 
@@ -51,11 +52,11 @@ export const PanelInputs: React.FC = () => {
   );
 
   const names: string[] = jobInputs ? Object.keys(jobInputs).sort() : [];
-  const incomingInputsCount = clientJobDefinition?.definition?.inputs ? Object.keys(clientJobDefinition.definition.inputs).length - (jobInputs ? Object.keys(jobInputs).length : 0) : 0;
+  const incomingInputsCount = getInputsCount(clientJobDefinition, jobInputs);
 
   return (
     <PanelContainer>
-      <PanelHeader title={`Inputs (${incomingInputsCount})`} />
+      <PanelHeader title={`Inputs (${incomingInputsCount}) = dynamic - static (below)`} />
       <HStack px={4} width="100%" justifyContent="space-between">
         <Text>{"/inputs/<scripts>"}</Text>
         <AddInputButtonAndModal add={addNewInput} showText={false} />

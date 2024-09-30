@@ -12,6 +12,8 @@ import {
 } from '/@/styles/theme';
 
 import {
+  Badge,
+  Box,
   Button,
   Flex,
   HStack,
@@ -28,6 +30,7 @@ import {
   Terminal,
   UploadSimple,
 } from '@phosphor-icons/react';
+import { getInputsCount, getOutputs } from './sections/util';
 
 export const MainHeader: React.FC = () => {
   const [jobDefinitionBlob] =
@@ -39,6 +42,12 @@ export const MainHeader: React.FC = () => {
   const rightPanelContext = useStore((state) => state.rightPanelContext);
   const setMainInputFile = useStore((state) => state.setMainInputFile);
   const mainInputFile = useStore((state) => state.mainInputFile);
+
+  const currentJobDefinition = useStore((state) => state.newJobDefinition);
+  const incomingInputsCount = getInputsCount(currentJobDefinition, jobInputs);
+  const job = useStore((state) => state.jobState);
+  const outputs = getOutputs(job);
+  const outputsCount = Object.keys(outputs).length;
 
   useEffect(() => {
     // check to see if the run command points to a file in inputs
@@ -59,9 +68,10 @@ export const MainHeader: React.FC = () => {
     }
   }, [jobInputs, jobDefinitionBlob]);
 
-  const icon = (svg, context) => {
+  const icon = (svg: React.ElementType, context: string, badge?:string) => {
     const toggleValue = rightPanelContext === context ? null : context;
     return (
+      <Box position="relative" display="inline-block">
       <Tooltip
         label={`${context[0].toUpperCase() + context.slice(1, context.length)}`}
       >
@@ -75,6 +85,21 @@ export const MainHeader: React.FC = () => {
           onClick={() => setRightPanelContext(toggleValue)}
         />
       </Tooltip>
+      {badge ? (
+
+      <Badge
+        position="absolute"
+        bottom="0"
+        right="0"
+        transform="translate(40%, 20%)"
+        colorScheme="green"
+        borderRadius="full"
+        boxSize="16px"
+      >{badge}</Badge>
+      ): null}
+    </Box>
+
+      
     );
   };
 
@@ -157,8 +182,8 @@ export const MainHeader: React.FC = () => {
         w={"11rem"}
       >
         {icon(Gear, "settings")}
-        {icon(DownloadSimple, "inputs")}
-        {icon(UploadSimple, "outputs")}
+        {icon(DownloadSimple, "inputs", incomingInputsCount ? incomingInputsCount.toString() : undefined)}
+        {icon(UploadSimple, "outputs", outputsCount ? outputsCount.toString() : undefined)}
       </HStack>
     </Flex>
   );
