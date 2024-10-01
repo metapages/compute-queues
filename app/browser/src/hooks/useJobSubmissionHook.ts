@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useStore } from '../store';
-import { useOptionJobStartAutomatically } from './useOptionJobStartAutomatically';
+import { useStore } from "../store";
+import { useOptionJobStartAutomatically } from "./useOptionJobStartAutomatically";
 
 /**
  * Get the current client-defined job definition and submit it to the server
@@ -42,7 +42,7 @@ export const useJobSubmissionHook = () => {
     }
 
     let cancelled = false;
-    let loadingCheckInterval: any = undefined;
+    let loadingCheckInterval = undefined;
 
     (async () => {
       const jobHashCurrent = dockerJobClient.hash; //await shaObject(dockerJobClient.definition);

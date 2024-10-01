@@ -1,27 +1,13 @@
-import { useCallback } from 'react';
+import React, { useCallback } from "react";
 
-import { PanelContainer } from '/@/components/generic/PanelContainer';
-import { PanelHeader } from '/@/components/generic/PanelHeader';
-import { useStore } from '/@/store';
+import { PanelContainer } from "/@/components/generic/PanelContainer";
+import { PanelHeader } from "/@/components/generic/PanelHeader";
+import { useStore } from "/@/store";
 
-import {
-  Container,
-  HStack,
-  Icon,
-  Spacer,
-  Table,
-  Tbody,
-  Td,
-  Text,
-  Tr,
-} from '@chakra-ui/react';
-import { ArrowDown } from '@phosphor-icons/react';
+import { Container, HStack, Icon, Spacer, Table, Tbody, Td, Text, Tr } from "@chakra-ui/react";
+import { ArrowDown } from "@phosphor-icons/react";
 
-import {
-  downloadFile,
-  getOutputs,
-  zipAndDownloadDatarefs,
-} from '/@/shared/util';
+import { downloadFile, getOutputs, zipAndDownloadDatarefs } from "/@/helpers";
 
 export const PanelOutputs: React.FC = () => {
   const job = useStore(state => state.jobState);
@@ -32,7 +18,7 @@ export const PanelOutputs: React.FC = () => {
   const outputCount = outputs ? Object.keys(outputs).length : 0;
 
   return (
-    <PanelContainer>
+    <PanelContainer gap={4}>
       <PanelHeader title={`Outputs`} />
       <HStack px={4} width="100%" justifyContent="space-between">
         <Text>{"/outputs/<files>"}</Text>
@@ -44,7 +30,7 @@ export const PanelOutputs: React.FC = () => {
         <Container>
           <Table px={5} variant="simple">
             <Tbody>
-              {Object.keys(outputs).map((name) => {
+              {Object.keys(outputs).map(name => {
                 return (
                   <Tr key={name} justifyContent={"space-between"}>
                     <Td>
@@ -53,8 +39,7 @@ export const PanelOutputs: React.FC = () => {
                         <Icon
                           onClick={() => downloadFile(name, outputs[name])}
                           boxSize={"1.4rem"}
-                          as={ArrowDown}
-                        ></Icon>
+                          as={ArrowDown}></Icon>
                       </HStack>
                     </Td>
                   </Tr>

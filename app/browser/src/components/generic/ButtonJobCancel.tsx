@@ -1,8 +1,8 @@
-import { CloseIcon } from '@chakra-ui/icons';
-import { IconButton } from '@chakra-ui/react';
-import { useState, useEffect, useCallback } from 'react';
-import { DockerJobDefinitionRow, DockerJobState, DockerJobFinishedReason, StateChange } from '/@/shared';
-import { useStore } from '/@/store';
+import React, { useState, useEffect, useCallback } from "react";
+import { CloseIcon } from "@chakra-ui/icons";
+import { IconButton } from "@chakra-ui/react";
+import { DockerJobDefinitionRow, DockerJobState, DockerJobFinishedReason, StateChange } from "/@/shared";
+import { useStore } from "/@/store";
 
 export const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({ job }) => {
   const [clicked, setClicked] = useState<boolean>(false);
@@ -18,7 +18,7 @@ export const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({ job
     if (job) {
       setClicked(true);
       sendClientStateChange({
-        tag: '',
+        tag: "",
         state: DockerJobState.Finished,
         job: job.hash,
         value: {
@@ -35,7 +35,7 @@ export const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({ job
     case DockerJobState.Running:
       return (
         <IconButton
-          aria-label='Cancel'
+          aria-label="Cancel"
           icon={<CloseIcon boxSize={3} />}
           onClick={onClickCancel}
           isActive={!clicked}></IconButton>

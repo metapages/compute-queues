@@ -1,6 +1,6 @@
-import Dexie from 'dexie';
+import Dexie from "dexie";
 
-import { DockerJobDefinitionRow } from './shared';
+import { DockerJobDefinitionRow } from "./shared";
 
 interface IJobsFinished {
   id: string;
@@ -22,10 +22,10 @@ class LocalDatabase extends Dexie {
   //...other tables goes here...
 
   constructor() {
-    super('jobs');
+    super("jobs");
     // console.log("CREATING DATABASE")
     this.version(1).stores({
-      jobsFinished: 'id, job, created_at',
+      jobsFinished: "id, job, created_at",
       // menuIds: "channel, menuIds, updated_at",
       // menus: "id, channel, menu, updated_at",
       // menuItems: "id, channel, menuItemDefinition, updated_at",
@@ -50,9 +50,9 @@ class LocalDatabase extends Dexie {
     if (!jobsFinished || jobsFinished.length === 0) {
       return;
     }
-    console.log('jobsFinished', jobsFinished);
-    const { job } = jobsFinished?.[0];
-    return job;
+    console.log("jobsFinished", jobsFinished);
+
+    return jobsFinished && jobsFinished[0] ? jobsFinished[0].job : undefined;
   }
 
   async deleteFinishedJob(id: string): Promise<void> {

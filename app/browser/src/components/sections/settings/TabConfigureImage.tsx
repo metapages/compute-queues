@@ -1,10 +1,10 @@
-import { ReactNode, useCallback, useEffect, useState } from 'react';
+import React, { ReactNode, useCallback, useEffect, useState } from "react";
 
-import { ButtonModalEditor } from '/@/components/generic/ButtonModalEditor';
-import { FormLink } from '/@/components/generic/FormLink';
-import { DockerJobDefinitionParamsInUrlHash } from '/@/shared';
-import { useFormik } from 'formik';
-import * as yup from 'yup';
+import { ButtonModalEditor } from "/@/components/generic/ButtonModalEditor";
+import { FormLink } from "/@/components/generic/FormLink";
+import { DockerJobDefinitionParamsInUrlHash } from "/@/shared";
+import { useFormik } from "formik";
+import * as yup from "yup";
 
 import {
   Box,
@@ -19,9 +19,9 @@ import {
   RadioGroup,
   Text,
   VStack,
-} from '@chakra-ui/react';
-import { useHashParamJson } from '@metapages/hash-query';
-import { TrashSimple } from '@phosphor-icons/react';
+} from "@chakra-ui/react";
+import { useHashParamJson } from "@metapages/hash-query";
+import { TrashSimple } from "@phosphor-icons/react";
 
 const validationSchema = yup.object({
   buildArgs: yup.string().optional(),
@@ -34,36 +34,36 @@ const validationSchema = yup.object({
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
 const linkMap = {
-  image: 'https://hub.docker.com/',
-  command: 'https://docs.docker.com/reference/dockerfile/#cmd',
-  dockerfile: 'https://docs.docker.com/build/building/packaging/#dockerfile',
-  context: 'https://docs.docker.com/build/building/context/#git-repositories',
-  filename: 'https://docs.docker.com/build/building/packaging/#filenames',
-  target: 'https://docs.docker.com/build/building/multi-stage/#stop-at-a-specific-build-stage',
-  buildArgs: 'https://docs.docker.com/reference/cli/docker/buildx/build/#build-arg',
+  image: "https://hub.docker.com/",
+  command: "https://docs.docker.com/reference/dockerfile/#cmd",
+  dockerfile: "https://docs.docker.com/build/building/packaging/#dockerfile",
+  context: "https://docs.docker.com/build/building/context/#git-repositories",
+  filename: "https://docs.docker.com/build/building/packaging/#filenames",
+  target: "https://docs.docker.com/build/building/multi-stage/#stop-at-a-specific-build-stage",
+  buildArgs: "https://docs.docker.com/reference/cli/docker/buildx/build/#build-arg",
 };
 
 const labelMap = {
-  image: 'docker image name',
-  context: 'Git Repo URL',
-  filename: 'Dockerfile Name',
-  buildArgs: 'Build Args',
+  image: "docker image name",
+  context: "Git Repo URL",
+  filename: "Dockerfile Name",
+  buildArgs: "Build Args",
 };
 const labelSubMap = {
-  buildArgs: 'Comma Separated',
+  buildArgs: "Comma Separated",
 };
 
-type TabType = 'useExisting' | 'fromRepo';
+type TabType = "useExisting" | "fromRepo";
 
 export const TabConfigureImage: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
-  const [jobDefinitionBlob, setJobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>('job');
-  const [tab, setTab] = useState<TabType>(jobDefinitionBlob?.image ? 'useExisting' : 'fromRepo');
+  const [jobDefinitionBlob, setJobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
+  const [tab, setTab] = useState<TabType>(jobDefinitionBlob?.image ? "useExisting" : "fromRepo");
 
   useEffect(() => {
     if (!tab && jobDefinitionBlob) {
-      setTab(jobDefinitionBlob?.image ? 'useExisting' : 'fromRepo');
+      setTab(jobDefinitionBlob?.image ? "useExisting" : "fromRepo");
     }
   }, [tab, jobDefinitionBlob]);
 
@@ -88,7 +88,7 @@ export const TabConfigureImage: React.FC<{
         delete newJobDefinitionBlob.image;
         if (values.buildArgs) {
           newJobDefinitionBlob.build.buildArgs = values.buildArgs
-            .split(',')
+            .split(",")
             .map(s => s.trim())
             .filter(s => s.length > 0);
         }
@@ -125,7 +125,7 @@ export const TabConfigureImage: React.FC<{
       } else {
         delete newJobDefinitionBlob.build.dockerfile;
       }
-      formik.setFieldValue('dockerfile', content);
+      formik.setFieldValue("dockerfile", content);
       setJobDefinitionBlob(newJobDefinitionBlob);
       onSave?.();
     },
@@ -147,7 +147,7 @@ export const TabConfigureImage: React.FC<{
 
   const formik = useFormik({
     initialValues: {
-      buildArgs: jobDefinitionBlob?.build?.buildArgs?.join(','),
+      buildArgs: jobDefinitionBlob?.build?.buildArgs?.join(","),
       context: jobDefinitionBlob?.build?.context,
       image: jobDefinitionBlob?.image,
       dockerfile: jobDefinitionBlob?.build?.dockerfile,
@@ -159,7 +159,7 @@ export const TabConfigureImage: React.FC<{
   });
 
   const deleteImage = useCallback(() => {
-    formik.setFieldValue('image', '');
+    formik.setFieldValue("image", "");
     const newJobDefinitionBlob = { ...jobDefinitionBlob };
     delete newJobDefinitionBlob.image;
     setJobDefinitionBlob(newJobDefinitionBlob);
@@ -176,17 +176,17 @@ export const TabConfigureImage: React.FC<{
 
   const existingImageInputs = () => {
     return (
-      <FormControl pl={'1rem'} key={'image'}>
+      <FormControl pl={"1rem"} key={"image"}>
         <InputGroup>
           <Input
-            width='100%'
-            size={'sm'}
-            id={'image'}
-            name={'image'}
-            type='text'
-            variant='outline'
+            width="100%"
+            size={"sm"}
+            id={"image"}
+            name={"image"}
+            type="text"
+            variant="outline"
             onChange={formik.handleChange}
-            value={(formik.values as any)['image'] || ''}
+            value={formik.values.image || ""}
           />
         </InputGroup>
       </FormControl>
@@ -195,40 +195,40 @@ export const TabConfigureImage: React.FC<{
 
   const externalImageInputs = () => {
     return (
-      <VStack pl={'1rem'} gap={'1.5rem'} w={'100%'}>
+      <VStack pl={"1rem"} gap={"1.5rem"} w={"100%"}>
         <FormControl>
-          <Box key={'dockerfile'}>
-            <HStack w='100%' justifyContent='space-between' alignContent={'flex-start'}>
-              <VStack gap={0} alignItems={'flex-start'}>
-                <FormLabel h={'1rem'}>
-                  <FormLink href={linkMap['dockerfile']} label={'dockerfile'} />
+          <Box key={"dockerfile"}>
+            <HStack w="100%" justifyContent="space-between" alignContent={"flex-start"}>
+              <VStack gap={0} alignItems={"flex-start"}>
+                <FormLabel h={"1rem"}>
+                  <FormLink href={linkMap["dockerfile"]} label={"dockerfile"} />
                 </FormLabel>
-                <Text fontSize={'xs'} color='gray.400'>
-                  {jobDefinitionBlob?.build?.dockerfile?.split('\n').find(s => s.startsWith('FROM '))}
+                <Text fontSize={"xs"} color="gray.400">
+                  {jobDefinitionBlob?.build?.dockerfile?.split("\n").find(s => s.startsWith("FROM "))}
                 </Text>
               </VStack>
               <HStack>
                 <ButtonModalEditor
                   content={jobDefinitionBlob?.build?.dockerfile}
                   onUpdate={updateDockerfile}
-                  button={{ isDisabled: isImageSet, ['aria-label']: 'edit dockerfile' }}
+                  button={{ isDisabled: isImageSet, ["aria-label"]: "edit dockerfile" }}
                 />
                 {jobDefinitionBlob?.build?.dockerfile ? (
-                  <Icon aria-label='delete dockerfile' onClick={deleteDockerfile} as={TrashSimple}></Icon>
+                  <Icon aria-label="delete dockerfile" onClick={deleteDockerfile} as={TrashSimple}></Icon>
                 ) : null}
               </HStack>
             </HStack>
           </Box>
         </FormControl>
-        {['context', 'filename', 'target', 'buildArgs'].map(key => {
-          let labelJsx: ReactNode = <FormLink href={linkMap[key]} label={labelMap[key] || key} />;
+        {["context", "filename", "target", "buildArgs"].map(key => {
+          const labelJsx: ReactNode = <FormLink href={linkMap[key]} label={labelMap[key] || key} />;
           return (
-            <VStack w='100%' key={key}>
+            <VStack w="100%" key={key}>
               <FormControl key={key}>
                 <FormLabel htmlFor={key}>
                   {labelJsx}
                   {labelSubMap[key] && (
-                    <Text fontSize={'xs'} color='gray.400'>
+                    <Text fontSize={"xs"} color="gray.400">
                       {labelSubMap[key]}
                     </Text>
                   )}
@@ -236,17 +236,17 @@ export const TabConfigureImage: React.FC<{
                 <HStack>
                   <InputGroup>
                     <Input
-                      width='100%'
+                      width="100%"
                       id={key}
                       name={key}
-                      size={'sm'}
-                      type='text'
-                      variant='outline'
+                      size={"sm"}
+                      type="text"
+                      variant="outline"
                       isDisabled={
-                        (key !== 'image' && isImageSet) || (key === 'image' && isBuildSet && !formik.values.image)
+                        (key !== "image" && isImageSet) || (key === "image" && isBuildSet && !formik.values.image)
                       }
                       onChange={formik.handleChange}
-                      value={(formik.values as any)[key] || ''}
+                      value={formik.values[key] || ""}
                     />
                   </InputGroup>
                 </HStack>
@@ -259,34 +259,34 @@ export const TabConfigureImage: React.FC<{
   };
 
   const onSetValue = tab => {
-    if (tab === 'fromRepo') {
-      localStorage.setItem('dockerImage', formik.values.image);
+    if (tab === "fromRepo") {
+      localStorage.setItem("dockerImage", formik.values.image);
       deleteImage();
     } else {
-      const prevImage = localStorage.getItem('dockerImage') || '';
-      formik.setFieldValue('image', prevImage);
+      const prevImage = localStorage.getItem("dockerImage") || "";
+      formik.setFieldValue("image", prevImage);
     }
     setTab(tab);
   };
 
   return (
     <form onSubmit={formik.handleSubmit}>
-      <VStack gap={'2rem'}>
+      <VStack gap={"2rem"}>
         <FormControl>
           <RadioGroup onChange={onSetValue} value={tab}>
-            <VStack align={'flex-start'} gap={5}>
-              <Radio value='useExisting' colorScheme={'blackAlpha'}>
+            <VStack align={"flex-start"} gap={5}>
+              <Radio value="useExisting" colorScheme={"blackAlpha"}>
                 <Text>Use Existing Image</Text>
               </Radio>
-              {tab === 'useExisting' && existingImageInputs()}
-              <Radio value='fromRepo' colorScheme={'blackAlpha'}>
+              {tab === "useExisting" && existingImageInputs()}
+              <Radio value="fromRepo" colorScheme={"blackAlpha"}>
                 <Text>Build Image from Repo</Text>
               </Radio>
-              {tab === 'fromRepo' && externalImageInputs()}
+              {tab === "fromRepo" && externalImageInputs()}
             </VStack>
           </RadioGroup>
         </FormControl>
-        <Button alignSelf='center' type='submit' colorScheme='green' size='sm'>
+        <Button alignSelf="center" type="submit" colorScheme="green" size="sm">
           Save
         </Button>
       </VStack>

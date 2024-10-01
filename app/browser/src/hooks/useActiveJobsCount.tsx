@@ -1,6 +1,6 @@
-import { DockerJobState } from '/@/shared';
+import { DockerJobState } from "/@/shared";
 
-import { useStore } from '../store';
+import { useStore } from "../store";
 
 export const useActiveJobsCount = () => {
   const jobs = useStore(state => state.jobStates);

@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  Box,
   Button,
   HStack,
   Icon,
@@ -13,10 +12,10 @@ import {
   ModalOverlay,
   useDisclosure,
   Text,
-} from '@chakra-ui/react';
-import { MetaframeStandaloneComponent } from '@metapages/metapage-embed-react';
-import { Check } from '@phosphor-icons/react';
-import { encodeOptions } from '/@/shared';
+} from "@chakra-ui/react";
+import { MetaframeStandaloneComponent } from "@metapages/metapage-embed-react";
+import { Check } from "@phosphor-icons/react";
+import { encodeOptions } from "/@/helpers";
 
 export interface EditorJsonProps {
   content: string;
@@ -29,19 +28,19 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({ content, onUpdate
   // 650
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [value, setValue] = useState(content);
-  const options = useRef('');
+  const options = useRef("");
   useEffect(() => {
     setValue(content);
   }, [content]);
 
   useEffect(() => {
     setValue(content);
-    const fileExtension = fileName?.split('.').pop();
+    const fileExtension = fileName?.split(".").pop();
     options.current = encodeOptions({
       autosend: true,
       hidemenuififrame: true,
-      mode: fileExtension || 'sh',
-      theme: 'mf-default',
+      mode: fileExtension || "sh",
+      theme: "mf-default",
     });
   }, [content]);
 
@@ -51,11 +50,12 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({ content, onUpdate
   }, [value, onUpdate, onClose]);
 
   const onOutputs = useCallback(
+    // eslint-disable-next-line
     (outputs: any) => {
-      if (outputs['text'] === undefined || outputs['text'] === null) {
+      if (outputs["text"] === undefined || outputs["text"] === null) {
         return;
       }
-      const newValue = outputs['text'];
+      const newValue = outputs["text"];
       setValue(newValue);
     },
     [onUpdate, onClose],
@@ -63,28 +63,28 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({ content, onUpdate
 
   return (
     <>
-      <IconButton size='md' variant={'unstyled'} onClick={onOpen} {...button}>
+      <IconButton size="md" variant={"unstyled"} onClick={onOpen} {...button}>
         <Text>Edit</Text>
       </IconButton>
-      <Modal id={'edit-modal-right'} isOpen={isOpen} onClose={onClose} size='full'>
-        <ModalOverlay backdropFilter='blur(1px)' />
-        <ModalContent maxW='90%'>
-          <ModalHeader p={0} h={'headerHeight'} borderBottom={'1px'}>
-            <HStack w='100%' justifyContent='space-between'>
-              <Text px={'2rem'} fontWeight={400}>
+      <Modal id={"edit-modal-right"} isOpen={isOpen} onClose={onClose} size="full">
+        <ModalOverlay backdropFilter="blur(1px)" />
+        <ModalContent maxW="90%">
+          <ModalHeader p={0} h={"headerHeight"} borderBottom={"1px"}>
+            <HStack w="100%" justifyContent="space-between">
+              <Text px={"2rem"} fontWeight={400}>
                 {fileName}
               </Text>
               <Button
-                w={'8rem'}
-                bg={'gray.300'}
-                px={'2rem'}
-                borderLeft={'1px'}
+                w={"8rem"}
+                bg={"gray.300"}
+                px={"2rem"}
+                borderLeft={"1px"}
                 borderRadius={0}
-                leftIcon={<Icon color='green' pb={'0.2rem'} boxSize={'1.5rem'} as={Check} />}
-                variant={'unstyled'}
+                leftIcon={<Icon color="green" pb={"0.2rem"} boxSize={"1.5rem"} as={Check} />}
+                variant={"unstyled"}
                 onClick={onSave}
-                display={'flex'}>
-                <Text pr={'1rem'} display={'flex'} color='green'>
+                display={"flex"}>
+                <Text pr={"1rem"} display={"flex"} color="green">
                   Save
                 </Text>
               </Button>
@@ -94,7 +94,7 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({ content, onUpdate
             <MetaframeStandaloneComponent
               url={`https://editor.mtfm.io/#?hm=disabled&options=${options.current}`}
               inputs={{ text: value }}
-              onOutputs={onOutputs as any}
+              onOutputs={onOutputs}
             />
           </div>
         </ModalContent>

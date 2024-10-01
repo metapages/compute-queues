@@ -1,16 +1,16 @@
-import React from 'react';
+import React from "react";
 
-import { DockerJobFinishedReason, DockerJobState, StateChangeValueWorkerFinished } from '/@/shared';
-import { useStore } from '/@/store';
+import { DockerJobFinishedReason, DockerJobState, StateChangeValueWorkerFinished } from "/@/shared";
+import { useStore } from "/@/store";
 
-import { Box, HStack, Icon, Spinner, Text, VStack, useToast } from '@chakra-ui/react';
-import { useHashParam } from '@metapages/hash-query';
-import { Check, HourglassMedium, Prohibit, WarningCircle } from '@phosphor-icons/react';
+import { Box, HStack, Icon, Spinner, Text, VStack, useToast } from "@chakra-ui/react";
+import { useHashParam } from "@metapages/hash-query";
+import { Check, HourglassMedium, Prohibit, WarningCircle } from "@phosphor-icons/react";
 
 const STATUS_ICON_SIZE = 6;
 export const JobStatus: React.FC = () => {
   const toast = useToast();
-  const [queue] = useHashParam('queue');
+  const [queue] = useHashParam("queue");
   const workers = useStore(state => state.workers);
   const job = useStore(state => state.jobState);
 
@@ -20,7 +20,7 @@ export const JobStatus: React.FC = () => {
     return <></>;
   }
 
-  if (!queue || queue === '') return <></>;
+  if (!queue || queue === "") return <></>;
 
   const { icon, text, exitCode, desc, jobId, showExitCodeRed } = getJobStateValues(
     job,
@@ -33,13 +33,13 @@ export const JobStatus: React.FC = () => {
     // see https://www.chromium.org/Home/chromium-security/deprecating-permissions-in-cross-origin-iframes/
     navigator?.clipboard?.writeText(jobId);
 
-    if (!!navigator?.clipboard?.writeText) {
+    if (navigator?.clipboard?.writeText) {
       toast({
-        position: 'bottom-left',
+        position: "bottom-left",
         duration: 20,
         isClosable: true,
         render: () => (
-          <Box color='gray.600' p={3} bg='gray.300' mb={'footerHeight'}>
+          <Box color="gray.600" p={3} bg="gray.300" mb={"footerHeight"}>
             <Text>Job Id copied to clipboard</Text>
           </Box>
         ),
@@ -48,21 +48,21 @@ export const JobStatus: React.FC = () => {
   };
 
   return (
-    <HStack h={'100%'} gap={5} alignItems='center' justifyContent={'center'}>
+    <HStack h={"100%"} gap={5} alignItems="center" justifyContent={"center"}>
       {icon}
-      <VStack gap={0.2} alignItems={'flex-start'}>
-        <Text align={'start'} fontWeight={500}>
+      <VStack gap={0.2} alignItems={"flex-start"}>
+        <Text align={"start"} fontWeight={500}>
           {text}
         </Text>
         <HStack gap={2}>
-          {desc && <Text fontSize={'0.7rem'}>{desc}</Text>}
+          {desc && <Text fontSize={"0.7rem"}>{desc}</Text>}
           {jobId && (
-            <Text cursor={'copy'} onClick={copyJobId} fontSize={'0.7rem'}>
+            <Text cursor={"copy"} onClick={copyJobId} fontSize={"0.7rem"}>
               Job Id: {jobId.slice(0, 5)}
             </Text>
           )}
           {exitCode && (
-            <Text color={showExitCodeRed ? 'red' : undefined} fontSize={'0.7rem'}>
+            <Text color={showExitCodeRed ? "red" : undefined} fontSize={"0.7rem"}>
               Exit Code: {exitCode}
             </Text>
           )}
@@ -77,81 +77,83 @@ const getJobStateValues = (
   state,
   workerCount,
 ): {
-  icon: any;
+  icon: JSX.Element;
   text: string;
-  exitCode: any;
-  desc: any;
-  jobId: any;
+  exitCode: number | undefined;
+  desc: null | string;
+  jobId: string;
   showExitCodeRed: boolean;
 } => {
-  let text = '';
+  let text = "";
   let icon = <></>;
   let desc = null;
-  let exitCode = null;
+  let exitCode;
   let showExitCodeRed = false;
-  let jobId = job?.hash;
+  const jobId = job?.hash;
 
   if (!job) {
-    text = 'No job started';
+    text = "No job started";
     icon = <Icon as={Prohibit} boxSize={STATUS_ICON_SIZE} />;
   }
 
   switch (state) {
-    case DockerJobState.Finished:
+    case DockerJobState.Finished: {
       const resultFinished = job.value as StateChangeValueWorkerFinished;
 
       if (!resultFinished) {
-        icon = <Icon color={'red'} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-        text = 'Job Finished - No Result';
+        icon = <Icon color={"red"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
+        text = "Job Finished - No Result";
         showExitCodeRed = true;
         break;
       }
       switch (resultFinished.reason) {
         case DockerJobFinishedReason.Cancelled:
           icon = <Icon as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-          text = 'Job Cancelled';
+          text = "Job Cancelled";
           break;
-        case DockerJobFinishedReason.Error:
+        case DockerJobFinishedReason.Error: {
           const errorBlob: { statusCode: number; json: { message: string } } | undefined =
             resultFinished?.result?.error;
           showExitCodeRed = true;
-          icon = <Icon color={'red'} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-          text = 'Job Failed';
+          icon = <Icon color={"red"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
+          text = "Job Failed";
           // truncate to char len, add modal if it's longer than one line (to right of exit code)
           desc = errorBlob?.json?.message;
           exitCode = errorBlob?.statusCode;
           break;
+        }
         case DockerJobFinishedReason.Success:
           exitCode = resultFinished?.result?.StatusCode;
-          text = 'Job Complete';
+          text = "Job Complete";
           if (exitCode === 0) {
-            icon = <Icon color={'green'} as={Check} boxSize={STATUS_ICON_SIZE} />;
+            icon = <Icon color={"green"} as={Check} boxSize={STATUS_ICON_SIZE} />;
           } else {
-            icon = <Icon color={'orange'} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
+            icon = <Icon color={"orange"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
           }
           break;
         case DockerJobFinishedReason.TimedOut:
-          icon = <Icon color={'orange'} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-          text = 'Job Timed Out';
+          icon = <Icon color={"orange"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
+          text = "Job Timed Out";
           break;
         case DockerJobFinishedReason.WorkerLost:
-          icon = <Icon color={'orange'} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-          text = 'Connection with worker lost, waiting to requeue';
+          icon = <Icon color={"orange"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
+          text = "Connection with worker lost, waiting to requeue";
           break;
       }
       break;
+    }
     case DockerJobState.Queued:
       icon = <Icon as={HourglassMedium} boxSize={STATUS_ICON_SIZE} />;
-      text = 'Job Queued';
+      text = "Job Queued";
       break;
     case DockerJobState.ReQueued:
-      icon = <Icon color={'orange'} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-      text = 'Job Requeued';
+      icon = <Icon color={"orange"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
+      text = "Job Requeued";
       break;
     case DockerJobState.Running:
-      text = 'Job Running';
-      icon = <Spinner color={'orange'} boxSize={STATUS_ICON_SIZE} />;
-      desc = `${workerCount} Worker${workerCount > 1 ? 's' : ''}`;
+      text = "Job Running";
+      icon = <Spinner color={"orange"} boxSize={STATUS_ICON_SIZE} />;
+      desc = `${workerCount} Worker${workerCount > 1 ? "s" : ""}`;
       break;
   }
   return { text, icon, desc, exitCode, jobId, showExitCodeRed };

@@ -1,21 +1,21 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from "react";
 
-import { useJobSubmissionHook } from '/@/hooks/useJobSubmissionHook';
-import { DockerJobFinishedReason, DockerJobState, StateChangeValueWorkerFinished } from '/@/shared/types';
+import { useJobSubmissionHook } from "/@/hooks/useJobSubmissionHook";
+import { DockerJobFinishedReason, DockerJobState, StateChangeValueWorkerFinished } from "/@/shared/types";
 
-import { Button, HStack, Icon, Spacer, Text, useMediaQuery } from '@chakra-ui/react';
-import { Lock, Play, Queue as QueueIcon, Repeat, Stop } from '@phosphor-icons/react';
+import { Button, HStack, Icon, Spacer, Text, useMediaQuery } from "@chakra-ui/react";
+import { Lock, Play, Queue as QueueIcon, Repeat, Stop } from "@phosphor-icons/react";
 
-import { useStore } from '../../store';
-import { useHashParam } from '@metapages/hash-query';
+import { useStore } from "../../store";
+import { useHashParam } from "@metapages/hash-query";
 
 export const JobControlButton: React.FC = () => {
   const serverJobState = useStore(state => state.jobState);
   const clientJobDefinition = useStore(state => state.newJobDefinition);
 
-  const [isLargerThan600] = useMediaQuery('(min-width: 600px)');
+  const [isLargerThan600] = useMediaQuery("(min-width: 600px)");
   const [isJobRequeued, setIsJobRequeued] = useState(false);
-  const [queue] = useHashParam('queue', '');
+  const [queue] = useHashParam("queue", "");
 
   const mainInputFileContent = useStore(state => state.mainInputFileContent);
   const setUserClickedRun = useStore(state => state.setUserClickedRun);
@@ -61,75 +61,75 @@ export const JobControlButton: React.FC = () => {
   }, [submitJob, setUserClickedRun]);
 
   const noBuildButton = (
-    <HeaderButton ariaLabel='No docker build or image' color={'red'} text={isLargerThan600 ? 'No docker image:' : ''} />
+    <HeaderButton ariaLabel="No docker build or image" color={"red"} text={isLargerThan600 ? "No docker image:" : ""} />
   );
 
-  const noQueueButton = <HeaderButton ariaLabel='No queue' color={'red'} text={isLargerThan600 ? 'No queue 👇' : ''} />;
+  const noQueueButton = <HeaderButton ariaLabel="No queue" color={"red"} text={isLargerThan600 ? "No queue 👇" : ""} />;
 
   const disabledButton = (
     <HeaderButton
-      ariaLabel='Disabled'
-      text={isLargerThan600 ? 'Disabled' : ''}
-      icon={<Icon as={Lock} size={'1.2rem'} />}
+      ariaLabel="Disabled"
+      text={isLargerThan600 ? "Disabled" : ""}
+      icon={<Icon as={Lock} size={"1.2rem"} />}
     />
   );
 
   const cancelButton = (
     <HeaderButton
-      ariaLabel='Stop-job'
-      icon={<Stop weight='duotone' color='red' size={'1.2rem'} />}
+      ariaLabel="Stop-job"
+      icon={<Stop weight="duotone" color="red" size={"1.2rem"} />}
       onClick={onClickCancel}
-      text={isLargerThan600 ? 'Stop Job' : ''}
-      color={'red'}
+      text={isLargerThan600 ? "Stop Job" : ""}
+      color={"red"}
     />
   );
 
   const saveAndRunButton = (
     <HeaderButton
-      ariaLabel='Save-and-run'
-      icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
+      ariaLabel="Save-and-run"
+      icon={<Play weight="duotone" color="green" size={"1.2rem"} />}
       onClick={onClickSaveAndRun}
-      text={isLargerThan600 ? 'Save+Run' : ''}
+      text={isLargerThan600 ? "Save+Run" : ""}
       loading={loading}
     />
   );
 
   const queuedButton = (
     <HeaderButton
-      ariaLabel='Queued'
-      icon={<QueueIcon color='green' size={'1.2rem'} />}
+      ariaLabel="Queued"
+      icon={<QueueIcon color="green" size={"1.2rem"} />}
       onClick={() => {}}
-      text={isLargerThan600 ? 'queued...' : ''}
+      text={isLargerThan600 ? "queued..." : ""}
     />
   );
 
   const requeueButton = (
     <HeaderButton
-      ariaLabel='Re-queue'
-      icon={<Icon as={Repeat} color='green' size={'1.2rem'} />}
+      ariaLabel="Re-queue"
+      icon={<Icon as={Repeat} color="green" size={"1.2rem"} />}
       onClick={onClickRetry}
       loading={isJobRequeued}
-      text={isLargerThan600 ? 'Run Again' : ''}
-      color={'green'}
+      text={isLargerThan600 ? "Run Again" : ""}
+      color={"green"}
     />
   );
 
   const runButton = (
     <HeaderButton
-      ariaLabel='Run-job'
-      icon={<Play weight='duotone' color='green' size={'1.2rem'} />}
+      ariaLabel="Run-job"
+      icon={<Play weight="duotone" color="green" size={"1.2rem"} />}
       onClick={onClickRun}
-      text={isLargerThan600 ? 'Run Job' : ''}
-      color={'green'}
+      text={isLargerThan600 ? "Run Job" : ""}
+      color={"green"}
     />
   );
 
-  const runButtonDisabled = (
+  const _runButtonDisabled = (
     <HeaderButton
-      ariaLabel='Run-job'
-      icon={<Play weight='duotone' color='gray' size={'1.2rem'} />}
-      text={isLargerThan600 ? 'Run Job' : ''}
-      color={'gray'}
+      ariaLabel="Run-job"
+      icon={<Play weight="duotone" color="gray" size={"1.2rem"} />}
+      text={isLargerThan600 ? "Run Job" : ""}
+      color={"gray"}
     />
   );
 
@@ -157,7 +157,7 @@ export const JobControlButton: React.FC = () => {
     case DockerJobState.Queued:
     case DockerJobState.Running:
       return cancelButton;
-    case DockerJobState.Finished:
+    case DockerJobState.Finished: {
       const value: StateChangeValueWorkerFinished | undefined = serverJobState?.value as StateChangeValueWorkerFinished;
       if (value) {
         switch (value.reason) {
@@ -171,6 +171,7 @@ export const JobControlButton: React.FC = () => {
         }
       }
       return disabledButton;
+    }
     default:
       return disabledButton;
   }
@@ -180,25 +181,25 @@ const HeaderButton: React.FC<{
   text: string;
   ariaLabel: string;
   onClick?: () => void;
-  icon?: any;
+  icon?: JSX.Element;
   color?: string;
   loading?: boolean;
 }> = ({ text, ariaLabel, onClick, icon, color, loading }) => {
   return (
     <Button
       disabled={true}
-      w={text.length ? '7.5rem' : '3rem'}
+      w={text.length ? "7.5rem" : "3rem"}
       aria-label={ariaLabel}
-      variant={'ghost'}
-      _hover={{ bg: 'none' }}
+      variant={"ghost"}
+      _hover={{ bg: "none" }}
       onClick={onClick}
-      cursor={onClick ? 'pointer' : 'not-allowed'}
+      cursor={onClick ? "pointer" : "not-allowed"}
       isLoading={loading}>
       <HStack gap={2}>
         {icon}
         {text.length && <Spacer />}
       </HStack>
-      <Text color={color || 'gray.600'} fontWeight={500} fontSize={'0.9rem'}>
+      <Text color={color || "gray.600"} fontWeight={500} fontSize={"0.9rem"}>
         {text}
       </Text>
     </Button>

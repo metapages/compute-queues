@@ -2,7 +2,7 @@
  * Via Context provide the current docker job definition which is combined from metaframe inputs
  * and URL query parameters, and the means to change (some of) them
  */
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 import {
   copyLargeBlobsToCloud,
@@ -13,14 +13,14 @@ import {
   isDataRef,
   JobInputs,
   shaObject,
-} from '/@/shared';
+} from "/@/shared";
 
-import { useHashParamBoolean, useHashParamJson } from '@metapages/hash-query';
-import { useMetaframeAndInput } from '@metapages/metaframe-hook';
-import { DataRefSerialized, Metaframe } from '@metapages/metapage';
+import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query";
+import { useMetaframeAndInput } from "@metapages/metaframe-hook";
+import { DataRefSerialized, Metaframe } from "@metapages/metapage";
 
-import { UPLOAD_DOWNLOAD_BASE_URL } from '../config';
-import { useStore } from '../store';
+import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
+import { useStore } from "../store";
 
 /**
  * Gets the configuration from 1) the URL hash parameters and 2) the metaframe inputs,
@@ -28,13 +28,13 @@ import { useStore } from '../store';
  */
 export const useDockerJobDefinition = () => {
   // TODO: unclear if this does anything anymore
-  const [debug] = useHashParamBoolean('debug');
+  const [debug] = useHashParamBoolean("debug");
 
   // we listen to the job parameters embedded in the URL changing
-  const [definitionParamsInUrl] = useHashParamJson<DockerJobDefinitionParamsInUrlHash | undefined>('job');
+  const [definitionParamsInUrl] = useHashParamJson<DockerJobDefinitionParamsInUrlHash | undefined>("job");
 
   // input text files are stored in the URL hash
-  const [jobInputsFromUrl] = useHashParamJson<JobInputs | undefined>('inputs');
+  const [jobInputsFromUrl] = useHashParamJson<JobInputs | undefined>("inputs");
 
   // this changes when the metaframe inputs change
   const metaframeBlob = useMetaframeAndInput();
@@ -50,8 +50,8 @@ export const useDockerJobDefinition = () => {
   }, [metaframeBlob?.metaframe]);
 
   // When all the things are updated, set the new job definition
-  const setNewJobDefinition = useStore((state) => state.setNewJobDefinition);
-  
+  const setNewJobDefinition = useStore(state => state.setNewJobDefinition);
+
   // if the URL inputs change, or the metaframe inputs change, maybe update the store.newJobDefinition
   useEffect(() => {
     let cancelled = false;
@@ -91,13 +91,13 @@ export const useDockerJobDefinition = () => {
         return;
       }
       Object.keys(inputs).forEach(name => {
-        const fixedName = name.startsWith('/') ? name.slice(1) : name;
-        let value = inputs[name];
+        const fixedName = name.startsWith("/") ? name.slice(1) : name;
+        const value = inputs[name];
         // null (and undefined) cannot be serialized, so skip them
         if (value === undefined || value === null) {
           return;
         }
-        if (typeof value === 'object' && value?._s === true) {
+        if (typeof value === "object" && value?._s === true) {
           const blob = value as DataRefSerialized;
           // serialized blob/typedarray/arraybuffer
           definition.inputs![fixedName] = {
@@ -109,18 +109,18 @@ export const useDockerJobDefinition = () => {
           // no need to serialize it, or further process
           if (isDataRef(value)) {
             definition.inputs![fixedName] = value;
-          } else if (typeof value === 'object') {
+          } else if (typeof value === "object") {
             if (value?.type)
               definition.inputs![fixedName] = {
                 value,
                 type: DataRefType.json,
               };
-          } else if (typeof value === 'string') {
+          } else if (typeof value === "string") {
             definition.inputs![fixedName] = {
               value,
               type: DataRefType.utf8,
             };
-          } else if (typeof value === 'number') {
+          } else if (typeof value === "number") {
             definition.inputs![fixedName] = {
               value: `${value}`,
               type: DataRefType.utf8,

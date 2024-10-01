@@ -1,7 +1,7 @@
 /**
  * Gets the server state and a method to send state changes over a websocket connection
  */
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 import {
   BroadcastJobStates,
@@ -10,19 +10,19 @@ import {
   WebsocketMessageClientToServer,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
-} from '/@/shared';
-import ReconnectingWebSocket from 'reconnecting-websocket';
+} from "/@/shared";
+import ReconnectingWebSocket from "reconnecting-websocket";
 
-import { useHashParam } from '@metapages/hash-query';
+import { useHashParam } from "@metapages/hash-query";
 
-import { websocketConnectionUrl } from '../config';
-import { cacheInsteadOfSendMessages, useStore } from '../store';
+import { websocketConnectionUrl } from "../config";
+import { cacheInsteadOfSendMessages, useStore } from "../store";
 
 /**
  * Sets states bits in the store
  */
 export const serverWebsocket = (): void => {
-  const [address] = useHashParam('queue');
+  const [address] = useHashParam("queue");
 
   const setIsServerConnected = useStore(state => state.setIsServerConnected);
 
@@ -37,7 +37,7 @@ export const serverWebsocket = (): void => {
   const handleJobStatusPayload = useStore(state => state.handleJobStatusPayload);
 
   useEffect(() => {
-    if (!address || address === '') {
+    if (!address || address === "") {
       return;
     }
     const url = `${websocketConnectionUrl}/${address}/client`;
@@ -49,13 +49,13 @@ export const serverWebsocket = (): void => {
     const onMessage = (message: MessageEvent) => {
       try {
         const messageString = message.data.toString();
-        if (messageString === 'PONG') {
+        if (messageString === "PONG") {
           timeLastPong = Date.now();
 
           // wait a bit then send a ping
           setTimeout(() => {
             if (Date.now() - timeLastPing >= 5000) {
-              rws.send('PING');
+              rws.send("PING");
               timeLastPing = Date.now();
             }
             setTimeout(() => {
@@ -68,7 +68,7 @@ export const serverWebsocket = (): void => {
 
           return;
         }
-        if (!messageString.startsWith('{')) {
+        if (!messageString.startsWith("{")) {
           return;
         }
         const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(messageString);
@@ -76,7 +76,7 @@ export const serverWebsocket = (): void => {
 
         if (!possibleMessage?.payload) {
           console.log({
-            error: 'Missing payload in message',
+            error: "Missing payload in message",
             message: messageString,
           });
           return;
@@ -92,8 +92,7 @@ export const serverWebsocket = (): void => {
             broadcastJobStates.isSubset = true;
             break;
           case WebsocketMessageTypeServerBroadcast.Workers:
-            const workersMessage = possibleMessage.payload as BroadcastWorkers;
-            setWorkers(workersMessage);
+            setWorkers(possibleMessage.payload as BroadcastWorkers);
             break;
           case WebsocketMessageTypeServerBroadcast.StatusRequest:
             // Clients do not respond to status requests
@@ -103,8 +102,7 @@ export const serverWebsocket = (): void => {
             // But we don't currently have a specific use for this
             break;
           case WebsocketMessageTypeServerBroadcast.JobStatusPayload:
-            const jobLogs = possibleMessage.payload as JobStatusPayload;
-            handleJobStatusPayload(jobLogs);
+            handleJobStatusPayload(possibleMessage.payload as JobStatusPayload);
             break;
           default:
             //ignored
@@ -124,6 +122,7 @@ export const serverWebsocket = (): void => {
       rws.send(JSON.stringify(message));
     };
 
+    // eslint-disable-next-line
     const onError = (error: any) => {
       console.error(error);
     };
@@ -138,16 +137,16 @@ export const serverWebsocket = (): void => {
       setSendMessage(cacheInsteadOfSendMessages);
     };
 
-    rws.addEventListener('message', onMessage);
-    rws.addEventListener('error', onError);
-    rws.addEventListener('open', onOpen);
-    rws.addEventListener('close', onClose);
+    rws.addEventListener("message", onMessage);
+    rws.addEventListener("error", onError);
+    rws.addEventListener("open", onOpen);
+    rws.addEventListener("close", onClose);
 
     return () => {
-      rws.removeEventListener('message', onMessage);
-      rws.removeEventListener('error', onError);
-      rws.removeEventListener('open', onOpen);
-      rws.removeEventListener('close', onClose);
+      rws.removeEventListener("message", onMessage);
+      rws.removeEventListener("error", onError);
+      rws.removeEventListener("open", onOpen);
+      rws.removeEventListener("close", onClose);
       rws.close();
       setIsServerConnected(false);
       setSendMessage(cacheInsteadOfSendMessages);
