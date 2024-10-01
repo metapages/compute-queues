@@ -1,19 +1,47 @@
-import { useCallback } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
 import { PanelContainer } from '/@/components/generic/PanelContainer';
 import { PanelHeader } from '/@/components/generic/PanelHeader';
 import { AddInputButtonAndModal } from '/@/components/sections/inputs/AddInputButtonAndModal';
 import { InputRow } from '/@/components/sections/inputs/InputRow';
-import { JobInputs } from '/@/shared/types';
+import {
+  InputsRefs,
+  JobInputs,
+} from '/@/shared/types';
 import { useStore } from '/@/store';
 
-import { Container, HStack, Table, Tbody, Text } from '@chakra-ui/react';
+import {
+  Container,
+  HStack,
+  Icon,
+  Spacer,
+  Table,
+  Tbody,
+  Td,
+  Text,
+  Tr,
+} from '@chakra-ui/react';
 import { useHashParamJson } from '@metapages/hash-query';
-import { getInputsCount } from '../../helpers/util';
+import { ArrowDown } from '@phosphor-icons/react';
+
+import {
+  downloadFile,
+  getDynamicInputs,
+} from '/@/shared/util';
 
 export const PanelInputs: React.FC = () => {
-  const clientJobDefinition = useStore(state => state.newJobDefinition);
-  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>('inputs');
+  const clientJobDefinition = useStore((state) => state.newJobDefinition); 
+  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>(
+    "inputs"
+  );
+  const [dynamicInputs, setDynamicInputs] = useState<InputsRefs>({});
+  useEffect(() => {
+    setDynamicInputs(getDynamicInputs(clientJobDefinition, jobInputs))
+  }, [clientJobDefinition, jobInputs])
 
   const addNewInput = useCallback(
     (name: string) => {
@@ -41,13 +69,12 @@ export const PanelInputs: React.FC = () => {
   );
 
   const names: string[] = jobInputs ? Object.keys(jobInputs).sort() : [];
-  const incomingInputsCount = getInputsCount(clientJobDefinition, jobInputs);
 
   return (
-    <PanelContainer gap={4}>
-      <PanelHeader title={`Inputs (${incomingInputsCount}) = dynamic - static (below)`} />
-      <HStack px={4} width='100%' justifyContent='space-between'>
-        <Text>{'/inputs/<scripts>'}</Text>
+    <PanelContainer>
+      <PanelHeader title={`Inputs`} />
+      <HStack px={4} width="100%" justifyContent="space-between">
+        <Text>{`/inputs/<scripts defined here>`}</Text>
         <AddInputButtonAndModal add={addNewInput} showText={false} />
       </HStack>
       <Container>
@@ -65,6 +92,32 @@ export const PanelInputs: React.FC = () => {
           </Tbody>
         </Table>
       </Container>
+
+      <HStack px={4} py={10} width="100%" justifyContent="space-between">
+        <Text>{`/inputs/<dynamic from upstream>   (${dynamicInputs ? Object.keys(dynamicInputs).length : 0})`}</Text>
+        <Spacer/>
+      </HStack>
+      <Container>
+        <Table variant="simple">
+          <Tbody>
+            {Object.keys(dynamicInputs).map((name) => (
+               <Tr key={name} justifyContent={"space-between"}>
+               <Td>
+                 <HStack p={2} justifyContent={"space-between"}>
+                   <Text>{name}</Text>
+                   <Icon
+                     onClick={() => downloadFile(name, dynamicInputs[name])}
+                     boxSize={"1.4rem"}
+                     as={ArrowDown}
+                   ></Icon>
+                 </HStack>
+               </Td>
+             </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      </Container>
+
     </PanelContainer>
   );
 };

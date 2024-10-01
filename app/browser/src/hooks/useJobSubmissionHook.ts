@@ -42,7 +42,7 @@ export const useJobSubmissionHook = () => {
     }
 
     let cancelled = false;
-    let loadingCheckInterval: number | undefined = undefined;
+    let loadingCheckInterval: any = undefined;
 
     (async () => {
       const jobHashCurrent = dockerJobClient.hash; //await shaObject(dockerJobClient.definition);

@@ -7,7 +7,7 @@ import { useStore } from '/@/store';
 import { Badge, Box, Button, Flex, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from '@chakra-ui/react';
 import { useHashParamJson } from '@metapages/hash-query';
 import { DownloadSimple, Gear, PencilSimple, Terminal, UploadSimple } from '@phosphor-icons/react';
-import { getInputsCount, getOutputs } from '../helpers/util';
+import { getInputsCount, getOutputs } from '/@/shared/util';
 
 export const MainHeader: React.FC = () => {
   const [isLargerThan400] = useMediaQuery('(min-width: 400px)');

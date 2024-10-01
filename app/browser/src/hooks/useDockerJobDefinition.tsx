@@ -50,8 +50,8 @@ export const useDockerJobDefinition = () => {
   }, [metaframeBlob?.metaframe]);
 
   // When all the things are updated, set the new job definition
-  const setNewJobDefinition = useStore(state => state.setNewJobDefinition);
-
+  const setNewJobDefinition = useStore((state) => state.setNewJobDefinition);
+  
   // if the URL inputs change, or the metaframe inputs change, maybe update the store.newJobDefinition
   useEffect(() => {
     let cancelled = false;

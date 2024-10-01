@@ -1,9 +1,27 @@
-import { DataRef, DockerJobDefinitionRow, DockerJobState, StateChangeValueWorkerFinished } from '/@/shared';
+import { useCallback } from 'react';
+
+import {
+  DockerJobDefinitionRow,
+  DockerJobState,
+  InputsRefs,
+  StateChangeValueWorkerFinished,
+} from '/@/shared';
 import { useStore } from '/@/store';
 
-import { Text, HStack, Icon, Box, VStack, Center } from '@chakra-ui/react';
+import {
+  Box,
+  Center,
+  HStack,
+  Icon,
+  Text,
+  VStack,
+} from '@chakra-ui/react';
 import { ArrowDown } from '@phosphor-icons/react';
-// import { UPLOAD_DOWNLOAD_BASE_URL } from '/@/config';
+
+import {
+  downloadFile,
+  zipAndDownloadDatarefs,
+} from '/@/shared/util';
 
 export const OUTPUT_TABLE_ROW_HEIGHT = 35;
 
@@ -11,14 +29,10 @@ export const OutputTable: React.FC = () => {
   const job = useStore(state => state.jobState);
   const outputs = getOutputs(job);
   const outputCount = Object.keys(outputs).length;
-  const downloadFile = async (name: string, outPut: DataRef) => {
-    // TODO: add download functionality
-  };
 
-  const downloadAll = async () => {
-    // TODO: add download functionality
-    // use dataRefToBuffer?
-  };
+  const downloadAll = useCallback(async () => {
+    await zipAndDownloadDatarefs(outputs, "all-outputs");
+  }, [outputs]);
 
   if (Object.keys(outputs).length === 0) return <></>;
   return (
@@ -55,7 +69,7 @@ export const OutputTable: React.FC = () => {
   );
 };
 
-export const getOutputs = (job?: DockerJobDefinitionRow) => {
+export const getOutputs = (job?: DockerJobDefinitionRow) :InputsRefs => {
   if (!job?.state || job.state !== DockerJobState.Finished) {
     return {};
   }

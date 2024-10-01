@@ -15,6 +15,11 @@ import {
 
 export const ENV_VAR_DATA_ITEM_LENGTH_MAX = 200;
 
+export const dataRefToDownloadLink = async (ref: DataRef): Promise<string> => {
+  const buffer = await dataRefToBuffer(ref);
+  return URL.createObjectURL(new Blob([buffer], { type: 'application/octet-stream' }));
+};
+
 export const dataRefToBuffer = async (ref: DataRef): Promise<Uint8Array> => {
   switch (ref.type) {
     case DataRefType.base64:
