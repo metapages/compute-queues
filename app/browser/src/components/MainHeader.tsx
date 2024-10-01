@@ -21,6 +21,7 @@ import {
   Spacer,
   Text,
   Tooltip,
+  useMediaQuery,
 } from '@chakra-ui/react';
 import { useHashParamJson } from '@metapages/hash-query';
 import {
@@ -33,6 +34,7 @@ import {
 import { getInputsCount, getOutputs } from './sections/util';
 
 export const MainHeader: React.FC = () => {
+  const [isLargerThan400] = useMediaQuery("(min-width: 400px)");
   const [jobDefinitionBlob] =
     useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [jobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
@@ -104,6 +106,7 @@ export const MainHeader: React.FC = () => {
   };
 
   const editorShown = rightPanelContext === "editScript";
+  const rightSectionWidth = isLargerThan400 ? '11rem' : '0rem';
   return (
     <Flex
       w={"100%"}
@@ -111,7 +114,7 @@ export const MainHeader: React.FC = () => {
       bg={"black.3"}
       borderBottom={defaultBorder}
     >
-      <HStack justify={"space-between"} px={2} w={`calc(100% - 11rem)`}>
+      <HStack justify={"space-between"} px={2} w={`calc(100% - ${rightSectionWidth})`}>
         <HStack>
           <Icon as={Terminal} color={"gray.39"} boxSize="4" />
 
@@ -174,17 +177,17 @@ export const MainHeader: React.FC = () => {
           <JobControlButton />
         </HStack>
       </HStack>
-      <HStack
+      {isLargerThan400 && <HStack
         borderLeft={defaultBorder}
         px={4}
         bg={"black.3"}
         justifyContent={"space-around"}
-        w={"11rem"}
+        w={rightSectionWidth}
       >
         {icon(Gear, "settings")}
         {icon(DownloadSimple, "inputs", incomingInputsCount ? incomingInputsCount.toString() : undefined)}
         {icon(UploadSimple, "outputs", outputsCount ? outputsCount.toString() : undefined)}
-      </HStack>
+      </HStack>}
     </Flex>
   );
 };

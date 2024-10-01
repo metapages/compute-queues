@@ -10,7 +10,7 @@ import { JobInputs } from '/@/shared/types';
 import { useStore } from '/@/store';
 
 import {
-  Button,
+  Center,
   Container,
   HStack,
   Table,
@@ -76,9 +76,6 @@ export const PanelInputs: React.FC = () => {
           </Tbody>
         </Table>
       </Container>
-      <HStack as={Button} bg={'none'} _hover={{bg: 'none'}}>
-        <AddInputButtonAndModal showText={true} add={addNewInput} />
-      </HStack>
     </PanelContainer>
   );
 };

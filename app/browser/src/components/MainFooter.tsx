@@ -1,4 +1,4 @@
-import { Box, HStack, Spacer, Icon, Tooltip } from "@chakra-ui/react";
+import { Box, HStack, Spacer, Icon, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { QuestionMark } from "@phosphor-icons/react";
 import { useStore } from "/@/store";
 import { defaultBorder, footerHeight } from "/@/styles/theme";
@@ -7,6 +7,7 @@ import { JobStatus } from "/@/components/footer/JobStatus";
 import { QueueIconAndModal } from "/@/components/sections/queue/QueueIconAndModal";
 
 export const MainFooter: React.FC = () => {
+  const [isLargerThan400] = useMediaQuery("(min-width: 400px)");
   const setRightPanelContext = useStore((state) => state.setRightPanelContext);
   const rightPanelContext = useStore((state) => state.rightPanelContext);
   const helpPanelShown = rightPanelContext === 'help'
@@ -16,7 +17,7 @@ export const MainFooter: React.FC = () => {
       <HStack justify={'space-between'} h={'3.5rem'}>
         <JobStatus />
         <Spacer/>
-        <HStack gap={3}>
+        {isLargerThan400 && <HStack gap={3}>
           <QueueIconAndModal />
           <Tooltip label={'Help'}>
             <Icon 
@@ -28,10 +29,8 @@ export const MainFooter: React.FC = () => {
               onClick={() => setRightPanelContext(helpPanelShown ? null : 'help')}
               />
           </Tooltip>
-        </HStack>
+        </HStack>}
       </HStack>
     </Box>
   )
 };
-
-export default MainFooter;

@@ -87,7 +87,7 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({
       </IconButton>
       <Modal id={'edit-modal-right'} isOpen={isOpen} onClose={onClose} size="full">
         <ModalOverlay backdropFilter='blur(1px)'/>
-        <ModalContent maxW="50%">
+        <ModalContent maxW="90%">
           <ModalHeader p={0} h={headerHeight} borderBottom={defaultBorder}>
             <HStack w="100%" justifyContent="space-between">
               <Text px={'2rem'} fontWeight={400}>

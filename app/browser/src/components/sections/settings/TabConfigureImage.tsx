@@ -60,7 +60,7 @@ const labelSubMap = {
 
 type TabType = "useExisting" | "fromRepo";
 
-export const PanelImageBuildFromUrlParams: React.FC<{
+export const TabConfigureImage: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
   const [jobDefinitionBlob, setJobDefinitionBlob] =
@@ -194,9 +194,6 @@ export const PanelImageBuildFromUrlParams: React.FC<{
 
   const existingImageInputs = () => {
     return <FormControl  pl={'1rem'} key={'image'}>
-      {/* <FormLabel htmlFor={'image'}>
-        <FormLink href={linkMap['image']} label={labelMap['image']}/>
-      </FormLabel> */}
       <InputGroup>
         <Input
           width="100%"

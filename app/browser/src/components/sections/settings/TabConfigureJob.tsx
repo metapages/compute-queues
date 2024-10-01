@@ -46,7 +46,7 @@ const linkMap = {
   command: "https://docs.docker.com/reference/dockerfile/#cmd",                           
 }
 
-export const PanelConfigurationAndContainerFromUrlParams: React.FC = () => {
+export const TabConfigureJob: React.FC = () => {
   const [jobDefinitionBlob, setJobDefinitionBlob] =
     useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [debug, setDebug] = useHashParamBoolean("debug");

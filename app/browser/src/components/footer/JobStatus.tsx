@@ -8,11 +8,13 @@ import {
 import { useStore } from '/@/store';
 
 import {
+  Box,
   HStack,
   Icon,
   Spinner,
   Text,
   VStack,
+  useToast,
 } from '@chakra-ui/react';
 import { useHashParam } from '@metapages/hash-query';
 import {
@@ -21,11 +23,12 @@ import {
   Prohibit,
   WarningCircle,
 } from '@phosphor-icons/react';
+import { footerHeight } from '/@/styles/theme';
 
 const STATUS_ICON_SIZE = 6;
 export const JobStatus: React.FC = () => {
+  const toast = useToast();
   const [queue] = useHashParam("queue");
-  
   const workers = useStore((state) => state.workers);
   const job = useStore((state) => state.jobState);
 
@@ -43,15 +46,34 @@ export const JobStatus: React.FC = () => {
     workers?.workers?.length || 0
   );
 
-  // Question: should the jobId be click to copy? - yes
+  const copyJobId = () => {
+    // Note: this does not currently work
+    // see https://www.chromium.org/Home/chromium-security/deprecating-permissions-in-cross-origin-iframes/
+    navigator?.clipboard?.writeText(jobId);
+  
+    if (!!navigator?.clipboard?.writeText) {
+      toast({
+        position: 'bottom-left',
+        duration: 20,
+        isClosable: true,
+        render: () => (
+          <Box color='gray.35' p={3} bg='black.10' mb={footerHeight}>
+            <Text>Job Id copied to clipboard</Text>
+          </Box>
+        ),
+      });
+    }  
+
+  }
+
   return <HStack h={'100%'} gap={5} alignItems='center' justifyContent={'center'}>
       {icon}
       <VStack gap={0.2} alignItems={"flex-start"}>
         <Text align={"start"} fontWeight={500}>{text}</Text>
         <HStack gap={2}>
           {desc && <Text fontSize={'0.7rem'}>{desc}</Text>}
-          {jobId && <Text fontSize={'0.7rem'}>Job Id: {jobId.slice(0, 5)}</Text>}
-          {exitCode !== null && <Text color={showExitCodeRed && 'red'} fontSize={'0.7rem'}>Exit Code: {exitCode}</Text>}
+          {jobId && <Text cursor={'copy'} onClick={copyJobId} fontSize={'0.7rem'}>Job Id: {jobId.slice(0, 5)}</Text>}
+          {exitCode !== null && <Text color={showExitCodeRed ? 'red' : undefined} fontSize={'0.7rem'}>Exit Code: {exitCode}</Text>}
         </HStack>
       </VStack>
   </HStack>
