@@ -1,22 +1,8 @@
-import {
-  DockerJobState,
-  JobsStateMap,
-  StateChangeValueQueued,
-} from '/@/shared';
-
-import {
-  Box,
-  Table,
-  TableContainer,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tr,
-} from '@chakra-ui/react';
-
-import { useStore } from '/@/store';
-import { ButtonJobCancel } from '/@/components/generic/ButtonJobCancel';
+import React from "react";
+import { DockerJobState, JobsStateMap, StateChangeValueQueued } from "/@/shared";
+import { Box, Table, TableContainer, Tbody, Td, Th, Thead, Tr } from "@chakra-ui/react";
+import { useStore } from "/@/store";
+import { ButtonJobCancel } from "/@/components/generic/ButtonJobCancel";
 
 export const JobsTable: React.FC = () => {
   const jobs = useStore((state) => state.jobStates);
@@ -43,16 +29,16 @@ export const JobsTable: React.FC = () => {
 
   return (
     <Box p={2}>
-      <TableContainer whiteSpace={'wrap'} fontSize={'0.7rem'}>
-        <Table layout={'fixed'} size={'sm'} w={'100%'} variant="simple">
+      <TableContainer whiteSpace={"wrap"} fontSize={"0.7rem"}>
+        <Table layout={"fixed"} size={"sm"} w={"100%"} variant="simple">
           <Thead>
             <Tr>
-              <Th w={'15%'}>Id</Th>
-              <Th w={'20%'}>image</Th>
-              <Th w={'20%'}>command</Th>
-              <Th w={'15%'}>Time</Th>
-              <Th w={'15%'}>State</Th>
-              <Th w={'15%'}>Cancel</Th>
+              <Th w={"15%"}>Id</Th>
+              <Th w={"20%"}>image</Th>
+              <Th w={"20%"}>command</Th>
+              <Th w={"15%"}>Time</Th>
+              <Th w={"15%"}>State</Th>
+              <Th w={"15%"}>Cancel</Th>
             </Tr>
           </Thead>
           <Tbody>

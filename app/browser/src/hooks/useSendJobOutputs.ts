@@ -1,7 +1,4 @@
-import {
-  useEffect,
-  useRef,
-} from 'react';
+import { useEffect, useRef } from "react";
 
 import {
   convertJobOutputDataRefsToExpectedFormat,
@@ -10,21 +7,16 @@ import {
   DockerJobState,
   fetchJsonFromUrl,
   StateChangeValueWorkerFinished,
-} from '/@/shared';
+} from "/@/shared";
 
-import { useMetaframeAndInput } from '@metapages/metaframe-hook';
-import {
-  isIframe,
-  MetaframeInputMap,
-} from '@metapages/metapage';
+import { useMetaframeAndInput } from "@metapages/metaframe-hook";
+import { isIframe, MetaframeInputMap } from "@metapages/metapage";
 
-import { UPLOAD_DOWNLOAD_BASE_URL } from '../config';
-import { DockerRunResultWithOutputs } from '../shared';
-import { useStore } from '../store';
-import {
-  useOptionJobStartAutomatically,
-} from './useOptionJobStartAutomatically';
-import { useOptionResolveDataRefs } from './useOptionResolveDataRefs';
+import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
+import { DockerRunResultWithOutputs } from "../shared";
+import { useStore } from "../store";
+import { useOptionJobStartAutomatically } from "./useOptionJobStartAutomatically";
+import { useOptionResolveDataRefs } from "./useOptionResolveDataRefs";
 
 const datarefKeyToUrl = async (ref: DataRef): Promise<DataRef> => {
   if (ref.type === DataRefType.key) {
@@ -44,7 +36,7 @@ const convertMetaframeOutputKeysToUrls = async (
   outputs: MetaframeInputMap
 ): Promise<MetaframeInputMap> => {
   const newOutputs: MetaframeInputMap = {};
-  for (const [key, value] of Object.entries(outputs)) {
+  for (const [key, _value] of Object.entries(outputs)) {
     newOutputs[key] = await datarefKeyToUrl(outputs[key]);
   }
   return newOutputs;
@@ -98,7 +90,7 @@ export const useSendJobOutputs = () => {
     if (!result) {
       return;
     }
-    const { outputs, ...theRest } = result;
+    const { outputs } = result;
     if (!outputs || Object.keys(outputs).length === 0) {
       // console.log(`💔 NOT sending outputs there are none`);
       jobHashOutputsLastSent.current = undefined;

@@ -14,7 +14,7 @@ export enum DataRefType {
   key = "key",
 }
 
-const DataRefTypeKeys :string[] = Object.keys(DataRefType).filter(key => isNaN(Number(key)));
+const DataRefTypeKeys: string[] = Object.keys(DataRefType).filter(key => isNaN(Number(key)));
 export const DataRefTypesSet = new Set(DataRefTypeKeys);
 export const DataRefTypeDefault = DataRefType.utf8;
 
@@ -24,6 +24,7 @@ export type DataRef<T = string> = {
   hash?: string;
 };
 
+// eslint-disable-next-line
 export const isDataRef = (value: any): boolean => {
   return !!(
     value &&
@@ -73,17 +74,14 @@ export type DockerJobDefinitionInputsBase64 = {
 // immediately to this version, otherwise big lumps in the inputs will
 // completely clog up the data pipes. Stay small out there, definitions,
 // you're the living entities flowing
-export type DockerJobDefinitionInputRefs = Omit<
-  DockerJobDefinitionInputsBase64,
-  "inputs"
-> & {
+export type DockerJobDefinitionInputRefs = Omit<DockerJobDefinitionInputsBase64, "inputs"> & {
   inputs?: InputsRefs;
 };
-
 
 export interface DockerRunResult {
   StatusCode?: number;
   logs: ConsoleLogLine[];
+  // eslint-disable-next-line
   error?: any;
 }
 
@@ -91,7 +89,7 @@ export interface DockerRunResultWithOutputs extends DockerRunResult {
   outputs: InputsRefs;
 }
 
-/** 
+/**
  * Think very hard and carefully before adding a new state.
  * There is a lot of power in keeping this part simple.
  */
@@ -162,9 +160,9 @@ export interface DockerJobDefinitionRow {
   history: StateChange[];
 }
 
-export const isDockerJobDefinitionRowFinished = (row:DockerJobDefinitionRow) => {
+export const isDockerJobDefinitionRowFinished = (row: DockerJobDefinitionRow) => {
   return row.state === DockerJobState.Finished;
-}
+};
 
 // export type JobsStateMap = { [id in string]: DockerJobDefinitionRow };
 export type JobsStateMap = Record<string, DockerJobDefinitionRow>;
@@ -212,15 +210,9 @@ export enum WebsocketMessageTypeWorkerToServer {
 }
 export interface WebsocketMessageWorkerToServer {
   type: WebsocketMessageTypeWorkerToServer;
-  payload:
-    | StateChange
-    | WorkerRegistration
-    | WorkerStatusResponse
-    | JobStatusPayload;
+  payload: StateChange | WorkerRegistration | WorkerStatusResponse | JobStatusPayload;
 }
-export type WebsocketMessageSenderWorker = (
-  message: WebsocketMessageWorkerToServer
-) => void;
+export type WebsocketMessageSenderWorker = (message: WebsocketMessageWorkerToServer) => void;
 
 /**
  * These are all the messsages types the (browser) clients send to the api server
@@ -252,9 +244,7 @@ export interface WebsocketMessageClientToServer {
   type: WebsocketMessageTypeClientToServer;
   payload: StateChange | PayloadClearJobCache | PayloadResubmitJob;
 }
-export type WebsocketMessageSenderClient = (
-  message: WebsocketMessageClientToServer
-) => void;
+export type WebsocketMessageSenderClient = (message: WebsocketMessageClientToServer) => void;
 
 /**
  * These are all the messsages types the server sends to:
@@ -313,10 +303,7 @@ export type BroadcastStatusRequest = undefined;
  * Client specific
  ************************************************************/
 
-export type DockerJobDefinitionParamsInUrlHash = Omit<
-  DockerJobDefinitionInputRefs,
-  "inputs"
->;
+export type DockerJobDefinitionParamsInUrlHash = Omit<DockerJobDefinitionInputRefs, "inputs">;
 
 // this is the actual job definition consumed by the workers
 export interface DockerJobDefinitionMetadata {
@@ -351,8 +338,8 @@ export const isJobCacheAllowedToBeDeleted = (state: StateChange): boolean => {
 };
 
 export type DockerApiDeviceRequest = {
-    Driver: string,
-    Count?: number,
-    DeviceIDs?: string[],
-    Capabilities: string[][],
-}
+  Driver: string;
+  Count?: number;
+  DeviceIDs?: string[];
+  Capabilities: string[][];
+};

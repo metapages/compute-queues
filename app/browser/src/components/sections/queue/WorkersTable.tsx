@@ -1,20 +1,8 @@
-import {
-  DockerJobState,
-  JobsStateMap,
-  StateChangeValueRunning,
-} from '/@/shared';
-import { useStore } from '/@/store';
+import React from "react";
+import { DockerJobState, JobsStateMap, StateChangeValueRunning } from "/@/shared";
+import { useStore } from "/@/store";
 
-import {
-  Box,
-  Table,
-  TableCaption,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tr,
-} from '@chakra-ui/react';
+import { Box, Table, TableCaption, Tbody, Td, Th, Thead, Tr } from "@chakra-ui/react";
 
 export const WorkersTable: React.FC = () => {
   const workers = useStore((state) => state.workers);
@@ -27,10 +15,10 @@ export const WorkersTable: React.FC = () => {
         <TableCaption>(will run jobs)</TableCaption>
         <Thead>
           <Tr>
-            <Th w={'10%'}>ID</Th>
-            <Th w={'10%'}>CPUs</Th>
-            <Th w={'10%'}>GPUs</Th>
-            <Th w={'10%'}>Jobs</Th>
+            <Th w={"10%"}>ID</Th>
+            <Th w={"10%"}>CPUs</Th>
+            <Th w={"10%"}>GPUs</Th>
+            <Th w={"10%"}>Jobs</Th>
           </Tr>
         </Thead>
         <Tbody>

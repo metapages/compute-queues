@@ -2,18 +2,15 @@ import { defineStyle, defineStyleConfig, extendTheme } from "@chakra-ui/react";
 import { defaultTheme } from "./defaultTheme"
 
 const getColor = (theme, color, fallback) => {
-  let colorExists = false
-  const chakraColor = color.split('.')
+  const chakraColor = color.split(".");
 
-  if (theme.colors.hasOwnProperty(chakraColor[0])) {
-    if (theme.colors[chakraColor[0]].hasOwnProperty(chakraColor[1])) {
-      colorExists = true
+  if (Object.prototype.hasOwnProperty.call(theme.colors, chakraColor[0])) {
+    if (Object.prototype.hasOwnProperty.call(theme.colors[chakraColor[0]], chakraColor[1])) {
+      return theme.colors[chakraColor[0]][chakraColor[1]];
     }
   }
 
-  return colorExists ? 
-    theme.colors[chakraColor[0]][chakraColor[1]] : 
-    theme.colors[fallback]['300']
+  return theme.colors[fallback]["300"];
 };
 
 export const inputTheme = defineStyleConfig({

@@ -1,15 +1,9 @@
-import pDebounce from 'p-debounce';
-import { create } from 'zustand';
+import pDebounce from "p-debounce";
+import { create } from "zustand";
 
-import {
-  getHashParamValueJsonFromWindow,
-  setHashParamJsonInWindow,
-} from '@metapages/hash-query';
+import { getHashParamValueJsonFromWindow, setHashParamJsonInWindow } from "@metapages/hash-query";
 
-import {
-  deleteFinishedJob,
-  getFinishedJob,
-} from './cache';
+import { deleteFinishedJob, getFinishedJob } from "./cache";
 import {
   BroadcastWorkers,
   DockerJobState,
@@ -19,7 +13,7 @@ import {
   WebsocketMessageClientToServer,
   WebsocketMessageSenderClient,
   WebsocketMessageTypeClientToServer,
-} from './shared';
+} from "./shared";
 import {
   ConsoleLogLine,
   DockerJobDefinitionMetadata,
@@ -28,7 +22,7 @@ import {
   JobStatusPayload,
   StateChangeValueWorkerFinished,
   WebsocketMessageServerBroadcast,
-} from './shared/types';
+} from "./shared/types";
 
 let _cachedMostRecentSubmit: WebsocketMessageClientToServer | undefined;
 
@@ -127,7 +121,7 @@ export const useStore = create<MainStore>((set, get) => ({
   // The hash param jobStartsAutomatically is also checked.
   userClickedRun: false,
   setUserClickedRun: (userClickedRun: boolean) => {
-    set((state) => ({ userClickedRun }));
+    set(() => ({ userClickedRun }));
   },
 
   // Stores the latest job definition + inputs
@@ -135,7 +129,7 @@ export const useStore = create<MainStore>((set, get) => ({
   setNewJobDefinition: async (job: DockerJobDefinitionMetadata) => {
     // Update the local job hash (id) on change
     if (!job) {
-      set((state) => ({
+      set(() => ({
         newJobDefinition: undefined,
         jobState: undefined,
         jobId: undefined,
@@ -147,14 +141,14 @@ export const useStore = create<MainStore>((set, get) => ({
     if (get().newJobDefinition?.hash === job.hash) {
       // no change. 
       // But we update the state anyway, in case the job state changed
-      set((state) => ({
+      set(() => ({
         jobState: get().jobStates[job.hash],
       }));
       return;
     }
 
     // new job definition!: update the jobId, and reset the logs
-    set((state) => ({
+    set(() => ({
       newJobDefinition: job,
       jobState: get().jobStates[job.hash],
       buildLogs: null,
@@ -189,7 +183,7 @@ export const useStore = create<MainStore>((set, get) => ({
   setJobState: (jobState: DockerJobDefinitionRow | undefined) => {
     
     if (!jobState) {
-      set((state) => ({
+      set(() => ({
         jobState: undefined,
         buildLogs: null,
         runLogs: null,
@@ -201,12 +195,9 @@ export const useStore = create<MainStore>((set, get) => ({
       return;
     }
 
-    set((state) => ({ jobState }));
-    if (
-      jobState?.state === DockerJobState.Queued ||
-      jobState?.state === DockerJobState.ReQueued
-    ) {
-      set((state) => ({
+    set(() => ({ jobState }));
+    if (jobState?.state === DockerJobState.Queued || jobState?.state === DockerJobState.ReQueued) {
+      set(() => ({
         buildLogs: null,
         runLogs: null,
       }));
@@ -214,7 +205,7 @@ export const useStore = create<MainStore>((set, get) => ({
       // if the job is finished, logs come from the result
       // not the cached streaming logs
       const resultFinished = jobState?.value as StateChangeValueWorkerFinished;
-      set((state) => ({
+      set(() => ({
         runLogs: resultFinished.result?.logs,
       }));
     }
@@ -227,7 +218,6 @@ export const useStore = create<MainStore>((set, get) => ({
     // If so, set the job state to finished, with the cached finished state
     // This means the state change doesn't reach the server+worker
     if (clientStateChange.state === DockerJobState.Queued) {
-      const queueState = clientStateChange.value as StateChangeValueQueued;
       const existingFinishedJob = await getFinishedJob(clientStateChange.job);
       if (existingFinishedJob) {
         // console.log(
@@ -314,7 +304,7 @@ export const useStore = create<MainStore>((set, get) => ({
 
     const jobHash = get().newJobDefinition?.hash;
     const serverJobState = newJobStates[jobHash];
-    set((state) => ({ jobStates: newJobStates }));
+    set(() => ({ jobStates: newJobStates }));
     get().setJobState(serverJobState);
 
     // Set the job state(s) from the server
@@ -322,12 +312,12 @@ export const useStore = create<MainStore>((set, get) => ({
 
   workers: undefined,
   setWorkers: (workers: BroadcastWorkers) => {
-    set((state) => ({ workers }));
+    set(() => ({ workers }));
   },
 
   isServerConnected: false,
   setIsServerConnected: (isServerConnected: boolean) => {
-    set((state) => ({ isServerConnected }));
+    set(() => ({ isServerConnected }));
   },
 
   // the initial sendMessage just caches the messages to send later
@@ -340,34 +330,34 @@ export const useStore = create<MainStore>((set, get) => ({
       _cachedMostRecentSubmit = undefined
       sendMessage(msg);
     }
-    set((state) => ({ sendMessage }));
+    set(() => ({ sendMessage }));
   },
 
   rawMessage: undefined,
   setRawMessage: (rawMessage: WebsocketMessageServerBroadcast) => {
-    set((state) => ({ rawMessage }));
+    set(() => ({ rawMessage }));
   },
 
   buildLogs: null,
   setBuildLogs: (logs: ConsoleLogLine[] | null) => {
-    set((state) => ({ buildLogs: logs }));
+    set(() => ({ buildLogs: logs }));
   },
   appendBuildLogs: (logs: ConsoleLogLine[] | null) => {
     if (!logs || logs.length === 0) {
       return;
     }
-    set((state) => ({ buildLogs: [...(get().buildLogs || []), ...logs] }));
+    set(() => ({ buildLogs: [...(get().buildLogs || []), ...logs] }));
   },
 
   runLogs: null,
   setRunLogs: (logs: ConsoleLogLine[] | null) => {
-    set((state) => ({ runLogs: logs }));
+    set(() => ({ runLogs: logs }));
   },
   appendRunLogs: (logs: ConsoleLogLine[] | null) => {
     if (!logs || logs.length === 0) {
       return;
     }
-    set((state) => ({ runLogs: [...(get().runLogs || []), ...logs] }));
+    set(() => ({ runLogs: [...(get().runLogs || []), ...logs] }));
   },
 
   handleJobStatusPayload: (status: JobStatusPayload) => {
@@ -393,18 +383,18 @@ export const useStore = create<MainStore>((set, get) => ({
   },
 
   setRightPanelContext: (rightPanelContext: string | null) => {
-    set((state) => ({ rightPanelContext }));
+    set(() => ({ rightPanelContext }));
   },
   rightPanelContext: null,
 
   mainInputFile: null,
   setMainInputFile: (mainInputFile: string | null) => {
-    set((state) => ({ mainInputFile }));
+    set(() => ({ mainInputFile }));
   },
 
   mainInputFileContent: null,
   setMainInputFileContent: (mainInputFileContent: string | null) => {
-    set((state) => ({ mainInputFileContent }));
+    set(() => ({ mainInputFileContent }));
   },
 
   saveInputFileAndRun: () => {
@@ -418,9 +408,9 @@ export const useStore = create<MainStore>((set, get) => ({
         get().submitJob();
       }
     });
-    const inputs:Record<string,string> = getHashParamValueJsonFromWindow('inputs') || {};
+    const inputs: Record<string, string> = getHashParamValueJsonFromWindow("inputs") || {};
     inputs[get().mainInputFile] = get().mainInputFileContent;
-    setHashParamJsonInWindow('inputs', inputs);
+    setHashParamJsonInWindow("inputs", inputs);
     get().setMainInputFileContent(null);
   }
 

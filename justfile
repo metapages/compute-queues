@@ -33,6 +33,10 @@ cyan               := "\\e[36m"
 @down +args="": 
   just app/down {{args}}
 
+@lint:
+  echo "does work?"
+  just app/browser/lint
+
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":
   just app/publish-versioned-artifacts {{version}}

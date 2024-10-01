@@ -1,8 +1,8 @@
-import fs from 'fs';
-import { resolve } from 'path';
-import { defineConfig } from 'vite';
+import fs from "fs";
+import { resolve } from "path";
+import { defineConfig } from "vite";
 
-import react from '@vitejs/plugin-react';
+import react from "@vitejs/plugin-react";
 
 const HOST: string = process.env.HOST || "server1.localhost";
 const PORT: string = process.env.PORT || "4440";
@@ -13,7 +13,7 @@ const OUTDIR: string | undefined = process.env.OUTDIR;
 const INSIDE_CONTAINER: boolean = fs.existsSync("/.dockerenv");
 
 // https://vitejs.dev/config/
-export default defineConfig(({ command, mode }) => ({
+export default defineConfig(({ mode }) => ({
   // For serving NOT at the base path e.g. with github pages: https://<user_or_org>.github.io/<repo>/
   base: BASE,
   resolve: {
@@ -41,9 +41,7 @@ export default defineConfig(({ command, mode }) => ({
   server: {
     open: INSIDE_CONTAINER ? undefined : "/",
     host: INSIDE_CONTAINER ? "0.0.0.0" : HOST,
-    port: parseInt(
-      CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) ? PORT : "8000"
-    ),
+    port: parseInt(CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) ? PORT : "8000"),
     https:
       CERT_KEY_FILE &&
       fs.existsSync(CERT_KEY_FILE) &&

@@ -1,7 +1,7 @@
 /**
  * Gets the server state and a method to send state changes over a websocket connection
  */
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 import {
   BroadcastJobStates,
@@ -10,16 +10,13 @@ import {
   WebsocketMessageClientToServer,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
-} from '/@/shared';
-import ReconnectingWebSocket from 'reconnecting-websocket';
+} from "/@/shared";
+import ReconnectingWebSocket from "reconnecting-websocket";
 
-import { useHashParam } from '@metapages/hash-query';
+import { useHashParam } from "@metapages/hash-query";
 
-import { websocketConnectionUrl } from '../config';
-import {
-  cacheInsteadOfSendMessages,
-  useStore,
-} from '../store';
+import { websocketConnectionUrl } from "../config";
+import { cacheInsteadOfSendMessages, useStore } from "../store";
 
 /**
  * Sets states bits in the store
@@ -105,8 +102,7 @@ export const serverWebsocket = (): void => {
             broadcastJobStates.isSubset = true;
             break;
           case WebsocketMessageTypeServerBroadcast.Workers:
-            const workersMessage = possibleMessage.payload as BroadcastWorkers;
-            setWorkers(workersMessage);
+            setWorkers(possibleMessage.payload as BroadcastWorkers);
             break;
           case WebsocketMessageTypeServerBroadcast.StatusRequest:
             // Clients do not respond to status requests
@@ -116,8 +112,7 @@ export const serverWebsocket = (): void => {
             // But we don't currently have a specific use for this
             break;
           case WebsocketMessageTypeServerBroadcast.JobStatusPayload:
-            const jobLogs = possibleMessage.payload as JobStatusPayload;
-            handleJobStatusPayload(jobLogs);
+            handleJobStatusPayload(possibleMessage.payload as JobStatusPayload);
             break;
           default:
             //ignored
@@ -137,6 +132,7 @@ export const serverWebsocket = (): void => {
       rws.send(JSON.stringify(message));
     };
 
+    // eslint-disable-next-line
     const onError = (error: any) => {
       console.error(error);
     };

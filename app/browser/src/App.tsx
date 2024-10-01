@@ -1,6 +1,7 @@
-import { serverWebsocket } from '/@/hooks/serverWebsocket';
-import { useDockerJobDefinition } from '/@/hooks/useDockerJobDefinition';
-import { useSendJobOutputs } from '/@/hooks/useSendJobOutputs';
+import React from "react";
+import { serverWebsocket } from "/@/hooks/serverWebsocket";
+import { useDockerJobDefinition } from "/@/hooks/useDockerJobDefinition";
+import { useSendJobOutputs } from "/@/hooks/useSendJobOutputs";
 import { Main } from "/@/routes/Main";
 
 export const App: React.FC = () => {

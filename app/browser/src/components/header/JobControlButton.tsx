@@ -1,39 +1,18 @@
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useState } from "react";
 
-import { useJobSubmissionHook } from '/@/hooks/useJobSubmissionHook';
-import {
-  DockerJobFinishedReason,
-  DockerJobState,
-  StateChangeValueWorkerFinished,
-} from '/@/shared/types';
+import { useJobSubmissionHook } from "/@/hooks/useJobSubmissionHook";
+import { DockerJobFinishedReason, DockerJobState, StateChangeValueWorkerFinished } from "/@/shared/types";
 
-import {
-  Button,
-  HStack,
-  Icon,
-  Spacer,
-  Text,
-  useMediaQuery,
-} from '@chakra-ui/react';
-import {
-  Lock,
-  Play,
-  Queue as QueueIcon,
-  Repeat,
-  Stop,
-} from '@phosphor-icons/react';
+import { Button, HStack, Icon, Spacer, Text, useMediaQuery } from "@chakra-ui/react";
+import { Lock, Play, Queue as QueueIcon, Repeat, Stop } from "@phosphor-icons/react";
 
-import { useStore } from '../../store';
-import { useHashParam } from '@metapages/hash-query';
+import { useStore } from "../../store";
+import { useHashParam } from "@metapages/hash-query";
 
 export const JobControlButton: React.FC = () => {
-  const serverJobState = useStore((state) => state.jobState);
-  const clientJobDefinition = useStore((state) => state.newJobDefinition);
-  
+  const serverJobState = useStore(state => state.jobState);
+  const clientJobDefinition = useStore(state => state.newJobDefinition);
+
   const [isLargerThan600] = useMediaQuery("(min-width: 600px)");
   const [isJobRequeued, setIsJobRequeued] = useState(false);
   const [queue] = useHashParam("queue", "");
@@ -84,20 +63,10 @@ export const JobControlButton: React.FC = () => {
 
 
   const noBuildButton = (
-    <HeaderButton
-      ariaLabel="No docker build or image"
-      color={"red"}
-      text={isLargerThan600 ? "No docker image:" : ""}
-    />
+    <HeaderButton ariaLabel="No docker build or image" color={"red"} text={isLargerThan600 ? "No docker image:" : ""} />
   );
 
-  const noQueueButton = (
-    <HeaderButton
-      ariaLabel="No queue"
-      color={"red"}
-      text={isLargerThan600 ? "No queue 👇" : ""}
-    />
-  );
+  const noQueueButton = <HeaderButton ariaLabel="No queue" color={"red"} text={isLargerThan600 ? "No queue 👇" : ""} />;
 
   const disabledButton = (
     <HeaderButton
@@ -157,7 +126,7 @@ export const JobControlButton: React.FC = () => {
     />
   );
 
-  const runButtonDisabled = (
+  const _runButtonDisabled = (
     <HeaderButton
       ariaLabel="Run-job"
       icon={<Play weight="duotone" color="gray" size={"1.2rem"} />}
@@ -190,9 +159,8 @@ export const JobControlButton: React.FC = () => {
     case DockerJobState.Queued:
     case DockerJobState.Running:
       return cancelButton;
-    case DockerJobState.Finished:
-      const value: StateChangeValueWorkerFinished | undefined =
-        serverJobState?.value as StateChangeValueWorkerFinished;
+    case DockerJobState.Finished: {
+      const value: StateChangeValueWorkerFinished | undefined = serverJobState?.value as StateChangeValueWorkerFinished;
       if (value) {
         switch (value.reason) {
           case DockerJobFinishedReason.Error:
@@ -205,6 +173,7 @@ export const JobControlButton: React.FC = () => {
         }
       }
       return disabledButton;
+    }
     default:
       return disabledButton;
   }
@@ -214,21 +183,20 @@ const HeaderButton: React.FC<{
   text: string;
   ariaLabel: string;
   onClick?: () => void;
-  icon?: any;
+  icon?: JSX.Element;
   color?: string;
   loading?: boolean;
 }> = ({ text, ariaLabel, onClick, icon, color, loading }) => {
   return (
     <Button
       disabled={true}
-      w={text.length ? '7.5rem' : '3rem'}
+      w={text.length ? "7.5rem" : "3rem"}
       aria-label={ariaLabel}
       variant={"ghost"}
       _hover={{ bg: "none" }}
       onClick={onClick}
       cursor={onClick ? "pointer" : "not-allowed"}
-      isLoading={loading}
-    >
+      isLoading={loading}>
       <HStack gap={2}>
         {icon}
         {text.length && <Spacer />}

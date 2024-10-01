@@ -1,24 +1,13 @@
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from "react";
 
-import { useStore } from '/@/store';
-import { useFormik } from 'formik';
+import { useStore } from "/@/store";
+import { useFormik } from "formik";
 
-import { WifiHigh, WifiSlash } from '@phosphor-icons/react';
-import * as yup from 'yup';
+import { WifiHigh, WifiSlash } from "@phosphor-icons/react";
+import * as yup from "yup";
 
-import {
-  Alert,
-  AlertIcon,
-  Button,
-  FormControl,
-  HStack,
-  Icon,
-  Input,
-  InputGroup,
-  Tag,
-  Text,
-} from '@chakra-ui/react';
-import { useHashParam } from '@metapages/hash-query';
+import { Alert, AlertIcon, Button, FormControl, HStack, Icon, Input, InputGroup, Tag, Text } from "@chakra-ui/react";
+import { useHashParam } from "@metapages/hash-query";
 
 const validationSchema = yup.object({
   queue: yup.string(),
@@ -34,7 +23,7 @@ export const QueueButtonAndLabel: React.FC = () => {
     (values: FormType) => {
       setQueue(values.queue);
       formik.setFieldValue("queue", values.queue);
-      // commenting this out because it makes the initial value persist 
+      // commenting this out because it makes the initial value persist
       // uncomment to return to this behavior
       // formik.resetForm();
       setShowInput(false);
@@ -51,9 +40,10 @@ export const QueueButtonAndLabel: React.FC = () => {
   });
 
   return (
-    <HStack width="100%" pl={'1rem'}>
-      <Icon as={queue && isServerConnected ? WifiHigh : WifiSlash}
-        color={!(queue && isServerConnected) && 'red'}
+    <HStack width="100%" pl={"1rem"}>
+      <Icon
+        as={queue && isServerConnected ? WifiHigh : WifiSlash}
+        color={!(queue && isServerConnected) && "red"}
         aria-label="edit docker job queue"
         boxSize="7"
       />
@@ -75,7 +65,7 @@ export const QueueButtonAndLabel: React.FC = () => {
                     />
                 </InputGroup>
               </FormControl>
-              <Button type="submit" colorScheme="green" size={'sm'} mr={0}>
+              <Button type="submit" colorScheme="green" size={"sm"} mr={0}>
                 Add
               </Button>
             </HStack>
