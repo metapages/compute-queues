@@ -1,3 +1,4 @@
+import { getOutputs } from './util';
 import { PanelContainer } from '/@/components/generic/PanelContainer';
 import { PanelHeader } from '/@/components/generic/PanelHeader';
 import {
@@ -54,15 +55,4 @@ export const PanelOutputs: React.FC = () => {
       </Container>
     </PanelContainer>
   );
-};
-
-export const getOutputs = (job?: DockerJobDefinitionRow) => {
-  if (!job?.state || job.state !== DockerJobState.Finished) {
-    return {};
-  }
-  const result = (job.value as StateChangeValueWorkerFinished).result;
-  if (result && result.outputs) {
-    return result.outputs;
-  }
-  return {};
 };

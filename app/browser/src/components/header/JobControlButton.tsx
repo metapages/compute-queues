@@ -28,11 +28,15 @@ import {
 } from '@phosphor-icons/react';
 
 import { useStore } from '../../store';
+import { useHashParam } from '@metapages/hash-query';
 
 export const JobControlButton: React.FC = () => {
   const serverJobState = useStore((state) => state.jobState);
+  const clientJobDefinition = useStore((state) => state.newJobDefinition);
+  
   const [isLargerThan600] = useMediaQuery("(min-width: 600px)");
   const [isJobRequeued, setIsJobRequeued] = useState(false);
+  const [queue] = useHashParam("queue", "");
 
   const mainInputFileContent = useStore((state) => state.mainInputFileContent);
   const setUserClickedRun = useStore((state) => state.setUserClickedRun);
@@ -52,6 +56,7 @@ export const JobControlButton: React.FC = () => {
   const resubmitJob = useStore((state) => state.resubmitJob);
 
   const state = serverJobState?.state;
+  const isMissingBuild = !(clientJobDefinition?.definition?.build || clientJobDefinition?.definition?.image);
 
   const onClickCancel = useCallback(() => {
     cancelJob();
@@ -76,6 +81,23 @@ export const JobControlButton: React.FC = () => {
     submitJob();
     setUserClickedRun(true);
   }, [submitJob, setUserClickedRun]);
+
+
+  const noBuildButton = (
+    <HeaderButton
+      ariaLabel="No docker build or image"
+      color={"red"}
+      text={isLargerThan600 ? "No docker image:" : ""}
+    />
+  );
+
+  const noQueueButton = (
+    <HeaderButton
+      ariaLabel="No queue"
+      color={"red"}
+      text={isLargerThan600 ? "No queue 👇" : ""}
+    />
+  );
 
   const disabledButton = (
     <HeaderButton
@@ -143,6 +165,14 @@ export const JobControlButton: React.FC = () => {
       color={"gray"}
     />
   );
+
+  if (isMissingBuild) {
+    return noBuildButton;
+  }
+
+  if (!queue) {
+    return noQueueButton;
+  }
 
   if (temporarilyForceShowQueued) {
     return queuedButton;
