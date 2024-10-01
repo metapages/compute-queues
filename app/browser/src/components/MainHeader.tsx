@@ -187,7 +187,7 @@ export const MainHeader: React.FC = () => {
         {icon(Gear, "settings")}
         {icon(DownloadSimple, "inputs", incomingInputsCount ? incomingInputsCount.toString() : undefined)}
         {icon(UploadSimple, "outputs", outputsCount ? outputsCount.toString() : undefined)}
-      </HStack>
+      </HStack>}
     </Flex>
   );
 };
