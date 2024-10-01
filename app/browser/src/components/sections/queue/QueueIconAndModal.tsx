@@ -6,9 +6,9 @@ import {
   ModalContent,
   ModalHeader,
   ModalOverlay,
-  Container, Text,
+  Container, 
+  Text,
 } from "@chakra-ui/react"
-import { headerHeight, defaultBorder } from "/@/styles/theme";
 import { Queue as QueueIcon } from "@phosphor-icons/react";
 import { Queue } from "/@/components/sections/queue/Queue";
 import { useStore } from "/@/store";
@@ -23,12 +23,11 @@ export const QueueIconAndModal: React.FC = () => {
 
   return <>
     {!queue ? (<Text align={"start"} color={'red'} fontWeight={500}>Please enter a queue:</Text>) : (isNoWorkers ? (<Text align={"start"} color={'red'} fontWeight={500}>No workers in the queue:</Text>) : null)}
-
     <Tooltip label={'Queue'}>
       <Icon
         as={QueueIcon}
-        _hover={{ bg: 'black.10' }}
-        bg={isOpen ? 'black.10' : 'none'}
+        _hover={{ bg: 'gray.300' }}
+        bg={isOpen ? 'gray.300' : 'none'}
         p={'3px'}
         borderRadius={5}
         boxSize="6"
@@ -38,7 +37,7 @@ export const QueueIconAndModal: React.FC = () => {
     <Modal isOpen={isOpen} onClose={onClose} size={'100%'}>
       <ModalOverlay backdropFilter='blur(1px)' />
       <ModalContent h={'90%'} w={'90%'}>
-        <ModalHeader p={0} h={headerHeight} borderBottom={defaultBorder}>
+        <ModalHeader p={0} h={'headerHeight'} borderBottom={'1px'}>
         </ModalHeader>
         <Container p={3} m={0} overflow={'scroll'} minWidth={'100%'} h={'100%'}>
           <Queue />

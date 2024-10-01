@@ -76,7 +76,7 @@ export const PanelEditor: React.FC = () => {
 
   if (!options.current) return <></>;
   return (
-    <PanelContainer gap={0}>
+    <PanelContainer>
       <PanelHeader title={mainInputFile} preserveCase={true} onSave={onSave} />
       <div style={{height: 'calc(100% + 1rem)', width: '100%', position: 'relative', top: '-1.0rem'}} id={'mf-editor'}>
         <MetaframeStandaloneComponent

@@ -233,7 +233,7 @@ const HeaderButton: React.FC<{
         {icon}
         {text.length && <Spacer />}
       </HStack>
-      <Text color={color || "gray.35"} fontWeight={500} fontSize={"0.9rem"}>
+      <Text color={color || "gray.600"} fontWeight={500} fontSize={"0.9rem"}>
         {text}
       </Text>
     </Button>

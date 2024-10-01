@@ -6,20 +6,18 @@ import {
   VStack,
 } from '@chakra-ui/react';
 
+import { useStore } from '../store';
+
 import { MainFooter } from '/@/components/MainFooter';
 import { MainHeader } from '/@/components/MainHeader';
 import { PanelLogs } from '/@/components/sections/PanelLogs';
 import { PanelEditor } from '/@/components/sections/PanelEditor';
 import { PanelInputs } from '/@/components/sections/PanelInputs';
-import { PanelOutputs } from '../components/sections/PanelOutputs';
-import { PanelSettings } from '../components/sections/PanelSettings';
-import { useStore } from '../store';
-import {
-  contentHeight,
-  defaultBorder,
-} from '../styles/theme';
-import { JobControlButton } from '../components/header/JobControlButton';
-import { JobStatus } from '../components/footer/JobStatus';
+import { PanelOutputs } from '/@/components/sections/PanelOutputs';
+import { PanelSettings } from '/@/components/sections/PanelSettings';
+import { JobControlButton } from '/@/components/header/JobControlButton';
+import { JobStatus } from '/@/components/footer/JobStatus';
+import { PanelDocs } from '/@/components/sections/PanelDocs';
 
 export const Main: React.FC = () => {
   const rightPanelContext = useStore((state) => state.rightPanelContext);
@@ -33,10 +31,7 @@ export const Main: React.FC = () => {
     outputs: <PanelOutputs />,
     settings: <PanelSettings />,
     editScript: <PanelEditor />,
-    help: <iframe
-      style={{ width: "100%", height: contentHeight }}
-      src={`https://markdown.mtfm.io/#?url=${window.location.origin}${window.location.pathname}/README.md`}
-    />,
+    help: <PanelDocs />,
     stderr: <PanelLogs mode={'stderr'} />,
   }
   const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
@@ -57,7 +52,7 @@ export const Main: React.FC = () => {
   const leftWidth = `calc(100% - ${rightWidth})`;
 
   if (!isTallerThan200) {
-    return <Container m={0} bg={'black.10'} minW={'100%'} minH={'100%'} h={'100vh'} w={'100vw'}>
+    return <Container m={0} bg={'gray.300'} minW={'100%'} minH={'100%'} h={'100vh'} w={'100vw'}>
       <HStack justifyContent={'space-around'} minH={'100%'}>
         <JobStatus />
         <JobControlButton />
@@ -67,13 +62,13 @@ export const Main: React.FC = () => {
   return (
     <VStack gap={0} minWidth={'200px'} minHeight="100vh">
       <MainHeader />
-      <HStack gap={0} w={'100%'} minW="100vw" minH={contentHeight}>
-        <Box minW={leftWidth} minH={contentHeight}>
+      <HStack gap={0} w={'100%'} minW="100vw" minH={'contentHeight'}>
+        <Box minW={leftWidth} minH={'contentHeight'}>
           <PanelLogs mode={stdErrShown ? 'stdout' : 'stdout+stderr'} />
         </Box>
         <Box minW={rightWidth} 
-          minH={contentHeight} 
-          borderLeft={rightContent && defaultBorder}>
+          minH={'contentHeight'} 
+          borderLeft={rightContent && '1px'}>
           {rightContent}
         </Box>
       </HStack>

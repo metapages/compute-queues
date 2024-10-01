@@ -20,7 +20,6 @@ import {
   Text,
 } from '@chakra-ui/react';
 import { MetaframeStandaloneComponent } from '@metapages/metapage-embed-react';
-import { defaultBorder, headerHeight } from '/@/styles/theme';
 import { Check } from '@phosphor-icons/react';
 import { encodeOptions } from '/@/shared';
 
@@ -76,7 +75,6 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({
     <>
       <IconButton
         size="md"
-        fontWeight={400}
         variant={'unstyled'}
         onClick={onOpen}
         {...button}
@@ -88,16 +86,16 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({
       <Modal id={'edit-modal-right'} isOpen={isOpen} onClose={onClose} size="full">
         <ModalOverlay backdropFilter='blur(1px)'/>
         <ModalContent maxW="90%">
-          <ModalHeader p={0} h={headerHeight} borderBottom={defaultBorder}>
+          <ModalHeader p={0} h={'headerHeight'} borderBottom={'1px'}>
             <HStack w="100%" justifyContent="space-between">
               <Text px={'2rem'} fontWeight={400}>
                 {fileName}
               </Text>
               <Button
                 w={'8rem'}
-                bg={'black.10'}
+                bg={'gray.300'}
                 px={'2rem'}
-                borderLeft={defaultBorder} 
+                borderLeft={'1px'} 
                 borderRadius={0} 
                 leftIcon={
                   <Icon color='green' pb={'0.2rem'} boxSize={'1.5rem'} as={Check}/>
