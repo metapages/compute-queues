@@ -10,7 +10,6 @@ import { JobInputs } from '/@/shared/types';
 import { useStore } from '/@/store';
 
 import {
-  Center,
   Container,
   HStack,
   Table,
@@ -55,14 +54,14 @@ export const PanelInputs: React.FC = () => {
   const incomingInputsCount = getInputsCount(clientJobDefinition, jobInputs);
 
   return (
-    <PanelContainer>
+    <PanelContainer gap={4}>
       <PanelHeader title={`Inputs (${incomingInputsCount}) = dynamic - static (below)`} />
       <HStack px={4} width="100%" justifyContent="space-between">
         <Text>{"/inputs/<scripts>"}</Text>
         <AddInputButtonAndModal add={addNewInput} showText={false} />
       </HStack>
       <Container>
-        <Table variant="simple">
+        <Table px={5} variant="simple">
           <Tbody>
             {names.map((name) => (
               <InputRow

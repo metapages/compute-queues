@@ -6,7 +6,7 @@ import { PanelContainer } from '/@/components/generic/PanelContainer';
 
 export const PanelSettings: React.FC = () => {
   return (
-    <PanelContainer gap={0}>
+    <PanelContainer>
       <PanelHeader title={'Job Settings'}/>
       <PanelImageAndContainer />
     </PanelContainer>

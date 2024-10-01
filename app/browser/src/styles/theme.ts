@@ -1,12 +1,20 @@
-import { border, defineStyle, defineStyleConfig, extendTheme } from "@chakra-ui/react";
+import { defineStyle, defineStyleConfig, extendTheme } from "@chakra-ui/react";
+import { defaultTheme } from "./defaultTheme"
 
-export const defaultBorder = '1px solid var(--chakra-colors-black-10)';
-const headerHeightVal = 3
-const footerHeightVal = 3.5;
-export const contentHeight = `calc(100vh - ${headerHeightVal + footerHeightVal}rem)`;
-export const headerHeight = `${headerHeightVal}rem`;
-export const footerHeight = `${footerHeightVal}rem`;
+const getColor = (theme, color, fallback) => {
+  let colorExists = false
+  const chakraColor = color.split('.')
 
+  if (theme.colors.hasOwnProperty(chakraColor[0])) {
+    if (theme.colors[chakraColor[0]].hasOwnProperty(chakraColor[1])) {
+      colorExists = true
+    }
+  }
+
+  return colorExists ? 
+    theme.colors[chakraColor[0]][chakraColor[1]] : 
+    theme.colors[fallback]['300']
+};
 
 export const inputTheme = defineStyleConfig({
   defaultProps: {
@@ -21,6 +29,13 @@ export const buttonTheme = defineStyleConfig({
       variant: 'solid',
   },
 });
+const headerHeightVal = 3; // chakra size val: 12
+const footerHeightVal = 3.5; // chakra size val: 14
+
+// 1px extra deduction for border weight 
+export const contentHeight = `calc(100vh - ${headerHeightVal + footerHeightVal}rem - 1px)`;
+export const headerHeight = `${headerHeightVal}rem`;
+export const footerHeight = `${footerHeightVal}rem - 0px`;
 
 export const codeTheme = defineStyle({
   fontSize: '0.9rem',
@@ -28,31 +43,25 @@ export const codeTheme = defineStyle({
 });
 
 export const theme = extendTheme(
+  defaultTheme,
   {
+    sizes: {
+      contentHeight,
+      headerHeight,
+      footerHeight,
+    },
+    borders: {
+      '1px': `1px solid ${getColor(defaultTheme, 'gray.300', 'gray')}`
+    },
     fonts: {
       body: `'JetBrains Mono Variable', monospace`,
       mono: `'JetBrains Mono Variable', monospace`,
-    },
-    colors: {
-      gray: {
-        35: '#585858',
-        39: '#636564',
-        87: '#DEDEDE',
-        90: '#E6E6E6',
-        95: '#F3F3F3',
-      },
-      black: {
-        3: 'rgba(0, 0, 0, 0.03)',
-        4: 'rgba(0, 0, 0, 0.04)',
-        10: 'rgba(0, 0, 0, 0.1)',
-        100: '#000',
-      }
     },
     components: {
       Text: {
         baseStyle: (props) => {
           return {
-            color: props.color || 'gray.35',
+            color: props.color || 'gray.600',
             fontSize: props.fontSize || '0.9rem',
           }
         },
@@ -60,7 +69,7 @@ export const theme = extendTheme(
       Icon: {
         baseStyle: (props) => {
           return {
-            color: props.color || 'gray.35',
+            color: props.color || 'gray.600',
             boxSize: props.boxSize || '1.2rem',
             cursor: props.cursor || 'pointer',
           }
@@ -74,7 +83,7 @@ export const theme = extendTheme(
               bg: '#ECECEC !important',
               border: "1px solid",
               borderRadius: '5px',
-              borderColor: 'gray.87',
+              borderColor: 'gray.300',
               _hover: {
                 borderColor: 'gray.87',
               },
@@ -92,11 +101,20 @@ export const theme = extendTheme(
       },
       PanelContainer: {
         baseStyle: {
-          bg: 'black.3',
+          bg: 'gray.100',
           w: '100%',
           minHeight: contentHeight,
           maxHeight: contentHeight,
           overflow: 'scroll',
+        }
+      },
+      PanelHeaderContainer: {
+        baseStyle: {
+          w: '100%',
+          minHeight: 6,
+          maxHeight: 6,
+          borderBottom: "1px solid",
+          borderColor: 'gray.300',
         }
       },
       Tabs: {
@@ -107,7 +125,7 @@ export const theme = extendTheme(
               borderBottom: 'none',
               color: 'none',
               borderColor: 'none',
-              bg: "black.10",
+              bg: "gray.300",
               _selected: {
                 border: 'none',
                 borderColor: 'none',

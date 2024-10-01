@@ -35,7 +35,6 @@ export const AddInputButtonAndModal: React.FC<{
       if (values.fileName) {
         add(values.fileName);
       }
-      // formik.resetForm();
       onClose();
     },
     [onClose, add]
@@ -58,8 +57,7 @@ export const AddInputButtonAndModal: React.FC<{
     <>
       <HStack onClick={onToggle} aria-label="add input"
       >
-        <Icon as={Plus} 
-          boxSize={'1.3rem'} />
+        <Icon as={Plus} />
         {
           showText ?
           <Text size={'med'}>New File</Text>
