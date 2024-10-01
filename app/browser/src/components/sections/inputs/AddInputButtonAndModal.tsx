@@ -37,12 +37,12 @@ export const AddInputButtonAndModal: React.FC<{
       }
       onClose();
     },
-    [onClose, add]
+    [onClose, add],
   );
 
   const formik = useFormik({
     initialValues: {
-      fileName: "",
+      fileName: '',
     },
     onSubmit,
     validationSchema,
@@ -55,32 +55,29 @@ export const AddInputButtonAndModal: React.FC<{
 
   return (
     <>
-      <HStack onClick={onToggle} aria-label="add input"
-      >
+      <HStack onClick={onToggle} aria-label='add input'>
         <Icon as={Plus} />
-        {
-          showText ?
-          <Text size={'med'}>New File</Text>
-          : null
-        }
+        {showText ? <Text size={'med'}>New File</Text> : null}
       </HStack>
 
       <Modal isOpen={isOpen} onClose={closeAndClear}>
-        <ModalOverlay sx={{right: 0, width: '50%'}} />
+        <ModalOverlay sx={{ right: 0, width: '50%' }} />
         <ModalContent>
-          <ModalHeader><Text>New input (file) name</Text></ModalHeader>
+          <ModalHeader>
+            <Text>New input (file) name</Text>
+          </ModalHeader>
           <form onSubmit={formik.handleSubmit}>
             <ModalBody>
               <Input
-                id="fileName"
-                name="fileName"
-                type="text"
+                id='fileName'
+                name='fileName'
+                type='text'
                 onChange={formik.handleChange}
                 value={formik.values.fileName}
               />
             </ModalBody>
             <ModalFooter>
-              <Button type="submit" colorScheme="blackAlpha" mr={3}>
+              <Button type='submit' colorScheme='blackAlpha' mr={3}>
                 Add
               </Button>
             </ModalFooter>

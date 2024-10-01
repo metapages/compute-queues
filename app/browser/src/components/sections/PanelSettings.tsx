@@ -7,7 +7,7 @@ import { PanelContainer } from '/@/components/generic/PanelContainer';
 export const PanelSettings: React.FC = () => {
   return (
     <PanelContainer>
-      <PanelHeader title={'Job Settings'}/>
+      <PanelHeader title={'Job Settings'} />
       <PanelImageAndContainer />
     </PanelContainer>
   );

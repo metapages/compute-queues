@@ -1,8 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { useEffect, useRef, useState } from 'react';
 import linkifyHtml from 'linkify-html';
 import { AnsiUp } from 'ansi_up';
 import { ConsoleLogLine, DockerJobState, StateChangeValueWorkerFinished } from '/@/shared/types';
@@ -10,14 +6,10 @@ import { useStore } from '/@/store';
 import { VariableSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 
-import {
-  Box,
-  Code,
-  VStack,
-} from '@chakra-ui/react';
+import { Box, Code, VStack } from '@chakra-ui/react';
 import { OUTPUT_TABLE_ROW_HEIGHT, OutputTable } from './OutputTable';
 
-export type LogsMode = "stdout+stderr" | "stdout" | "stderr" | "build";
+export type LogsMode = 'stdout+stderr' | 'stdout' | 'stderr' | 'build';
 
 const EMPTY_ARRAY: ConsoleLogLine[] = [];
 const options = { defaultProtocol: 'https' };
@@ -30,10 +22,10 @@ export const DisplayLogs: React.FC<{
   const logsRef = useRef<string[]>([]);
   const [logs, setLogs] = useState<string[]>([]);
   const [jobId, setJobId] = useState<string | undefined>();
-  const [showOutputTable, setShowOutputTable] = useState(false)
-  const [outputCount, setOutputCount] = useState(0)
+  const [showOutputTable, setShowOutputTable] = useState(false);
+  const [outputCount, setOutputCount] = useState(0);
   const myref = useRef(null);
-  const job = useStore((state) => state.jobState);
+  const job = useStore(state => state.jobState);
 
   useEffect(() => {
     if (!job?.state || job.state !== DockerJobState.Finished) return;
@@ -41,15 +33,15 @@ export const DisplayLogs: React.FC<{
     const result = (job.value as StateChangeValueWorkerFinished).result;
     if (result && result.outputs && mode.includes('stdout')) {
       setShowOutputTable(true);
-      setOutputCount(Object.keys(result.outputs).length)
+      setOutputCount(Object.keys(result.outputs).length);
     }
-  }, [job, mode])
+  }, [job, mode]);
 
   const showRef = () => {
     if (myref.current) {
-      myref.current._outerRef.scroll({top: myref.current._outerRef.scrollHeight, left: 0, behavior: 'smooth' })
+      myref.current._outerRef.scroll({ top: myref.current._outerRef.scrollHeight, left: 0, behavior: 'smooth' });
     }
-  }
+  };
 
   // if the logs change, or if the ref changes, scroll to the bottom
   useEffect(() => {
@@ -62,9 +54,9 @@ export const DisplayLogs: React.FC<{
     setLogs(logsRef.current);
   }, [jobId]);
 
-  const jobState = useStore((state) => state.jobState);
-  const buildLogs = useStore((state) => state.buildLogs);
-  const runLogs = useStore((state) => state.runLogs);
+  const jobState = useStore(state => state.jobState);
+  const buildLogs = useStore(state => state.buildLogs);
+  const runLogs = useStore(state => state.runLogs);
 
   // update the job id
   useEffect(() => {
@@ -85,78 +77,86 @@ export const DisplayLogs: React.FC<{
     const stdErrLogs = [];
     for (let log of allLogs) {
       if (log[2]) {
-        stdErrLogs.push(log)
+        stdErrLogs.push(log);
       } else {
-        stdOutLogs.push(log)
+        stdOutLogs.push(log);
       }
     }
     switch (mode) {
-      case "stdout+stderr":
+      case 'stdout+stderr':
         currentLogs = allLogs;
         break;
-      case "stdout":
+      case 'stdout':
         currentLogs = stdOutLogs;
         break;
-      case "stderr":
+      case 'stderr':
         currentLogs = stdErrLogs;
         break;
-      case "build":
+      case 'build':
         currentLogs = buildLogs || EMPTY_ARRAY;
         break;
     }
     let logsNewlineHandled: any[] = [];
-    currentLogs.forEach((line) => {
+    currentLogs.forEach(line => {
       if (!line) {
         return;
       }
-      const lines = line[0]?.split("\n");
+      const lines = line[0]?.split('\n');
       logsNewlineHandled = logsNewlineHandled.concat(lines);
     });
-    logsRef.current = outputCount ? [...logsNewlineHandled, "OUTPUT_TABLE_PLACEHOLDER"] : logsNewlineHandled;
+    logsRef.current = outputCount ? [...logsNewlineHandled, 'OUTPUT_TABLE_PLACEHOLDER'] : logsNewlineHandled;
     setLogs(logsRef.current);
   }, [mode, jobState, jobId, buildLogs, runLogs, showOutputTable, outputCount]);
 
   if (!jobId) {
-    return <VStack alignItems={'flex-start'} h={'100%'} pl={3}></VStack>
+    return <VStack alignItems={'flex-start'} h={'100%'} pl={3}></VStack>;
   }
 
-  const getItemSize = (index) => {
-    if (logs[index] === "OUTPUT_TABLE_PLACEHOLDER") return (OUTPUT_TABLE_ROW_HEIGHT * (outputCount + 1)) + LINE_HEIGHT;
+  const getItemSize = index => {
+    if (logs[index] === 'OUTPUT_TABLE_PLACEHOLDER') return OUTPUT_TABLE_ROW_HEIGHT * (outputCount + 1) + LINE_HEIGHT;
     return LINE_HEIGHT;
-  }
+  };
 
   const Row = ({ index, style }) => {
     // if this is the last log in the list, add the output table
     // this will allow the table to scroll with the other log content
-    if (logs[index] === "OUTPUT_TABLE_PLACEHOLDER") {
-      return <Box style={style}>
-        <OutputTable />
-      </Box>;
+    if (logs[index] === 'OUTPUT_TABLE_PLACEHOLDER') {
+      return (
+        <Box style={style}>
+          <OutputTable />
+        </Box>
+      );
     }
     let formattedLog = linkifyHtml(ansi_up.ansi_to_html(logs[index]), options);
-    return <Code 
-      style={style} 
-      sx={{display: 'block', textWrap: 'nowrap'}} 
-      bg={'none'} 
-      dangerouslySetInnerHTML={{ __html: formattedLog }}
+    return (
+      <Code
+        style={style}
+        sx={{ display: 'block', textWrap: 'nowrap' }}
+        bg={'none'}
+        dangerouslySetInnerHTML={{ __html: formattedLog }}
       />
+    );
   };
 
-  return <VStack alignItems={'flex-start'} h={'100%'} pl={3}>
-    <AutoSizer>
-      {({height, width}) => {
-        return <List
-          height={height}
-          itemSize={getItemSize}
-          itemCount={logsRef.current.length}
-          width={width}
-          ref={(el) => {myref.current = el}}
-        >
-          {Row}
-        </List>
-      }}
-    </AutoSizer>
-    {!logs.length && showOutputTable && <OutputTable />}
-  </VStack>
-  ;
+  return (
+    <VStack alignItems={'flex-start'} h={'100%'} pl={3}>
+      <AutoSizer>
+        {({ height, width }) => {
+          return (
+            <List
+              height={height}
+              itemSize={getItemSize}
+              itemCount={logsRef.current.length}
+              width={width}
+              ref={el => {
+                myref.current = el;
+              }}>
+              {Row}
+            </List>
+          );
+        }}
+      </AutoSizer>
+      {!logs.length && showOutputTable && <OutputTable />}
+    </VStack>
+  );
 };

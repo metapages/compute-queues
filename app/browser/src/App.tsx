@@ -1,7 +1,7 @@
 import { serverWebsocket } from '/@/hooks/serverWebsocket';
 import { useDockerJobDefinition } from '/@/hooks/useDockerJobDefinition';
 import { useSendJobOutputs } from '/@/hooks/useSendJobOutputs';
-import { Main } from "/@/routes/Main";
+import { Main } from '/@/routes/Main';
 
 export const App: React.FC = () => {
   // Get the job definition from the URL and metaframe inputs, set in the store
@@ -11,7 +11,5 @@ export const App: React.FC = () => {
   // if a job is finished, send the outputs to the metaframe
   useSendJobOutputs();
 
-  return (
-    <Main />
-  );
+  return <Main />;
 };

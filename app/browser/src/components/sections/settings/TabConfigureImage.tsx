@@ -1,9 +1,4 @@
-import {
-  ReactNode,
-  useCallback,
-  useEffect,
-  useState,
-} from 'react';
+import { ReactNode, useCallback, useEffect, useState } from 'react';
 
 import { ButtonModalEditor } from '/@/components/generic/ButtonModalEditor';
 import { FormLink } from '/@/components/generic/FormLink';
@@ -39,39 +34,38 @@ const validationSchema = yup.object({
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
 const linkMap = {
-  image: "https://hub.docker.com/",
-  command: "https://docs.docker.com/reference/dockerfile/#cmd",                           
-  dockerfile: "https://docs.docker.com/build/building/packaging/#dockerfile",
-  context: "https://docs.docker.com/build/building/context/#git-repositories",
-  filename: "https://docs.docker.com/build/building/packaging/#filenames",
-  target: "https://docs.docker.com/build/building/multi-stage/#stop-at-a-specific-build-stage",
-  buildArgs: "https://docs.docker.com/reference/cli/docker/buildx/build/#build-arg",
-}
+  image: 'https://hub.docker.com/',
+  command: 'https://docs.docker.com/reference/dockerfile/#cmd',
+  dockerfile: 'https://docs.docker.com/build/building/packaging/#dockerfile',
+  context: 'https://docs.docker.com/build/building/context/#git-repositories',
+  filename: 'https://docs.docker.com/build/building/packaging/#filenames',
+  target: 'https://docs.docker.com/build/building/multi-stage/#stop-at-a-specific-build-stage',
+  buildArgs: 'https://docs.docker.com/reference/cli/docker/buildx/build/#build-arg',
+};
 
 const labelMap = {
-  image: "docker image name",
-  context: "Git Repo URL",
-  filename: "Dockerfile Name",
-  buildArgs: "Build Args",
-}
+  image: 'docker image name',
+  context: 'Git Repo URL',
+  filename: 'Dockerfile Name',
+  buildArgs: 'Build Args',
+};
 const labelSubMap = {
-  buildArgs: "Comma Separated",
-}
+  buildArgs: 'Comma Separated',
+};
 
-type TabType = "useExisting" | "fromRepo";
+type TabType = 'useExisting' | 'fromRepo';
 
 export const TabConfigureImage: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
-  const [jobDefinitionBlob, setJobDefinitionBlob] =
-  useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
-  const [tab, setTab] = useState<TabType>(jobDefinitionBlob?.image ? "useExisting" : "fromRepo")
-  
+  const [jobDefinitionBlob, setJobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>('job');
+  const [tab, setTab] = useState<TabType>(jobDefinitionBlob?.image ? 'useExisting' : 'fromRepo');
+
   useEffect(() => {
     if (!tab && jobDefinitionBlob) {
-      setTab(jobDefinitionBlob?.image ? 'useExisting' : "fromRepo")
+      setTab(jobDefinitionBlob?.image ? 'useExisting' : 'fromRepo');
     }
-  }, [tab, jobDefinitionBlob])
+  }, [tab, jobDefinitionBlob]);
 
   const onSubmit = useCallback(
     (values: FormType) => {
@@ -83,13 +77,7 @@ export const TabConfigureImage: React.FC<{
       if (values.image) {
         newJobDefinitionBlob.image = values.image;
         delete newJobDefinitionBlob.build;
-      } else if (
-        !values.buildArgs &&
-        !values.context &&
-        !values.filename &&
-        !values.dockerfile &&
-        !values.target
-      ) {
+      } else if (!values.buildArgs && !values.context && !values.filename && !values.dockerfile && !values.target) {
         delete newJobDefinitionBlob.build;
       } else {
         newJobDefinitionBlob.build = {};
@@ -100,9 +88,9 @@ export const TabConfigureImage: React.FC<{
         delete newJobDefinitionBlob.image;
         if (values.buildArgs) {
           newJobDefinitionBlob.build.buildArgs = values.buildArgs
-            .split(",")
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0);
+            .split(',')
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
         }
 
         if (values.context) {
@@ -121,7 +109,7 @@ export const TabConfigureImage: React.FC<{
       setJobDefinitionBlob(newJobDefinitionBlob);
       onSave?.();
     },
-    [jobDefinitionBlob, onSave, setJobDefinitionBlob]
+    [jobDefinitionBlob, onSave, setJobDefinitionBlob],
   );
 
   const updateDockerfile = useCallback(
@@ -137,32 +125,29 @@ export const TabConfigureImage: React.FC<{
       } else {
         delete newJobDefinitionBlob.build.dockerfile;
       }
-      formik.setFieldValue("dockerfile", content);
+      formik.setFieldValue('dockerfile', content);
       setJobDefinitionBlob(newJobDefinitionBlob);
       onSave?.();
     },
-    [jobDefinitionBlob, onSave, setJobDefinitionBlob]
+    [jobDefinitionBlob, onSave, setJobDefinitionBlob],
   );
 
-  const deleteDockerfile = useCallback(
-    () => {
-      const newJobDefinitionBlob = { ...jobDefinitionBlob };
-      if (!newJobDefinitionBlob.build) {
-        return;
-      }
-      delete newJobDefinitionBlob.build.dockerfile;
-      if (Object.keys(newJobDefinitionBlob.build).length === 0) {
-        delete newJobDefinitionBlob.build;
-      }
-      setJobDefinitionBlob(newJobDefinitionBlob);
-      onSave?.();
-    },
-    [jobDefinitionBlob, onSave, setJobDefinitionBlob]
-  );
+  const deleteDockerfile = useCallback(() => {
+    const newJobDefinitionBlob = { ...jobDefinitionBlob };
+    if (!newJobDefinitionBlob.build) {
+      return;
+    }
+    delete newJobDefinitionBlob.build.dockerfile;
+    if (Object.keys(newJobDefinitionBlob.build).length === 0) {
+      delete newJobDefinitionBlob.build;
+    }
+    setJobDefinitionBlob(newJobDefinitionBlob);
+    onSave?.();
+  }, [jobDefinitionBlob, onSave, setJobDefinitionBlob]);
 
   const formik = useFormik({
     initialValues: {
-      buildArgs: jobDefinitionBlob?.build?.buildArgs?.join(","),
+      buildArgs: jobDefinitionBlob?.build?.buildArgs?.join(','),
       context: jobDefinitionBlob?.build?.context,
       image: jobDefinitionBlob?.image,
       dockerfile: jobDefinitionBlob?.build?.dockerfile,
@@ -173,16 +158,13 @@ export const TabConfigureImage: React.FC<{
     validationSchema,
   });
 
-  const deleteImage = useCallback(
-    () => {
-      formik.setFieldValue("image", "");
-      const newJobDefinitionBlob = { ...jobDefinitionBlob };
-      delete newJobDefinitionBlob.image;
-      setJobDefinitionBlob(newJobDefinitionBlob);
-      onSave?.();
-    },
-    [formik, jobDefinitionBlob, onSave, setJobDefinitionBlob]
-  );
+  const deleteImage = useCallback(() => {
+    formik.setFieldValue('image', '');
+    const newJobDefinitionBlob = { ...jobDefinitionBlob };
+    delete newJobDefinitionBlob.image;
+    setJobDefinitionBlob(newJobDefinitionBlob);
+    onSave?.();
+  }, [formik, jobDefinitionBlob, onSave, setJobDefinitionBlob]);
 
   const isImageSet = !!formik.values.image;
   const isBuildSet =
@@ -193,101 +175,98 @@ export const TabConfigureImage: React.FC<{
     !!formik.values.target;
 
   const existingImageInputs = () => {
-    return <FormControl  pl={'1rem'} key={'image'}>
-      <InputGroup>
-        <Input
-          width="100%"
-          size={'sm'}
-          id={'image'}
-          name={'image'}
-          type="text"
-          variant="outline"
-          onChange={formik.handleChange}
-          value={(formik.values as any)['image'] || ""}
-        />
-      </InputGroup>
-    </FormControl>
-  }
-
+    return (
+      <FormControl pl={'1rem'} key={'image'}>
+        <InputGroup>
+          <Input
+            width='100%'
+            size={'sm'}
+            id={'image'}
+            name={'image'}
+            type='text'
+            variant='outline'
+            onChange={formik.handleChange}
+            value={(formik.values as any)['image'] || ''}
+          />
+        </InputGroup>
+      </FormControl>
+    );
+  };
 
   const externalImageInputs = () => {
-    return <VStack pl={'1rem'} gap={'1.5rem'} w={'100%'}>
-      <FormControl>
-        <Box key={'dockerfile'}>
-          <HStack w="100%" justifyContent="space-between" alignContent={'flex-start'}>
-            <VStack gap={0} alignItems={'flex-start'}>
-              <FormLabel h={'1rem'}>
-                <FormLink href={linkMap["dockerfile"]} label={'dockerfile'}/>
-              </FormLabel>
-              <Text fontSize={'xs'} color="gray.400">{jobDefinitionBlob?.build?.dockerfile?.split("\n").find(s => s.startsWith("FROM "))}</Text>
-            </VStack>
-            <HStack>
-              <ButtonModalEditor
-                content={jobDefinitionBlob?.build?.dockerfile}
-                onUpdate={updateDockerfile}
-                button={{isDisabled: isImageSet, ["aria-label"]: "edit dockerfile"}}
+    return (
+      <VStack pl={'1rem'} gap={'1.5rem'} w={'100%'}>
+        <FormControl>
+          <Box key={'dockerfile'}>
+            <HStack w='100%' justifyContent='space-between' alignContent={'flex-start'}>
+              <VStack gap={0} alignItems={'flex-start'}>
+                <FormLabel h={'1rem'}>
+                  <FormLink href={linkMap['dockerfile']} label={'dockerfile'} />
+                </FormLabel>
+                <Text fontSize={'xs'} color='gray.400'>
+                  {jobDefinitionBlob?.build?.dockerfile?.split('\n').find(s => s.startsWith('FROM '))}
+                </Text>
+              </VStack>
+              <HStack>
+                <ButtonModalEditor
+                  content={jobDefinitionBlob?.build?.dockerfile}
+                  onUpdate={updateDockerfile}
+                  button={{ isDisabled: isImageSet, ['aria-label']: 'edit dockerfile' }}
                 />
-              {jobDefinitionBlob?.build?.dockerfile ? <Icon
-                  aria-label="delete dockerfile"
-                  onClick={deleteDockerfile}
-                  as={TrashSimple}
-                ></Icon> : null
-              }
+                {jobDefinitionBlob?.build?.dockerfile ? (
+                  <Icon aria-label='delete dockerfile' onClick={deleteDockerfile} as={TrashSimple}></Icon>
+                ) : null}
+              </HStack>
             </HStack>
-          </HStack>
-        </Box>
-      </FormControl>
-      {[
-          "context",
-          "filename",
-          "target",
-          "buildArgs"
-        ].map((key) => {
+          </Box>
+        </FormControl>
+        {['context', 'filename', 'target', 'buildArgs'].map(key => {
           let labelJsx: ReactNode = <FormLink href={linkMap[key]} label={labelMap[key] || key} />;
           return (
-            <VStack w="100%" key={key}>
+            <VStack w='100%' key={key}>
               <FormControl key={key}>
                 <FormLabel htmlFor={key}>
-                    {labelJsx}
-                    {
-                      labelSubMap[key] && 
-                      <Text fontSize={'xs'} color="gray.400">{labelSubMap[key]}</Text>
-                    }
+                  {labelJsx}
+                  {labelSubMap[key] && (
+                    <Text fontSize={'xs'} color='gray.400'>
+                      {labelSubMap[key]}
+                    </Text>
+                  )}
                 </FormLabel>
                 <HStack>
-                <InputGroup>
-                  <Input
-                    width="100%"
-                    id={key}
-                    name={key}
-                    size={'sm'}
-                    type="text"
-                    variant="outline"
-                    isDisabled={
-                      (key !== "image" && isImageSet) ||
-                      (key === "image" && isBuildSet && !formik.values.image)
-                    }
-                    onChange={formik.handleChange}
-                    value={(formik.values as any)[key] || ""}
-                  />
-                </InputGroup>
-                  </HStack>
+                  <InputGroup>
+                    <Input
+                      width='100%'
+                      id={key}
+                      name={key}
+                      size={'sm'}
+                      type='text'
+                      variant='outline'
+                      isDisabled={
+                        (key !== 'image' && isImageSet) || (key === 'image' && isBuildSet && !formik.values.image)
+                      }
+                      onChange={formik.handleChange}
+                      value={(formik.values as any)[key] || ''}
+                    />
+                  </InputGroup>
+                </HStack>
               </FormControl>
             </VStack>
           );
         })}
-    </VStack>
-  }
+      </VStack>
+    );
+  };
 
-  const onSetValue = (tab) => {
+  const onSetValue = tab => {
     if (tab === 'fromRepo') {
       localStorage.setItem('dockerImage', formik.values.image);
       deleteImage();
     } else {
       const prevImage = localStorage.getItem('dockerImage') || '';
-      formik.setFieldValue("image", prevImage);
+      formik.setFieldValue('image', prevImage);
     }
-    setTab(tab)
+    setTab(tab);
   };
 
   return (
@@ -307,7 +286,7 @@ export const TabConfigureImage: React.FC<{
             </VStack>
           </RadioGroup>
         </FormControl>
-        <Button alignSelf="center" type="submit" colorScheme="green" size="sm">
+        <Button alignSelf='center' type='submit' colorScheme='green' size='sm'>
           Save
         </Button>
       </VStack>

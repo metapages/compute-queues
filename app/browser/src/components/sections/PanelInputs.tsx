@@ -2,34 +2,24 @@ import { useCallback } from 'react';
 
 import { PanelContainer } from '/@/components/generic/PanelContainer';
 import { PanelHeader } from '/@/components/generic/PanelHeader';
-import {
-  AddInputButtonAndModal,
-} from '/@/components/sections/inputs/AddInputButtonAndModal';
+import { AddInputButtonAndModal } from '/@/components/sections/inputs/AddInputButtonAndModal';
 import { InputRow } from '/@/components/sections/inputs/InputRow';
 import { JobInputs } from '/@/shared/types';
 import { useStore } from '/@/store';
 
-import {
-  Container,
-  HStack,
-  Table,
-  Tbody,
-  Text,
-} from '@chakra-ui/react';
+import { Container, HStack, Table, Tbody, Text } from '@chakra-ui/react';
 import { useHashParamJson } from '@metapages/hash-query';
-import { getInputsCount } from './util';
+import { getInputsCount } from '../../helpers/util';
 
 export const PanelInputs: React.FC = () => {
-  const clientJobDefinition = useStore((state) => state.newJobDefinition); 
-  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>(
-    "inputs"
-  );
+  const clientJobDefinition = useStore(state => state.newJobDefinition);
+  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>('inputs');
 
   const addNewInput = useCallback(
     (name: string) => {
-      setJobInputs({ ...jobInputs, [name]: "" });
+      setJobInputs({ ...jobInputs, [name]: '' });
     },
-    [jobInputs, setJobInputs]
+    [jobInputs, setJobInputs],
   );
 
   const deleteInput = useCallback(
@@ -38,7 +28,7 @@ export const PanelInputs: React.FC = () => {
       delete newJobDefinitionBlob[name];
       setJobInputs(newJobDefinitionBlob);
     },
-    [jobInputs, setJobInputs]
+    [jobInputs, setJobInputs],
   );
 
   const updateInput = useCallback(
@@ -47,7 +37,7 @@ export const PanelInputs: React.FC = () => {
       newJobDefinitionBlob[name] = content;
       setJobInputs(newJobDefinitionBlob);
     },
-    [jobInputs, setJobInputs]
+    [jobInputs, setJobInputs],
   );
 
   const names: string[] = jobInputs ? Object.keys(jobInputs).sort() : [];
@@ -56,18 +46,18 @@ export const PanelInputs: React.FC = () => {
   return (
     <PanelContainer gap={4}>
       <PanelHeader title={`Inputs (${incomingInputsCount}) = dynamic - static (below)`} />
-      <HStack px={4} width="100%" justifyContent="space-between">
-        <Text>{"/inputs/<scripts>"}</Text>
+      <HStack px={4} width='100%' justifyContent='space-between'>
+        <Text>{'/inputs/<scripts>'}</Text>
         <AddInputButtonAndModal add={addNewInput} showText={false} />
       </HStack>
       <Container>
-        <Table px={5} variant="simple">
+        <Table px={5} variant='simple'>
           <Tbody>
-            {names.map((name) => (
+            {names.map(name => (
               <InputRow
                 key={name}
                 name={name}
-                content={jobInputs?.[name] ?? ""}
+                content={jobInputs?.[name] ?? ''}
                 onDelete={deleteInput}
                 onUpdate={updateInput}
               />

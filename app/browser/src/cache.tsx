@@ -22,10 +22,10 @@ class LocalDatabase extends Dexie {
   //...other tables goes here...
 
   constructor() {
-    super("jobs");
+    super('jobs');
     // console.log("CREATING DATABASE")
     this.version(1).stores({
-      jobsFinished: "id, job, created_at",
+      jobsFinished: 'id, job, created_at',
       // menuIds: "channel, menuIds, updated_at",
       // menus: "id, channel, menu, updated_at",
       // menuItems: "id, channel, menuItemDefinition, updated_at",
@@ -34,10 +34,7 @@ class LocalDatabase extends Dexie {
     });
   }
 
-  async saveFinishedJob(
-    id: string,
-    job: DockerJobDefinitionRow
-  ): Promise<void> {
+  async saveFinishedJob(id: string, job: DockerJobDefinitionRow): Promise<void> {
     // console.log(`🔻🔻 👜  savesMenuDefinition (channel=${channel.substring(0, 24)})`, menusDefinition);
     await this.jobsFinished.put({
       id,
@@ -48,9 +45,7 @@ class LocalDatabase extends Dexie {
     console.log(`🔻 ✅ 👜   saveFinishedJob`);
   }
 
-  async getFinishedJob(
-    id: string
-  ): Promise<DockerJobDefinitionRow | undefined> {
+  async getFinishedJob(id: string): Promise<DockerJobDefinitionRow | undefined> {
     const jobsFinished = await this.jobsFinished.where({ id }).toArray();
     if (!jobsFinished || jobsFinished.length === 0) {
       return;
@@ -60,9 +55,7 @@ class LocalDatabase extends Dexie {
     return job;
   }
 
-  async deleteFinishedJob(
-    id: string
-  ): Promise<void> {
+  async deleteFinishedJob(id: string): Promise<void> {
     await this.jobsFinished.delete(id);
   }
 }
@@ -71,18 +64,15 @@ const localDb = new LocalDatabase();
 export const cache = localDb;
 
 // Function to get an object from the database
-export const saveFinishedJob = async (
-  id: string,
-  job: DockerJobDefinitionRow
-) => {
+export const saveFinishedJob = async (id: string, job: DockerJobDefinitionRow) => {
   return await cache.saveFinishedJob(id, job);
 };
 
 // Function to store an object in the database
-export const getFinishedJob = async (id: string) :Promise<DockerJobDefinitionRow | undefined> => {
+export const getFinishedJob = async (id: string): Promise<DockerJobDefinitionRow | undefined> => {
   return await cache.getFinishedJob(id);
 };
 
-export const deleteFinishedJob = async (id: string) :Promise<void> => {
+export const deleteFinishedJob = async (id: string): Promise<void> => {
   await cache.deleteFinishedJob(id);
 };

@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect } from "react";
-import { useKeyPress } from "@react-typed-hooks/use-key-press";
+import React, { useCallback, useEffect } from 'react';
+import { useKeyPress } from '@react-typed-hooks/use-key-press';
 import {
   Button,
   Modal,
@@ -13,15 +13,15 @@ import {
   Text,
   Container,
   HStack,
-} from "@chakra-ui/react";
-import { TrashSimple } from "@phosphor-icons/react";
+} from '@chakra-ui/react';
+import { TrashSimple } from '@phosphor-icons/react';
 
 // Delete icon with a confirmation modal
 export const ButtonDeleteWithConfirm: React.FC<{
   callback: (_?: any) => any;
   result?: { loading?: boolean; error?: any; data?: any };
   modalHeader?: string;
-}> = ({ callback, result, modalHeader = "Confirm deletion?" }) => {
+}> = ({ callback, result, modalHeader = 'Confirm deletion?' }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const onClickDelete = useCallback(() => {
@@ -29,7 +29,7 @@ export const ButtonDeleteWithConfirm: React.FC<{
     onClose();
   }, [callback, onClose]);
 
-  const isEnterPressed = useKeyPress({ targetKey: "Enter" });
+  const isEnterPressed = useKeyPress({ targetKey: 'Enter' });
   useEffect(() => {
     if (isEnterPressed && isOpen) {
       callback();
@@ -39,27 +39,24 @@ export const ButtonDeleteWithConfirm: React.FC<{
 
   return (
     <>
-      <Icon as={TrashSimple}
-        aria-label='delete' 
-        onClick={onOpen} />
+      <Icon as={TrashSimple} aria-label='delete' onClick={onOpen} />
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
           <ModalCloseButton />
           <ModalBody>
-            <Container
-              h={'4rem'}
-              pt={'1rem'}
-              >
-              <Text fontSize={'1rem'} align={'center'}>{modalHeader}</Text>
+            <Container h={'4rem'} pt={'1rem'}>
+              <Text fontSize={'1rem'} align={'center'}>
+                {modalHeader}
+              </Text>
             </Container>
           </ModalBody>
           <ModalFooter>
             <HStack>
-              <Button colorScheme='gray' onClick={onClose} size="sm">
+              <Button colorScheme='gray' onClick={onClose} size='sm'>
                 Cancel
               </Button>
-              <Button  colorScheme='red' onClick={onClickDelete}size="sm">
+              <Button colorScheme='red' onClick={onClickDelete} size='sm'>
                 Delete
               </Button>
             </HStack>

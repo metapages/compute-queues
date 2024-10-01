@@ -1,8 +1,8 @@
-import { Tr, Td, HStack, Icon, Flex, Text } from "@chakra-ui/react";
-import { File } from "@phosphor-icons/react";
-import { useCallback } from "react";
-import { ButtonDeleteWithConfirm } from "/@/components/generic/ButtonDeleteWithConfirm";
-import { ButtonModalEditor } from "/@/components/generic/ButtonModalEditor";
+import { Tr, Td, HStack, Icon, Flex, Text } from '@chakra-ui/react';
+import { File } from '@phosphor-icons/react';
+import { useCallback } from 'react';
+import { ButtonDeleteWithConfirm } from '/@/components/generic/ButtonDeleteWithConfirm';
+import { ButtonModalEditor } from '/@/components/generic/ButtonModalEditor';
 
 export const InputRow: React.FC<{
   name: string;
@@ -10,10 +10,7 @@ export const InputRow: React.FC<{
   onDelete: (name: string) => void;
   onUpdate: (name: string, content: string) => void;
 }> = ({ name, content, onDelete, onUpdate }) => {
-  const onUpdateMemoized = useCallback(
-    (contentUpdate: string) => onUpdate(name, contentUpdate),
-    [name, onUpdate]
-  );
+  const onUpdateMemoized = useCallback((contentUpdate: string) => onUpdate(name, contentUpdate), [name, onUpdate]);
 
   return (
     <Tr>

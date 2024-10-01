@@ -16,33 +16,28 @@ import ReconnectingWebSocket from 'reconnecting-websocket';
 import { useHashParam } from '@metapages/hash-query';
 
 import { websocketConnectionUrl } from '../config';
-import {
-  cacheInsteadOfSendMessages,
-  useStore,
-} from '../store';
+import { cacheInsteadOfSendMessages, useStore } from '../store';
 
 /**
  * Sets states bits in the store
  */
 export const serverWebsocket = (): void => {
-  const [address] = useHashParam("queue");
+  const [address] = useHashParam('queue');
 
-  const setIsServerConnected = useStore((state) => state.setIsServerConnected);
+  const setIsServerConnected = useStore(state => state.setIsServerConnected);
 
-  const setJobStates = useStore((state) => state.setJobStates);
+  const setJobStates = useStore(state => state.setJobStates);
 
-  const setWorkers = useStore((state) => state.setWorkers);
+  const setWorkers = useStore(state => state.setWorkers);
 
-  const setSendMessage = useStore((state) => state.setSendMessage);
+  const setSendMessage = useStore(state => state.setSendMessage);
 
-  const setRawMessage = useStore((state) => state.setRawMessage);
+  const setRawMessage = useStore(state => state.setRawMessage);
 
-  const handleJobStatusPayload = useStore(
-    (state) => state.handleJobStatusPayload
-  );
+  const handleJobStatusPayload = useStore(state => state.handleJobStatusPayload);
 
   useEffect(() => {
-    if (!address || address === "") {
+    if (!address || address === '') {
       return;
     }
     const url = `${websocketConnectionUrl}/${address}/client`;
@@ -54,25 +49,18 @@ export const serverWebsocket = (): void => {
     const onMessage = (message: MessageEvent) => {
       try {
         const messageString = message.data.toString();
-        if (messageString === "PONG") {
+        if (messageString === 'PONG') {
           timeLastPong = Date.now();
 
           // wait a bit then send a ping
           setTimeout(() => {
             if (Date.now() - timeLastPing >= 5000) {
-              rws.send("PING");
+              rws.send('PING');
               timeLastPing = Date.now();
             }
             setTimeout(() => {
-              if (
-                Date.now() - timeLastPong >= 10000 &&
-                rws.readyState === rws.OPEN
-              ) {
-                console.log(
-                  `Reconnecting because no PONG since ${
-                    Date.now() - timeLastPong
-                  }ms `
-                );
+              if (Date.now() - timeLastPong >= 10000 && rws.readyState === rws.OPEN) {
+                console.log(`Reconnecting because no PONG since ${Date.now() - timeLastPong}ms `);
                 rws.reconnect();
               }
             }, 10000);
@@ -80,16 +68,15 @@ export const serverWebsocket = (): void => {
 
           return;
         }
-        if (!messageString.startsWith("{")) {
+        if (!messageString.startsWith('{')) {
           return;
         }
-        const possibleMessage: WebsocketMessageServerBroadcast =
-          JSON.parse(messageString);
+        const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(messageString);
         // console.log(`❔ received from server:`, possibleMessage)
 
         if (!possibleMessage?.payload) {
           console.log({
-            error: "Missing payload in message",
+            error: 'Missing payload in message',
             message: messageString,
           });
           return;
@@ -151,16 +138,16 @@ export const serverWebsocket = (): void => {
       setSendMessage(cacheInsteadOfSendMessages);
     };
 
-    rws.addEventListener("message", onMessage);
-    rws.addEventListener("error", onError);
-    rws.addEventListener("open", onOpen);
-    rws.addEventListener("close", onClose);
+    rws.addEventListener('message', onMessage);
+    rws.addEventListener('error', onError);
+    rws.addEventListener('open', onOpen);
+    rws.addEventListener('close', onClose);
 
     return () => {
-      rws.removeEventListener("message", onMessage);
-      rws.removeEventListener("error", onError);
-      rws.removeEventListener("open", onOpen);
-      rws.removeEventListener("close", onClose);
+      rws.removeEventListener('message', onMessage);
+      rws.removeEventListener('error', onError);
+      rws.removeEventListener('open', onOpen);
+      rws.removeEventListener('close', onClose);
       rws.close();
       setIsServerConnected(false);
       setSendMessage(cacheInsteadOfSendMessages);
