@@ -7,7 +7,6 @@ import {
   StateChangeValueWorkerFinished,
 } from '/@/shared';
 import { useStore } from '/@/store';
-import { defaultBorder } from '/@/styles/theme';
 
 import {
   Box,
@@ -22,6 +21,7 @@ import {
   downloadFile,
   zipAndDownloadDatarefs,
 } from '../util';
+import { ArrowDown } from '@phosphor-icons/react';
 
 export const OUTPUT_TABLE_ROW_HEIGHT = 35;
 
