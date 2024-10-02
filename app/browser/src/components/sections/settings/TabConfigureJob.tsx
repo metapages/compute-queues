@@ -45,8 +45,7 @@ export const TabConfigureJob: React.FC = () => {
 
   const onSubmit = useCallback(
     (values: FormType) => {
-      const newJobDefinitionBlob = {...jobDefinitionBlob};
-
+      const newJobDefinitionBlob = { ...jobDefinitionBlob };
 
       if (values.workdir) {
         newJobDefinitionBlob.workdir = values.workdir;
@@ -59,7 +58,7 @@ export const TabConfigureJob: React.FC = () => {
       setJobDefinitionBlob(newJobDefinitionBlob);
       setDebug(!!values.debug);
     },
-    [jobDefinitionBlob, setJobDefinitionBlob, setDebug, toggleJobStartAutomatically]
+    [jobDefinitionBlob, setJobDefinitionBlob, setDebug, toggleJobStartAutomatically],
   );
 
   const formik = useFormik({
@@ -82,7 +81,7 @@ export const TabConfigureJob: React.FC = () => {
       formik.setFieldValue(name, checked);
       formik.submitForm();
     },
-    [formik]
+    [formik],
   );
 
   return (
@@ -137,7 +136,6 @@ export const TabConfigureJob: React.FC = () => {
               </FormLabel>
               <Switch id="debug" name="debug" onChange={handleSwitchChange} isChecked={debug} />
             </FormControl>
-            
 
             <Divider />
             <Text align="center" fontWeight="bold">

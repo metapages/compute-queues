@@ -5,7 +5,6 @@ import { TabConfigureImage } from "/@/components/sections/settings/TabConfigureI
 import { TabConfigureJob } from "/@/components/sections/settings/TabConfigureJob";
 
 export const PanelImageAndContainer: React.FC = () => {
-
   return (
     <VStack w="100%" alignItems="stretch" overflow={"scroll"}>
       <Tabs isFitted={true}>

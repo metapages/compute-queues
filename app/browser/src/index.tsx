@@ -13,5 +13,5 @@ createRoot(container!).render(
     <WithMetaframeAndInputs>
       <App />
     </WithMetaframeAndInputs>
-  </ChakraProvider>
+  </ChakraProvider>,
 );

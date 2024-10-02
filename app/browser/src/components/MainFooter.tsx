@@ -28,9 +28,10 @@ export const MainFooter: React.FC = () => {
                 as={QuestionMark}
                 onClick={() => setRightPanelContext(helpPanelShown ? null : "help")}
               />
-          </Tooltip>
-        </HStack>)}
+            </Tooltip>
+          </HStack>
+        )}
       </HStack>
     </Box>
-  )
+  );
 };

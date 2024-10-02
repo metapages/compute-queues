@@ -26,10 +26,11 @@ import {
 
 let _cachedMostRecentSubmit: WebsocketMessageClientToServer | undefined;
 
-export const cacheInsteadOfSendMessages = (
-  message: WebsocketMessageClientToServer
-) => {
-  if (message.type === WebsocketMessageTypeClientToServer.StateChange && (message.payload as StateChange).state === DockerJobState.Queued) {
+export const cacheInsteadOfSendMessages = (message: WebsocketMessageClientToServer) => {
+  if (
+    message.type === WebsocketMessageTypeClientToServer.StateChange &&
+    (message.payload as StateChange).state === DockerJobState.Queued
+  ) {
     _cachedMostRecentSubmit = message;
   }
 };
@@ -115,7 +116,6 @@ interface MainStore {
  * 4. If the current job is finished, send the outputs (once)
  */
 export const useStore = create<MainStore>((set, get) => ({
-
   // This is only used to figure out if the job outputs should
   // be sent to the metaframe outputs when the metaframe starts
   // The hash param jobStartsAutomatically is also checked.
@@ -139,7 +139,7 @@ export const useStore = create<MainStore>((set, get) => ({
       return;
     }
     if (get().newJobDefinition?.hash === job.hash) {
-      // no change. 
+      // no change.
       // But we update the state anyway, in case the job state changed
       set(() => ({
         jobState: get().jobStates[job.hash],
@@ -156,7 +156,6 @@ export const useStore = create<MainStore>((set, get) => ({
     }));
   },
 
-  
   submitJob: pDebounce(() => {
     const definitionBlob = get().newJobDefinition;
     if (!definitionBlob) {
@@ -181,7 +180,6 @@ export const useStore = create<MainStore>((set, get) => ({
 
   jobState: undefined,
   setJobState: (jobState: DockerJobDefinitionRow | undefined) => {
-    
     if (!jobState) {
       set(() => ({
         jobState: undefined,
@@ -191,7 +189,11 @@ export const useStore = create<MainStore>((set, get) => ({
       return;
     }
     const existingJobState = get().jobState;
-    if (existingJobState && existingJobState.hash === jobState.hash && existingJobState.history.length === jobState.history.length) {
+    if (
+      existingJobState &&
+      existingJobState.hash === jobState.hash &&
+      existingJobState.history.length === jobState.history.length
+    ) {
       return;
     }
 
@@ -253,7 +255,7 @@ export const useStore = create<MainStore>((set, get) => ({
         reason: DockerJobFinishedReason.Cancelled,
         time: Date.now(),
       },
-    }
+    };
     get().sendClientStateChange(stateChange);
   },
 
@@ -269,8 +271,8 @@ export const useStore = create<MainStore>((set, get) => ({
       type: WebsocketMessageTypeClientToServer.ResubmitJob,
       payload: {
         jobId: jobState.hash,
-      }
-    }
+      },
+    };
     get().sendMessage(messageClientToServer);
   },
 
@@ -289,7 +291,7 @@ export const useStore = create<MainStore>((set, get) => ({
         reason: DockerJobFinishedReason.Cancelled,
         time: Date.now(),
       },
-    }
+    };
     get().sendClientStateChange(stateChange);
     // delete the finished job from the local cache
     deleteFinishedJob(client.hash);
@@ -327,7 +329,7 @@ export const useStore = create<MainStore>((set, get) => ({
     // Send the cached messages
     if (sendMessage !== cacheInsteadOfSendMessages) {
       const msg = _cachedMostRecentSubmit;
-      _cachedMostRecentSubmit = undefined
+      _cachedMostRecentSubmit = undefined;
       sendMessage(msg);
     }
     set(() => ({ sendMessage }));
@@ -412,7 +414,5 @@ export const useStore = create<MainStore>((set, get) => ({
     inputs[get().mainInputFile] = get().mainInputFileContent;
     setHashParamJsonInWindow("inputs", inputs);
     get().setMainInputFileContent(null);
-  }
-
+  },
 }));
-

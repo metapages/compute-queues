@@ -37,7 +37,7 @@ export const AddInputButtonAndModal: React.FC<{
       }
       onClose();
     },
-    [onClose, add]
+    [onClose, add],
   );
 
   const formik = useFormik({
@@ -63,7 +63,9 @@ export const AddInputButtonAndModal: React.FC<{
       <Modal isOpen={isOpen} onClose={closeAndClear}>
         <ModalOverlay sx={{ right: 0, width: "50%" }} />
         <ModalContent>
-          <ModalHeader><Text>New input (file) name</Text></ModalHeader>
+          <ModalHeader>
+            <Text>New input (file) name</Text>
+          </ModalHeader>
           <form onSubmit={formik.handleSubmit}>
             <ModalBody>
               <Input

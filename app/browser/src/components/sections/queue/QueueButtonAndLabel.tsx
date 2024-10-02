@@ -17,7 +17,7 @@ interface FormType extends yup.InferType<typeof validationSchema> {}
 export const QueueButtonAndLabel: React.FC = () => {
   const [queue, setQueue] = useHashParam("queue", "");
   const [showInput, setShowInput] = useState(false);
-  const isServerConnected = useStore((state) => state.isServerConnected);
+  const isServerConnected = useStore(state => state.isServerConnected);
 
   const onSubmit = useCallback(
     (values: FormType) => {
@@ -28,7 +28,7 @@ export const QueueButtonAndLabel: React.FC = () => {
       // formik.resetForm();
       setShowInput(false);
     },
-    [setQueue]
+    [setQueue],
   );
 
   const formik = useFormik({
@@ -47,10 +47,8 @@ export const QueueButtonAndLabel: React.FC = () => {
         aria-label="edit docker job queue"
         boxSize="7"
       />
-      <Text p={2}>
-        Queue key:
-      </Text>
-      { showInput ? 
+      <Text p={2}>Queue key:</Text>
+      {showInput ? (
         <>
           <form onSubmit={formik.handleSubmit}>
             <HStack>
@@ -62,7 +60,7 @@ export const QueueButtonAndLabel: React.FC = () => {
                     type="text"
                     onChange={formik.handleChange}
                     value={formik.values.queue}
-                    />
+                  />
                 </InputGroup>
               </FormControl>
               <Button type="submit" colorScheme="green" size={"sm"} mr={0}>
@@ -71,12 +69,12 @@ export const QueueButtonAndLabel: React.FC = () => {
             </HStack>
             {/* {error ? <Message type="error" message={error} /> : null} */}
           </form>
-        </> :
+        </>
+      ) : (
         <HStack gap={5}>
-          {queue ? <Tag>{queue}</Tag> : null}{" "}
-          <Text onClick={() => setShowInput(true)}>Edit</Text>
+          {queue ? <Tag>{queue}</Tag> : null} <Text onClick={() => setShowInput(true)}>Edit</Text>
         </HStack>
-      }
+      )}
 
       {!queue || queue === "" ? (
         <Alert status="error">

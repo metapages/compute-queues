@@ -14,7 +14,7 @@ const titleByMode = (mode: LogsMode): string => {
     default:
       return "";
   }
-}
+};
 export const PanelLogs: React.FC<{
   mode: LogsMode;
 }> = ({ mode }) => {

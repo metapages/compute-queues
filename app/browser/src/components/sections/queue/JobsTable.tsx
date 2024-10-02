@@ -5,16 +5,12 @@ import { useStore } from "/@/store";
 import { ButtonJobCancel } from "/@/components/generic/ButtonJobCancel";
 
 export const JobsTable: React.FC = () => {
-  const jobs = useStore((state) => state.jobStates);
+  const jobs = useStore(state => state.jobStates);
 
   const jobIds = jobs ? Object.keys(jobs) : [];
   jobIds.sort((jobA, jobB) => {
-    const jobAActive =
-      jobs[jobA].state === DockerJobState.Running ||
-      jobs[jobA].state === DockerJobState.Queued;
-    const jobBActive =
-      jobs[jobB].state === DockerJobState.Running ||
-      jobs[jobB].state === DockerJobState.Queued;
+    const jobAActive = jobs[jobA].state === DockerJobState.Running || jobs[jobA].state === DockerJobState.Queued;
+    const jobBActive = jobs[jobB].state === DockerJobState.Running || jobs[jobB].state === DockerJobState.Queued;
     if (jobAActive && !jobBActive) {
       return -1;
     }
@@ -58,8 +54,7 @@ const JobComponent: React.FC<{
 }> = ({ jobId, jobs }) => {
   // How many jobs is this worker running
   const jobBlob = jobs[jobId];
-  const definition = (jobBlob!.history[0]!.value as StateChangeValueQueued)
-    .definition;
+  const definition = (jobBlob!.history[0]!.value as StateChangeValueQueued).definition;
 
   return (
     <Tr>

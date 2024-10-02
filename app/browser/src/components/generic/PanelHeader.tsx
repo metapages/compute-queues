@@ -5,9 +5,9 @@ import { useStore } from "../../store";
 import { PanelHeaderContainer } from "./PanelHeaderContainer";
 
 interface PanelHeaderProps {
-    title: string;
-    onSave?: () => void;
-    preserveCase?: boolean;
+  title: string;
+  onSave?: () => void;
+  preserveCase?: boolean;
 }
 
 export const PanelHeader: React.FC<PanelHeaderProps> = ({ title, onSave, preserveCase }) => {

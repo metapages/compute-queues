@@ -4,22 +4,22 @@ import { useStore } from "../../store";
 import { PanelHeaderContainer } from "./PanelHeaderContainer";
 
 interface ConsoleHeaderProps {
-    title: string;
-    showSplit: boolean;
-    showCombine: boolean
+  title: string;
+  showSplit: boolean;
+  showCombine: boolean;
 }
 
-export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, showCombine}) => {
-  const setRightPanelContext = useStore((state) => state.setRightPanelContext);
-  const setRunLogs = useStore((state) => state.setRunLogs);
-  const setBuildLogs = useStore((state) => state.setBuildLogs);
+export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({ title, showSplit, showCombine }) => {
+  const setRightPanelContext = useStore(state => state.setRightPanelContext);
+  const setRunLogs = useStore(state => state.setRunLogs);
+  const setBuildLogs = useStore(state => state.setBuildLogs);
 
   const onSplit = () => {
     setRightPanelContext("stderr");
   };
   const onCombine = () => {
     setRightPanelContext(null);
-  }
+  };
 
   const clearLogs = () => {
     setBuildLogs(null);
@@ -44,7 +44,7 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, s
             Clear
           </Text>
         </HStack>
-    </HStack>
-  </PanelHeaderContainer>
+      </HStack>
+    </PanelHeaderContainer>
   );
 };

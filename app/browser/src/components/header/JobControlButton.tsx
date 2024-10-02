@@ -17,10 +17,9 @@ export const JobControlButton: React.FC = () => {
   const [isJobRequeued, setIsJobRequeued] = useState(false);
   const [queue] = useHashParam("queue", "");
 
-  const mainInputFileContent = useStore((state) => state.mainInputFileContent);
-  const setUserClickedRun = useStore((state) => state.setUserClickedRun);
-  const [temporarilyForceShowQueued, setTemporarilyForceShowQueued] =
-    useState(false);
+  const mainInputFileContent = useStore(state => state.mainInputFileContent);
+  const setUserClickedRun = useStore(state => state.setUserClickedRun);
+  const [temporarilyForceShowQueued, setTemporarilyForceShowQueued] = useState(false);
 
   // If we get a new job state, we are not in the process of requeueing
   useEffect(() => {
@@ -30,9 +29,9 @@ export const JobControlButton: React.FC = () => {
   }, [serverJobState]);
 
   const { submitJob, loading } = useJobSubmissionHook();
-  const cancelJob = useStore((state) => state.cancelJob);
-  const saveInputFileAndRun = useStore((state) => state.saveInputFileAndRun);
-  const resubmitJob = useStore((state) => state.resubmitJob);
+  const cancelJob = useStore(state => state.cancelJob);
+  const saveInputFileAndRun = useStore(state => state.saveInputFileAndRun);
+  const resubmitJob = useStore(state => state.resubmitJob);
 
   const state = serverJobState?.state;
   const isMissingBuild = !(clientJobDefinition?.definition?.build || clientJobDefinition?.definition?.image);
@@ -61,9 +60,8 @@ export const JobControlButton: React.FC = () => {
     setUserClickedRun(true);
   }, [submitJob, setUserClickedRun]);
 
-
   const noBuildButton = (
-    <HeaderButton ariaLabel="No docker build or image" color={"red"} text={isLargerThan600 ? "No docker image:" : ""} />
+    <HeaderButton ariaLabel="No docker build or image" color={"red"} text={isLargerThan600 ? "No docker image" : ""} />
   );
 
   const noQueueButton = <HeaderButton ariaLabel="No queue" color={"red"} text={isLargerThan600 ? "No queue 👇" : ""} />;

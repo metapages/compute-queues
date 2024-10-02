@@ -12,7 +12,5 @@ export const App: React.FC = () => {
   // if a job is finished, send the outputs to the metaframe
   useSendJobOutputs();
 
-  return (
-    <Main />
-  );
+  return <Main />;
 };

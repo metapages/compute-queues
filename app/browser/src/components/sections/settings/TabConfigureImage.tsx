@@ -65,7 +65,7 @@ export const TabConfigureImage: React.FC<{
     if (!tab && jobDefinitionBlob) {
       setTab(jobDefinitionBlob?.image ? "useExisting" : "fromRepo");
     }
-  }, [tab, jobDefinitionBlob])
+  }, [tab, jobDefinitionBlob]);
 
   const onSubmit = useCallback(
     (values: FormType) => {
@@ -77,13 +77,7 @@ export const TabConfigureImage: React.FC<{
       if (values.image) {
         newJobDefinitionBlob.image = values.image;
         delete newJobDefinitionBlob.build;
-      } else if (
-        !values.buildArgs &&
-        !values.context &&
-        !values.filename &&
-        !values.dockerfile &&
-        !values.target
-      ) {
+      } else if (!values.buildArgs && !values.context && !values.filename && !values.dockerfile && !values.target) {
         delete newJobDefinitionBlob.build;
       } else {
         newJobDefinitionBlob.build = {};
@@ -115,7 +109,7 @@ export const TabConfigureImage: React.FC<{
       setJobDefinitionBlob(newJobDefinitionBlob);
       onSave?.();
     },
-    [jobDefinitionBlob, onSave, setJobDefinitionBlob]
+    [jobDefinitionBlob, onSave, setJobDefinitionBlob],
   );
 
   const updateDockerfile = useCallback(
@@ -135,24 +129,21 @@ export const TabConfigureImage: React.FC<{
       setJobDefinitionBlob(newJobDefinitionBlob);
       onSave?.();
     },
-    [jobDefinitionBlob, onSave, setJobDefinitionBlob]
+    [jobDefinitionBlob, onSave, setJobDefinitionBlob],
   );
 
-  const deleteDockerfile = useCallback(
-    () => {
-      const newJobDefinitionBlob = { ...jobDefinitionBlob };
-      if (!newJobDefinitionBlob.build) {
-        return;
-      }
-      delete newJobDefinitionBlob.build.dockerfile;
-      if (Object.keys(newJobDefinitionBlob.build).length === 0) {
-        delete newJobDefinitionBlob.build;
-      }
-      setJobDefinitionBlob(newJobDefinitionBlob);
-      onSave?.();
-    },
-    [jobDefinitionBlob, onSave, setJobDefinitionBlob]
-  );
+  const deleteDockerfile = useCallback(() => {
+    const newJobDefinitionBlob = { ...jobDefinitionBlob };
+    if (!newJobDefinitionBlob.build) {
+      return;
+    }
+    delete newJobDefinitionBlob.build.dockerfile;
+    if (Object.keys(newJobDefinitionBlob.build).length === 0) {
+      delete newJobDefinitionBlob.build;
+    }
+    setJobDefinitionBlob(newJobDefinitionBlob);
+    onSave?.();
+  }, [jobDefinitionBlob, onSave, setJobDefinitionBlob]);
 
   const formik = useFormik({
     initialValues: {
@@ -263,9 +254,9 @@ export const TabConfigureImage: React.FC<{
             </VStack>
           );
         })}
-    </VStack>
+      </VStack>
     );
-  }
+  };
 
   const onSetValue = tab => {
     if (tab === "fromRepo") {
@@ -275,7 +266,7 @@ export const TabConfigureImage: React.FC<{
       const prevImage = localStorage.getItem("dockerImage") || "";
       formik.setFieldValue("image", prevImage);
     }
-    setTab(tab)
+    setTab(tab);
   };
 
   return (

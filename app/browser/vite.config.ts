@@ -24,9 +24,7 @@ export default defineConfig(({ mode }) => ({
   },
 
   // this is really stupid this should not be necessary
-  plugins: [
-    react(),
-  ],
+  plugins: [react()],
 
   esbuild: {
     logOverride: { "this-is-undefined-in-esm": "silent" },
@@ -43,10 +41,7 @@ export default defineConfig(({ mode }) => ({
     host: INSIDE_CONTAINER ? "0.0.0.0" : HOST,
     port: parseInt(CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) ? PORT : "8000"),
     https:
-      CERT_KEY_FILE &&
-      fs.existsSync(CERT_KEY_FILE) &&
-      CERT_FILE &&
-      fs.existsSync(CERT_FILE)
+      CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) && CERT_FILE && fs.existsSync(CERT_FILE)
         ? {
             key: fs.readFileSync(CERT_KEY_FILE),
             cert: fs.readFileSync(CERT_FILE),

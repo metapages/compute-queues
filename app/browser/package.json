@@ -8,7 +8,10 @@
   "type": "module",
   "scripts": {
     "prebuild": "npm i && ./node_modules/typescript/bin/tsc --build --verbose",
-    "build": "rm -rf dist/* && node_modules/parcel-bundler/bin/cli.js build public/index.html --no-autoinstall"
+    "build": "rm -rf dist/* && node_modules/parcel-bundler/bin/cli.js build public/index.html --no-autoinstall",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "format": "npx prettier . --write"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.1.1",

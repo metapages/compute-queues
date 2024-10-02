@@ -8,5 +8,4 @@ export const defaultTheme = extendTheme({
       600: "#585858",
     },
   },
-})
-
+});

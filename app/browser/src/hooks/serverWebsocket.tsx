@@ -24,19 +24,17 @@ import { cacheInsteadOfSendMessages, useStore } from "../store";
 export const serverWebsocket = (): void => {
   const [address] = useHashParam("queue");
 
-  const setIsServerConnected = useStore((state) => state.setIsServerConnected);
+  const setIsServerConnected = useStore(state => state.setIsServerConnected);
 
-  const setJobStates = useStore((state) => state.setJobStates);
+  const setJobStates = useStore(state => state.setJobStates);
 
-  const setWorkers = useStore((state) => state.setWorkers);
+  const setWorkers = useStore(state => state.setWorkers);
 
-  const setSendMessage = useStore((state) => state.setSendMessage);
+  const setSendMessage = useStore(state => state.setSendMessage);
 
-  const setRawMessage = useStore((state) => state.setRawMessage);
+  const setRawMessage = useStore(state => state.setRawMessage);
 
-  const handleJobStatusPayload = useStore(
-    (state) => state.handleJobStatusPayload
-  );
+  const handleJobStatusPayload = useStore(state => state.handleJobStatusPayload);
 
   useEffect(() => {
     if (!address || address === "") {
@@ -61,15 +59,8 @@ export const serverWebsocket = (): void => {
               timeLastPing = Date.now();
             }
             setTimeout(() => {
-              if (
-                Date.now() - timeLastPong >= 10000 &&
-                rws.readyState === rws.OPEN
-              ) {
-                console.log(
-                  `Reconnecting because no PONG since ${
-                    Date.now() - timeLastPong
-                  }ms `
-                );
+              if (Date.now() - timeLastPong >= 10000 && rws.readyState === rws.OPEN) {
+                console.log(`Reconnecting because no PONG since ${Date.now() - timeLastPong}ms `);
                 rws.reconnect();
               }
             }, 10000);
@@ -80,8 +71,7 @@ export const serverWebsocket = (): void => {
         if (!messageString.startsWith("{")) {
           return;
         }
-        const possibleMessage: WebsocketMessageServerBroadcast =
-          JSON.parse(messageString);
+        const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(messageString);
         // console.log(`❔ received from server:`, possibleMessage)
 
         if (!possibleMessage?.payload) {

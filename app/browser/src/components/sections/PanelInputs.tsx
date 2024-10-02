@@ -25,7 +25,7 @@ export const PanelInputs: React.FC = () => {
     (name: string) => {
       setJobInputs({ ...jobInputs, [name]: "" });
     },
-    [jobInputs, setJobInputs]
+    [jobInputs, setJobInputs],
   );
 
   const deleteInput = useCallback(
@@ -34,7 +34,7 @@ export const PanelInputs: React.FC = () => {
       delete newJobDefinitionBlob[name];
       setJobInputs(newJobDefinitionBlob);
     },
-    [jobInputs, setJobInputs]
+    [jobInputs, setJobInputs],
   );
 
   const updateInput = useCallback(
@@ -43,7 +43,7 @@ export const PanelInputs: React.FC = () => {
       newJobDefinitionBlob[name] = content;
       setJobInputs(newJobDefinitionBlob);
     },
-    [jobInputs, setJobInputs]
+    [jobInputs, setJobInputs],
   );
 
   const names: string[] = jobInputs ? Object.keys(jobInputs).sort() : [];
@@ -58,7 +58,7 @@ export const PanelInputs: React.FC = () => {
       <Container>
         <Table px={5} variant="simple">
           <Tbody>
-            {names.map((name) => (
+            {names.map(name => (
               <InputRow
                 key={name}
                 name={name}

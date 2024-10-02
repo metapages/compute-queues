@@ -10,10 +10,7 @@ export const InputRow: React.FC<{
   onDelete: (name: string) => void;
   onUpdate: (name: string, content: string) => void;
 }> = ({ name, content, onDelete, onUpdate }) => {
-  const onUpdateMemoized = useCallback(
-    (contentUpdate: string) => onUpdate(name, contentUpdate),
-    [name, onUpdate]
-  );
+  const onUpdateMemoized = useCallback((contentUpdate: string) => onUpdate(name, contentUpdate), [name, onUpdate]);
 
   return (
     <Tr>

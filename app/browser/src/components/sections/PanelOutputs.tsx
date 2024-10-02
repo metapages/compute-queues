@@ -10,7 +10,7 @@ import { ArrowDown } from "@phosphor-icons/react";
 import { downloadFile, getOutputs, zipAndDownloadDatarefs } from "/@/helpers";
 
 export const PanelOutputs: React.FC = () => {
-  const job = useStore((state) => state.jobState);
+  const job = useStore(state => state.jobState);
   const outputs = getOutputs(job);
   const downloadAll = useCallback(async () => {
     await zipAndDownloadDatarefs(outputs, "all-outputs");

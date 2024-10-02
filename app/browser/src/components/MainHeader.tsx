@@ -15,14 +15,14 @@ export const MainHeader: React.FC = () => {
   const [jobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
 
   // only show the edit button if the command points to a script in the inputs
-  const setRightPanelContext = useStore((state) => state.setRightPanelContext);
-  const rightPanelContext = useStore((state) => state.rightPanelContext);
-  const setMainInputFile = useStore((state) => state.setMainInputFile);
-  const mainInputFile = useStore((state) => state.mainInputFile);
+  const setRightPanelContext = useStore(state => state.setRightPanelContext);
+  const rightPanelContext = useStore(state => state.rightPanelContext);
+  const setMainInputFile = useStore(state => state.setMainInputFile);
+  const mainInputFile = useStore(state => state.mainInputFile);
 
-  const currentJobDefinition = useStore((state) => state.newJobDefinition);
+  const currentJobDefinition = useStore(state => state.newJobDefinition);
   const incomingInputsCount = getInputsCount(currentJobDefinition, jobInputs);
-  const job = useStore((state) => state.jobState);
+  const job = useStore(state => state.jobState);
   const outputs = getOutputs(job);
   const outputsCount = Object.keys(outputs).length;
 
@@ -36,7 +36,7 @@ export const MainHeader: React.FC = () => {
     }
   }, [jobInputs, jobDefinitionBlob]);
 
-  const icon = (svg: React.ElementType, context: string, badge?:string) => {
+  const icon = (svg: React.ElementType, context: string, badge?: string) => {
     const toggleValue = rightPanelContext === context ? null : context;
     return (
       <Box position="relative" display="inline-block">
@@ -77,9 +77,7 @@ export const MainHeader: React.FC = () => {
         <HStack>
           <Icon as={Terminal} boxSize="4" />
           {!mainInputFile ? (
-            <Text fontWeight={400}>
-              {jobDefinitionBlob?.command}
-            </Text>
+            <Text fontWeight={400}>{jobDefinitionBlob?.command}</Text>
           ) : (
             <Button
               variant={"ghost"}
@@ -88,7 +86,7 @@ export const MainHeader: React.FC = () => {
               _hover={{ bg: editorShown ? "gray.300" : "none" }}>
               <HStack gap={2}>
                 <Text>{`${mainInputFile}`}</Text>
-                <Icon as={PencilSimple} />                
+                <Icon as={PencilSimple} />
               </HStack>
             </Button>
           )}

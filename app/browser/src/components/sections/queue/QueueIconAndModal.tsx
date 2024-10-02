@@ -7,7 +7,7 @@ import {
   ModalContent,
   ModalHeader,
   ModalOverlay,
-  Container, 
+  Container,
   Text,
 } from "@chakra-ui/react";
 import { Queue as QueueIcon } from "@phosphor-icons/react";

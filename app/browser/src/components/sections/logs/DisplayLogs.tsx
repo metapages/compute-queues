@@ -22,10 +22,10 @@ export const DisplayLogs: React.FC<{
   const logsRef = useRef<string[]>([]);
   const [logs, setLogs] = useState<string[]>([]);
   const [jobId, setJobId] = useState<string | undefined>();
-  const [showOutputTable, setShowOutputTable] = useState(false)
-  const [outputCount, setOutputCount] = useState(0)
+  const [showOutputTable, setShowOutputTable] = useState(false);
+  const [outputCount, setOutputCount] = useState(0);
   const myref = useRef(null);
-  const job = useStore((state) => state.jobState);
+  const job = useStore(state => state.jobState);
 
   useEffect(() => {
     if (!job?.state || job.state !== DockerJobState.Finished) return;
@@ -33,15 +33,15 @@ export const DisplayLogs: React.FC<{
     const result = (job.value as StateChangeValueWorkerFinished).result;
     if (result && result.outputs && mode.includes("stdout")) {
       setShowOutputTable(true);
-      setOutputCount(Object.keys(result.outputs).length)
+      setOutputCount(Object.keys(result.outputs).length);
     }
-  }, [job, mode])
+  }, [job, mode]);
 
   const showRef = () => {
     if (myref.current) {
       myref.current._outerRef.scroll({ top: myref.current._outerRef.scrollHeight, left: 0, behavior: "smooth" });
     }
-  }
+  };
 
   // if the logs change, or if the ref changes, scroll to the bottom
   useEffect(() => {
@@ -54,9 +54,9 @@ export const DisplayLogs: React.FC<{
     setLogs(logsRef.current);
   }, [jobId]);
 
-  const jobState = useStore((state) => state.jobState);
-  const buildLogs = useStore((state) => state.buildLogs);
-  const runLogs = useStore((state) => state.runLogs);
+  const jobState = useStore(state => state.jobState);
+  const buildLogs = useStore(state => state.buildLogs);
+  const runLogs = useStore(state => state.runLogs);
 
   // update the job id
   useEffect(() => {
@@ -77,9 +77,9 @@ export const DisplayLogs: React.FC<{
     const stdErrLogs = [];
     for (const log of allLogs) {
       if (log[2]) {
-        stdErrLogs.push(log)
+        stdErrLogs.push(log);
       } else {
-        stdOutLogs.push(log)
+        stdOutLogs.push(log);
       }
     }
     switch (mode) {
@@ -115,7 +115,7 @@ export const DisplayLogs: React.FC<{
   const getItemSize = index => {
     if (logs[index] === "OUTPUT_TABLE_PLACEHOLDER") return OUTPUT_TABLE_ROW_HEIGHT * (outputCount + 1) + LINE_HEIGHT;
     return LINE_HEIGHT;
-  }
+  };
 
   // eslint-disable-next-line
   const Row: React.FC<{ index: number; style: any }> = ({ index, style }) => {

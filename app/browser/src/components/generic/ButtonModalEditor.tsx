@@ -24,12 +24,7 @@ export interface EditorJsonProps {
   fileName?: string;
 }
 
-export const ButtonModalEditor: React.FC<EditorJsonProps> = ({
-  content,
-  onUpdate,
-  button,
-  fileName,
-}) => {
+export const ButtonModalEditor: React.FC<EditorJsonProps> = ({ content, onUpdate, button, fileName }) => {
   // 650
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [value, setValue] = useState(content);
@@ -63,7 +58,7 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({
       const newValue = outputs["text"];
       setValue(newValue);
     },
-    [onUpdate, onClose]
+    [onUpdate, onClose],
   );
 
   return (

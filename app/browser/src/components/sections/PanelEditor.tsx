@@ -19,7 +19,7 @@ export const PanelEditor: React.FC = () => {
   useEffect(() => {
     return () => {
       setMainInputFileContent(null);
-    }
+    };
   }, [setMainInputFileContent]);
 
   const options = useRef("");
@@ -42,7 +42,7 @@ export const PanelEditor: React.FC = () => {
       newJobInputsBlob[mainInputFile] = content;
       setJobInputs(newJobInputsBlob);
     },
-    [jobInputs, setJobInputs, mainInputFile]
+    [jobInputs, setJobInputs, mainInputFile],
   );
 
   const onSave = useCallback(() => {
@@ -63,7 +63,7 @@ export const PanelEditor: React.FC = () => {
       setValue(newValue);
       setMainInputFileContent(newValue);
     },
-    [mainInputFile, jobInputs, setMainInputFileContent]
+    [mainInputFile, jobInputs, setMainInputFileContent],
   );
 
   if (!options.current) return <></>;

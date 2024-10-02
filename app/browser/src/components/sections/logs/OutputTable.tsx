@@ -10,7 +10,7 @@ import { downloadFile, zipAndDownloadDatarefs } from "/@/helpers";
 export const OUTPUT_TABLE_ROW_HEIGHT = 35;
 
 export const OutputTable: React.FC = () => {
-  const job = useStore((state) => state.jobState);
+  const job = useStore(state => state.jobState);
   const outputs = getOutputs(job);
   const outputCount = Object.keys(outputs).length;
 

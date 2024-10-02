@@ -65,12 +65,9 @@ export const useDockerJobDefinition = () => {
     definition.inputs = !jobInputsFromUrl
       ? {}
       : Object.fromEntries(
-          Object.keys(jobInputsFromUrl).map((key) => {
-            return [
-              key,
-              { type: DataRefType.utf8, value: jobInputsFromUrl[key] as string },
-            ];
-          })
+          Object.keys(jobInputsFromUrl).map(key => {
+            return [key, { type: DataRefType.utf8, value: jobInputsFromUrl[key] as string }];
+          }),
         );
 
     if (!definition.image && !definition.build) {
@@ -108,7 +105,7 @@ export const useDockerJobDefinition = () => {
             type: DataRefType.base64,
           };
         } else {
-          // If it's a DataRef, just use it, then there's 
+          // If it's a DataRef, just use it, then there's
           // no need to serialize it, or further process
           if (isDataRef(value)) {
             definition.inputs![fixedName] = value;
@@ -137,10 +134,7 @@ export const useDockerJobDefinition = () => {
 
       // at this point, these inputs *could* be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
-      definition.inputs = await copyLargeBlobsToCloud(
-        definition.inputs,
-        UPLOAD_DOWNLOAD_BASE_URL
-      );
+      definition.inputs = await copyLargeBlobsToCloud(definition.inputs, UPLOAD_DOWNLOAD_BASE_URL);
       if (cancelled) {
         return;
       }
