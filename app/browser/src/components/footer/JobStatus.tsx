@@ -33,6 +33,7 @@ export const JobStatus: React.FC = () => {
     // see https://www.chromium.org/Home/chromium-security/deprecating-permissions-in-cross-origin-iframes/
     navigator?.clipboard?.writeText(jobId);
 
+    // eslint-disable-next-line
     if (!!navigator?.clipboard?.writeText) {
       toast({
         position: "bottom-left",
@@ -72,24 +73,15 @@ export const JobStatus: React.FC = () => {
   );
 };
 
-const getJobStateValues = (
-  job,
-  state,
-  workerCount,
-): {
-  icon: any;
-  text: string;
-  exitCode: any;
-  desc: any;
-  jobId: any;
-  showExitCodeRed: boolean;
-} => {
+const getJobStateValues = (job, state, workerCount) => {
   let text = "";
   let icon = <></>;
   let desc = null;
   let exitCode = null;
   let showExitCodeRed = false;
-  let jobId = job?.hash;
+  const jobId = job?.hash;
+  const resultFinished = job.value as StateChangeValueWorkerFinished;
+  const errorBlob: { statusCode: number; json: { message: string } } | undefined = resultFinished?.result?.error;
 
   if (!job) {
     text = "No job started";
@@ -98,8 +90,6 @@ const getJobStateValues = (
 
   switch (state) {
     case DockerJobState.Finished:
-      const resultFinished = job.value as StateChangeValueWorkerFinished;
-
       if (!resultFinished) {
         icon = <Icon color={"red"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
         text = "Job Finished - No Result";
@@ -112,8 +102,6 @@ const getJobStateValues = (
           text = "Job Cancelled";
           break;
         case DockerJobFinishedReason.Error:
-          const errorBlob: { statusCode: number; json: { message: string } } | undefined =
-            resultFinished?.result?.error;
           showExitCodeRed = true;
           icon = <Icon color={"red"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
           text = "Job Failed";
