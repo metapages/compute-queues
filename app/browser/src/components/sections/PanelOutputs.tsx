@@ -32,46 +32,29 @@ export const PanelOutputs: React.FC = () => {
   const outputCount = outputs ? Object.keys(outputs).length : 0;
 
   return (
-    <PanelContainer>
-      <PanelHeader title={`Outputs`} />
+    <PanelContainer gap={4}>
+      <PanelHeader title={`Outputs (${outputs ? Object.keys(outputs).length : 0})`} />
       <HStack px={4} width="100%" justifyContent="space-between">
         <Text>{"/outputs/<files>"}</Text>
         <Spacer />
-          <Text>Download All ({outputCount})</Text>
-          <Icon onClick={downloadAll} boxSize={"1.1rem"} as={ArrowDown}></Icon>
+        <Text>Download All ({outputCount})</Text>
+        <Icon onClick={downloadAll} boxSize={"1.1rem"} as={ArrowDown}></Icon>
       </HStack>
-
-      <Container width="100%" overflow={"scroll"} p={0}>
-      
-        {/* {false ? null : <HStack>
-          <Text px={4}>{"/outputs/<files>"}</Text>    
-          <Spacer />
-          <Text>Download All ({outputCount})</Text>
-          <Icon onClick={downloadAll} boxSize={"1.1rem"} as={ArrowDown}></Icon>
-        </HStack>} */}
-
-        <Container>
-          <Table px={5} variant="simple">
-            <Tbody>
-              {Object.keys(outputs).map((name) => {
-                return (
-                  <Tr key={name} justifyContent={"space-between"}>
-                    <Td>
-                      <HStack p={2} justifyContent={"space-between"}>
-                        <Text>{name}</Text>
-                        <Icon
-                          onClick={() => downloadFile(name, outputs[name])}
-                          boxSize={"1.4rem"}
-                          as={ArrowDown}
-                        ></Icon>
-                      </HStack>
-                    </Td>
-                  </Tr>
-                );
-              })}
-            </Tbody>
-          </Table>
-        </Container>
+      <Container width="100%" overflow={'scroll'} p={0}>
+        <Table px={5} variant="simple">
+          <Tbody>
+            {Object.keys(outputs).map((name) => {
+              return <Tr key={name} justifyContent={'space-between'}>
+                <Td>
+                  <HStack p={2} justifyContent={'space-between'}>
+                    <Text>{name}</Text>
+                    <Icon onClick={() => downloadFile(name, outputs[name])} boxSize={'1.4rem'} as={ArrowDown}></Icon>
+                  </HStack>
+                </Td>
+              </Tr>
+            })}
+          </Tbody>
+        </Table>
       </Container>
     </PanelContainer>
   );

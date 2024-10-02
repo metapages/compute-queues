@@ -73,14 +73,14 @@ export const PanelInputs: React.FC = () => {
   const names: string[] = jobInputs ? Object.keys(jobInputs).sort() : [];
 
   return (
-    <PanelContainer>
+    <PanelContainer gap={4}>
       <PanelHeader title={`Inputs`} />
       <HStack px={4} width="100%" justifyContent="space-between">
         <Text>{`/inputs/<scripts defined here>`}</Text>
         <AddInputButtonAndModal add={addNewInput} showText={false} />
       </HStack>
       <Container>
-        <Table variant="simple">
+        <Table px={5} variant="simple">
           <Tbody>
             {names.map((name) => (
               <InputRow

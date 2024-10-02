@@ -6,10 +6,6 @@ import {
   JobInputs,
 } from '/@/shared';
 import { useStore } from '/@/store';
-import {
-  defaultBorder,
-  headerHeight,
-} from '/@/styles/theme';
 
 import {
   Badge,
@@ -52,19 +48,10 @@ export const MainHeader: React.FC = () => {
   const outputsCount = Object.keys(outputs).length;
 
   useEffect(() => {
-    // check to see if the run command points to a file in inputs
+    // TODO: make the primary editable file something that can he
+    // specified so we don't rely on lexicographical order
     const fileNames = jobInputs ? Object.keys(jobInputs).sort() : [];
-    const command = jobDefinitionBlob?.command;
     let mainFile = null;
-    // if (fileNames.length && command?.length) {
-    //   for (let file of fileNames) {
-    //     if (command.includes(file)) {
-    //       // if there's a file that matches the command, set that as the editable file
-    //       setMainInputFile(file);
-    //     }
-    //   }
-    // }
-    // if no file matches the command, set the editable file to the first input
     if (!mainFile && fileNames.length) {
       setMainInputFile(fileNames[0]);
     }
@@ -78,8 +65,8 @@ export const MainHeader: React.FC = () => {
         label={`${context[0].toUpperCase() + context.slice(1, context.length)}`}
       >
         <Icon
-          _hover={{ bg: "black.10" }}
-          bg={context === rightPanelContext ? "black.10" : "none"}
+          _hover={{ bg: "gray.300" }}
+          bg={context === rightPanelContext ? "gray.300" : "none"}
           p={"3px"}
           borderRadius={5}
           as={svg}
@@ -96,8 +83,8 @@ export const MainHeader: React.FC = () => {
         transform="translate(40%, 20%)"
         colorScheme="green"
         borderRadius="full"
-        boxSize="16px"
-      >{badge}</Badge>
+        boxSize="1rem"
+      ><Text align={'center'} fontSize={'0.7rem'}>{badge}</Text></Badge>
       ): null}
     </Box>
 
@@ -110,77 +97,42 @@ export const MainHeader: React.FC = () => {
   return (
     <Flex
       w={"100%"}
-      h={headerHeight}
-      bg={"black.3"}
-      borderBottom={defaultBorder}
+      h={'headerHeight'}
+      bg={'gray.100'}
+      borderBottom={'1px'}
     >
       <HStack justify={"space-between"} px={2} w={`calc(100% - ${rightSectionWidth})`}>
         <HStack>
-          <Icon as={Terminal} color={"gray.39"} boxSize="4" />
-
+          <Icon as={Terminal} boxSize="4" />
           {!mainInputFile ? (
-            <Text fontWeight={400} color={"gray.39"}>
+            <Text fontWeight={400}>
               {jobDefinitionBlob?.command}
             </Text>
           ) : (
             <Button
               variant={"ghost"}
-              bg={editorShown ? "black.10" : "none"}
+              bg={editorShown ? "gray.300" : "none"}
               onClick={() =>
                 setRightPanelContext(editorShown ? null : "editScript")
               }
-              _hover={{ bg: editorShown ? "black.10" : "none" }}
+              _hover={{ bg: editorShown ? "gray.300" : "none" }}
             >
               <HStack gap={2}>
                 <Text>{`${mainInputFile}`}</Text>
-                <Icon as={PencilSimple} />
-                {/* <Spacer /> */}
-                
+                <Icon as={PencilSimple} />                
               </HStack>
             </Button>
           )}
-
-          {/* <Text fontWeight={400} color={'gray.39'}>{jobDefinitionBlob?.command}</Text> */}
-          {/* <Text>{`/inputs/${mainInputFile}`}</Text> */}
-          {/* <Text>{`${mainInputFile}`}</Text>
-          {mainInputFile && (
-            <Button
-              variant={"ghost"}
-              bg={editorShown ? "black.10" : "none"}
-              onClick={() =>
-                setRightPanelContext(editorShown ? null : "editScript")
-              }
-              _hover={{ bg: editorShown ? "black.10" : "none" }}
-            >
-              <HStack gap={2}>
-                <Icon as={PencilSimple} />
-              </HStack>
-            </Button>
-          )} */}
         </HStack>
         <Spacer />
         <HStack>
-          {/* { mainInputFile && <Button 
-              variant={'ghost'} 
-              bg={editorShown ? 'black.10' : 'none'}
-              onClick={() => setRightPanelContext(editorShown ? null : 'editScript')}
-              _hover={{bg: editorShown ? 'black.10' : 'none' }}
-
-              >
-              <HStack gap={2}>
-                <Icon as={PencilSimple}/>
-                <Spacer />
-                <Text>{`/inputs/${mainInputFile}`}</Text>
-              </HStack>
-            </Button>
-          } */}
           <JobControlButton />
         </HStack>
       </HStack>
       {isLargerThan400 && <HStack
-        borderLeft={defaultBorder}
+        borderLeft={'1px'}
         px={4}
-        bg={"black.3"}
+        bg={'gray.100'}
         justifyContent={"space-around"}
         w={rightSectionWidth}
       >

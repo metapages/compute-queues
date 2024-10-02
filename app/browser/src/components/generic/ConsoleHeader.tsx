@@ -1,9 +1,7 @@
 import React from 'react';
-import {
-    HStack, Text, Flex,
-} from '@chakra-ui/react';
+import { HStack, Text } from '@chakra-ui/react';
 import { useStore } from '../../store';
-import { defaultBorder } from '../../styles/theme';
+import { PanelHeaderContainer } from './PanelHeaderContainer';
 
 interface ConsoleHeaderProps {
     title: string;
@@ -27,14 +25,14 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({title, showSplit, s
     setBuildLogs(null);
     setRunLogs(null);
   }
-  return <Flex zIndex={2} w={'100%'} h={'1.5rem'} borderBottom={defaultBorder} bgColor={'black.3'} >
+  return <PanelHeaderContainer bg={'gray.100'}>
     <HStack justify={'space-between'} px={3} w={'100%'}>
-        <Text color={'gray.39'} fontSize={'0.7rem'}>{title.toUpperCase()}</Text>
+        <Text fontSize={'0.7rem'}>{title.toUpperCase()}</Text>
         <HStack>
-          { showSplit && <Text cursor={'pointer'} color={'gray.39'} fontSize={'0.7rem'} onClick={onSplit}>Split</Text> }
-          { showCombine && <Text cursor={'pointer'} color={'gray.39'} fontSize={'0.7rem'} onClick={onCombine}>Combine</Text> }
-          <Text cursor={'pointer'} color={'gray.39'} fontSize={'0.7rem'} onClick={clearLogs}>Clear</Text>
+          { showSplit && <Text cursor={'pointer'} fontSize={'0.7rem'} onClick={onSplit}>Split</Text> }
+          { showCombine && <Text cursor={'pointer'} fontSize={'0.7rem'} onClick={onCombine}>Combine</Text> }
+          <Text cursor={'pointer'} fontSize={'0.7rem'} onClick={clearLogs}>Clear</Text>
         </HStack>
     </HStack>
-  </Flex>
+  </PanelHeaderContainer>
 };

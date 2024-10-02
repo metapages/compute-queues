@@ -1,7 +1,6 @@
 import { Container } from "@chakra-ui/react"
 import { ConsoleHeader } from "/@/components/generic/ConsoleHeader"
 import { DisplayLogs, LogsMode } from "/@/components/sections/logs/DisplayLogs"
-import { contentHeight } from "/@/styles/theme"
 
 const titleByMode = (mode: LogsMode): string => {
   switch (mode) {
@@ -23,9 +22,9 @@ export const PanelLogs: React.FC<{
   const showCombine = mode === 'stderr';
 
   return <Container 
-    minH={contentHeight} 
-    h={contentHeight} 
-    maxH={contentHeight} 
+    minH={'contentHeight'} 
+    h={'contentHeight'} 
+    maxH={'contentHeight'} 
     p={0} 
     minW={'100%'} 
     overflow={'scroll'} 

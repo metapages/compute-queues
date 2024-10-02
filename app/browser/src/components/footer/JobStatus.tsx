@@ -23,7 +23,6 @@ import {
   Prohibit,
   WarningCircle,
 } from '@phosphor-icons/react';
-import { footerHeight } from '/@/styles/theme';
 
 const STATUS_ICON_SIZE = 6;
 export const JobStatus: React.FC = () => {
@@ -57,7 +56,7 @@ export const JobStatus: React.FC = () => {
         duration: 20,
         isClosable: true,
         render: () => (
-          <Box color='gray.35' p={3} bg='black.10' mb={footerHeight}>
+          <Box color='gray.600' p={3} bg='gray.300' mb={'footerHeight'}>
             <Text>Job Id copied to clipboard</Text>
           </Box>
         ),
@@ -73,7 +72,7 @@ export const JobStatus: React.FC = () => {
         <HStack gap={2}>
           {desc && <Text fontSize={'0.7rem'}>{desc}</Text>}
           {jobId && <Text cursor={'copy'} onClick={copyJobId} fontSize={'0.7rem'}>Job Id: {jobId.slice(0, 5)}</Text>}
-          {exitCode !== null && <Text color={showExitCodeRed ? 'red' : undefined} fontSize={'0.7rem'}>Exit Code: {exitCode}</Text>}
+          {exitCode && <Text color={showExitCodeRed ? 'red' : undefined} fontSize={'0.7rem'}>Exit Code: {exitCode}</Text>}
         </HStack>
       </VStack>
   </HStack>

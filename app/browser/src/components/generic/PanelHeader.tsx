@@ -1,10 +1,10 @@
 import React from 'react';
 import {
-    HStack, Text, Icon, Flex,
+    HStack, Text, Icon,
 } from '@chakra-ui/react';
 import { X } from '@phosphor-icons/react';
 import { useStore } from '../../store';
-import { defaultBorder } from '../../styles/theme';
+import { PanelHeaderContainer } from './PanelHeaderContainer';
 
 interface PanelHeaderProps {
     title: string;
@@ -15,13 +15,13 @@ interface PanelHeaderProps {
 export const PanelHeader: React.FC<PanelHeaderProps> = ({title, onSave, preserveCase}) => {
     const setRightPanelContext = useStore((state) => state.setRightPanelContext);
     const titleText = preserveCase ? title : title.toUpperCase();
-    return <Flex zIndex={2} w={'100%'} h={'1.5rem'} minH={'1.5rem'} borderBottom={defaultBorder} >
+   return <PanelHeaderContainer>
       <HStack justify={'space-between'} px={3} w={'100%'}>
-         <Text color={'gray.39'} fontSize={'0.7rem'}>{titleText}</Text>
+         <Text fontSize={'0.7rem'}>{titleText}</Text>
          <HStack>
-            { onSave && <Text cursor={'pointer'} color={'gray.39'} fontSize={'0.7rem'} onClick={onSave}>Save</Text> }
+            { onSave && <Text cursor={'pointer'} fontSize={'0.7rem'} onClick={onSave}>Save</Text> }
             <Icon boxSize={'1rem'} as={X} onClick={() => setRightPanelContext(null)}></Icon>
          </HStack>
       </HStack>
-    </Flex>
+    </PanelHeaderContainer>
 };

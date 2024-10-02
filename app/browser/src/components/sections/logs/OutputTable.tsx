@@ -7,7 +7,6 @@ import {
   StateChangeValueWorkerFinished,
 } from '/@/shared';
 import { useStore } from '/@/store';
-import { defaultBorder } from '/@/styles/theme';
 
 import {
   Box,
@@ -17,12 +16,12 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { ArrowDown } from '@phosphor-icons/react';
 
 import {
   downloadFile,
   zipAndDownloadDatarefs,
 } from '../util';
+import { ArrowDown } from '@phosphor-icons/react';
 
 export const OUTPUT_TABLE_ROW_HEIGHT = 35;
 
@@ -40,14 +39,13 @@ export const OutputTable: React.FC = () => {
     <Box mt={3}
       maxW={'25rem'}  
       minW={'20rem'} 
-      border="1px solid" 
-      borderColor="gray.87" 
+      border={'1px'}
       borderRadius="md" 
       w={'80%'}
       overflow={'hidden'}
     >
-      <VStack gap={0}>
-        <Center p={0} w={'100%'} bg={'black.3'} borderBottom={defaultBorder} >
+      <VStack gap={0} bg={'gray.100'}>
+        <Center p={0} w={'100%'} borderBottom={'1px'} >
           <HStack 
             w={'calc(100% - 1rem)'} 
             p={1.5}
@@ -56,11 +54,11 @@ export const OutputTable: React.FC = () => {
             <Text fontWeight={600}>Outputs</Text>
             <HStack>
               <Text>Download All ({outputCount})</Text>
-              <Icon onClick={downloadAll} boxSize={'1.1rem'} as={ArrowDown}></Icon>
+              <Icon onClick={downloadAll} as={ArrowDown}></Icon>
             </HStack>
           </HStack>
         </Center>
-        <VStack w={'100%'} bg={'black.10'}>
+        <VStack w={'100%'} bg={'gray.100'}>
           {Object.keys(outputs).map((name, i) => {
             const lastRow = Object.keys(outputs).length - 1 === i;
             return <HStack 
@@ -68,10 +66,10 @@ export const OutputTable: React.FC = () => {
               w={'calc(100% - 1rem)'}
               h={`${OUTPUT_TABLE_ROW_HEIGHT}px`}
               p={1.5} 
-              borderBottom={lastRow ? 'none' : defaultBorder} 
+              borderBottom={lastRow ? 'none' : '1px'}
               justifyContent={'space-between'}>
               <Text>{name}</Text>
-              <Icon onClick={() => downloadFile(name, outputs[name])} boxSize={'1.1rem'} as={ArrowDown}></Icon>
+              <Icon onClick={() => downloadFile(name, outputs[name])} as={ArrowDown}></Icon>
             </HStack>
           })}
         </VStack>

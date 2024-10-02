@@ -42,14 +42,13 @@ export const ButtonDeleteWithConfirm: React.FC<{
       <Icon as={TrashSimple}
         aria-label='delete' 
         onClick={onOpen} />
-
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
           <ModalCloseButton />
           <ModalBody>
             <Container
-              height={'4rem'}
+              h={'4rem'}
               pt={'1rem'}
               >
               <Text fontSize={'1rem'} align={'center'}>{modalHeader}</Text>
