@@ -69,7 +69,7 @@ You can develop workers locally, pointing to prod or local API
 ```
   just app/worker/dev
 
-  just app/worker/dev-prod
+  just app/worker/prod
 ```
 
 You can develop the browser locally, pointing to prod or local API
@@ -77,7 +77,7 @@ You can develop the browser locally, pointing to prod or local API
 ```
   just app/browser/dev
 
-  just app/browser/dev-prod
+  just app/browser/prod
 ```
 
 ### Local development: host system prerequisites
