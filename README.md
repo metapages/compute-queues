@@ -66,18 +66,26 @@ You can edit browser code, worker code, api code, and CLI and everything automat
 
 You can develop workers locally, pointing to prod or local API
 
-```
+```sh
   just app/worker/dev
+  # or
+  just worker dev
 
   just app/worker/prod
+  # or
+  just worker prod
 ```
 
 You can develop the browser locally, pointing to prod or local API
 
-```
+```sh
   just app/browser/dev
+  # or
+  just browser dev
 
   just app/browser/prod
+  # or
+  just browser prod
 ```
 
 ### Local development: host system prerequisites
