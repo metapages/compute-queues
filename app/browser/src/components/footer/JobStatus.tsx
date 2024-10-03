@@ -1,6 +1,8 @@
 import React from 'react';
 
 import {
+  ConsoleLogLine,
+  DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
   StateChangeValueWorkerFinished,
@@ -13,8 +15,8 @@ import {
   Icon,
   Spinner,
   Text,
-  VStack,
   useToast,
+  VStack,
 } from '@chakra-ui/react';
 import { useHashParam } from '@metapages/hash-query';
 import {
@@ -30,6 +32,9 @@ export const JobStatus: React.FC = () => {
   const [queue] = useHashParam("queue");
   const workers = useStore((state) => state.workers);
   const job = useStore((state) => state.jobState);
+  const buildLogs = useStore((state) => state.buildLogs);
+  
+  
 
   const state = job?.state;
 
@@ -41,8 +46,9 @@ export const JobStatus: React.FC = () => {
 
   const { icon, text, exitCode, desc, jobId, showExitCodeRed } = getJobStateValues(
     job, 
-    state, 
-    workers?.workers?.length || 0
+    state,
+    workers?.workers?.length || 0,
+    buildLogs,
   );
 
   const copyJobId = () => {
@@ -78,7 +84,7 @@ export const JobStatus: React.FC = () => {
   </HStack>
 };
 
-const getJobStateValues = (job, state, workerCount): {
+const getJobStateValues = (job:DockerJobDefinitionRow | undefined, state :DockerJobState, workerCount:number, buildLogs:  ConsoleLogLine[] | null): {
   icon: any, 
   text: string, 
   exitCode: any, 
@@ -152,7 +158,7 @@ const getJobStateValues = (job, state, workerCount): {
       text = "Job Requeued";
       break; 
     case DockerJobState.Running:
-      text = "Job Running";
+      text = buildLogs && buildLogs.length > 0 ? "Job Building" : "Job Running";
       icon = <Spinner color={'orange'} boxSize={STATUS_ICON_SIZE} />;
       desc = `${workerCount} Worker${workerCount > 1 ? 's' : ''}`;
       break; 
