@@ -31,15 +31,11 @@ normal                := '\033[0m'
     echo -e ""
 
 # Run the worker locally, pointing to the local API
-run +args="":
+dev +args="":
     deno run --allow-all --unsafely-ignore-certificate-errors src/cli.ts run {{args}}
 
 # Run the worker locally, pointing to production API
-@run-prod queue="local1":
-    deno run --allow-all src/cli.ts run --cpus=1 --api-server-address=https://container.mtfm.io {{queue}}
-
-# Run the worker locally, pointing to the previous API
-@dev-docker-mtfm-io queue="local1":
+@prod queue="local1":
     deno run --allow-all src/cli.ts run --cpus=1 --api-server-address=https://container.mtfm.io {{queue}}
 
 # Quick type check

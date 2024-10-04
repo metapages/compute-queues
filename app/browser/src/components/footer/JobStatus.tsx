@@ -1,6 +1,6 @@
 import React from "react";
 
-import { DockerJobFinishedReason, DockerJobState, StateChangeValueWorkerFinished } from "/@/shared";
+import { ConsoleLogLine, DockerJobDefinitionRow, DockerJobFinishedReason, DockerJobState, StateChangeValueWorkerFinished } from "/@/shared";
 import { useStore } from "/@/store";
 
 import { Box, HStack, Icon, Spinner, Text, VStack, useToast } from "@chakra-ui/react";
@@ -11,8 +11,11 @@ const STATUS_ICON_SIZE = 6;
 export const JobStatus: React.FC = () => {
   const toast = useToast();
   const [queue] = useHashParam("queue");
-  const workers = useStore(state => state.workers);
-  const job = useStore(state => state.jobState);
+
+  const workers = useStore((state) => state.workers);
+  const job = useStore((state) => state.jobState);
+  const buildLogs = useStore((state) => state.buildLogs);
+  
 
   const state = job?.state;
 
@@ -23,9 +26,10 @@ export const JobStatus: React.FC = () => {
   if (!queue || queue === "") return <></>;
 
   const { icon, text, exitCode, desc, jobId, showExitCodeRed } = getJobStateValues(
-    job,
+    job, 
     state,
     workers?.workers?.length || 0,
+    buildLogs,
   );
 
   const copyJobId = () => {
@@ -73,7 +77,7 @@ export const JobStatus: React.FC = () => {
   );
 };
 
-const getJobStateValues = (job, state, workerCount) => {
+const getJobStateValues = (job:DockerJobDefinitionRow | undefined, state: DockerJobState, workerCount: number, buildLogs: ConsoleLogLine[] | null) => {
   let text = "";
   let icon = <></>;
   let desc = null;
@@ -137,10 +141,10 @@ const getJobStateValues = (job, state, workerCount) => {
       text = "Job Requeued";
       break;
     case DockerJobState.Running:
-      text = "Job Running";
-      icon = <Spinner color={"orange"} boxSize={STATUS_ICON_SIZE} />;
-      desc = `${workerCount} Worker${workerCount > 1 ? "s" : ""}`;
-      break;
-  }
-  return { text, icon, desc, exitCode, jobId, showExitCodeRed };
+      text = buildLogs && buildLogs.length > 0 ? "Job Building" : "Job Running";
+      icon = <Spinner color={'orange'} boxSize={STATUS_ICON_SIZE} />;
+      desc = `${workerCount} Worker${workerCount > 1 ? 's' : ''}`;
+      break; 
+    }
+  return {text, icon, desc, exitCode, jobId, showExitCodeRed};
 };
