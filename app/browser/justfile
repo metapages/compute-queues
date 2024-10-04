@@ -116,3 +116,7 @@ serve: _mkcert _install
 
 @_ensure_npm_modules:
     if [ ! -f "{{tsc}}" ]; then npm i; fi
+
+@lint:
+    npm run lint:fix    
+    npm run format

@@ -1,52 +1,6 @@
-import {
-  DataRef,
-  dataRefToBuffer,
-  dataRefToDownloadLink,
-  DockerJobDefinitionMetadata,
-  DockerJobDefinitionRow,
-  DockerJobState,
-  InputsRefs,
-  JobInputs,
-  StateChangeValueWorkerFinished,
-} from "/@/shared";
+import { DataRef, dataRefToBuffer, dataRefToDownloadLink, InputsRefs } from "/@/shared";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
-
-export const getInputsCount = (
-  currentJobDefinition: DockerJobDefinitionMetadata | undefined,
-  hashParamInputs: JobInputs | undefined,
-) => {
-  const incomingInputsCount = currentJobDefinition?.definition?.inputs
-    ? Math.max(
-        0,
-        Object.keys(currentJobDefinition.definition.inputs).length -
-          (hashParamInputs ? Object.keys(hashParamInputs).length : 0),
-      )
-    : 0;
-  return incomingInputsCount;
-};
-
-export const getDynamicInputs = (
-  currentJobDefinition: DockerJobDefinitionMetadata | undefined,
-  hashParamInputs: JobInputs | undefined,
-): InputsRefs => {
-  const inputs: InputsRefs = { ...currentJobDefinition.definition?.inputs };
-  for (const key of Object.keys(hashParamInputs || {})) {
-    delete inputs[key];
-  }
-  return inputs;
-};
-
-export const getOutputs = (job?: DockerJobDefinitionRow) => {
-  if (!job?.state || job.state !== DockerJobState.Finished) {
-    return {};
-  }
-  const result = (job.value as StateChangeValueWorkerFinished).result;
-  if (result && result.outputs) {
-    return result.outputs;
-  }
-  return {};
-};
 
 export const downloadFile = async (name: string, ref: DataRef) => {
   // use dataRefToBuffer?

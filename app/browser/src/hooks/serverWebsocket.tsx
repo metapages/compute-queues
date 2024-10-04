@@ -1,7 +1,7 @@
 /**
  * Gets the server state and a method to send state changes over a websocket connection
  */
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 import {
   BroadcastJobStates,
@@ -10,16 +10,13 @@ import {
   WebsocketMessageClientToServer,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
-} from '/@/shared';
-import ReconnectingWebSocket from 'reconnecting-websocket';
+} from "/@/shared";
+import ReconnectingWebSocket from "reconnecting-websocket";
 
-import { useHashParam } from '@metapages/hash-query';
+import { useHashParam } from "@metapages/hash-query";
 
-import { websocketConnectionUrl } from '../config';
-import {
-  cacheInsteadOfSendMessages,
-  useStore,
-} from '../store';
+import { websocketConnectionUrl } from "../config";
+import { cacheInsteadOfSendMessages, useStore } from "../store";
 
 /**
  * Sets states bits in the store
@@ -27,19 +24,17 @@ import {
 export const serverWebsocket = (): void => {
   const [address] = useHashParam("queue");
 
-  const setIsServerConnected = useStore((state) => state.setIsServerConnected);
+  const setIsServerConnected = useStore(state => state.setIsServerConnected);
 
-  const setJobStates = useStore((state) => state.setJobStates);
+  const setJobStates = useStore(state => state.setJobStates);
 
-  const setWorkers = useStore((state) => state.setWorkers);
+  const setWorkers = useStore(state => state.setWorkers);
 
-  const setSendMessage = useStore((state) => state.setSendMessage);
+  const setSendMessage = useStore(state => state.setSendMessage);
 
-  const setRawMessage = useStore((state) => state.setRawMessage);
+  const setRawMessage = useStore(state => state.setRawMessage);
 
-  const handleJobStatusPayload = useStore(
-    (state) => state.handleJobStatusPayload
-  );
+  const handleJobStatusPayload = useStore(state => state.handleJobStatusPayload);
 
   useEffect(() => {
     if (!address || address === "") {
@@ -64,15 +59,8 @@ export const serverWebsocket = (): void => {
               timeLastPing = Date.now();
             }
             setTimeout(() => {
-              if (
-                Date.now() - timeLastPong >= 10000 &&
-                rws.readyState === rws.OPEN
-              ) {
-                console.log(
-                  `Reconnecting because no PONG since ${
-                    Date.now() - timeLastPong
-                  }ms `
-                );
+              if (Date.now() - timeLastPong >= 10000 && rws.readyState === rws.OPEN) {
+                console.log(`Reconnecting because no PONG since ${Date.now() - timeLastPong}ms `);
                 rws.reconnect();
               }
             }, 10000);
@@ -83,8 +71,7 @@ export const serverWebsocket = (): void => {
         if (!messageString.startsWith("{")) {
           return;
         }
-        const possibleMessage: WebsocketMessageServerBroadcast =
-          JSON.parse(messageString);
+        const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(messageString);
         // console.log(`❔ received from server:`, possibleMessage)
 
         if (!possibleMessage?.payload) {
@@ -105,8 +92,7 @@ export const serverWebsocket = (): void => {
             broadcastJobStates.isSubset = true;
             break;
           case WebsocketMessageTypeServerBroadcast.Workers:
-            const workersMessage = possibleMessage.payload as BroadcastWorkers;
-            setWorkers(workersMessage);
+            setWorkers(possibleMessage.payload as BroadcastWorkers);
             break;
           case WebsocketMessageTypeServerBroadcast.StatusRequest:
             // Clients do not respond to status requests
@@ -116,8 +102,7 @@ export const serverWebsocket = (): void => {
             // But we don't currently have a specific use for this
             break;
           case WebsocketMessageTypeServerBroadcast.JobStatusPayload:
-            const jobLogs = possibleMessage.payload as JobStatusPayload;
-            handleJobStatusPayload(jobLogs);
+            handleJobStatusPayload(possibleMessage.payload as JobStatusPayload);
             break;
           default:
             //ignored
@@ -137,6 +122,7 @@ export const serverWebsocket = (): void => {
       rws.send(JSON.stringify(message));
     };
 
+    // eslint-disable-next-line
     const onError = (error: any) => {
       console.error(error);
     };
