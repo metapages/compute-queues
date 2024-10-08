@@ -164,6 +164,12 @@ export const isDockerJobDefinitionRowFinished = (row: DockerJobDefinitionRow) =>
   return row.state === DockerJobState.Finished;
 };
 
+export const getFinishedJobState = (row: DockerJobDefinitionRow): StateChangeValueWorkerFinished | undefined => {
+  if (isDockerJobDefinitionRowFinished(row)) {
+    return row.value as StateChangeValueWorkerFinished;
+  }
+};
+
 // export type JobsStateMap = { [id in string]: DockerJobDefinitionRow };
 export type JobsStateMap = Record<string, DockerJobDefinitionRow>;
 

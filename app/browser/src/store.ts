@@ -19,6 +19,7 @@ import {
   DockerJobDefinitionMetadata,
   DockerJobDefinitionRow,
   DockerJobFinishedReason,
+  getFinishedJobState,
   JobStatusPayload,
   StateChangeValueWorkerFinished,
   WebsocketMessageServerBroadcast,
@@ -148,11 +149,12 @@ export const useStore = create<MainStore>((set, get) => ({
     }
 
     // new job definition!: update the jobId, and reset the logs
+    const finishedState = get().jobStates[job.hash] ? getFinishedJobState(get().jobStates[job.hash]) : undefined;
     set(() => ({
       newJobDefinition: job,
       jobState: get().jobStates[job.hash],
       buildLogs: null,
-      runLogs: null,
+      runLogs: finishedState?.result?.logs || null,
     }));
   },
 
@@ -231,7 +233,6 @@ export const useStore = create<MainStore>((set, get) => ({
           [clientStateChange.job]: existingFinishedJob,
         };
         get().setJobStates(newJobStates);
-        // set((state) => ({ jobStates: newJobStates }));
         return;
       }
     }
