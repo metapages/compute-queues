@@ -98,9 +98,9 @@ export const MainHeader: React.FC = () => {
       </HStack>
       {isLargerThan400 && (
         <HStack borderLeft={"1px"} px={4} bg={"gray.100"} justifyContent={"space-around"} w={rightSectionWidth}>
-          {icon(Gear, "settings")}
           {icon(DownloadSimple, "inputs", incomingInputsCount ? incomingInputsCount.toString() : undefined)}
           {icon(UploadSimple, "outputs", outputsCount ? outputsCount.toString() : undefined)}
+          {icon(Gear, "settings")}
         </HStack>
       )}
     </Flex>
