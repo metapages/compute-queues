@@ -8,7 +8,6 @@ import klaw from 'npm:klaw@4.1.0';
 
 import { config } from '../config.ts';
 import {
-  DataRef,
   dataRefToFile,
   DockerJobDefinitionInputRefs,
   DockerJobDefinitionRow,
@@ -56,8 +55,7 @@ export const convertIOToVolumeMounts = async (
   const inputs = definition.inputs;
 
   if (inputs) {
-    for (const [name, inputRef] of Object.entries(inputs)) {
-      const ref: DataRef = inputs[name];
+    for (const [name, ref] of Object.entries(inputs)) {
       await dataRefToFile(ref, join(inputsDir, name), address);
     }
   }
@@ -76,12 +74,16 @@ export const convertIOToVolumeMounts = async (
 
   if (definition?.configFiles) {
     for (const [name, ref] of Object.entries(definition.configFiles)) {
-      const hostFilePath = join(configFilesDir, name);
+      const isAbsolutePath = name.startsWith("/");
+      let hostFilePath = isAbsolutePath ? join(configFilesDir, name): join(inputsDir, name) ;
       await dataRefToFile(ref, hostFilePath, address);
-      result.push({
-        host: hostFilePath,
-        container: name?.startsWith("/") ? name : `/inputs/${name}`,
-      });
+      // /inputs are already mounted in
+      if (isAbsolutePath) {
+        result.push({
+          host: hostFilePath,
+          container: name?.startsWith("/") ? name : `/inputs/${name}`,
+        });
+      }
     }
   }
 

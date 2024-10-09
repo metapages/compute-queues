@@ -1,13 +1,13 @@
 import React, { useEffect } from "react";
 
 import { JobControlButton } from "/@/components/header/JobControlButton";
+import { getDynamicInputsCount, getOutputs } from "/@/helpers";
 import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "/@/shared";
 import { useStore } from "/@/store";
 
 import { Badge, Box, Button, Flex, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { useHashParamJson } from "@metapages/hash-query";
 import { DownloadSimple, Gear, PencilSimple, Terminal, UploadSimple } from "@phosphor-icons/react";
-import { getInputsCount, getOutputs } from "/@/helpers";
 
 export const MainHeader: React.FC = () => {
   const [isLargerThan400] = useMediaQuery("(min-width: 400px)");
@@ -21,7 +21,7 @@ export const MainHeader: React.FC = () => {
   const mainInputFile = useStore(state => state.mainInputFile);
 
   const currentJobDefinition = useStore(state => state.newJobDefinition);
-  const incomingInputsCount = getInputsCount(currentJobDefinition, jobInputs);
+  const incomingInputsCount = getDynamicInputsCount(currentJobDefinition, jobInputs);
   const job = useStore(state => state.jobState);
   const outputs = getOutputs(job);
   const outputsCount = Object.keys(outputs).length;

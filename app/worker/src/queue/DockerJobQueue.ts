@@ -382,7 +382,6 @@ export class DockerJobQueue {
 
         (async () => {
         
-
             let volumes: Volume[];
             try {
                 volumes = await convertIOToVolumeMounts({id:jobBlob.hash, definition}, config.server, this.workerId);
