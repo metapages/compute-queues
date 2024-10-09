@@ -4,8 +4,8 @@ import {
   DockerJobState,
   InputsRefs,
   StateChangeValueWorkerFinished,
-} from "/@/shared";
-import stringify from "safe-stable-stringify";
+} from '/@/shared';
+import stringify from 'safe-stable-stringify';
 
 // eslint-disable-next-line
 export const encodeOptions = (options: any): string => {
@@ -20,11 +20,11 @@ export const capitalize = (str: string): string => {
 };
 
 export const getDynamicInputsCount = (currentJobDefinition: DockerJobDefinitionMetadata | undefined) => {
-  return currentJobDefinition.definition?.inputs ? Object.keys(currentJobDefinition.definition.inputs).length : 0;
+  return currentJobDefinition?.definition?.inputs ? Object.keys(currentJobDefinition.definition.inputs).length : 0;
 };
 
 export const getDynamicInputs = (currentJobDefinition: DockerJobDefinitionMetadata | undefined): InputsRefs => {
-  return currentJobDefinition.definition?.inputs || {};
+  return currentJobDefinition?.definition?.inputs || {};
 };
 
 export const getOutputs = (job?: DockerJobDefinitionRow) => {
