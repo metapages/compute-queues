@@ -74,6 +74,9 @@ export const useDockerJobDefinition = () => {
       return;
     }
 
+    // sanity check
+    definition.inputs = definition.inputs || {};
+
     (async () => {
       if (cancelled) {
         return;
