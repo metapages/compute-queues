@@ -1,4 +1,9 @@
-import React, { ReactNode, useCallback, useEffect, useState } from "react";
+import React, {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 import { ButtonModalEditor } from "/@/components/generic/ButtonModalEditor";
 import { FormLink } from "/@/components/generic/FormLink";
@@ -212,6 +217,7 @@ export const TabConfigureImage: React.FC<{
                   content={jobDefinitionBlob?.build?.dockerfile}
                   onUpdate={updateDockerfile}
                   button={{ isDisabled: isImageSet, ["aria-label"]: "edit dockerfile" }}
+                  fileName="Dockerfile"
                 />
                 {jobDefinitionBlob?.build?.dockerfile ? (
                   <Icon aria-label="delete dockerfile" onClick={deleteDockerfile} as={TrashSimple}></Icon>
