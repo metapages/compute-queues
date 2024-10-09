@@ -67,14 +67,14 @@ docker-image-publish version="":
         --build-arg DOCKER_TAG=${DOCKER_TAG:-cache} \
         --platform linux/amd64,linux/arm64 \
         --tag metapage/metaframe-docker-worker:$VERSION .
-    echo "✅ metapage/metaframe-docker-worker:$VERSION"
-    docker buildx build --push \
-        --file worker/Dockerfile \
-        --target worker \
-        --build-arg DOCKER_TAG=${DOCKER_TAG:-cache} \
-        --platform linux/amd64,linux/arm64 \
-        --tag metapage/metaframe-docker-worker:latest .
-    echo "✅ metapage/metaframe-docker-worker:latest"
+    # echo "✅ metapage/metaframe-docker-worker:$VERSION"
+    # docker buildx build --push \
+    #     --file worker/Dockerfile \
+    #     --target worker \
+    #     --build-arg DOCKER_TAG=${DOCKER_TAG:-cache} \
+    #     --platform linux/amd64,linux/arm64 \
+    #     --tag metapage/metaframe-docker-worker:latest .
+    # echo "✅ metapage/metaframe-docker-worker:latest"
     echo "✅ metapage/metaframe-docker-worker:$VERSION"
 
 # This is different to docker-image-publish because buildx does not 
