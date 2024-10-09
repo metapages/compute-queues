@@ -1,8 +1,10 @@
 import React, { useCallback } from "react";
-import { Tr, Td, HStack, Icon, Flex, Text } from "@chakra-ui/react";
-import { File } from "@phosphor-icons/react";
+
 import { ButtonDeleteWithConfirm } from "/@/components/generic/ButtonDeleteWithConfirm";
 import { ButtonModalEditor } from "/@/components/generic/ButtonModalEditor";
+
+import { Flex, HStack, Icon, Td, Text, Tr } from "@chakra-ui/react";
+import { File } from "@phosphor-icons/react";
 
 export const InputRow: React.FC<{
   name: string;
@@ -15,9 +17,10 @@ export const InputRow: React.FC<{
   return (
     <Tr>
       <Td>
-        <HStack gap={3}>
-          <Icon as={File}></Icon>
-          <Text>{name}</Text>
+        <HStack gap={0}>
+          <Icon as={File} mr={3}></Icon>
+          {name.startsWith("/") ? null : <Text as="span">/inputs/</Text>}
+          <Text as="span">{name}</Text>
         </HStack>
       </Td>
       <Td>

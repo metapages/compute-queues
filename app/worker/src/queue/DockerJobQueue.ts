@@ -383,7 +383,7 @@ export class DockerJobQueue {
         (async () => {
         
 
-            let volumes: { inputs: Volume, outputs: Volume };
+            let volumes: Volume[];
             try {
                 volumes = await convertIOToVolumeMounts({id:jobBlob.hash, definition}, config.server, this.workerId);
             } catch (err) {
@@ -426,7 +426,7 @@ export class DockerJobQueue {
                 entrypoint: definition.entrypoint ? convertStringToDockerCommand(definition.entrypoint, definition.env) : undefined,
                 workdir: definition.workdir,
                 env: definition.env,
-                volumes: [volumes!.inputs, volumes!.outputs],
+                volumes,
                 deviceRequests,
                 durationMax: definition.durationMax,
                 // outStream?: Writable;

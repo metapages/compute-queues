@@ -52,7 +52,9 @@ export type DockerJobImageBuild = {
 };
 
 // inputs values are base64 encoded strings
-export type DockerJobDefinitionInputsBase64 = {
+export type DockerJobDefinitionInputsBase64V1 = {
+  // version, incrementing
+  v?: number;
   // the docker image OR git repository URL
   image?: Image;
   // docker image build configuration
@@ -65,7 +67,10 @@ export type DockerJobDefinitionInputsBase64 = {
   entrypoint?: string;
   workdir?: string;
 
+  // these are dynamic
   inputs?: InputsBase64String;
+  // these are fixed and part of the job sha
+  configFiles?: InputsBase64String;
   durationMax?: number;
   gpu?: boolean;
 };
@@ -74,8 +79,9 @@ export type DockerJobDefinitionInputsBase64 = {
 // immediately to this version, otherwise big lumps in the inputs will
 // completely clog up the data pipes. Stay small out there, definitions,
 // you're the living entities flowing
-export type DockerJobDefinitionInputRefs = Omit<DockerJobDefinitionInputsBase64, "inputs"> & {
+export type DockerJobDefinitionInputRefs = Omit<DockerJobDefinitionInputsBase64V1, "inputs" | "configFiles"> & {
   inputs?: InputsRefs;
+  configFiles?: InputsRefs;
 };
 
 export interface DockerRunResult {
@@ -309,7 +315,7 @@ export type BroadcastStatusRequest = undefined;
  * Client specific
  ************************************************************/
 
-export type DockerJobDefinitionParamsInUrlHash = Omit<DockerJobDefinitionInputRefs, "inputs">;
+export type DockerJobDefinitionParamsInUrlHash = Omit<DockerJobDefinitionInputRefs, "inputs" | "configInputs">;
 
 // this is the actual job definition consumed by the workers
 export interface DockerJobDefinitionMetadata {
