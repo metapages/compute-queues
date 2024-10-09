@@ -8,7 +8,7 @@
     "**/app/api/assets": true,
     "**/dist": true
   },
-  "deno.enable": false,
+  "deno.enable": true,
   "files.watcherExclude": {
     "**/dist": true
   },
