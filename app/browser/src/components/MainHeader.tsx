@@ -21,7 +21,7 @@ export const MainHeader: React.FC = () => {
   const mainInputFile = useStore(state => state.mainInputFile);
 
   const currentJobDefinition = useStore(state => state.newJobDefinition);
-  const incomingInputsCount = getDynamicInputsCount(currentJobDefinition, jobInputs);
+  const incomingInputsCount = getDynamicInputsCount(currentJobDefinition);
   const job = useStore(state => state.jobState);
   const outputs = getOutputs(job);
   const outputsCount = Object.keys(outputs).length;

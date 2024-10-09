@@ -17,7 +17,7 @@ export const PanelInputs: React.FC = () => {
   const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
   const [dynamicInputs, setDynamicInputs] = useState<InputsRefs>({});
   useEffect(() => {
-    setDynamicInputs(getDynamicInputs(clientJobDefinition, jobInputs));
+    setDynamicInputs(getDynamicInputs(clientJobDefinition));
   }, [clientJobDefinition, jobInputs]);
 
   const addNewInput = useCallback(
