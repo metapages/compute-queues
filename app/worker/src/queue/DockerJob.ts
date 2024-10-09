@@ -1,11 +1,8 @@
 import { Buffer } from 'https://deno.land/std@0.177.0/node/buffer.ts';
 import { Writable } from 'https://deno.land/std@0.177.0/node/stream.ts';
 import { existsSync } from 'https://deno.land/std@0.224.0/fs/exists.ts';
-// import Docker from 'https://deno.land/x/dockerapi@v0.1.0/mod.ts';
 import Docker from 'npm:dockerode@4.0.2';
 
-// import { Buffer } from "node:buffer";
-// import { args as CliArgs } from '../args.ts';
 import * as StreamTools from '../docker/streamtools.ts';
 import { DockerJobSharedVolumeName } from '../docker/volume.ts';
 import {
@@ -69,7 +66,6 @@ export interface DockerJobArgs {
   env?: any;
   entrypoint?: string[] | undefined;
   workdir?: string;
-  // volumes?: Array<MountedDockerVolumeDef>;
   volumes?: Array<Volume>;
   outStream?: Writable;
   errStream?: Writable;

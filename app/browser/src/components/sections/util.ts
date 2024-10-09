@@ -6,35 +6,17 @@ import {
   DockerJobDefinitionRow,
   DockerJobState,
   InputsRefs,
-  JobInputs,
   StateChangeValueWorkerFinished,
 } from "/@/shared";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
-export const getInputsCount = (
-  currentJobDefinition: DockerJobDefinitionMetadata | undefined,
-  hashParamInputs: JobInputs | undefined,
-) => {
-  const incomingInputsCount = currentJobDefinition?.definition?.inputs
-    ? Math.max(
-        0,
-        Object.keys(currentJobDefinition.definition.inputs).length -
-          (hashParamInputs ? Object.keys(hashParamInputs).length : 0),
-      )
-    : 0;
-  return incomingInputsCount;
+export const getDynamicInputsCount = (currentJobDefinition: DockerJobDefinitionMetadata | undefined) => {
+  return currentJobDefinition?.definition?.inputs ? Object.keys(currentJobDefinition.definition.inputs).length : 0;
 };
 
-export const getDynamicInputs = (
-  currentJobDefinition: DockerJobDefinitionMetadata | undefined,
-  hashParamInputs: JobInputs | undefined,
-): InputsRefs => {
-  const inputs: InputsRefs = { ...currentJobDefinition.definition?.inputs };
-  for (const key of Object.keys(hashParamInputs || {})) {
-    delete inputs[key];
-  }
-  return inputs;
+export const getConfigInputs = (currentJobDefinition: DockerJobDefinitionMetadata | undefined): InputsRefs => {
+  return currentJobDefinition.definition?.configFiles || {};
 };
 
 export const getOutputs = (job?: DockerJobDefinitionRow) => {

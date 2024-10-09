@@ -4,10 +4,10 @@ import { useJobSubmissionHook } from "/@/hooks/useJobSubmissionHook";
 import { DockerJobFinishedReason, DockerJobState, StateChangeValueWorkerFinished } from "/@/shared/types";
 
 import { Button, HStack, Icon, Spacer, Text, useMediaQuery } from "@chakra-ui/react";
+import { useHashParam } from "@metapages/hash-query";
 import { Lock, Play, Queue as QueueIcon, Repeat, Stop } from "@phosphor-icons/react";
 
 import { useStore } from "../../store";
-import { useHashParam } from "@metapages/hash-query";
 
 export const JobControlButton: React.FC = () => {
   const serverJobState = useStore(state => state.jobState);
@@ -187,7 +187,8 @@ const HeaderButton: React.FC<{
 }> = ({ text, ariaLabel, onClick, icon, color, loading }) => {
   return (
     <Button
-      disabled={true}
+      // why is this here?
+      // disabled={true}
       w={text.length ? "7.5rem" : "3rem"}
       aria-label={ariaLabel}
       variant={"ghost"}

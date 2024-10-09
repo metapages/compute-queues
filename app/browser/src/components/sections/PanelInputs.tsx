@@ -4,14 +4,13 @@ import { PanelContainer } from "/@/components/generic/PanelContainer";
 import { PanelHeader } from "/@/components/generic/PanelHeader";
 import { AddInputButtonAndModal } from "/@/components/sections/inputs/AddInputButtonAndModal";
 import { InputRow } from "/@/components/sections/inputs/InputRow";
+import { downloadFile, getDynamicInputs } from "/@/helpers";
 import { InputsRefs, JobInputs } from "/@/shared/types";
 import { useStore } from "/@/store";
 
 import { Container, HStack, Icon, Spacer, Table, Tbody, Td, Text, Tr } from "@chakra-ui/react";
 import { useHashParamJson } from "@metapages/hash-query";
 import { ArrowDown } from "@phosphor-icons/react";
-
-import { downloadFile, getDynamicInputs } from "/@/helpers";
 
 export const PanelInputs: React.FC = () => {
   const clientJobDefinition = useStore(state => state.newJobDefinition);
@@ -52,7 +51,7 @@ export const PanelInputs: React.FC = () => {
     <PanelContainer gap={4}>
       <PanelHeader title={`Inputs`} />
       <HStack px={4} width="100%" justifyContent="space-between">
-        <Text>{`/inputs/<scripts defined here>`}</Text>
+        <Text>{`Container mounted scripts + config:`}</Text>
         <AddInputButtonAndModal add={addNewInput} showText={false} />
       </HStack>
       <Container>

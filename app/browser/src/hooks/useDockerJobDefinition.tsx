@@ -62,7 +62,7 @@ export const useDockerJobDefinition = () => {
 
     // These are inputs set in the metaframe and stored in the url hash params. They
     // are always type: DataRefType.utf8 because they come from the text editor
-    definition.inputs = !jobInputsFromUrl
+    definition.configFiles = !jobInputsFromUrl
       ? {}
       : Object.fromEntries(
           Object.keys(jobInputsFromUrl).map(key => {
@@ -135,6 +135,7 @@ export const useDockerJobDefinition = () => {
       // at this point, these inputs *could* be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
       definition.inputs = await copyLargeBlobsToCloud(definition.inputs, UPLOAD_DOWNLOAD_BASE_URL);
+      definition.configFiles = await copyLargeBlobsToCloud(definition.configFiles, UPLOAD_DOWNLOAD_BASE_URL);
       if (cancelled) {
         return;
       }
