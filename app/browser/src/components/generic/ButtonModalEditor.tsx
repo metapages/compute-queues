@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
+import { encodeOptions } from "/@/helpers";
+
 import {
   Button,
   HStack,
@@ -10,12 +12,11 @@ import {
   ModalContent,
   ModalHeader,
   ModalOverlay,
-  useDisclosure,
   Text,
+  useDisclosure,
 } from "@chakra-ui/react";
 import { MetaframeStandaloneComponent } from "@metapages/metapage-embed-react";
 import { Check } from "@phosphor-icons/react";
-import { encodeOptions } from "/@/helpers";
 
 export interface EditorJsonProps {
   content: string;
@@ -93,7 +94,7 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({ content, onUpdate
           <div>
             <MetaframeStandaloneComponent
               url={`https://editor.mtfm.io/#?hm=disabled&options=${options.current}`}
-              inputs={{ text: value }}
+              inputs={{ [fileName]: value }}
               onOutputs={onOutputs}
             />
           </div>

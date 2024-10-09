@@ -4,8 +4,8 @@ import {
   DockerJobState,
   InputsRefs,
   StateChangeValueWorkerFinished,
-} from '/@/shared';
-import stringify from 'safe-stable-stringify';
+} from "/@/shared";
+import stringify from "safe-stable-stringify";
 
 // eslint-disable-next-line
 export const encodeOptions = (options: any): string => {
