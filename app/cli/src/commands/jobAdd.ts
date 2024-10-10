@@ -10,15 +10,16 @@ import {
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from '/@/shared';
-import { exists } from 'https://deno.land/std@0.224.0/fs/mod.ts';
-import { basename } from 'https://deno.land/std@0.224.0/path/mod.ts';
-import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
+import { Command } from 'cliffy';
 import {
   closed,
   open,
 } from 'jsr:@korkje/wsi@^0.3.2';
-import { readAll } from 'jsr:@std/io/read-all';
-import { writeAllSync } from 'jsr:@std/io/write-all';
+import { readAll } from 'jsr:@std/io@0.225.0/read-all';
+import { writeAllSync } from 'jsr:@std/io@0.225.0/write-all';
+
+import { exists } from '@std/fs';
+import { basename } from '@std/path';
 
 export const jobAdd = new Command()
   .arguments("<queue:string> [stdin:string]")

@@ -1,10 +1,20 @@
 {
   "imports": {
-    "@metapages/metapage": "npm:@metapages/metapage@0.16.0",
     "/@/shared": "./src/shared/mod.ts",
     "fetch-retry": "npm:fetch-retry@5.0.6",
     "ms": "https://deno.land/x/ms@v0.1.0/ms.ts",
     "object-hash" : "npm:object-hash@3.0.0",
-    "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3"
+    "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3",
+    "cliffy": "jsr:@cliffy/command@1.0.0-rc.7",
+    "@korkje/wsi": "jsr:@korkje/wsi@^0.3.2",
+    "@metapages/hash-query": "npm:@metapages/hash-query@0.4.8",
+    "@metapages/metapage": "npm:@metapages/metapage@0.16.0",
+    "fast-deep-equal/es6": "npm:fast-deep-equal/es6/index.js",
+    "uuid": "npm:uuid@9.0.1",
+    "@std/fs": "jsr:@std/fs@0.224.0",
+    "@std/path": "jsr:@std/path@0.224.0",
+    "retry": "https://deno.land/x/retry@v2.0.0/mod.ts",
+    "@std/assert": "jsr:@std/assert@0.224.0",
+    "@cliffy/ansi": "jsr:@cliffy/ansi@1.0.0-rc.4"
   }
 }
