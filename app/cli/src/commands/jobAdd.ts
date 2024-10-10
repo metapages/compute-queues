@@ -13,13 +13,12 @@ import {
 import { exists } from 'https://deno.land/std@0.224.0/fs/mod.ts';
 import { basename } from 'https://deno.land/std@0.224.0/path/mod.ts';
 import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
-import { readAll } from 'jsr:@std/io/read-all';
-import { writeAllSync } from 'jsr:@std/io/write-all';
-
 import {
   closed,
   open,
-} from '@korkje/wsi';
+} from 'jsr:@korkje/wsi@^0.3.2';
+import { readAll } from 'jsr:@std/io/read-all';
+import { writeAllSync } from 'jsr:@std/io/write-all';
 
 export const jobAdd = new Command()
   .arguments("<queue:string> [stdin:string]")
