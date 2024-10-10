@@ -1,9 +1,10 @@
-import { ensureDir } from 'https://deno.land/std@0.224.0/fs/ensure_dir.ts';
-import { dirname } from 'https://deno.land/std@0.224.0/path/mod.ts';
-import { retryAsync } from 'https://deno.land/x/retry@v2.0.0/mod.ts';
+import { retry } from 'jsr:@std/async@1.0.6';
 import { crypto } from 'jsr:@std/crypto@1.0.3';
 import { encodeHex } from 'jsr:@std/encoding@1.0.3';
 import { LRUCache } from 'npm:lru-cache@11.0.1';
+
+import { ensureDir } from '@std/fs/ensure-dir';
+import { dirname } from '@std/path';
 
 import { decodeBase64 } from './base64.ts';
 import { ENV_VAR_DATA_ITEM_LENGTH_MAX } from './dataref.ts';
@@ -34,7 +35,7 @@ const FileHashesUploaded = new LRUCache<string, boolean>({
  * @param workerB
  * @returns preferred worker id
  */
-export const resolvePreferredWorker = (workerA: string, workerB: string) => {
+export const resolvePreferredWorker = (workerA: string, workerB: string) :string => {
   return workerA.localeCompare(workerB) < 0 ? workerA : workerB;
 };
 
@@ -119,7 +120,7 @@ export const fileToDataref = async (
     // Hack to stream upload files, since fetch doesn't seem
     // to support streaming uploads (even though it should)
     let count = 0;
-    await retryAsync(async () => {
+    await retry(async () => {
       const command = new Deno.Command("curl", {
         args: [json.url, "--upload-file", file],
       });
@@ -130,7 +131,7 @@ export const fileToDataref = async (
           `Failed attempt ${count} to upload ${file} to ${json.url} code=${code} stdout=${new TextDecoder().decode(stdout)}`
         );
       }
-    }, {delay: 1000, maxTry: 5});
+    }, {maxAttempts: 5});
     FileHashesUploaded.set(hash, true);
 
     return json.ref; // the server gave us this ref to use

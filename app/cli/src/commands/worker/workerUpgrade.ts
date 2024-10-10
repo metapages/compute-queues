@@ -1,5 +1,12 @@
-import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
-import { compareVersions } from 'https://deno.land/x/compare_versions/mod.ts';
+import { Command } from 'cliffy';
+import {
+  compare,
+  parse,
+} from 'jsr:@std/semver@1.0.3';
+
+const compareVersions = (a: string, b: string) :number => {
+  return compare(parse(a), parse(b));
+}
 
 export const workerUpgrade = new Command()
   .description("Update all workers to a new version")
@@ -178,7 +185,7 @@ async function getLatestVersionFromDockerHub(imageName: string): Promise<string 
     // Use your semver comparison function to get the latest version
     const latestVersion = getLatestSemverVersion(tags);
     return latestVersion;
-  } catch (error) {
+  } catch (error :any) {
     console.error(`Error fetching tags from DockerHub: ${error.message}`);
     return null;
   }
