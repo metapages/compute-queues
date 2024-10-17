@@ -55,7 +55,7 @@ dev target="": _mkcert _install
     VITE_SERVER_ORIGIN=${VITE_SERVER_ORIGIN} {{vite}} --clearScreen false
 
 # Browser develop: pointing to production API
-dev-prod: (dev "https://container.mtfm.io")
+prod: (dev "https://container.mtfm.io")
 
 # Build the browser client static assets (in <root/docs>)
 build BASE="": _install (_tsc "--build")
@@ -116,3 +116,7 @@ serve: _mkcert _install
 
 @_ensure_npm_modules:
     if [ ! -f "{{tsc}}" ]; then npm i; fi
+
+@lint:
+    npm run lint:fix    
+    npm run format

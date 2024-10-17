@@ -1,12 +1,5 @@
-import {
-  HStack,
-  VStack,
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
-  Tabs,
-} from "@chakra-ui/react";
+import React from "react";
+import { HStack, VStack, Tab, TabList, TabPanel, TabPanels, Tabs } from "@chakra-ui/react";
 import { useActiveJobsCount } from "/@/hooks/useActiveJobsCount";
 import { useWorkersCount } from "/@/hooks/useWorkersCount";
 import { QuestionIcon } from "@chakra-ui/icons";
@@ -19,8 +12,7 @@ export const Queue: React.FC = () => {
   const activeJobsCount = useActiveJobsCount();
   const workerCount = useWorkersCount();
 
-  const maybeHelpForNoWorkers =
-    workerCount > 0 ? null : <QuestionIcon color="red" />;
+  const maybeHelpForNoWorkers = workerCount > 0 ? null : <QuestionIcon color="red" />;
 
   return (
     <VStack width="100%" justifyContent="flex-start" alignItems="flex-start">
@@ -28,8 +20,10 @@ export const Queue: React.FC = () => {
       <HStack width="100%" justifyContent="flex-start" alignItems="stretch">
         <Tabs isFitted={true} width="100%" variant="enclosed">
           <TabList>
-            <Tab fontSize={'0.9rem'}>Jobs (active total: {activeJobsCount})</Tab>
-            <Tab fontSize={'0.9rem'}>Workers (total {workerCount}) &nbsp; {maybeHelpForNoWorkers}</Tab>
+            <Tab fontSize={"0.9rem"}>Jobs (active total: {activeJobsCount})</Tab>
+            <Tab fontSize={"0.9rem"}>
+              Workers (total {workerCount}) &nbsp; {maybeHelpForNoWorkers}
+            </Tab>
             {/* {maybeHelpForNoWorkers} */}
           </TabList>
           <TabPanels>

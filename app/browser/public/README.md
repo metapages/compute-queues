@@ -1,27 +1,30 @@
 # Run docker containers as metaframes in the browser
 
-
 ## Quickstart: Run a worker
 
-Run a worker pointing to a queue `public1` (you can change this queue name to anything you like, just make it long and unguessable):
+Run a worker pointing to a queue `public1` (you can change this queue name to anything you like, just make it long and
+unguessable):
 
 ```
-docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.34.0 run --cpus=4 --gpus=1 public1
+docker run  --pull always --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:latest run --cpus=4 --gpus=1 public1
 ```
 
 ## Quickstart: Run a job from the browser
 
-Go [this link](https://container.mtfm.io/?command=cHJpbnQgXCggc2Rmc2RmMiBcKQ%3D%3D&image=python3#/queue/1?command=cHl0aG9uIC1jICdwcmludCgiaGVscCIpJw%253D%253D&image=python%253A3.8.8-alpine3.13&job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnB5dGhvbiUyMC1jJTIwJ3ByaW50KCU1QyUyMmhlbHAlNUMlMjIpJyUyMiUyQyUyMmltYWdlJTIyJTNBJTIycHl0aG9uJTNBMy4xMi4xLWFscGluZTMuMTklMjIlN0Q=&queue=public1) to run a simple python job using the worker above:
-
+Go
+[this link](https://container.mtfm.io/?command=cHJpbnQgXCggc2Rmc2RmMiBcKQ%3D%3D&image=python3#/queue/1?command=cHl0aG9uIC1jICdwcmludCgiaGVscCIpJw%253D%253D&image=python%253A3.8.8-alpine3.13&job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMnB5dGhvbiUyMC1jJTIwJ3ByaW50KCU1QyUyMmhlbHAlNUMlMjIpJyUyMiUyQyUyMmltYWdlJTIyJTNBJTIycHl0aG9uJTNBMy4xMi4xLWFscGluZTMuMTklMjIlN0Q=&queue=public1)
+to run a simple python job using the worker above:
 
 ## Inputs, outputs, and caching
 
- - env var `JOB_INPUTS` is the directory where job input files are copied. Defaults to `/inputs`
- - env var `JOB_OUTPUTS` is the directory where job output files will be copied when the job finishes successfully. Defaults to `/outputs` 
+- env var `JOB_INPUTS` is the directory where job input files are copied. Defaults to `/inputs`
+- env var `JOB_OUTPUTS` is the directory where job output files will be copied when the job finishes successfully.
+  Defaults to `/outputs`
 
 ### Directory for caching data and large ML models
 
-The directory defined in the env var `JOB_CACHE` (defaults to `/job-cache`) is shared between all jobs running on a host. Use this location to store large data sets and models.
+The directory defined in the env var `JOB_CACHE` (defaults to `/job-cache`) is shared between all jobs running on a
+host. Use this location to store large data sets and models.
 
 The cache is not shared between worker instances, only between jobs running on a single instance or computer.
 
@@ -29,20 +32,20 @@ The cache is not shared between worker instances, only between jobs running on a
 
 `container.mtfm.io` runs docker containers on workers. It is currently in beta.
 
- - Run any publicly available docker image: `Python`, `R`, `C++`, `Java`, ... anything.
- - Bring your own workers
-   - Currently individual machines are supported, but kubernetes and nomad support coming soon
- - Your queue is simply an unguessable hash. Do not share it without consideration.
+- Run any publicly available docker image: `Python`, `R`, `C++`, `Java`, ... anything.
+- Bring your own workers
+  - Currently individual machines are supported, but kubernetes and nomad support coming soon
+- Your queue is simply an unguessable hash. Do not share it without consideration.
 
 Use cases:
 
- - machine learning pipelines
- - data analysis workflows
+- machine learning pipelines
+- data analysis workflows
 
 Any time the inputs change (and on start) the configured docker contaner is run:
- - `/inputs` is the location where inputs are copied as files
- - `/outputs`: any files here when the container exits are passed on as metaframe outputs
 
+- `/inputs` is the location where inputs are copied as files
+- `/outputs`: any files here when the container exits are passed on as metaframe outputs
 
 ```mermaid
 flowchart TD
@@ -61,7 +64,8 @@ flowchart TD
 
 ```
 
-Versioned. Reproducible. No client install requirements, as long as you have at least one worker running somewhere, you can run any programming language.
+Versioned. Reproducible. No client install requirements, as long as you have at least one worker running somewhere, you
+can run any programming language.
 
 ## Getting started
 
@@ -74,7 +78,7 @@ Versioned. Reproducible. No client install requirements, as long as you have at 
 2. Configure the docker job
 3. Run a worker (or a bunch) pointing to a queue: `public1` (warning: this is a public shared compute queue)
    ```
-   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.34.0 run --cpus=4 --gpus=1 public1
+   docker run --pull always --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:latest run --cpus=4 --gpus=1 public1
    ```
 
 **Coming soon:** GPU support

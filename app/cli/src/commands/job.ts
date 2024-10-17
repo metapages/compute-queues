@@ -4,8 +4,7 @@ import { jobAdd } from './jobAdd.ts';
 import { jobAwait } from './jobAwait.ts';
 
 export const jobCommand = new Command()
-  // .name("job")
-  .description("Job commands")
+  .description("Commands for submitting and monitoring jobs to the API server")
   .action(function () {
     this.showHelp();
   })

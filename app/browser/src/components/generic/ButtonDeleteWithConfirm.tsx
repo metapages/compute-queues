@@ -18,10 +18,9 @@ import { TrashSimple } from "@phosphor-icons/react";
 
 // Delete icon with a confirmation modal
 export const ButtonDeleteWithConfirm: React.FC<{
-  callback: (_?: any) => any;
-  result?: { loading?: boolean; error?: any; data?: any };
+  callback: () => void;
   modalHeader?: string;
-}> = ({ callback, result, modalHeader = "Confirm deletion?" }) => {
+}> = ({ callback, modalHeader = "Confirm deletion?" }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const onClickDelete = useCallback(() => {
@@ -39,28 +38,24 @@ export const ButtonDeleteWithConfirm: React.FC<{
 
   return (
     <>
-      <Icon as={TrashSimple}
-        aria-label='delete' 
-        onClick={onOpen} />
-
+      <Icon as={TrashSimple} aria-label="delete" onClick={onOpen} />
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
           <ModalCloseButton />
           <ModalBody>
-            <Container
-              height={'4rem'}
-              pt={'1rem'}
-              >
-              <Text fontSize={'1rem'} align={'center'}>{modalHeader}</Text>
+            <Container h={"4rem"} pt={"1rem"}>
+              <Text fontSize={"1rem"} align={"center"}>
+                {modalHeader}
+              </Text>
             </Container>
           </ModalBody>
           <ModalFooter>
             <HStack>
-              <Button colorScheme='gray' onClick={onClose} size="sm">
+              <Button colorScheme="gray" onClick={onClose} size="sm">
                 Cancel
               </Button>
-              <Button  colorScheme='red' onClick={onClickDelete}size="sm">
+              <Button colorScheme="red" onClick={onClickDelete} size="sm">
                 Delete
               </Button>
             </HStack>

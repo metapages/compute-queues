@@ -10,6 +10,9 @@ normal                := '\033[0m'
 @_help:
   just --list --unsorted --list-heading $'Commands:\n'
   echo -e ""
+  echo -e "   Run the cli anywhere:"
+  echo -e "       deno run -A --config https://raw.githubusercontent.com/metapages/compute-queues/main/app/cli/deno.json https://raw.githubusercontent.com/metapages/compute-queues/main/app/cli/src/cli.ts"
+  
 
 # Run the cli
 mtpg +args="":
@@ -18,6 +21,7 @@ mtpg +args="":
 # Run the cli
 mtpg-prod +args="":
   deno run --location https://container.mtfm.io --allow-all src/cli.ts {{args}}
+
 
 
 compile:

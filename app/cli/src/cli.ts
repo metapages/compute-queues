@@ -1,9 +1,10 @@
 import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
 
 import { jobCommand } from './commands/job.ts';
+import { workerCommand } from './commands/worker/worker.ts';
 
 await new Command()
-    .description("Commands for submitting and monitoring jobs to the API server")
+    .description("Metapage compute CLI")
     .name("mtpg")
     .version("v1.0.0")
     .help({
@@ -26,6 +27,7 @@ await new Command()
   
     // Put all the sub-commands here
     .command("job", jobCommand)
+    .command("worker", workerCommand)
     // end sub-commands
     
     .reset()

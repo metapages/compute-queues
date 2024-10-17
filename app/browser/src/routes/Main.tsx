@@ -1,62 +1,69 @@
-import { ConsoleHeader } from '/@/components/generic/ConsoleHeader';
-import { MainFooter } from '/@/components/MainFooter';
-import { MainHeader } from '/@/components/MainHeader';
-import { DisplayLogs } from '/@/components/sections/DisplayLogs';
-import { PanelEditor } from '/@/components/sections/PanelEditor';
-import { PanelInputs } from '/@/components/sections/PanelInputs';
+import React from "react";
+import { Box, Container, HStack, useMediaQuery, VStack } from "@chakra-ui/react";
 
-import {
-  Box,
-  Container,
-  HStack,
-  VStack,
-} from '@chakra-ui/react';
+import { useStore } from "../store";
 
-import { PanelOutputs } from '../components/sections/PanelOutputs';
-import { PanelSettings } from '../components/sections/PanelSettings';
-import { useStore } from '../store';
-import {
-  contentHeight,
-  defaultBorder,
-} from '../styles/theme';
+import { MainFooter } from "/@/components/MainFooter";
+import { MainHeader } from "/@/components/MainHeader";
+import { PanelLogs } from "/@/components/sections/PanelLogs";
+import { PanelEditor } from "/@/components/sections/PanelEditor";
+import { PanelInputs } from "/@/components/sections/PanelInputs";
+import { PanelOutputs } from "/@/components/sections/PanelOutputs";
+import { PanelSettings } from "/@/components/sections/PanelSettings";
+import { JobControlButton } from "/@/components/header/JobControlButton";
+import { JobStatus } from "/@/components/footer/JobStatus";
+import { PanelDocs } from "/@/components/sections/PanelDocs";
 
 export const Main: React.FC = () => {
+  const rightPanelContext = useStore(state => state.rightPanelContext);
+  const [isWiderThan1000] = useMediaQuery("(min-width: 1000px)");
+  const [isTallerThan200] = useMediaQuery("(min-height: 200px)");
 
-  const rightPanelContext = useStore((state) => state.rightPanelContext);
-
-  const showStdErr = rightPanelContext === 'stderr'; 
+  const editorShown = rightPanelContext === "editScript";
+  const stdErrShown = rightPanelContext === "stderr";
   const rightPanelOptions = {
     inputs: <PanelInputs />,
     outputs: <PanelOutputs />,
     settings: <PanelSettings />,
     editScript: <PanelEditor />,
-    help: <iframe
-      style={{ width: "100%", height: contentHeight }}
-      src={`https://markdown.mtfm.io/#?url=${window.location.origin}${window.location.pathname}/README.md`}
-    />,
-    stderr: <Container minHeight={contentHeight} height={contentHeight} p={0} minW={'100%'} overflow={'scroll'} bg={'white'}>
-      <ConsoleHeader title={'stderr'} 
-        showSplit={false} 
-        showCombine={true} 
-      />
-      <DisplayLogs mode={'stderr'} />
-    </Container>
-  }
+    help: <PanelDocs />,
+    stderr: <PanelLogs mode={"stderr"} />,
+  };
   const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
+  let rightWidth = "0%";
+  if (rightPanelContext) {
+    if (!isWiderThan1000) {
+      if (editorShown) {
+        rightWidth = "100%";
+      } else if (stdErrShown) {
+        rightWidth = "50%";
+      } else {
+        rightWidth = "80%";
+      }
+    } else {
+      rightWidth = "50%";
+    }
+  }
+  const leftWidth = `calc(100% - ${rightWidth})`;
+
+  if (!isTallerThan200) {
+    return (
+      <Container m={0} bg={"gray.300"} minW={"100%"} minH={"100%"} h={"100vh"} w={"100vw"}>
+        <HStack justifyContent={"space-around"} minH={"100%"}>
+          <JobStatus />
+          <JobControlButton />
+        </HStack>
+      </Container>
+    );
+  }
   return (
-    <VStack gap={0} minHeight="100vh" minWidth={'40rem'} overflow={'hide'}>
+    <VStack gap={0} minWidth={"200px"} minHeight="100vh">
       <MainHeader />
-      <HStack gap={0} width={'100%'} minWidth="100vw" minHeight={contentHeight}>
-        <Box minW={rightContent ? '50%' : '100%'} minHeight={contentHeight}>
-          <Container minHeight={contentHeight} height={contentHeight} p={0} minW={'100%'} overflow={'scroll'} bg={'white'}>
-            <ConsoleHeader title={showStdErr ? 'stdout' : 'console'} 
-              showSplit={!showStdErr} 
-              showCombine={false}
-            />
-            <DisplayLogs mode={showStdErr ? 'stdout' : 'stdout+stderr'} />
-          </Container>
+      <HStack gap={0} w={"100%"} minW="100vw" minH={"contentHeight"}>
+        <Box minW={leftWidth} minH={"contentHeight"}>
+          <PanelLogs mode={stdErrShown ? "stdout" : "stdout+stderr"} />
         </Box>
-        <Box minW={rightContent ? '50%' : '0%'} minHeight={contentHeight} borderLeft={rightContent && defaultBorder}>
+        <Box minW={rightWidth} minH={"contentHeight"} borderLeft={rightContent && "1px"}>
           {rightContent}
         </Box>
       </HStack>

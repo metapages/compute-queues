@@ -8,7 +8,6 @@ import klaw from 'npm:klaw@4.1.0';
 
 import { config } from '../config.ts';
 import {
-  DataRef,
   dataRefToFile,
   DockerJobDefinitionInputRefs,
   DockerJobDefinitionRow,
@@ -28,48 +27,65 @@ export const convertIOToVolumeMounts = async (
   job: {id:string, definition: DockerJobDefinitionInputRefs},
   address: string,
   workerId: string
-): Promise<{ inputs: Volume; outputs: Volume }> => {
+): Promise<Volume[]> => {
   const { id , definition } = job;
   const baseDir = join(TMPDIR, id);
+  const configFilesDir = join(baseDir, "configFiles");
   const inputsDir = join(baseDir, "inputs");
   const outputsDir = join(baseDir, "outputs");
 
   // create the tmp directory for inputs+outputs
+  await ensureDir(configFilesDir);
   await ensureDir(inputsDir);
   await ensureDir(outputsDir);
 
   // security/consistency: empty directories, in case restarting jobs
+  await emptyDir(configFilesDir);
   await emptyDir(inputsDir);
   await ensureDir(outputsDir);
 
   // make sure directories are writable
+  await Deno.chmod(configFilesDir, 0o777);
   await Deno.chmod(inputsDir, 0o777);
   await Deno.chmod(outputsDir, 0o777);
 
-  console.log(`[${workerId.substring(0, 6)}] [${id.substring(0, 6)}] creating\n\t ${inputsDir}\n\t ${outputsDir}`);
+  console.log(`[${workerId.substring(0, 6)}] [${id.substring(0, 6)}] creating\n\t ${inputsDir}\n\t ${outputsDir}\n\t ${configFilesDir}`);
 
   // copy the inputs (if any)
   const inputs = definition.inputs;
 
   if (inputs) {
-    for (const [name, inputRef] of Object.entries(inputs)) {
-      const ref: DataRef = inputs[name];
+    for (const [name, ref] of Object.entries(inputs)) {
       await dataRefToFile(ref, join(inputsDir, name), address);
     }
   }
-
-  const result = {
-    inputs: {
+  const result:Volume[] = [
+    {
       host: inputsDir,
       // TODO: allow this to be configurable
       container: "/inputs",
     },
-    outputs: {
+    {
       host: outputsDir,
       // TODO: allow this to be configurable
       container: "/outputs",
     },
-  };
+  ];
+
+  if (definition?.configFiles) {
+    for (const [name, ref] of Object.entries(definition.configFiles)) {
+      const isAbsolutePath = name.startsWith("/");
+      let hostFilePath = isAbsolutePath ? join(configFilesDir, name): join(inputsDir, name) ;
+      await dataRefToFile(ref, hostFilePath, address);
+      // /inputs are already mounted in
+      if (isAbsolutePath) {
+        result.push({
+          host: hostFilePath,
+          container: name?.startsWith("/") ? name : `/inputs/${name}`,
+        });
+      }
+    }
+  }
 
   return result;
 };

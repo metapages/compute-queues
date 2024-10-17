@@ -1,32 +1,28 @@
-import {
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
-  Tabs,
-  Text,
-  VStack,
-} from '@chakra-ui/react';
+import React from "react";
+import { Tab, TabList, TabPanel, TabPanels, Tabs, Text, VStack } from "@chakra-ui/react";
 
-import { PanelConfigurationAndContainerFromUrlParams } from '/@/components/sections/settings/PanelConfigurationAndContainerFromUrlParams';
-import { PanelImageBuildFromUrlParams } from '/@/components/sections/settings/PanelImageBuildFromUrlParams';
+import { TabConfigureImage } from "/@/components/sections/settings/TabConfigureImage";
+import { TabConfigureJob } from "/@/components/sections/settings/TabConfigureJob";
 
 export const PanelImageAndContainer: React.FC = () => {
-
   return (
-    <VStack w="100%" alignItems="stretch">
+    <VStack w="100%" alignItems="stretch" overflow={"scroll"}>
       <Tabs isFitted={true}>
-        <TabList mb='1em'>
-          <Tab><Text>Configure Job</Text></Tab>
-          <Tab><Text>Docker Image</Text></Tab>
+        <TabList mb="1em">
+          <Tab>
+            <Text>Configure Job</Text>
+          </Tab>
+          <Tab>
+            <Text>Docker Image</Text>
+          </Tab>
         </TabList>
 
         <TabPanels>
           <TabPanel>
-            <PanelConfigurationAndContainerFromUrlParams />
+            <TabConfigureJob />
           </TabPanel>
           <TabPanel>
-            <PanelImageBuildFromUrlParams />
+            <TabConfigureImage />
           </TabPanel>
         </TabPanels>
       </Tabs>

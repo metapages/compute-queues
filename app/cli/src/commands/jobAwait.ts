@@ -8,11 +8,10 @@ import {
   WebsocketMessageTypeServerBroadcast,
 } from '/@/shared';
 import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
-
 import {
   closed,
   open,
-} from '@korkje/wsi';
+} from 'jsr:@korkje/wsi@^0.3.2';
 
 export const jobAwait = new Command()
   .arguments("<queue:string> <jobId:string>")

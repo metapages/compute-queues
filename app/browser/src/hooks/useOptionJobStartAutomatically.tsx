@@ -1,16 +1,14 @@
-import {
-  ChangeEvent,
-  useCallback,
-} from 'react';
+import { ChangeEvent, useCallback } from "react";
 
-import { useHashParamBoolean } from '@metapages/hash-query';
+import { useHashParamBoolean } from "@metapages/hash-query";
 
-export const useOptionJobStartAutomatically = () :[boolean, (event: ChangeEvent<HTMLInputElement>) => void] => {
+export const useOptionJobStartAutomatically = (): [boolean, (event: ChangeEvent<HTMLInputElement>) => void] => {
   const [jobStartAutomatically, setJobStartAutomatically] = useHashParamBoolean("autostart");
-  const toggleJobStartAutomatically = useCallback((_: ChangeEvent<HTMLInputElement>) :void => {
-    setJobStartAutomatically(!jobStartAutomatically);
-  }, [
-    jobStartAutomatically, setJobStartAutomatically
-  ]);
+  const toggleJobStartAutomatically = useCallback(
+    (_: ChangeEvent<HTMLInputElement>): void => {
+      setJobStartAutomatically(!jobStartAutomatically);
+    },
+    [jobStartAutomatically, setJobStartAutomatically],
+  );
   return [jobStartAutomatically, toggleJobStartAutomatically];
 };

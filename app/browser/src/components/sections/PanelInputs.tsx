@@ -1,35 +1,30 @@
-import { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from "react";
 
-import { PanelContainer } from '/@/components/generic/PanelContainer';
-import { PanelHeader } from '/@/components/generic/PanelHeader';
-import {
-  AddInputButtonAndModal,
-} from '/@/components/sections/inputs/AddInputButtonAndModal';
-import { InputRow } from '/@/components/sections/inputs/InputRow';
-import { JobInputs } from '/@/shared/types';
-import { useStore } from '/@/store';
+import { PanelContainer } from "/@/components/generic/PanelContainer";
+import { PanelHeader } from "/@/components/generic/PanelHeader";
+import { AddInputButtonAndModal } from "/@/components/sections/inputs/AddInputButtonAndModal";
+import { InputRow } from "/@/components/sections/inputs/InputRow";
+import { downloadFile, getDynamicInputs } from "/@/helpers";
+import { InputsRefs, JobInputs } from "/@/shared/types";
+import { useStore } from "/@/store";
 
-import {
-  Button,
-  Container,
-  HStack,
-  Table,
-  Tbody,
-  Text,
-} from '@chakra-ui/react';
-import { useHashParamJson } from '@metapages/hash-query';
+import { Container, HStack, Icon, Spacer, Table, Tbody, Td, Text, Tr } from "@chakra-ui/react";
+import { useHashParamJson } from "@metapages/hash-query";
+import { ArrowDown } from "@phosphor-icons/react";
 
 export const PanelInputs: React.FC = () => {
-  const clientJobDefinition = useStore((state) => state.newJobDefinition); 
-  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>(
-    "inputs"
-  );
+  const clientJobDefinition = useStore(state => state.newJobDefinition);
+  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
+  const [dynamicInputs, setDynamicInputs] = useState<InputsRefs>({});
+  useEffect(() => {
+    setDynamicInputs(getDynamicInputs(clientJobDefinition));
+  }, [clientJobDefinition, jobInputs]);
 
   const addNewInput = useCallback(
     (name: string) => {
       setJobInputs({ ...jobInputs, [name]: "" });
     },
-    [jobInputs, setJobInputs]
+    [jobInputs, setJobInputs],
   );
 
   const deleteInput = useCallback(
@@ -38,7 +33,7 @@ export const PanelInputs: React.FC = () => {
       delete newJobDefinitionBlob[name];
       setJobInputs(newJobDefinitionBlob);
     },
-    [jobInputs, setJobInputs]
+    [jobInputs, setJobInputs],
   );
 
   const updateInput = useCallback(
@@ -47,23 +42,22 @@ export const PanelInputs: React.FC = () => {
       newJobDefinitionBlob[name] = content;
       setJobInputs(newJobDefinitionBlob);
     },
-    [jobInputs, setJobInputs]
+    [jobInputs, setJobInputs],
   );
 
   const names: string[] = jobInputs ? Object.keys(jobInputs).sort() : [];
-  const incomingInputsCount = clientJobDefinition?.definition?.inputs ? Object.keys(clientJobDefinition.definition.inputs).length - (jobInputs ? Object.keys(jobInputs).length : 0) : 0;
 
   return (
-    <PanelContainer>
-      <PanelHeader title={`Inputs (${incomingInputsCount})`} />
+    <PanelContainer gap={4}>
+      <PanelHeader title={`Inputs`} />
       <HStack px={4} width="100%" justifyContent="space-between">
-        <Text>{"/inputs/<scripts>"}</Text>
+        <Text>{`Container mounted scripts + config:`}</Text>
         <AddInputButtonAndModal add={addNewInput} showText={false} />
       </HStack>
       <Container>
-        <Table variant="simple">
+        <Table px={5} variant="simple">
           <Tbody>
-            {names.map((name) => (
+            {names.map(name => (
               <InputRow
                 key={name}
                 name={name}
@@ -75,9 +69,30 @@ export const PanelInputs: React.FC = () => {
           </Tbody>
         </Table>
       </Container>
-      <HStack as={Button} bg={'none'} _hover={{bg: 'none'}}>
-        <AddInputButtonAndModal showText={true} add={addNewInput} />
+
+      <HStack px={4} py={10} width="100%" justifyContent="space-between">
+        <Text>{`/inputs/<dynamic from upstream>   (${dynamicInputs ? Object.keys(dynamicInputs).length : 0})`}</Text>
+        <Spacer />
       </HStack>
+      <Container>
+        <Table variant="simple">
+          <Tbody>
+            {Object.keys(dynamicInputs).map(name => (
+              <Tr key={name} justifyContent={"space-between"}>
+                <Td>
+                  <HStack p={2} justifyContent={"space-between"}>
+                    <Text>{name}</Text>
+                    <Icon
+                      onClick={() => downloadFile(name, dynamicInputs[name])}
+                      boxSize={"1.4rem"}
+                      as={ArrowDown}></Icon>
+                  </HStack>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      </Container>
     </PanelContainer>
   );
 };

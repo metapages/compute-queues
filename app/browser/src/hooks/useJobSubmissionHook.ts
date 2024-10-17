@@ -1,14 +1,7 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useStore } from '../store';
-import {
-  useOptionJobStartAutomatically,
-} from './useOptionJobStartAutomatically';
+import { useStore } from "../store";
+import { useOptionJobStartAutomatically } from "./useOptionJobStartAutomatically";
 
 /**
  * Get the current client-defined job definition and submit it to the server
@@ -16,19 +9,17 @@ import {
  */
 export const useJobSubmissionHook = () => {
   const [isJobStartingAutomatically] = useOptionJobStartAutomatically();
-  const dockerJobClient = useStore((state) => state.newJobDefinition);
+  const dockerJobClient = useStore(state => state.newJobDefinition);
   const dockerJobClientRef = useRef(dockerJobClient);
-  const dockerJobServer = useStore((state) => state.jobState);
+  const dockerJobServer = useStore(state => state.jobState);
   const dockerJobServerRef = useRef(dockerJobServer);
   // Check this efficiently
   useEffect(() => {
     dockerJobServerRef.current = dockerJobServer;
   }, [dockerJobServer]);
 
-  const connected = useStore((state) => state.isServerConnected);
-  const submitJobFromStore = useStore(
-    (state) => state.submitJob
-  );
+  const connected = useStore(state => state.isServerConnected);
+  const submitJobFromStore = useStore(state => state.submitJob);
   const [loading, setLoading] = useState<boolean>(false);
 
   // Start job automatically? Only do this for the first job
@@ -51,10 +42,10 @@ export const useJobSubmissionHook = () => {
     }
 
     let cancelled = false;
-    let loadingCheckInterval: number | undefined = undefined;
+    let loadingCheckInterval = undefined;
 
     (async () => {
-      const jobHashCurrent = dockerJobClient.hash;//await shaObject(dockerJobClient.definition);
+      const jobHashCurrent = dockerJobClient.hash; //await shaObject(dockerJobClient.definition);
 
       if (cancelled) {
         return;
@@ -85,7 +76,6 @@ export const useJobSubmissionHook = () => {
     };
   }, [submitJobFromStore, connected, dockerJobClient]);
 
-  
   useEffect(() => {
     if (isJobStartingAutomatically) {
       submitJob();

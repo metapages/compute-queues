@@ -2,7 +2,7 @@
  * Via Context provide the current docker job definition which is combined from metaframe inputs
  * and URL query parameters, and the means to change (some of) them
  */
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
 import {
   copyLargeBlobsToCloud,
@@ -13,20 +13,14 @@ import {
   isDataRef,
   JobInputs,
   shaObject,
-} from '/@/shared';
+} from "/@/shared";
 
-import {
-  useHashParamBoolean,
-  useHashParamJson,
-} from '@metapages/hash-query';
-import { useMetaframeAndInput } from '@metapages/metaframe-hook';
-import {
-  DataRefSerialized,
-  Metaframe,
-} from '@metapages/metapage';
+import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query";
+import { useMetaframeAndInput } from "@metapages/metaframe-hook";
+import { DataRefSerialized, Metaframe } from "@metapages/metapage";
 
-import { UPLOAD_DOWNLOAD_BASE_URL } from '../config';
-import { useStore } from '../store';
+import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
+import { useStore } from "../store";
 
 /**
  * Gets the configuration from 1) the URL hash parameters and 2) the metaframe inputs,
@@ -37,9 +31,7 @@ export const useDockerJobDefinition = () => {
   const [debug] = useHashParamBoolean("debug");
 
   // we listen to the job parameters embedded in the URL changing
-  const [definitionParamsInUrl] = useHashParamJson<
-    DockerJobDefinitionParamsInUrlHash | undefined
-  >("job");
+  const [definitionParamsInUrl] = useHashParamJson<DockerJobDefinitionParamsInUrlHash | undefined>("job");
 
   // input text files are stored in the URL hash
   const [jobInputsFromUrl] = useHashParamJson<JobInputs | undefined>("inputs");
@@ -58,9 +50,7 @@ export const useDockerJobDefinition = () => {
   }, [metaframeBlob?.metaframe]);
 
   // When all the things are updated, set the new job definition
-  const setNewJobDefinition = useStore((state) => state.setNewJobDefinition);
-  
-  
+  const setNewJobDefinition = useStore(state => state.setNewJobDefinition);
 
   // if the URL inputs change, or the metaframe inputs change, maybe update the store.newJobDefinition
   useEffect(() => {
@@ -72,20 +62,20 @@ export const useDockerJobDefinition = () => {
 
     // These are inputs set in the metaframe and stored in the url hash params. They
     // are always type: DataRefType.utf8 because they come from the text editor
-    definition.inputs = !jobInputsFromUrl
+    definition.configFiles = !jobInputsFromUrl
       ? {}
       : Object.fromEntries(
-          Object.keys(jobInputsFromUrl).map((key) => {
-            return [
-              key,
-              { type: DataRefType.utf8, value: jobInputsFromUrl[key] as string },
-            ];
-          })
+          Object.keys(jobInputsFromUrl).map(key => {
+            return [key, { type: DataRefType.utf8, value: jobInputsFromUrl[key] as string }];
+          }),
         );
 
     if (!definition.image && !definition.build) {
       return;
     }
+
+    // sanity check
+    definition.inputs = definition.inputs || {};
 
     (async () => {
       if (cancelled) {
@@ -103,9 +93,9 @@ export const useDockerJobDefinition = () => {
       if (cancelled) {
         return;
       }
-      Object.keys(inputs).forEach((name) => {
+      Object.keys(inputs).forEach(name => {
         const fixedName = name.startsWith("/") ? name.slice(1) : name;
-        let value = inputs[name];
+        const value = inputs[name];
         // null (and undefined) cannot be serialized, so skip them
         if (value === undefined || value === null) {
           return;
@@ -118,7 +108,7 @@ export const useDockerJobDefinition = () => {
             type: DataRefType.base64,
           };
         } else {
-          // If it's a DataRef, just use it, then there's 
+          // If it's a DataRef, just use it, then there's
           // no need to serialize it, or further process
           if (isDataRef(value)) {
             definition.inputs![fixedName] = value;
@@ -147,10 +137,8 @@ export const useDockerJobDefinition = () => {
 
       // at this point, these inputs *could* be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
-      definition.inputs = await copyLargeBlobsToCloud(
-        definition.inputs,
-        UPLOAD_DOWNLOAD_BASE_URL
-      );
+      definition.inputs = await copyLargeBlobsToCloud(definition.inputs, UPLOAD_DOWNLOAD_BASE_URL);
+      definition.configFiles = await copyLargeBlobsToCloud(definition.configFiles, UPLOAD_DOWNLOAD_BASE_URL);
       if (cancelled) {
         return;
       }

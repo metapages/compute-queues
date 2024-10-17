@@ -29,6 +29,8 @@ RUN deno cache --unstable src/cli.ts
 
 COPY ./worker/entrypoint.sh /entrypoint.sh
 
+LABEL container.mtfm.io=worker
+
 ENTRYPOINT ["/entrypoint.sh"]
 
 # The standalone worker contains its own copy of dockerd, so it doesn't need to rely

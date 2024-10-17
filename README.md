@@ -4,6 +4,7 @@
 
  - `production api`: https://container.mtfm.io/
  - `api deployment config`: https://dash.deno.com/projects/compute-queue-api
+ - [testing metapage](https://app.metapage.io/dion/development-testing-container-mtfm-io-4f4f5b4c0a064bb3a185e18414dddb7b?view=settings)
 
 
 Run scientific workflow anywhere, reliably, via the browser. For compute heavy jobs, use your own computer, or run on a cluster. Share compute. Run scientific workflows no matter how old.
@@ -65,18 +66,26 @@ You can edit browser code, worker code, api code, and CLI and everything automat
 
 You can develop workers locally, pointing to prod or local API
 
-```
+```sh
   just app/worker/dev
+  # or
+  just worker dev
 
-  just app/worker/dev-prod
+  just app/worker/prod
+  # or
+  just worker prod
 ```
 
 You can develop the browser locally, pointing to prod or local API
 
-```
+```sh
   just app/browser/dev
+  # or
+  just browser dev
 
-  just app/browser/dev-prod
+  just app/browser/prod
+  # or
+  just browser prod
 ```
 
 ### Local development: host system prerequisites
@@ -144,10 +153,12 @@ E.g. kubernetes, nomad.
 
 This service provides docker compute functions as metaframes.
 
-, as a metaframed service. 
-
 This service provides an iframe, that allows users to configure running a specific docker container (a **job**) on a specific **queue**. The iframed browser window sends that job configuration to the server, the job is added to the queue, then workers pick up the job, run it, and send the results back.
 
 To run those docker containers, users can either rent compute from the metapage platform, or run worker(s) themselves, either on their own personal laptops/desktops, or on their own cluster infrastructure. Docker images can be used directly, or a git repo can be given, and the docker image built directly.
 
 This repo contains all the infrastructure for the queues, workers, and examples of cloud providers managing the horizintal scaling worker fleets.
+
+## Misc testing
+
+[local](http://localhost:8080/)
