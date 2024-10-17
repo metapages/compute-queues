@@ -127,7 +127,7 @@ clean:
 
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":
-    just worker/docker-image-publish {{version}}
+    just worker/publish-docker-images {{version}}
 
 # DEV: generate TLS certs for HTTPS over localhost https://blog.filippo.io/mkcert-valid-https-certificates-for-localhost/
 @_mkcert: _ensure_mkcert
