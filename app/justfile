@@ -61,7 +61,15 @@ status-prod queue="public1":
 
 test:
     #!/usr/bin/env bash
-    just down -v
+    set -e # exit when any command fails, preserving the status of the failed command
+
+    cleanup() {
+        just down -v
+    }
+
+    trap cleanup EXIT # cleanup when the script exits for any reason, including failure
+
+    cleanup
     # A local NPM registry saves time, bandwidth, and avoids rate limits
     STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873)
     if [ $STATUS_CODE = "200" ]; then
@@ -72,7 +80,6 @@ test:
     APP_PORT=4470 just test/test
     APP_PORT=4470 just shared/test
     APP_PORT=4470 just cli/test
-    just down -v
 
 # Clean up the project
 @test-cleanup:
