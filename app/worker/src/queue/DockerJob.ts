@@ -202,7 +202,7 @@ export const dockerJobExecute = async (
   const finish = async () => {
     try {
       createOptions.image = await ensureDockerImage({jobId: id, image, build: args.build, sender});
-    } catch (err) {
+    } catch (err:any) {
       result.logs = err.logs ? err.logs : [];
       if (err instanceof DockerBuildError) {
         result.error = "Error building image";

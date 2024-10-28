@@ -15,36 +15,37 @@ export const workerUpgrade = new Command()
   );
 
 // Function to execute shell commands
-async function runCommand(cmd: string[], captureOutput = true) {
-  const process = Deno.run({
-    cmd,
+async function runCommand(cmd: string, args: string[], captureOutput = true) {
+  const command = new Deno.Command(cmd, {
+    args,
     stdout: captureOutput ? "piped" : "inherit",
     stderr: captureOutput ? "piped" : "inherit",
   });
 
-  const { code } = await process.status();
+  // const child = command.spawn();
+
+  const { code, stdout, stderr } = await command.output();
   if (captureOutput) {
-    const rawOutput = await process.output();
-    const rawError = await process.stderrOutput();
-    process.close();
+    // const rawOutput = await process.output();
+    // const rawError = await process.stderrOutput();
+    // process.close();
     if (code === 0) {
-      return new TextDecoder().decode(rawOutput).trim();
+      return new TextDecoder().decode(stdout).trim();
     } else {
-      console.error(new TextDecoder().decode(rawError));
-      throw new Error(`Command failed: ${cmd.join(" ")}`);
+      console.error(new TextDecoder().decode(stderr));
+      throw new Error(`Command failed: ${cmd} ${args.join(" ")}`);
     }
   } else {
-    process.close();
+    // process.close();
     if (code !== 0) {
-      throw new Error(`Command failed: ${cmd.join(" ")}`);
+      throw new Error(`Command failed: ${cmd} ${args.join(" ")}`);
     }
   }
 }
 
 // Function to get all running containers
 async function getAllRunningContainers() {
-  const output = await runCommand([
-    "docker",
+  const output = await runCommand("docker",[
     "ps",
     "--format",
     "{{.ID}}:{{.Image}}",
@@ -66,8 +67,7 @@ async function getRunningContainersByImagePrefix(imagePrefix: string) {
 
 // Function to get container details
 async function getContainerDetails(containerId: string) {
-  const inspectOutput = await runCommand([
-    "docker",
+  const inspectOutput = await runCommand("docker",[    
     "inspect",
     containerId,
     "--format",
@@ -96,8 +96,7 @@ async function getContainerDetails(containerId: string) {
 // Function to start a new container with updated image version
 async function startNewContainer(details: any, newImageVersion: string) {
   const newImage = details.Image.split(":")[0] + ":" + newImageVersion;
-  const cmd = [
-    "docker",
+  const args = [
     "run",
     "-d", // Run detached
     "--name",
@@ -111,14 +110,14 @@ async function startNewContainer(details: any, newImageVersion: string) {
     ...details.Cmd, // Start with the same command
   ];
 
-  await runCommand(cmd, false);
+  await runCommand("docker", args, false);
   console.log(`Started new container ${details.Name} with image ${newImage}`);
 }
 
 // Function to stop and remove old container
 async function stopAndRemoveContainer(containerId: string) {
-  await runCommand(["docker", "stop", containerId], false);
-  await runCommand(["docker", "rm", containerId], false);
+  await runCommand("docker", ["stop", containerId], false);
+  await runCommand("docker", ["rm", containerId], false);
   console.log(`Stopped and removed old container ${containerId}`);
 }
 
@@ -178,7 +177,7 @@ async function getLatestVersionFromDockerHub(imageName: string): Promise<string 
     // Use your semver comparison function to get the latest version
     const latestVersion = getLatestSemverVersion(tags);
     return latestVersion;
-  } catch (error) {
+  } catch (error:any) {
     console.error(`Error fetching tags from DockerHub: ${error.message}`);
     return null;
   }

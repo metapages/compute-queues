@@ -1,3 +1,5 @@
+// For serving metrics endpoint
+import { serve } from 'https://deno.land/std@0.201.0/http/server.ts';
 import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
 import { ms } from 'ms';
 import ReconnectingWebSocket from 'npm:reconnecting-websocket@4.4.0';
@@ -11,7 +13,9 @@ import {
   DockerJobQueueArgs,
 } from '../queue/DockerJobQueue.ts';
 import {
+  DockerJobState,
   BroadcastJobStates,
+  JobStates,
   PayloadClearJobCache,
   WebsocketMessageSenderWorker,
   WebsocketMessageServerBroadcast,
@@ -21,6 +25,8 @@ import {
 } from '../shared/mod.ts';
 
 const VERSION :string = mod.version;
+
+let jobList :JobStates = { jobs: {} };
 
 /**
  * Connect via websocket to the API server, and attach the DockerJobQueue object
@@ -106,7 +112,8 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
       switch (possibleMessage.type) {
         // definitive list of jobs
         case WebsocketMessageTypeServerBroadcast.JobStates:
-          const allJobsStatesPayload = possibleMessage.payload as BroadcastJobStates;
+            const allJobsStatesPayload = possibleMessage.payload as BroadcastJobStates;
+            jobList = allJobsStatesPayload.state;
           if (!allJobsStatesPayload) {
             console.log({ error: 'Missing payload in message', possibleMessage });
             break;
@@ -149,6 +156,31 @@ export async function connectToServer(args:{server:string, queueId:string, cpus:
   });
 }
 
+// Create a simple HTTP server
+const metricsHandler = (req: Request): Response => {
+  const url = new URL(req.url);
+  // Route the metrics endpoint
+  if (url.pathname === "/metrics") {
+    const unfinishedJobs = Object.values(jobList.jobs).filter((job) => job.state !== DockerJobState.Finished);
+    const unfinishedQueueLength = unfinishedJobs.length;
+    // Simple Prometheus-compatible metric response
+    const response = `
+# HELP queue_length The number of outstanding jobs in the queue
+# TYPE queue_length gauge
+queue_length ${unfinishedQueueLength}
+`;
+    return new Response(response, {
+      status: 200,
+      headers: {
+        "content-type": "text/plain",
+      },
+    });
+  }
+
+  // We don't serve anything else
+  return new Response("Not Found", { status: 404 });
+};
+
 export const runCommand = new Command()
   .name("run")
   .arguments("<queue:string>")
@@ -186,4 +218,6 @@ export const runCommand = new Command()
     );
     await ensureSharedVolume();
     connectToServer({ server: config.server || "", queueId: queue, cpus, gpus, workerId: config.id });
+    console.log("Metrics accessible at: http://localhost:8000/metrics");
+    await serve(metricsHandler, { port: 8000 });
   });

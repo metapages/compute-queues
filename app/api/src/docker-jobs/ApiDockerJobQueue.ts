@@ -952,7 +952,7 @@ export class ApiDockerJobQueue {
           }
           break;
       }
-    } catch (err) {
+    } catch (err:any) {
       console.log(`💥💥💥 ERROR ${err}`, err.stack);
     }
 

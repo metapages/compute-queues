@@ -1,3 +1,7 @@
+import type {
+  Reader,
+  Writer,
+} from 'jsr:@std/io/types';
 import Docker from 'npm:dockerode@4.0.2';
 
 /******************************************************
@@ -43,7 +47,7 @@ export const createDockerClient = (port = 3000) => {
     }
   }
   // Utility function to copy data from one stream to another
-  async function copySocket(src: Deno.Reader, dst: Deno.Writer) {
+  async function copySocket(src: Reader, dst: Writer) {
     const buffer = new Uint8Array(1024);
     while (true) {
       if (closed) break;
