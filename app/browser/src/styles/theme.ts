@@ -28,12 +28,13 @@ export const buttonTheme = defineStyleConfig({
 });
 const headerHeightVal = 3; // chakra size val: 12
 const footerHeightVal = 3.5; // chakra size val: 14
+const panelHeightVal = 1.5; // chakra size val: 6
 
 // 1px extra deduction for border weight
-export const contentHeight = `calc(100vh - ${headerHeightVal + footerHeightVal}rem - 1px)`;
-export const headerHeight = `${headerHeightVal}rem`;
-export const footerHeight = `${footerHeightVal}rem - 0px`;
-
+const contentHeight = `calc(100vh - ${headerHeightVal + footerHeightVal}rem - 1px)`;
+const headerHeight = `${headerHeightVal}rem`;
+const footerHeight = `${footerHeightVal}rem - 0px`;
+const panelHeaderHeight = `${panelHeightVal}rem`;
 export const codeTheme = defineStyle({
   fontSize: "0.9rem",
   fontWeight: 500,
@@ -44,6 +45,7 @@ export const theme = extendTheme(defaultTheme, {
     contentHeight,
     headerHeight,
     footerHeight,
+    panelHeaderHeight,
   },
   borders: {
     "1px": `1px solid ${getColor(defaultTheme, "gray.300", "gray")}`,

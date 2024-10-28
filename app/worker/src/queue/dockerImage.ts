@@ -665,7 +665,7 @@ const downloadContextIntoDirectory = async (args: {
         logs: [["✅ copied context, ready to build", Date.now()]],
       } as JobStatusPayload,
     });
-  } catch (err) {
+  } catch (err:any) {
     throw new DockerBuildError(
       `Failure to build the docker image context: ${err?.message}`
     );

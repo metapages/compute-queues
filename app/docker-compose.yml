@@ -3,7 +3,6 @@ services:
   # api1 is public facing, while api2 is internal and the workers communicate with it
   # This way we are also testing BroadcaseChannel functionality
   test:
-    container_name: wm-test
     depends_on:
       api1: 
         condition: service_healthy
@@ -13,7 +12,7 @@ services:
         condition: service_healthy
       denokv:
         condition: service_started
-    image: denoland/deno:alpine-1.43.6
+    image: denoland/deno:alpine-2.0.3
     command: deno test --watch --allow-all --unstable-broadcast-channel --unstable-kv .
     working_dir: /app/test
     environment:
@@ -40,7 +39,6 @@ services:
   # api1 is public facing, while api2 is internal and the workers communicate with it
   # This way we are also testing BroadcaseChannel functionality
   api1:
-    container_name: wm-api1
     depends_on:
       traefik: 
         condition: service_started
@@ -50,7 +48,7 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
-    image: denoland/deno:alpine-1.43.6
+    image: denoland/deno:alpine-2.0.3
     command: deno run --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
     working_dir: /app/api
     healthcheck:
@@ -99,7 +97,6 @@ services:
   # This api is not connected to the public internet
   # but workers do communicate with it
   api2:
-    container_name: wm-api2
     depends_on:
       traefik: 
         condition: service_started
@@ -109,7 +106,7 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
-    image: denoland/deno:alpine-1.43.6
+    image: denoland/deno:alpine-2.0.3
     command: deno run --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
     working_dir: /app/api
     healthcheck:
@@ -154,7 +151,6 @@ services:
       driver: ${LOGGING_API:-json-file}
 
   worker:
-    container_name: wm-worker
     depends_on:
       api1: 
         condition: service_healthy
@@ -192,7 +188,6 @@ services:
 
   # Uncomment this to work with two workers
   # worker2:
-  #   container_name: wm-worker2
   #   depends_on:
   #     api1: 
   #       condition: service_healthy
@@ -228,7 +223,6 @@ services:
   #     driver: ${LOGGING_WORKER:-json-file}
 
   create-browser-assets:
-    container_name: wm-create-browser-assets
     build:
       context: .
       dockerfile: browser/Dockerfile
@@ -254,11 +248,10 @@ services:
   # Ensures the S3 bucket exists
   # The could be possibly done better elsewhere?
   create-s3-bucket:
-    container_name: wm-create-s3-bucket
     depends_on:
       minio: 
         condition: service_started
-    image: denoland/deno:alpine-1.43.6
+    image: denoland/deno:alpine-2.0.3
     command: deno run --watch --allow-all ./src/s3/create-bucket-development.ts
     working_dir: /app/api
     environment:
@@ -278,7 +271,6 @@ services:
       - deno:/deno
 
   minio:
-    container_name: wm-minio
     depends_on:
       traefik: 
         condition: service_started
@@ -308,7 +300,6 @@ services:
       - "traefik.http.routers.minio.entrypoints=web"
 
   denokv:
-    container_name: wm-denokv
     image: ghcr.io/denoland/denokv
     command: --sqlite-path /data/denokv.sqlite serve --access-token localdenoaccesstoken
     volumes:
@@ -317,7 +308,6 @@ services:
       - "4512:4512"
 
   traefik:
-    container_name: wm-traefik
     image: traefik:v2.10.1
     command:
       - --global.sendanonymoususage=false
@@ -356,7 +346,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   redis:
-    container_name: wm-redis
     image: redis:7.2.4
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]

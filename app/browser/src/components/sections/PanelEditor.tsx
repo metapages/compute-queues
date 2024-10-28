@@ -65,13 +65,12 @@ export const PanelEditor: React.FC = () => {
     },
     [mainInputFile, jobInputs, setMainInputFileContent],
   );
-
   if (!options.current) return <></>;
   return (
     <PanelContainer>
       <PanelHeader title={mainInputFile} preserveCase={true} onSave={onSave} />
       <div
-        style={{ height: "calc(100% + 1rem)", width: "100%", position: "relative", top: "-1.0rem" }}
+        style={{ height: "100%", width: "100%", position: "relative" }}
         id={"mf-editor"}>
         <MetaframeStandaloneComponent
           url={`https://editor.mtfm.io/#?hm=disabled&options=${options.current}`}

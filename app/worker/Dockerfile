@@ -1,7 +1,7 @@
 #################################################################
 # Base image
 #################################################################
-FROM denoland/deno:1.45.5 as worker
+FROM denoland/deno:2.0.3 as worker
 
 # # https://gist.github.com/squarebracket/e719069522436873bc6f13efb359cac9
 # RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
