@@ -12,7 +12,7 @@ export function createStringConsumer(f :(a:string)=>void) :Writable
         if (chunk != null) {
             try {
                 f(chunk.toString('utf8'));
-            } catch(err) {
+            } catch(err:any) {
                 done(err);
                 return;
             }
