@@ -5,11 +5,11 @@ import { createRoot } from "react-dom/client";
 import { ChakraProvider } from "@chakra-ui/react";
 import { WithMetaframeAndInputs } from "@metapages/metaframe-hook";
 import { App } from "/@/App";
-import { theme } from "/@/styles/theme";
+import { mfTheme } from "/@/styles/theme";
 
 const container = document.getElementById("root");
 createRoot(container!).render(
-  <ChakraProvider theme={theme}>
+  <ChakraProvider theme={mfTheme}>
     <WithMetaframeAndInputs>
       <App />
     </WithMetaframeAndInputs>
