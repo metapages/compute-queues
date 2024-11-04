@@ -20,10 +20,13 @@ export const useJobSubmissionHook = () => {
 
   const connected = useStore(state => state.isServerConnected);
   const submitJobFromStore = useStore(state => state.submitJob);
+  const queryJob = useStore(state => state.queryJob);
   const [loading, setLoading] = useState<boolean>(false);
 
   // Start job automatically? Only do this for the first job
   useEffect(() => {
+    // always query the job to see if it's already running/finished
+    queryJob();
     if (!isJobStartingAutomatically) {
       return;
     }
@@ -31,7 +34,7 @@ export const useJobSubmissionHook = () => {
       dockerJobClientRef.current = dockerJobClient;
       submitJobFromStore();
     }
-  }, [dockerJobClient, isJobStartingAutomatically, submitJobFromStore]);
+  }, [dockerJobClient, isJobStartingAutomatically, submitJobFromStore, queryJob]);
 
   // track the job state that matches our job definition (created by URL query params and inputs)
   // when we get the correct job state, it's straightforward to just show it
