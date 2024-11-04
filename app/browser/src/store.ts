@@ -21,6 +21,7 @@ import {
   DockerJobFinishedReason,
   getFinishedJobState,
   JobStatusPayload,
+  PayloadQueryJob,
   StateChangeValueWorkerFinished,
   WebsocketMessageServerBroadcast,
 } from "./shared/types";
@@ -44,6 +45,7 @@ interface MainStore {
   newJobDefinition: DockerJobDefinitionMetadata | undefined;
   setNewJobDefinition: (job: DockerJobDefinitionMetadata) => void;
   submitJob: () => void;
+  queryJob: () => void;
 
   /**
    * This is the state of our current job, sent from the server.
@@ -178,6 +180,22 @@ export const useStore = create<MainStore>((set, get) => ({
       tag: "", // document the meaning of this. It's the worker claim. Might be unneccesary due to history
     };
     get().sendClientStateChange(payload);
+  }, 200),
+
+  queryJob: pDebounce(() => {
+    const definitionBlob = get().newJobDefinition;
+    if (!definitionBlob) {
+      return;
+    }
+    
+    const payload: PayloadQueryJob = {
+      jobId: definitionBlob.hash,
+    };
+    // otherwise, just send the state change
+    get().sendMessage({
+      type: WebsocketMessageTypeClientToServer.QueryJob,
+      payload,
+    });
   }, 200),
 
   jobState: undefined,
