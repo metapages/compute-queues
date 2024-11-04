@@ -10,9 +10,15 @@ if [ -z "$METAPAGE_WORKER_CPUS" ]; then
     METAPAGE_WORKER_CPUS=1
 fi
 
+# if [ -n "$METAPAGE_GENERATE_WORKER_ID" ]; then
+#     # Generate a random worker ID
+#     METAPAGE_WORKER_ID_OPTION="--id $(uuidgen)"
+# fi
+
 if [ -z "$@" ]; then
     # Run the metapage worker, with a queue ID provided by environment variable
-    CMD="run --cpus $METAPAGE_WORKER_CPUS $METAPAGE_QUEUE_ID"
+    # Will supply the worker ID as well, if it was generated
+    CMD="run --cpus $METAPAGE_WORKER_CPUS $METAPAGE_WORKER_ID_OPTION $METAPAGE_QUEUE_ID"
 else
     # Run the command provided by the user
     CMD="$@"

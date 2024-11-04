@@ -1,1 +1,8 @@
 /.cache
+
+# Terraform files
+.terraform*
+*.tfstate*
+
+# Terraform plan outputs
+*.out
