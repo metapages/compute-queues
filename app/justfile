@@ -62,19 +62,19 @@ status-test queue="local1":
 status-prod queue="public1":
     curl https://container.mtfm.io/{{queue}}/status | jq .
 
-test:
+test: check
     #!/usr/bin/env bash
     set -e # exit when any command fails, preserving the status of the failed command
 
     cleanup() {
-        just down -v
+        docker compose --project-name=test down -v || true
     }
 
     trap cleanup EXIT # cleanup when the script exits for any reason, including failure
 
     cleanup
     # A local NPM registry saves time, bandwidth, and avoids rate limits
-    STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873)
+    STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873 || true)
     if [ $STATUS_CODE = "200" ]; then
         export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
     fi
@@ -83,16 +83,16 @@ test:
     APP_PORT=4470 just test/test
     APP_PORT=4470 just shared/test
     APP_PORT=4470 just cli/test
-    docker compose --project-name=test down -v
+    docker compose --project-name=test down -v || true
 
 # Clean up the project
 @test-cleanup:
-    docker compose down -v
+    docker compose --project-name=test down -v || true
 
 clean:
     rm -rf .cache
     just browser/clean
-    docker compose down -v
+    docker compose --project-name=dev down -v
 
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":

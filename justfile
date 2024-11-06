@@ -69,7 +69,7 @@ run-local-workers: publish-versioned-artifacts
   docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:$VERSION run --cpus=2 ${DIONS_SECRET_QUEUE}
 
 # Checks and tests
-@test: check
+@test:
   just app test
 
 # Quick compilation checks
