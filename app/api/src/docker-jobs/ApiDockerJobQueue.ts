@@ -50,6 +50,7 @@ import { BroadcastChannelRedis } from '@metapages/deno-redis-broadcastchannel';
 
 import { db } from '../db/kv/mod.ts';
 import { resolveMostCorrectJob } from './util.ts';
+import { PayloadQueryJob } from '../shared/mod.ts';
 
 // 60 seconds
 const MAX_TIME_FINISHED_JOB_IN_QUEUE = ms("60 seconds") as number;
@@ -1236,6 +1237,18 @@ export class ApiDockerJobQueue {
               this.stateChange(resubmitStateChange);
             })();
             break;
+          case WebsocketMessageTypeClientToServer.QueryJob:
+              (async () => {
+                // Send a message to our local workers to clear their respective caches
+                const jobId = (possibleMessage.payload as PayloadQueryJob)
+                  .jobId;
+                if (!jobId) {
+                  return;
+                }
+                // send the job state to the client
+                this.sendJobStatesToWebsocket(connection.socket, [jobId]);
+              })();
+              break;
           default:
           //ignored
         }
@@ -1248,7 +1261,7 @@ export class ApiDockerJobQueue {
     await this.sendJobStatesToWebsocket(connection.socket);
   }
 
-  createWebsocketBroadcastMessageJobStates(jobIds?: string[]): string {
+  async createWebsocketBroadcastMessageJobStates(jobIds?: string[]): Promise<string> {
     const sendingJobIds = jobIds || Object.keys(this.state.jobs);
     return this.createWebsocketBroadcastMessageJobStatesInternal(
       sendingJobIds,
@@ -1256,10 +1269,10 @@ export class ApiDockerJobQueue {
     );
   }
 
-  createWebsocketBroadcastMessageJobStatesInternal(
+  async createWebsocketBroadcastMessageJobStatesInternal(
     jobIds: string[],
     isAll = false
-  ): string {
+  ): Promise<string> {
     const jobStates: BroadcastJobStates = { state: { jobs: {} } };
     jobStates.isSubset = !isAll;
     const message: WebsocketMessageServerBroadcast = {
@@ -1269,18 +1282,29 @@ export class ApiDockerJobQueue {
         : WebsocketMessageTypeServerBroadcast.JobStateUpdates,
       payload: jobStates,
     };
-
-    jobIds.forEach((jobId) => {
+    for (const jobId of jobIds) {
       if (this.state.jobs[jobId]) {
         jobStates.state.jobs[jobId] = this.state.jobs[jobId];
+      } else {
+        const job = await db.resultCacheGet(jobId);
+        if (job) {
+          jobStates.state.jobs[jobId] = job;
+        }
       }
-    });
+    }
 
+    if ((Object.keys(jobStates.state.jobs).length === 0)) {
+      return "";
+    }
+    
     const messageString = JSON.stringify(message);
     return messageString;
   }
 
   async broadcastToLocalWorkers(messageString: string) {
+    if (!messageString) {
+      return;
+    }
     this.workers.myWorkers.forEach((worker) => {
       try {
         worker.connection.send(messageString);
@@ -1293,6 +1317,9 @@ export class ApiDockerJobQueue {
   }
 
   async broadcastToLocalClients(messageString: string) {
+    if (!messageString) {
+      return;
+    }
     this.clients.forEach((connection) => {
       try {
         connection.send(messageString);
@@ -1306,8 +1333,8 @@ export class ApiDockerJobQueue {
 
   async broadcastJobStatesToWebsockets(jobIds?: string[], isAll = false) {
     const messageString = jobIds
-      ? this.createWebsocketBroadcastMessageJobStatesInternal(jobIds, isAll)
-      : this.createWebsocketBroadcastMessageJobStates();
+      ? await this.createWebsocketBroadcastMessageJobStatesInternal(jobIds, isAll)
+      : await this.createWebsocketBroadcastMessageJobStates();
     if (!messageString) {
       return;
     }
@@ -1316,7 +1343,7 @@ export class ApiDockerJobQueue {
   }
 
   async sendJobStatesToWebsocket(connection: WebSocket, jobIds?: string[]) {
-    const messageString = this.createWebsocketBroadcastMessageJobStates(jobIds);
+    const messageString = await this.createWebsocketBroadcastMessageJobStates(jobIds);
     if (!messageString) {
       return;
     }

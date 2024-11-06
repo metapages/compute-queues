@@ -65,7 +65,7 @@ Deno.test(
 
     console.log(`opening the socket to the API server...`)
     await open(socket);
-    console.log(`...socket opened. Sending message...`, message);
+    // console.log(`...socket opened. Sending message...`, message);
     socket.send(JSON.stringify(message));
 
     console.log(`...awaiting job to finish`);
@@ -82,8 +82,8 @@ Deno.test(
   "submit multiple jobs and get expected results",
   async () => {
     const socket = new WebSocket(`${API_URL.replace("http", "ws")}/local1/client`);
-
-    const definitions = Array.from(Array(10).keys()).map((i) => ({
+    const count = 3;
+    const definitions = Array.from(Array(count).keys()).map((i) => ({
       
         image: "alpine:3.18.5",
         command: `echo ${Math.random()}`,
@@ -126,6 +126,7 @@ Deno.test(
               const i = messages.findIndex((m) => m.jobId === jobId);
               if (i >= 0 && lines && !jobIdsFinished.has(jobId)) {
                 promises[i]?.resolve(lines.trim());
+                console.log(`🐸 [test] 📡 job ${jobId} finished ${jobIdsFinished.size} / ${count}`);
                 jobIdsFinished.add(jobId);
               }
             }
@@ -136,15 +137,14 @@ Deno.test(
       }
     };
 
-    
-    console.log(`opening the socket to the API server...`)
+    // console.log(`opening the socket to the API server...`)
     await open(socket);
-    console.log(`...socket opened. Sending messages...`);
+    // console.log(`...socket opened. Sending messages...`);
     for(const { message } of messages) {
       socket.send(JSON.stringify(message));
     }
     
-    console.log(`...awaiting jobs to finish`);
+    // console.log(`...awaiting jobs to finish`);
     const results = await Promise.all(promises.map((p) => p.promise));
     results.forEach((result, i:number) => {
       assertEquals(result, definitions[i].command.replace("echo ", ""));

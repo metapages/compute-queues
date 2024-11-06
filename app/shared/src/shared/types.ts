@@ -233,6 +233,7 @@ export enum WebsocketMessageTypeClientToServer {
   StateChange = "StateChange",
   ClearJobCache = "ClearJobCache",
   ResubmitJob = "ResubmitJob",
+  QueryJob = "QueryJob",
 }
 export interface PayloadClearJobCache {
   jobId: string;
@@ -252,9 +253,13 @@ export interface PayloadClearJobOnWorker {
   jobId: string;
 }
 
+export interface PayloadQueryJob {
+  jobId: string;
+}
+
 export interface WebsocketMessageClientToServer {
   type: WebsocketMessageTypeClientToServer;
-  payload: StateChange | PayloadClearJobCache | PayloadResubmitJob;
+  payload: StateChange | PayloadClearJobCache | PayloadResubmitJob | PayloadQueryJob;
 }
 export type WebsocketMessageSenderClient = (message: WebsocketMessageClientToServer) => void;
 

@@ -54,8 +54,8 @@ services:
     healthcheck:
       test: sh -c 'PORT=8081 deno run --allow-net --allow-env src/util/healthcheck.ts'
       interval: 5s
-      timeout: 1s
-      retries: 3
+      timeout: 5s
+      retries: 10
     expose:
       - "8081"
     ports:
@@ -112,8 +112,8 @@ services:
     healthcheck:
       test: sh -c 'PORT=8082 deno run --allow-net --allow-env src/util/healthcheck.ts'
       interval: 5s
-      timeout: 1s
-      retries: 3
+      timeout: 5s
+      retries: 10
     expose:
       - "8082"
     environment:
@@ -349,8 +349,8 @@ services:
     image: redis:7.2.4
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"
 
 networks:
   default:

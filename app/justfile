@@ -31,11 +31,14 @@ up +args="": _ensure-all _mkcert
     if [ $STATUS_CODE = "200" ]; then
         export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
     fi
+    # Having issues with the worker
+    docker compose --project-name=dev rm --force
+    docker rm dev-worker-1 || true
     docker compose --project-name=dev up --remove-orphans {{args}}
 
 # Shut down the local stack: 'docker compose down'
 down +args="":
-    docker compose  --project-name=dev down {{args}}
+    docker compose --project-name=dev down {{args}}
 
 # Open the browser to the local frontend
 @open: _ensure-all
