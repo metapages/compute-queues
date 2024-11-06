@@ -1,8 +1,11 @@
 {
   "files.exclude": {
+    "**/.deno": true,
     "**/app/api/assets": true,
     "**/deno.lock": true,
-    "**/dist": true
+    "**/dist": true,
+    "**/.cache": true,
+    "**/node_modules": true,
   },
   "search.exclude": {
     "**/app/api/assets": true,

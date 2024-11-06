@@ -54,8 +54,8 @@ services:
     healthcheck:
       test: sh -c 'PORT=8081 deno run --allow-net --allow-env src/util/healthcheck.ts'
       interval: 5s
-      timeout: 1s
-      retries: 3
+      timeout: 5s
+      retries: 10
     expose:
       - "8081"
     ports:
@@ -112,8 +112,8 @@ services:
     healthcheck:
       test: sh -c 'PORT=8082 deno run --allow-net --allow-env src/util/healthcheck.ts'
       interval: 5s
-      timeout: 1s
-      retries: 3
+      timeout: 5s
+      retries: 10
     expose:
       - "8082"
     environment:
