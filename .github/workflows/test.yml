@@ -23,8 +23,7 @@ jobs:
         with:
           fetch-depth: '0'
 
-      - name: Build and test app on the self-hosted runner
-        uses: ./.github/actions/self-hosted
-        timeout-minutes: 30
-        with:
-          command: "just test"
+      - name: test
+        run: just test
+        timeout-minutes: 10
+
