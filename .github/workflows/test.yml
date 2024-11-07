@@ -9,8 +9,7 @@ on:
   push:
     # only non-main (and non-master) branches
     branches:
-      - "disabled"
-      # - "**"
+      - "**"
       - "!main"
       - "!master"
 
