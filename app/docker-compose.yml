@@ -15,6 +15,8 @@ services:
     image: denoland/deno:alpine-2.0.3
     command: deno test --watch --allow-all --unstable-broadcast-channel --unstable-kv .
     working_dir: /app/test
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - API_URL=http://api1:8081
@@ -244,6 +246,8 @@ services:
       - ./browser/vite.config.ts:/app/browser/vite.config.ts
       - ./shared:/app/shared
       - node_modules:/app/browser/node_modules
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Ensures the S3 bucket exists
   # The could be possibly done better elsewhere?
