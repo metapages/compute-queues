@@ -16,7 +16,7 @@ on:
 jobs:
   test_on_push:
     name: Build and test
-    runs-on: self-hosted
+    runs-on: [self-hosted, linux]
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
