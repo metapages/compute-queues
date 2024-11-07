@@ -304,8 +304,8 @@ services:
     command: --sqlite-path /data/denokv.sqlite serve --access-token localdenoaccesstoken
     volumes:
       - denokv:/data
-    ports:
-      - "4512:4512"
+    # ports:
+    #   - "4512:4512"
 
   traefik:
     image: traefik:v2.10.1
@@ -337,9 +337,9 @@ services:
     ports:
       # HTTPS / SSL port
       - "${APP_PORT:-443}:443"
-      - "80:80"
+      # - "80:80"
       # The Traefik Web UI port (enabled by api:insecure: true in traefik.yml)
-      - "${TRAEFIK_WEB_UI_PORT:-8080}:8080"
+      # - "${TRAEFIK_WEB_UI_PORT:-8080}:8080"
     volumes:
       - .cache/traefik/certs:/etc/certs:ro
       - .traefik/config.yml:/etc/traefik/config.yml

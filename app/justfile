@@ -3,7 +3,6 @@ set dotenv-load  := true
 
 APP_FQDN         := "worker-metaframe.localhost"
 APP_PORT         := env_var_or_default("APP_PORT", "443")
-
 normal           := '\033[0m'
 green            := "\\e[32m"
 
@@ -78,7 +77,7 @@ test: check
     if [ $STATUS_CODE = "200" ]; then
         export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
     fi
-    APP_PORT=4470 docker compose --project-name=test up --remove-orphans --detach
+    APP_PORT=4470 TRAEFIK_WEB_UI_PORT=8188 docker compose --project-name=test up --remove-orphans --detach
     APP_PORT=4470 just worker/test
     APP_PORT=4470 just test/test
     APP_PORT=4470 just shared/test
