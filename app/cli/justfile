@@ -34,5 +34,3 @@ compile:
 
 @test:
   echo "❗ no cli tests yet"
-  echo "Test failing tests"
-  exit 1
