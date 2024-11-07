@@ -3,7 +3,6 @@ set dotenv-load  := true
 
 APP_FQDN         := "worker-metaframe.localhost"
 APP_PORT         := env_var_or_default("APP_PORT", "443")
-
 normal           := '\033[0m'
 green            := "\\e[32m"
 
@@ -62,30 +61,46 @@ status-test queue="local1":
 status-prod queue="public1":
     curl https://container.mtfm.io/{{queue}}/status | jq .
 
-test:
+test: check
     #!/usr/bin/env bash
-    # Make sure there is no dev stack
-    docker compose --project-name=dev down -v
-    # A local NPM registry saves time, bandwidth, and avoids rate limits
-    STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873)
-    if [ $STATUS_CODE = "200" ]; then
-        export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
+    set -e # exit when any command fails, preserving the status of the failed command
+
+    cleanup() {
+        docker compose --project-name=test down -v || true
+    }
+
+    trap cleanup EXIT # cleanup when the script exits for any reason, including failure
+
+    cleanup
+
+    # Get host IP address for Linux
+    if [ "$(uname)" == "Linux" ]; then
+        HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
+    else
+        HOST_IP="host.docker.internal"
     fi
-    APP_PORT=4470 docker compose --project-name=test up --remove-orphans --detach
+
+    # A local NPM registry saves time, bandwidth, and avoids rate limits
+    STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873 || true)
+    if [ $STATUS_CODE = "200" ]; then
+        export NPM_CONFIG_REGISTRY=http://${HOST_IP}:4873
+    fi
+    # This is causing currently unknown issues, a dangling worker 
+    docker rm test-worker-1 || true
+    APP_PORT=4470 TRAEFIK_WEB_UI_PORT=8188 docker compose --project-name=test up --build --remove-orphans --detach
     APP_PORT=4470 just worker/test
     APP_PORT=4470 just test/test
     APP_PORT=4470 just shared/test
     APP_PORT=4470 just cli/test
-    docker compose --project-name=test down -v
 
 # Clean up the project
 @test-cleanup:
-    docker compose down -v
+    docker compose --project-name=test down -v || true
 
 clean:
     rm -rf .cache
     just browser/clean
-    docker compose down -v
+    docker compose --project-name=dev down -v
 
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":

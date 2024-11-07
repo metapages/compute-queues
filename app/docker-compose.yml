@@ -15,6 +15,8 @@ services:
     image: denoland/deno:alpine-2.0.3
     command: deno test --watch --allow-all --unstable-broadcast-channel --unstable-kv .
     working_dir: /app/test
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - API_URL=http://api1:8081
@@ -244,6 +246,8 @@ services:
       - ./browser/vite.config.ts:/app/browser/vite.config.ts
       - ./shared:/app/shared
       - node_modules:/app/browser/node_modules
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Ensures the S3 bucket exists
   # The could be possibly done better elsewhere?
@@ -304,8 +308,8 @@ services:
     command: --sqlite-path /data/denokv.sqlite serve --access-token localdenoaccesstoken
     volumes:
       - denokv:/data
-    ports:
-      - "4512:4512"
+    # ports:
+    #   - "4512:4512"
 
   traefik:
     image: traefik:v2.10.1
@@ -337,9 +341,9 @@ services:
     ports:
       # HTTPS / SSL port
       - "${APP_PORT:-443}:443"
-      - "80:80"
+      # - "80:80"
       # The Traefik Web UI port (enabled by api:insecure: true in traefik.yml)
-      - "${TRAEFIK_WEB_UI_PORT:-8080}:8080"
+      # - "${TRAEFIK_WEB_UI_PORT:-8080}:8080"
     volumes:
       - .cache/traefik/certs:/etc/certs:ro
       - .traefik/config.yml:/etc/traefik/config.yml
@@ -349,8 +353,8 @@ services:
     image: redis:7.2.4
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"
 
 networks:
   default:
