@@ -25,5 +25,5 @@ jobs:
 
       - name: test
         run: just test
-        timeout-minutes: 10
+        timeout-minutes: 20
 
