@@ -72,10 +72,18 @@ test: check
     trap cleanup EXIT # cleanup when the script exits for any reason, including failure
 
     cleanup
+
+    # Get host IP address for Linux
+    if [ "$(uname)" == "Linux" ]; then
+        HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
+    else
+        HOST_IP="host.docker.internal"
+    fi
+
     # A local NPM registry saves time, bandwidth, and avoids rate limits
     STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873 || true)
     if [ $STATUS_CODE = "200" ]; then
-        export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
+        export NPM_CONFIG_REGISTRY=http://${HOST_IP}:4873
     fi
     APP_PORT=4470 TRAEFIK_WEB_UI_PORT=8188 docker compose --project-name=test up --remove-orphans --detach
     APP_PORT=4470 just worker/test
