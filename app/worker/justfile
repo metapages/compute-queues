@@ -64,7 +64,7 @@ docker-image-publish version="":
     docker buildx build --push \
         --file worker/Dockerfile \
         --target worker \
-        --build-arg DOCKER_TAG=${DOCKER_TAG:-cache} \
+        --build-arg VERSION=${VERSION:-cache} \
         --platform linux/amd64,linux/arm64 \
         --tag metapage/metaframe-docker-worker:$VERSION .
     # echo "✅ metapage/metaframe-docker-worker:$VERSION"
@@ -93,6 +93,7 @@ docker-image-build-for-local version="":
         docker buildx build \
             --file worker/Dockerfile \
             --target worker \
+            --build-arg VERSION=${VERSION:-cache} \
             --platform $arch \
             --output type=docker \
             --tag metapage/metaframe-docker-worker:$VERSION \
