@@ -90,7 +90,6 @@ test: check
     APP_PORT=4470 just test/test
     APP_PORT=4470 just shared/test
     APP_PORT=4470 just cli/test
-    docker compose --project-name=test down -v || true
 
 # Clean up the project
 @test-cleanup:
