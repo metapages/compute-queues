@@ -85,7 +85,9 @@ test: check
     if [ $STATUS_CODE = "200" ]; then
         export NPM_CONFIG_REGISTRY=http://${HOST_IP}:4873
     fi
-    APP_PORT=4470 TRAEFIK_WEB_UI_PORT=8188 docker compose --project-name=test up --remove-orphans --detach
+    # This is causing currently unknown issues, a dangling worker 
+    docker rm test-worker-1 || true
+    APP_PORT=4470 TRAEFIK_WEB_UI_PORT=8188 docker compose --project-name=test up --build --remove-orphans --detach
     APP_PORT=4470 just worker/test
     APP_PORT=4470 just test/test
     APP_PORT=4470 just shared/test
