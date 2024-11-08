@@ -78,9 +78,17 @@ test: check
         while true; do
             local port=$(shuf -i 10000-65535 -n 1)
             # Check if port is in use using netstat or ss
-            if ! netstat -tuln | grep -q ":${port} "; then
-                echo "${port}"
-                break
+            # Check if port is in use using netstat/ss on Linux or lsof on macOS
+            if [ "$(uname)" == "Linux" ]; then
+                if ! ss -tuln | grep -q ":${port} "; then
+                    echo "${port}"
+                    break
+                fi
+            else
+                if ! lsof -i ":${port}" > /dev/null 2>&1; then
+                    echo "${port}"
+                    break
+                fi
             fi
         done
     }
