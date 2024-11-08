@@ -60,8 +60,6 @@ services:
       retries: 10
     expose:
       - "8081"
-    ports:
-      - "8081:8081"
     environment:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - PORT=8081
@@ -308,8 +306,6 @@ services:
     command: --sqlite-path /data/denokv.sqlite serve --access-token localdenoaccesstoken
     volumes:
       - denokv:/data
-    # ports:
-    #   - "4512:4512"
 
   traefik:
     image: traefik:v2.10.1
@@ -341,6 +337,7 @@ services:
     ports:
       # HTTPS / SSL port
       - "${APP_PORT:-443}:443"
+      # Disable the other ports to avoid conflicts
       # - "80:80"
       # The Traefik Web UI port (enabled by api:insecure: true in traefik.yml)
       # - "${TRAEFIK_WEB_UI_PORT:-8080}:8080"
@@ -353,8 +350,6 @@ services:
     image: redis:7.2.4
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
-    # ports:
-    #   - "6379:6379"
 
 networks:
   default:

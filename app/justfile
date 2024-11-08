@@ -31,8 +31,8 @@ up +args="": _ensure-all _mkcert
         export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
     fi
     # Having issues with the worker
-    docker compose --project-name=dev rm --force
-    docker rm dev-worker-1 || true
+    docker compose --project-name=dev rm --force 2>/dev/null || true
+    docker rm dev-worker-1 2>/dev/null || true
     docker compose --project-name=dev up --build --remove-orphans {{args}}
 
 # Shut down the local stack: 'docker compose down'
@@ -66,13 +66,27 @@ test: check
     set -e # exit when any command fails, preserving the status of the failed command
 
     cleanup() {
-        docker compose --project-name=test down -v || true
+        docker compose --project-name=test down -v 2>/dev/null || true
     }
 
     trap cleanup EXIT # cleanup when the script exits for any reason, including failure
 
     cleanup
 
+    # Generate a random port between 10000-65535 and ensure it's not in use
+    get_free_port() {
+        while true; do
+            local port=$(shuf -i 10000-65535 -n 1)
+            # Check if port is in use using netstat or ss
+            if ! netstat -tuln | grep -q ":${port} "; then
+                echo "${port}"
+                break
+            fi
+        done
+    }
+
+    export APP_PORT=$(get_free_port)
+    echo -e "Using port ${APP_PORT}"
     # Get host IP address for Linux
     if [ "$(uname)" == "Linux" ]; then
         HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
@@ -86,12 +100,12 @@ test: check
         export NPM_CONFIG_REGISTRY=http://${HOST_IP}:4873
     fi
     # This is causing currently unknown issues, a dangling worker 
-    docker rm test-worker-1 || true
-    APP_PORT=4470 TRAEFIK_WEB_UI_PORT=8188 docker compose --project-name=test up --build --remove-orphans --detach
-    APP_PORT=4470 just worker/test
-    APP_PORT=4470 just test/test
-    APP_PORT=4470 just shared/test
-    APP_PORT=4470 just cli/test
+    docker rm test-worker-1 2>/dev/null || true
+    docker compose --project-name=test up --build --remove-orphans --detach
+    just worker/test
+    just test/test
+    just shared/test
+    just cli/test
 
 # Clean up the project
 @test-cleanup:
