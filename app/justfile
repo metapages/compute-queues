@@ -33,7 +33,7 @@ up +args="": _ensure-all _mkcert
     # Having issues with the worker
     docker compose --project-name=dev rm --force
     docker rm dev-worker-1 || true
-    docker compose --project-name=dev up --remove-orphans {{args}}
+    docker compose --project-name=dev up --build --remove-orphans {{args}}
 
 # Shut down the local stack: 'docker compose down'
 down +args="":
