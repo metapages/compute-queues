@@ -36,7 +36,15 @@ resource "google_project_service" "cloud_trace" {
   disable_on_destroy         = false
 }
 
-data "project_id" "this" {}
+locals {
+  # IP ranges used by GCE internal application load balancer, according to https://cloud.google.com/load-balancing/docs/health-check-concepts#ip-ranges
+  gce_health_check_ip_ranges = [
+    "35.191.0.0/16",
+    "130.211.0.0/22"
+  ]
+}
+
+# data "google_project" "this" {}
 
 data "google_compute_network" "default" {
   name = "default"
@@ -66,7 +74,7 @@ resource "google_compute_router_nat" "this" {
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
-module "gce-container" {
+module "worker_vm" {
   source  = "terraform-google-modules/container-vm/google"
   version = "~> 3.2"
 
@@ -93,7 +101,7 @@ module "gce-container" {
     ports = [
       {
         name           = "http"
-        container_port = 8080
+        container_port = 8000
       }
     ]
     volumeMounts = [
@@ -130,16 +138,16 @@ module "mig_template" {
   preemptible          = true
   source_image_family  = "cos-stable"
   source_image_project = "cos-cloud"
-  source_image         = reverse(split("/", module.gce-container.source_image))[0]
+  source_image         = reverse(split("/", module.worker_vm.source_image))[0]
   metadata = {
     "google-logging-enabled"    = "true"
-    "gce-container-declaration" = module.gce-container.metadata_value
+    "gce-container-declaration" = module.worker_vm.metadata_value
   }
   tags = [
     "worker"
   ]
   labels = {
-    "container-vm" = module.gce-container.vm_container_label
+    "container-vm" = module.worker_vm.vm_container_label
   }
 }
 
@@ -149,13 +157,13 @@ module "mig" {
   instance_template = module.mig_template.self_link
   region            = var.region
   hostname          = "worker"
-  target_size       = 2
+  target_size       = 02
 
   # distribution_policy_zones = ["us-central1-a"]
   named_ports = [
     {
       name = "http",
-      port = 8080
+      port = 8000
     },
     {
       name = "ssh",
@@ -164,21 +172,106 @@ module "mig" {
   ]
 }
 
-module "opentelemetry_service_account" {
-  source     = "terraform-google-modules/service-accounts/google"
-  version    = "~> 4.2"
-  project_id = data.project_id.this
-  prefix     = "worker"
-  names      = ["opentelemetry"]
+
+module "metrics_vm" {
+  source  = "terraform-google-modules/container-vm/google"
+  version = "~> 3.2"
+
+  container = {
+    image = var.opentelemetry_collector_image
+    env   = []
+    tty : true
+    ports        = []
+    volumeMounts = []
+  }
+
+  volumes = []
+
+  restart_policy = "Always"
 }
 
-module "opentelemetry_cloud_run" {
-  source  = "GoogleCloudPlatform/cloud-run/google"
-  version = "~> 0.12"
+# All of the below, as well as the worker MIG definition itself, should probably go into a module
+# we can call multiple times to get multiple worker configurations deployed.
 
-  service_name          = "opentelemetry"
-  project_id            = data.project_id.this
-  location              = var.region
-  image                 = "otel/opentelemetry-collector:0.112.0"
-  service_account_email = module.service_account.email
+resource "google_compute_subnetwork" "ilb_proxy" {
+  name          = "ilb-proxy"
+  region        = var.region
+  network       = data.google_compute_network.default.self_link
+  ip_cidr_range = "10.10.0.0/24"
+  purpose       = "INTERNAL_HTTPS_LOAD_BALANCER"
+  role          = "ACTIVE"
+}
+
+# Allow traffic from the GCE internal application load balancer to the worker MIGs
+resource "google_compute_firewall" "ilb" {
+  name    = "ilb-proxy"
+  network = data.google_compute_network.default.self_link
+  allow {
+    protocol = "tcp"
+    ports    = ["8000"]
+  }
+  source_ranges = ["10.10.0.0/24"]
+  target_tags   = ["worker"]
+}
+
+# Allow traffic from GCE health probes to the worker MIGs
+resource "google_compute_firewall" "ilb_health_check" {
+  name    = "ilb-health-checks"
+  network = data.google_compute_network.default.self_link
+  allow {
+    protocol = "tcp"
+    ports    = ["8000"]
+  }
+  source_ranges = local.gce_health_check_ip_ranges
+  target_tags   = ["worker"]
+}
+
+resource "google_compute_region_health_check" "this" {
+  name               = "worker"
+  region             = var.region
+  check_interval_sec = 10
+  timeout_sec        = 10
+  http_health_check {
+    port         = 8000
+    request_path = "/metrics"
+  }
+}
+
+resource "google_compute_region_backend_service" "this" {
+  name                  = "metrics-to-mig"
+  region                = var.region
+  protocol              = "HTTP"
+  load_balancing_scheme = "INTERNAL_MANAGED"
+  timeout_sec           = 10
+  health_checks         = [google_compute_region_health_check.this.id]
+  backend {
+    group           = module.mig.instance_group
+    balancing_mode  = "UTILIZATION"
+    capacity_scaler = 1.0
+  }
+}
+
+resource "google_compute_region_url_map" "this" {
+  name            = "metrics-to-mig"
+  region          = var.region
+  default_service = google_compute_region_backend_service.this.id
+}
+
+resource "google_compute_region_target_http_proxy" "this" {
+  name    = "metrics-to-mig"
+  region  = var.region
+  url_map = google_compute_region_url_map.this.id
+}
+
+resource "google_compute_forwarding_rule" "google_compute_forwarding_rule" {
+  name                  = "metrics-to-mig"
+  region                = var.region
+  depends_on            = [data.google_compute_subnetwork.default]
+  ip_protocol           = "TCP"
+  load_balancing_scheme = "INTERNAL_MANAGED"
+  port_range            = "8000"
+  target                = google_compute_region_target_http_proxy.this.id
+  network               = data.google_compute_network.default.id
+  subnetwork            = data.google_compute_subnetwork.default.id
+  network_tier          = "PREMIUM"
 }
