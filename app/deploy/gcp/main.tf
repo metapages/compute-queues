@@ -56,6 +56,9 @@ exporters:
     metric:
       prefix: custom.googleapis.com/opentelemetry/
 processors:
+  resourcedetection/env:
+    detectors: [env]
+    override:true
   memory_limiter:
     check_interval: 1s
     limit_percentage: 80
@@ -185,7 +188,7 @@ module "mig" {
   hostname          = "worker"
   target_size       = 1
 
-  # distribution_policy_zones = ["us-central1-a"]
+  distribution_policy_zones = ["us-central1-a"]
   named_ports = [
     {
       name = "http",
@@ -196,6 +199,39 @@ module "mig" {
       port = 22
     }
   ]
+}
+
+resource "google_compute_region_autoscaler" "this" {
+  provider = google-beta
+  name     = "worker"
+  region   = var.region
+  target   = module.mig.instance_group_manager.id
+  autoscaling_policy {
+    max_replicas    = 10
+    min_replicas    = 1
+    cooldown_period = 15
+    metric {
+      name                       = "custom.googleapis.com/opentelemetry/queue_length"
+      filter                     = "resource.type = \"gce_instance_group\""
+      single_instance_assignment = 1
+    }
+  }
+}
+
+resource "google_monitoring_metric_descriptor" "queue_length" {
+  description  = "The length of the job queue for a given queue ID."
+  type         = "custom.googleapis.com/opentelemetry/queue_length"
+  metric_kind  = "GAUGE"
+  value_type   = "INT64"
+  unit         = "1"
+  display_name = "Queue Length"
+
+  # TODO: Update this to be queue ID or similar
+  labels {
+    key         = "instance_id"
+    value_type  = "STRING"
+    description = "Instance identifier."
+  }
 }
 
 
@@ -210,6 +246,10 @@ module "metrics_container" {
       {
         "name"  = "OTEL_YAML_CONFIG"
         "value" = local.opentelemetry_config
+      },
+      {
+        "name"  = "OTEL_RESOURCE_ATTRIBUTES"
+        "value" = "cloud.region=${var.region}"
       }
     ]
     args = ["--config=env:OTEL_YAML_CONFIG"]
