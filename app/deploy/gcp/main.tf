@@ -42,6 +42,32 @@ locals {
     "35.191.0.0/16",
     "130.211.0.0/22"
   ]
+  opentelemetry_config = <<EOF
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'collect-worker-metrics'
+          metrics_path: '/metrics'
+          static_configs:
+            - targets: ['${google_compute_forwarding_rule.this.ip_address}:8000']
+exporters:
+  googlecloud:
+    metric:
+      prefix: custom.googleapis.com/opentelemetry/
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+  batch:
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [memory_limiter, batch]
+      exporters: [googlecloud]
+EOF
+  # opentelemetry_config_base64 = base64encode(local.opentelemetry_config)
 }
 
 # data "google_project" "this" {}
@@ -157,7 +183,7 @@ module "mig" {
   instance_template = module.mig_template.self_link
   region            = var.region
   hostname          = "worker"
-  target_size       = 02
+  target_size       = 1
 
   # distribution_policy_zones = ["us-central1-a"]
   named_ports = [
@@ -173,21 +199,58 @@ module "mig" {
 }
 
 
-module "metrics_vm" {
+module "metrics_container" {
   source  = "terraform-google-modules/container-vm/google"
   version = "~> 3.2"
 
   container = {
     image = var.opentelemetry_collector_image
-    env   = []
     tty : true
-    ports        = []
-    volumeMounts = []
+    env = [
+      {
+        "name"  = "OTEL_YAML_CONFIG"
+        "value" = local.opentelemetry_config
+      }
+    ]
+    args = ["--config=env:OTEL_YAML_CONFIG"]
   }
 
-  volumes = []
-
   restart_policy = "Always"
+}
+
+data "google_compute_default_service_account" "default" {}
+
+resource "google_compute_instance" "metrics" {
+  name         = "metrics-collector"
+  machine_type = "e2-medium"
+  zone         = "us-central1-a"
+
+  boot_disk {
+    initialize_params {
+      image = module.metrics_container.source_image
+    }
+  }
+
+  network_interface {
+    network = "default"
+  }
+
+  tags = ["metrics"]
+
+  metadata = {
+    gce-container-declaration = module.metrics_container.metadata_value
+  }
+
+  labels = {
+    container-vm = module.metrics_container.vm_container_label
+  }
+
+  service_account {
+    email = data.google_compute_default_service_account.default.email
+    scopes = [
+      "https://www.googleapis.com/auth/cloud-platform",
+    ]
+  }
 }
 
 # All of the below, as well as the worker MIG definition itself, should probably go into a module
@@ -263,7 +326,7 @@ resource "google_compute_region_target_http_proxy" "this" {
   url_map = google_compute_region_url_map.this.id
 }
 
-resource "google_compute_forwarding_rule" "google_compute_forwarding_rule" {
+resource "google_compute_forwarding_rule" "this" {
   name                  = "metrics-to-mig"
   region                = var.region
   depends_on            = [data.google_compute_subnetwork.default]
