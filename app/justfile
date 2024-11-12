@@ -66,7 +66,7 @@ test: check
     set -e # exit when any command fails, preserving the status of the failed command
 
     cleanup() {
-        docker compose --project-name=test down -v 2>/dev/null || true
+        docker compose --project-name=test down 2>/dev/null || true
     }
 
     trap cleanup EXIT # cleanup when the script exits for any reason, including failure
@@ -103,10 +103,11 @@ test: check
     fi
 
     # A local NPM registry saves time, bandwidth, and avoids rate limits
-    STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873 || true)
-    if [ $STATUS_CODE = "200" ]; then
-        export NPM_CONFIG_REGISTRY=http://${HOST_IP}:4873
-    fi
+    # This fails on specific npm modules, so we'll just not use it for now
+    # STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873 || true)
+    # if [ $STATUS_CODE = "200" ]; then
+    #     export NPM_CONFIG_REGISTRY=http://${HOST_IP}:4873
+    # fi
     # This is causing currently unknown issues, a dangling worker 
     docker rm test-worker-1 2>/dev/null || true
     docker compose --project-name=test up --build --remove-orphans --detach
@@ -117,7 +118,7 @@ test: check
 
 # Clean up the project
 @test-cleanup:
-    docker compose --project-name=test down -v || true
+    docker compose --project-name=test down || true
 
 clean:
     rm -rf .cache
