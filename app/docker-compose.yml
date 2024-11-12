@@ -177,6 +177,7 @@ services:
       - /tmp:/tmp
       - /var/run/docker.sock:/var/run/docker.sock
       - deno:/deno
+      - node_modules_worker:/app/worker/node_modules
     extra_hosts:
       - host.docker.internal:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
@@ -214,6 +215,7 @@ services:
   #     - /tmp:/tmp
   #     - /var/run/docker.sock:/var/run/docker.sock
   #     - deno:/deno
+  #     - node_modules_worker:/app/worker/node_modules
   #   extra_hosts:
   #     - host.docker.internal:host-gateway
   #     - minio.worker-metaframe.localhost:host-gateway
@@ -363,4 +365,6 @@ volumes:
   denokv:
     driver: local
   node_modules:
+    driver: local
+  node_modules_worker:
     driver: local
