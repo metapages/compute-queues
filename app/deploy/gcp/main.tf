@@ -36,13 +36,20 @@ resource "google_project_service" "cloud_trace" {
   disable_on_destroy         = false
 }
 
+resource "google_project_service" "dns" {
+  service                    = "dns.googleapis.com"
+  disable_dependent_services = true
+  disable_on_destroy         = false
+}
+
 locals {
   # IP ranges used by GCE internal application load balancer, according to https://cloud.google.com/load-balancing/docs/health-check-concepts#ip-ranges
   gce_health_check_ip_ranges = [
     "35.191.0.0/16",
     "130.211.0.0/22"
   ]
-  opentelemetry_config = <<EOF
+  opentelemetry_scrape_targets = join(", ", [for key, value in var.worker_groups : "'${key}.workers.internal:8000'"])
+  opentelemetry_config         = <<EOF
 receivers:
   prometheus:
     config:
@@ -50,15 +57,12 @@ receivers:
         - job_name: 'collect-worker-metrics'
           metrics_path: '/metrics'
           static_configs:
-            - targets: ['${google_compute_forwarding_rule.this.ip_address}:8000']
+            - targets: [${local.opentelemetry_scrape_targets}]
 exporters:
   googlecloud:
     metric:
       prefix: custom.googleapis.com/opentelemetry/
 processors:
-  resourcedetection/env:
-    detectors: [env]
-    override:true
   memory_limiter:
     check_interval: 1s
     limit_percentage: 80
@@ -104,24 +108,21 @@ resource "google_compute_router_nat" "this" {
 }
 
 module "worker_vm" {
-  source  = "terraform-google-modules/container-vm/google"
-  version = "~> 3.2"
+  for_each = var.worker_groups
+  source   = "terraform-google-modules/container-vm/google"
+  version  = "~> 3.2"
 
   container = {
     image = var.worker_image
     env = [
       {
         name  = "METAPAGE_WORKER_CPUS"
-        value = "1"
+        value = each.value.cpus
       },
       {
         name  = "METAPAGE_QUEUE_ID"
-        value = var.queue_id
-      },
-      # {
-      #   name  = "METAPAGE_GENERATE_WORKER_ID"
-      #   value = "true"
-      # }
+        value = each.value.queue_id
+      }
     ]
     securityContext = {
       privileged : true
@@ -155,6 +156,7 @@ module "worker_vm" {
 }
 
 module "mig_template" {
+  for_each   = var.worker_groups
   source     = "terraform-google-modules/vm/google//modules/instance_template"
   version    = "~> 12.1.0"
   network    = data.google_compute_network.default.self_link
@@ -163,29 +165,30 @@ module "mig_template" {
     email  = google_service_account.mig_template_creator.email
     scopes = ["cloud-platform"]
   }
-  name_prefix          = "worker-"
+  name_prefix          = "worker-${each.key}-"
   preemptible          = true
   source_image_family  = "cos-stable"
   source_image_project = "cos-cloud"
-  source_image         = reverse(split("/", module.worker_vm.source_image))[0]
+  source_image         = reverse(split("/", module.worker_vm[each.key].source_image))[0]
   metadata = {
     "google-logging-enabled"    = "true"
-    "gce-container-declaration" = module.worker_vm.metadata_value
+    "gce-container-declaration" = module.worker_vm[each.key].metadata_value
   }
   tags = [
     "worker"
   ]
   labels = {
-    "container-vm" = module.worker_vm.vm_container_label
+    "container-vm" = module.worker_vm[each.key].vm_container_label
   }
 }
 
 module "mig" {
+  for_each          = var.worker_groups
   source            = "terraform-google-modules/vm/google//modules/mig"
   version           = "~> 12.1.0"
-  instance_template = module.mig_template.self_link
+  instance_template = module.mig_template[each.key].self_link
   region            = var.region
-  hostname          = "worker"
+  hostname          = each.key
   target_size       = 1
 
   distribution_policy_zones = ["us-central1-a"]
@@ -202,10 +205,11 @@ module "mig" {
 }
 
 resource "google_compute_region_autoscaler" "this" {
+  for_each = var.worker_groups
   provider = google-beta
-  name     = "worker"
+  name     = each.key
   region   = var.region
-  target   = module.mig.instance_group_manager.id
+  target   = module.mig[each.key].instance_group_manager.id
   autoscaling_policy {
     max_replicas    = 10
     min_replicas    = 1
@@ -218,83 +222,44 @@ resource "google_compute_region_autoscaler" "this" {
   }
 }
 
-resource "google_monitoring_metric_descriptor" "queue_length" {
-  description  = "The length of the job queue for a given queue ID."
-  type         = "custom.googleapis.com/opentelemetry/queue_length"
-  metric_kind  = "GAUGE"
-  value_type   = "INT64"
-  unit         = "1"
-  display_name = "Queue Length"
-
-  # TODO: Update this to be queue ID or similar
-  labels {
-    key         = "instance_id"
-    value_type  = "STRING"
-    description = "Instance identifier."
+resource "google_compute_region_backend_service" "this" {
+  for_each              = var.worker_groups
+  name                  = each.key
+  region                = var.region
+  protocol              = "HTTP"
+  load_balancing_scheme = "INTERNAL_MANAGED"
+  timeout_sec           = 10
+  health_checks         = [google_compute_region_health_check.this.id]
+  backend {
+    group           = module.mig[each.key].instance_group
+    balancing_mode  = "UTILIZATION"
+    capacity_scaler = 1.0
   }
 }
 
+resource "google_compute_region_url_map" "this" {
+  name   = "metrics-to-mig"
+  region = var.region
+  # This should be changed to something that isn't a user-defined MIG as default service...
+  default_service = google_compute_region_backend_service.this["a"].id
 
-module "metrics_container" {
-  source  = "terraform-google-modules/container-vm/google"
-  version = "~> 3.2"
 
-  container = {
-    image = var.opentelemetry_collector_image
-    tty : true
-    env = [
-      {
-        "name"  = "OTEL_YAML_CONFIG"
-        "value" = local.opentelemetry_config
-      },
-      {
-        "name"  = "OTEL_RESOURCE_ATTRIBUTES"
-        "value" = "cloud.region=${var.region}"
-      }
-    ]
-    args = ["--config=env:OTEL_YAML_CONFIG"]
-  }
-
-  restart_policy = "Always"
-}
-
-data "google_compute_default_service_account" "default" {}
-
-resource "google_compute_instance" "metrics" {
-  name         = "metrics-collector"
-  machine_type = "e2-medium"
-  zone         = "us-central1-a"
-
-  boot_disk {
-    initialize_params {
-      image = module.metrics_container.source_image
+  dynamic "host_rule" {
+    for_each = var.worker_groups
+    content {
+      hosts        = ["${host_rule.key}.workers.internal."]
+      path_matcher = host_rule.key
     }
   }
 
-  network_interface {
-    network = "default"
-  }
-
-  tags = ["metrics"]
-
-  metadata = {
-    gce-container-declaration = module.metrics_container.metadata_value
-  }
-
-  labels = {
-    container-vm = module.metrics_container.vm_container_label
-  }
-
-  service_account {
-    email = data.google_compute_default_service_account.default.email
-    scopes = [
-      "https://www.googleapis.com/auth/cloud-platform",
-    ]
+  dynamic "path_matcher" {
+    for_each = var.worker_groups
+    content {
+      name            = path_matcher.key
+      default_service = google_compute_region_backend_service.this[path_matcher.key].id
+    }
   }
 }
-
-# All of the below, as well as the worker MIG definition itself, should probably go into a module
-# we can call multiple times to get multiple worker configurations deployed.
 
 resource "google_compute_subnetwork" "ilb_proxy" {
   name          = "ilb-proxy"
@@ -340,26 +305,6 @@ resource "google_compute_region_health_check" "this" {
   }
 }
 
-resource "google_compute_region_backend_service" "this" {
-  name                  = "metrics-to-mig"
-  region                = var.region
-  protocol              = "HTTP"
-  load_balancing_scheme = "INTERNAL_MANAGED"
-  timeout_sec           = 10
-  health_checks         = [google_compute_region_health_check.this.id]
-  backend {
-    group           = module.mig.instance_group
-    balancing_mode  = "UTILIZATION"
-    capacity_scaler = 1.0
-  }
-}
-
-resource "google_compute_region_url_map" "this" {
-  name            = "metrics-to-mig"
-  region          = var.region
-  default_service = google_compute_region_backend_service.this.id
-}
-
 resource "google_compute_region_target_http_proxy" "this" {
   name    = "metrics-to-mig"
   region  = var.region
@@ -377,4 +322,100 @@ resource "google_compute_forwarding_rule" "this" {
   network               = data.google_compute_network.default.id
   subnetwork            = data.google_compute_subnetwork.default.id
   network_tier          = "PREMIUM"
+}
+
+resource "google_dns_managed_zone" "workers" {
+  name        = "workers"
+  dns_name    = "workers.internal."
+  description = "Internal DNS hostname for all worker MIGs"
+
+  visibility = "private"
+
+  private_visibility_config {
+    networks {
+      network_url = data.google_compute_network.default.id
+    }
+  }
+}
+
+resource "google_dns_record_set" "workers" {
+  name         = "*.workers.internal."
+  type         = "A"
+  ttl          = 300
+  managed_zone = google_dns_managed_zone.workers.name
+  rrdatas      = [google_compute_forwarding_rule.this.ip_address]
+}
+
+# resource "google_monitoring_metric_descriptor" "queue_length" {
+#   description  = "The length of the job queue for a given queue ID."
+#   type         = "custom.googleapis.com/opentelemetry/queue_length"
+#   metric_kind  = "GAUGE"
+#   value_type   = "DOUBLE"
+#   unit         = "1"
+#   display_name = "Queue Length"
+#
+#   # TODO: Update this to be queue ID or similar
+#   labels {
+#     key         = "instance_id"
+#     value_type  = "STRING"
+#     description = "Instance identifier."
+#   }
+# }
+
+module "metrics_container" {
+  source  = "terraform-google-modules/container-vm/google"
+  version = "~> 3.2"
+
+  container = {
+    image = var.opentelemetry_collector_image
+    tty : true
+    env = [
+      {
+        "name"  = "OTEL_YAML_CONFIG"
+        "value" = local.opentelemetry_config
+      },
+      {
+        "name"  = "OTEL_RESOURCE_ATTRIBUTES"
+        "value" = "cloud.region=${var.region}"
+      }
+    ]
+    args = ["--config=env:OTEL_YAML_CONFIG"]
+  }
+
+  restart_policy = "Always"
+}
+
+data "google_compute_default_service_account" "default" {}
+
+resource "google_compute_instance" "metrics" {
+  name         = "metrics-collector"
+  machine_type = "e2-micro"
+  zone         = "us-central1-a"
+
+  boot_disk {
+    initialize_params {
+      image = module.metrics_container.source_image
+    }
+  }
+
+  network_interface {
+    network = "default"
+  }
+
+  tags = ["metrics"]
+
+  metadata = {
+    gce-container-declaration = module.metrics_container.metadata_value
+  }
+
+  labels = {
+    container-vm = module.metrics_container.vm_container_label
+  }
+
+  service_account {
+    email = data.google_compute_default_service_account.default.email
+    scopes = [
+      "https://www.googleapis.com/auth/cloud-platform",
+    ]
+  }
 }
