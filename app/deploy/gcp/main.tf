@@ -129,6 +129,10 @@ module "worker_vm" {
         value = each.value.cpus
       },
       {
+        name  = "METAPAGE_WORKER_GPUS"
+        value = each.value.gpus != null ? each.value.gpus.count : 0
+      },
+      {
         name  = "METAPAGE_QUEUE_ID"
         value = each.value.queue_id
       }
@@ -165,27 +169,37 @@ module "worker_vm" {
 }
 
 module "mig_template" {
-  for_each   = var.worker_groups
-  source     = "terraform-google-modules/vm/google//modules/instance_template"
-  version    = "~> 12.1.0"
-  network    = data.google_compute_network.default.self_link
-  subnetwork = data.google_compute_subnetwork.default.self_link
+  for_each             = var.worker_groups
+  source               = "terraform-google-modules/vm/google//modules/instance_template"
+  version              = "~> 12.1.0"
+  name_prefix          = "worker-${each.key}-"
+  source_image_family  = "cos-stable"
+  source_image_project = "cos-cloud"
+  source_image         = reverse(split("/", module.worker_vm[each.key].source_image))[0]
+  machine_type         = each.value.instance_type
+  preemptible          = true
+  network              = data.google_compute_network.default.self_link
+  subnetwork           = data.google_compute_subnetwork.default.self_link
+
+  gpu = startswith(each.value.instance_type, "n1") && each.value.gpus != null ? {
+    count = each.value.gpus.count
+    type  = each.value.gpus.type
+  } : null
+
   service_account = {
     email  = google_service_account.mig_template_creator.email
     scopes = ["cloud-platform"]
   }
-  name_prefix          = "worker-${each.key}-"
-  preemptible          = true
-  source_image_family  = "cos-stable"
-  source_image_project = "cos-cloud"
-  source_image         = reverse(split("/", module.worker_vm[each.key].source_image))[0]
+
   metadata = {
     "google-logging-enabled"    = "true"
     "gce-container-declaration" = module.worker_vm[each.key].metadata_value
   }
+
   tags = [
     "worker"
   ]
+
   labels = {
     "container-vm" = module.worker_vm[each.key].vm_container_label
   }
