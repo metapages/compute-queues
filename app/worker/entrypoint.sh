@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+
+set -eo pipefail
 
 if [ "$METAPAGE_WORKER_RUN_STANDALONE" = "true" ]; then
     # Run docker daemon for environments that don't provide access to one
@@ -10,10 +12,10 @@ if [ -z "$METAPAGE_WORKER_CPUS" ]; then
     METAPAGE_WORKER_CPUS=1
 fi
 
-# if [ -n "$METAPAGE_GENERATE_WORKER_ID" ]; then
-#     # Generate a random worker ID
-#     METAPAGE_WORKER_ID_OPTION="--id $(uuidgen)"
-# fi
+if [ -n "$METAPAGE_GENERATE_WORKER_ID" ]; then
+    # Generate a random worker ID
+    METAPAGE_WORKER_ID_OPTION="--id $(uuidgen)"
+fi
 
 if [ -z "$@" ]; then
     # Run the metapage worker, with a queue ID provided by environment variable
