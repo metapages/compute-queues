@@ -1,10 +1,6 @@
-# Compute providers
+# Compute Workers on GCP
 
-**WIP**: This is a work in progress and still needs some cleanup before it's production-ready. It is usable though.
-
-https://www.notion.so/metapages/Metapage-compute-worker-providers-0913a04cd3784c569dfa374bc91e0bea?pvs=4
-
-Infrastructure code for cloud providers to create horizontally scaling workers.
+Infrastructure code to create horizontally scaling Metapage worker deployments on Google Cloud Platform.
 
 ## Basic Usage
 
@@ -23,6 +19,8 @@ Since the metrics to determine scaling are served from the workers themselves, a
 
 The module supports the creation of worker groups [with GPUs](https://cloud.google.com/compute/docs/gpus), by providing a definition with *either* N1-series instances and a populated `gpus` block, or accelerator-optimized instances with no `gpus` block included.
 
+Workers are currently scaled under the assumption that 1 CPU core should handle 1 job off the queue, so a VM with 4 CPUs will pull 4 jobs off the queue before the autoscaler decides it needs more worker VMs.
+
 ## Gotchas
 
 There are some quirks and things to be careful about when operating this module.
@@ -32,6 +30,7 @@ There are some quirks and things to be careful about when operating this module.
 - There are a number of failure points in the process required to autoscale the MIGs for our case, and those failures can happen silently. Ideally we build a dashboard in Cloud Monitoring to get a view of our system at a glance, but this doesn't include one yet. Places to check for failures include: 1) the /metrics endpoints on the MIG instance containers, 2) connectivity to request metrics from MIG instances from the metrics collector (especially load balancer, DNS, etc configuration), and 3) the metrics collector itself which processes and exports to Cloud Monitoring.
 - This module enables a number of Google APIs, and does *not* disable them or destroy the project when `terraform destroy` is run. If you want to be sure everything is torn down, you should delete your project manually in the GCP console.
 - The worker groups in this module don't yet scale to zero, so be careful about running expensive instance types -- especially if scaling limits are high! If there's any condition that causes the worker group to remain scaled out, you could be in for a nice surprise bill from GCP.
+- Worker MIGs are currently zonal, meaning they're confined to a single zone in the deployed region. This leaves them more vulnerable to zonal outages.
 
 # Terraform Module
 
