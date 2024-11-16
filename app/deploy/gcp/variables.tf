@@ -23,6 +23,10 @@ variable "worker_groups" {
     queue_id      = string
     instance_type = string
     cpus          = number
+    gpus = optional(object({
+      count = number
+      type  = string
+    }))
   }))
-  description = "Definitions of autoscaling worker groups to create. Map key will be used as the name of the worker group, so make sure it's DNS-friendly (no spaces, incompatible special characters, etc.)"
+  description = "Definitions of autoscaling worker groups to create. Map key will be used as the name of the worker group, so make sure it's DNS-friendly (no spaces, incompatible special characters, etc. The 'gpus' block is only appropriate for N1 series VMs with attached GPUs. If any other instance type is specified (like accelerator-optimized VMs), the 'gpus' block will be ignored.)"
 }
