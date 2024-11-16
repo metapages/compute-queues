@@ -121,6 +121,10 @@ module "worker_vm" {
     image = var.worker_image
     env = [
       {
+        name  = "METAPAGE_GENERATE_WORKER_ID"
+        value = true
+      },
+      {
         name  = "METAPAGE_WORKER_CPUS"
         value = each.value.cpus
       },
