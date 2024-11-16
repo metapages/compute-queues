@@ -43,19 +43,23 @@ resource "google_project_service" "dns" {
 }
 
 locals {
+  # Port the worker containers expose for http requests (to get metrics)
+  container_http_port = 8000
   # IP ranges used by GCE internal application load balancer, according to https://cloud.google.com/load-balancing/docs/health-check-concepts#ip-ranges
   gce_health_check_ip_ranges = [
     "35.191.0.0/16",
     "130.211.0.0/22"
   ]
-  opentelemetry_scrape_targets = join(", ", [for key, value in var.worker_groups : "'${key}.workers.internal'"])
+  worker_internal_domain       = "workers.internal"
+  worker_metrics_path          = "/metrics"
+  opentelemetry_scrape_targets = join(", ", [for key, value in var.worker_groups : "'${key}.${local.worker_internal_domain}'"])
   opentelemetry_config         = <<EOF
 receivers:
   prometheus:
     config:
       scrape_configs:
         - job_name: 'collect-worker-metrics'
-          metrics_path: '/metrics'
+          metrics_path: '${local.worker_metrics_path}'
           scheme: http
           static_configs:
             - targets: [${local.opentelemetry_scrape_targets}]
@@ -144,7 +148,7 @@ module "worker_vm" {
     ports = [
       {
         name           = "http"
-        container_port = 8000
+        container_port = local.container_http_port
       }
     ]
     volumeMounts = [
@@ -214,11 +218,11 @@ module "mig" {
   hostname          = each.key
   target_size       = 1
 
-  distribution_policy_zones = ["us-central1-a"]
+  distribution_policy_zones = ["${var.region}-a"]
   named_ports = [
     {
       name = "http",
-      port = 8000
+      port = local.container_http_port
     },
     {
       name = "ssh",
@@ -234,13 +238,13 @@ resource "google_compute_region_autoscaler" "this" {
   region   = var.region
   target   = module.mig[each.key].instance_group_manager.id
   autoscaling_policy {
-    max_replicas    = 10
-    min_replicas    = 1
-    cooldown_period = 15
+    max_replicas    = each.value.max_workers
+    min_replicas    = each.value.min_workers
+    cooldown_period = 30
     metric {
       name                       = "custom.googleapis.com/opentelemetry/queue_length"
-      filter                     = "resource.type = \"generic_task\" AND resource.label.task_id = \"${each.key}.workers.internal:80\""
-      single_instance_assignment = 1
+      filter                     = "resource.type = \"generic_task\" AND resource.label.task_id = \"${each.key}.${local.worker_internal_domain}:80\""
+      single_instance_assignment = each.value.cpus
     }
   }
 }
@@ -267,7 +271,7 @@ resource "google_compute_region_url_map" "this" {
   default_url_redirect {
     https_redirect         = false
     redirect_response_code = "TEMPORARY_REDIRECT"
-    host_redirect          = "nonexistent.workers.internal"
+    host_redirect          = "nonexistent.${local.worker_internal_domain}"
     path_redirect          = "/404"
     strip_query            = false
   }
@@ -275,7 +279,7 @@ resource "google_compute_region_url_map" "this" {
   dynamic "host_rule" {
     for_each = var.worker_groups
     content {
-      hosts        = ["${host_rule.key}.workers.internal"]
+      hosts        = ["${host_rule.key}.${local.worker_internal_domain}"]
       path_matcher = host_rule.key
     }
   }
@@ -283,7 +287,7 @@ resource "google_compute_region_url_map" "this" {
   dynamic "host_rule" {
     for_each = var.worker_groups
     content {
-      hosts        = ["${host_rule.key}.workers.internal:80"]
+      hosts        = ["${host_rule.key}.${local.worker_internal_domain}:80"]
       path_matcher = host_rule.key
     }
   }
@@ -316,7 +320,7 @@ resource "google_compute_firewall" "ilb" {
   network = data.google_compute_network.default.self_link
   allow {
     protocol = "tcp"
-    ports    = ["8000"]
+    ports    = [local.container_http_port]
   }
   source_ranges = ["10.10.0.0/24"]
   target_tags   = ["worker"]
@@ -328,7 +332,7 @@ resource "google_compute_firewall" "ilb_health_check" {
   network = data.google_compute_network.default.self_link
   allow {
     protocol = "tcp"
-    ports    = ["8000"]
+    ports    = [local.container_http_port]
   }
   source_ranges = local.gce_health_check_ip_ranges
   target_tags   = ["worker"]
@@ -340,8 +344,8 @@ resource "google_compute_region_health_check" "this" {
   check_interval_sec = 10
   timeout_sec        = 10
   http_health_check {
-    port         = 8000
-    request_path = "/metrics"
+    port         = local.container_http_port
+    request_path = local.worker_metrics_path
   }
 }
 
@@ -366,7 +370,7 @@ resource "google_compute_forwarding_rule" "this" {
 
 resource "google_dns_managed_zone" "workers" {
   name        = "workers"
-  dns_name    = "workers.internal."
+  dns_name    = "${local.worker_internal_domain}."
   description = "Internal DNS hostname for all worker MIGs"
 
   visibility = "private"
@@ -379,7 +383,7 @@ resource "google_dns_managed_zone" "workers" {
 }
 
 resource "google_dns_record_set" "workers" {
-  name         = "*.workers.internal."
+  name         = "*.${local.worker_internal_domain}."
   type         = "A"
   ttl          = 300
   managed_zone = google_dns_managed_zone.workers.name
@@ -414,7 +418,7 @@ data "google_compute_default_service_account" "default" {}
 resource "google_compute_instance" "metrics" {
   name         = "metrics-collector"
   machine_type = "e2-micro"
-  zone         = "us-central1-a"
+  zone         = "${var.region}-a"
 
   boot_disk {
     initialize_params {
