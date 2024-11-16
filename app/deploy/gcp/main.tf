@@ -48,7 +48,7 @@ locals {
     "35.191.0.0/16",
     "130.211.0.0/22"
   ]
-  opentelemetry_scrape_targets = join(", ", [for key, value in var.worker_groups : "'${key}.workers.internal:8000'"])
+  opentelemetry_scrape_targets = join(", ", [for key, value in var.worker_groups : "'${key}.workers.internal'"])
   opentelemetry_config         = <<EOF
 receivers:
   prometheus:
@@ -56,25 +56,30 @@ receivers:
       scrape_configs:
         - job_name: 'collect-worker-metrics'
           metrics_path: '/metrics'
+          scheme: http
           static_configs:
             - targets: [${local.opentelemetry_scrape_targets}]
+processors:
+  metricstransform:
+    transforms:
+      - include: queue_length
+        action: update
+        operations:
+          - action: toggle_scalar_data_type
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
 exporters:
   googlecloud:
     metric:
       prefix: custom.googleapis.com/opentelemetry/
-processors:
-  memory_limiter:
-    check_interval: 1s
-    limit_percentage: 80
-  batch:
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, metricstransform]
       exporters: [googlecloud]
 EOF
-  # opentelemetry_config_base64 = base64encode(local.opentelemetry_config)
 }
 
 # data "google_project" "this" {}
@@ -216,7 +221,7 @@ resource "google_compute_region_autoscaler" "this" {
     cooldown_period = 15
     metric {
       name                       = "custom.googleapis.com/opentelemetry/queue_length"
-      filter                     = "resource.type = \"gce_instance_group\""
+      filter                     = "resource.type = \"generic_task\" AND resource.label.task_id = \"${each.key}.workers.internal:80\""
       single_instance_assignment = 1
     }
   }
@@ -240,14 +245,27 @@ resource "google_compute_region_backend_service" "this" {
 resource "google_compute_region_url_map" "this" {
   name   = "metrics-to-mig"
   region = var.region
-  # This should be changed to something that isn't a user-defined MIG as default service...
-  default_service = google_compute_region_backend_service.this["a"].id
 
+  default_url_redirect {
+    https_redirect         = false
+    redirect_response_code = "TEMPORARY_REDIRECT"
+    host_redirect          = "nonexistent.workers.internal"
+    path_redirect          = "/404"
+    strip_query            = false
+  }
 
   dynamic "host_rule" {
     for_each = var.worker_groups
     content {
-      hosts        = ["${host_rule.key}.workers.internal."]
+      hosts        = ["${host_rule.key}.workers.internal"]
+      path_matcher = host_rule.key
+    }
+  }
+
+  dynamic "host_rule" {
+    for_each = var.worker_groups
+    content {
+      hosts        = ["${host_rule.key}.workers.internal:80"]
       path_matcher = host_rule.key
     }
   }
@@ -257,6 +275,10 @@ resource "google_compute_region_url_map" "this" {
     content {
       name            = path_matcher.key
       default_service = google_compute_region_backend_service.this[path_matcher.key].id
+      path_rule {
+        paths   = ["/"]
+        service = google_compute_region_backend_service.this[path_matcher.key].id
+      }
     }
   }
 }
@@ -317,7 +339,7 @@ resource "google_compute_forwarding_rule" "this" {
   depends_on            = [data.google_compute_subnetwork.default]
   ip_protocol           = "TCP"
   load_balancing_scheme = "INTERNAL_MANAGED"
-  port_range            = "8000"
+  port_range            = "80"
   target                = google_compute_region_target_http_proxy.this.id
   network               = data.google_compute_network.default.id
   subnetwork            = data.google_compute_subnetwork.default.id
@@ -345,22 +367,6 @@ resource "google_dns_record_set" "workers" {
   managed_zone = google_dns_managed_zone.workers.name
   rrdatas      = [google_compute_forwarding_rule.this.ip_address]
 }
-
-# resource "google_monitoring_metric_descriptor" "queue_length" {
-#   description  = "The length of the job queue for a given queue ID."
-#   type         = "custom.googleapis.com/opentelemetry/queue_length"
-#   metric_kind  = "GAUGE"
-#   value_type   = "DOUBLE"
-#   unit         = "1"
-#   display_name = "Queue Length"
-#
-#   # TODO: Update this to be queue ID or similar
-#   labels {
-#     key         = "instance_id"
-#     value_type  = "STRING"
-#     description = "Instance identifier."
-#   }
-# }
 
 module "metrics_container" {
   source  = "terraform-google-modules/container-vm/google"
