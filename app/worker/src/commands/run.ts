@@ -245,6 +245,7 @@ export const runCommand = new Command()
     "Data directory",
     { default: "/tmp/worker-metapage-io" },
   )
+  .option("--id [id:string]", "Custom worker ID")
   .action(async (options, queue: string) => {
     const {
       cpus,
@@ -253,14 +254,16 @@ export const runCommand = new Command()
       mode,
       port,
       dataDirectory,
+      id,
     } = options as {
-      cpus: number;
-      gpus: number;
-      apiServerAddress: string;
+       cpus: number;
+       gpus: number;
+       apiServerAddress: string;
       mode: string;
       port: number;
       dataDirectory: string;
-    };
+      id: string;
+     };
 
     if (!queue) {
       throw new Error("Must supply the queue id");
@@ -341,17 +344,8 @@ export const runCommand = new Command()
         queueId: config.queue,
         cpus: config.cpus,
         gpus: config.gpus,
-        workerId: config.id,
+        workerId: id || config.id,
         port: config.port,
       });
-
-      Deno.serve({
-        port: config.port,
-        onListen: () => {
-          console.log(
-            `Metrics accessible at: http://localhost:${config.port}/metrics`,
-          );
-        },
-      }, metricsHandler);
     }
   });

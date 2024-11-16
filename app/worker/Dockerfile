@@ -11,7 +11,8 @@ ENV DOCKER_VERSION=5:27.1.1-1~debian.12~bookworm
 RUN apt-get update && apt-get -y install \
 	curl \
 	ca-certificates \
-	fuse-overlayfs && \
+	fuse-overlayfs \
+	uuid-runtime && \
 	install -m 0755 -d /etc/apt/keyrings && \
 	curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && \
 	chmod a+r /etc/apt/keyrings/docker.asc && \
