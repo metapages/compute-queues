@@ -10,13 +10,13 @@ worker_groups = {
     instance_type = "n1-standard-1"
     cpus          = 1
   }
-  # b = {
-  #   queue_id      = "652ab68e-5f7b-11ef-b136-6f3c51289ae7"
-  #   instance_type = "n4-standard-2"
-  #   min_workers   = 2
-  #   max_workers   = 6
-  #   cpus          = 2
-  # }
+  b = {
+    queue_id      = "652ab68e-5f7b-11ef-b136-6f3c51289ae7"
+    instance_type = "n1-standard-2"
+    min_workers   = 2
+    max_workers   = 6
+    cpus          = 2
+  }
   # A worker group of basic N1 series VMs with attached GPUs
   # c = {
   #   queue_id      = "81e93644-4af2-11ef-a58f-676a7833797e"
