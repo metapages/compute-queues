@@ -9,7 +9,7 @@ import {
   StateChangeValueWorkerFinished,
 } from "/@/shared";
 
-import { useMetaframeAndInput } from "@metapages/metaframe-hook";
+import { useMetaframeAndInput } from "@metapages/metaframe-react-hook";
 import { isIframe, MetaframeInputMap } from "@metapages/metapage";
 
 import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
