@@ -40,7 +40,7 @@ export const serverWebsocket = (): void => {
     if (!address || address === "") {
       return;
     }
-    const url = `${websocketConnectionUrl}/${address}/client`;
+    const url = `${websocketConnectionUrl}${address}/client`;
     setIsServerConnected(false);
     const rws = new ReconnectingWebSocket(url);
     let timeLastPong = Date.now();

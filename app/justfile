@@ -33,7 +33,8 @@ up +args="": _ensure-all _mkcert
     # Having issues with the worker
     docker compose --project-name=dev rm --force 2>/dev/null || true
     docker rm dev-worker-1 2>/dev/null || true
-    docker compose --project-name=dev up --build --remove-orphans {{args}}
+    #  --build
+    docker compose --project-name=dev up --remove-orphans {{args}}
 
 # Shut down the local stack: 'docker compose down'
 down +args="":
@@ -121,9 +122,9 @@ test: check
     docker compose --project-name=test down || true
 
 clean:
-    rm -rf .cache
-    just browser/clean
     docker compose --project-name=dev down -v
+    just browser/clean
+    rm -rf .cache
 
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":
@@ -131,9 +132,27 @@ clean:
 
 # DEV: generate TLS certs for HTTPS over localhost https://blog.filippo.io/mkcert-valid-https-certificates-for-localhost/
 @_mkcert: _ensure_mkcert
-    if [ ! -f .cache/traefik/certs/local-key.pem ]; then \
-        FQDN={{APP_FQDN}} CERT_NAME=local CERTS_DIR=.cache/traefik/certs deno run --allow-all https://deno.land/x/metapages@v0.0.27/commands/ensure_mkcert.ts ;\
+    #!/usr/bin/env bash
+    rm -rf .cache/traefik/certs
+    mkdir -p .cache/traefik/certs/ ;
+    mkcert -cert-file .cache/traefik/certs/local-cert.pem -key-file .cache/traefik/certs/local-key.pem {{APP_FQDN}} minio.{{APP_FQDN}} localhost ;
+    if grep -q "{{APP_FQDN}}" /etc/hosts; then
+        echo -e "✅ Hostname {{APP_FQDN}} found in /etc/hosts"
+    else
+        echo -e "💥 Hostname {{APP_FQDN}} not found in /etc/hosts"
+        echo -e "👉 Add: '127.0.0.1   {{APP_FQDN}}' to /etc/hosts"
+        exit 1
     fi
+    if grep -q "minio.{{APP_FQDN}}" /etc/hosts; then
+        echo -e "✅ Hostname minio.{{APP_FQDN}} found in /etc/hosts"
+    else
+        echo -e "💥 Hostname minio.{{APP_FQDN}} not found in /etc/hosts"
+        echo -e "👉 Add: '127.0.0.1   minio.{{APP_FQDN}}' to /etc/hosts"
+        exit 1
+    fi
+    # if [ ! -f .cache/traefik/certs/local-key.pem ]; then \
+    #     FQDN={{APP_FQDN}} CERT_NAME=local CERTS_DIR=.cache/traefik/certs deno run --allow-all https://deno.land/x/metapages@v0.0.27/commands/ensure_mkcert.ts ;\
+    # fi
 
 @_ensure-all: _ensure_docker _ensure_deno
 

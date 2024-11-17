@@ -22,7 +22,7 @@ export const bucketParams = {
 };
 
 const config = {
-  sslEnabled: AWS_ACCESS_KEY_ID.includes("minio") ? false : true,
+  sslEnabled: true, //AWS_ACCESS_KEY_ID.includes("minio") ? false : true,
   credentials: {
     accessKeyId: AWS_ACCESS_KEY_ID,
     secretAccessKey: AWS_SECRET_ACCESS_KEY,
