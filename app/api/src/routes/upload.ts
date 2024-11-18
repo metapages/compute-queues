@@ -26,7 +26,8 @@ export const uploadHandler = async (c: Context) => {
     const command = new PutObjectCommand({ ...bucketParams, Key: key, });
     try {
 
-        const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        let url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        url = url.replace('http://', 'https://');
         return c.json({
             url, ref: {
                 value: key, // no http means we know it's an internal address, workers will know how to reach

@@ -476,7 +476,7 @@ export class DockerJobQueue {
                 } else {
                     // get outputs
                     try {
-                        console.log(`[${this.workerIdShort}] [${jobBlob.hash.substring(0,6)}] getting outputs`);
+                        console.log(`[${this.workerIdShort}] [${jobBlob.hash.substring(0,6)}] uploading outputs`);
                         const outputs = await getOutputs(jobBlob, this.workerId);
                         valueFinished = {
                             reason: DockerJobFinishedReason.Success,
@@ -485,9 +485,10 @@ export class DockerJobQueue {
                             result: { ...result, outputs },
                         };
                     } catch (err) {
-                        console.log(`[${this.workerIdShort}] [${jobBlob.hash.substring(0,6)}] 💥 failed to getOutputs ${err}`);
+                        console.log(`[${this.workerIdShort}] [${jobBlob.hash.substring(0,6)}] 💥 failed to upload outputs ${err}`);
                         resultWithOutputs.logs = resultWithOutputs.logs || [];
-                        resultWithOutputs.logs.push([`💥 failed to get job outputs`, Date.now(), true], [`${err}`, Date.now(), true]);
+                        console.error(err);
+                        resultWithOutputs.logs.push([`💥 failed to get job outputs`, Date.now(), true], [`err=${err}`, Date.now(), true]);
                         valueFinished = {
                             reason: DockerJobFinishedReason.Error,
                             worker: this.workerId,

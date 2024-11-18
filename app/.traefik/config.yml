@@ -2,3 +2,19 @@ tls:
   certificates:
     - certFile: "/etc/certs/local-cert.pem"
       keyFile: "/etc/certs/local-key.pem"
+
+http:
+  middlewares:
+    cors-middleware:
+      headers:
+        accessControlAllowMethods:
+          - "GET"
+          - "OPTIONS"
+          - "PUT"
+          - "POST"
+          - "DELETE"
+        accessControlAllowHeaders: "*"
+        accessControlAllowOriginList: "*"
+        accessControlMaxAge: 100
+        accessControlAllowCredentials: true
+        addVaryHeader: true

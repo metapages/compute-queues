@@ -25,7 +25,8 @@ export const downloadHandler = async (c: Context) => {
     // ContentMD5?: string;
     // ContentType?: string;
     const command = new GetObjectCommand({ ...bucketParams, Key: key});
-    const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    let url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    url = url.replace('http://', 'https://');
     return c.json({
         url, ref: {
             value: url,

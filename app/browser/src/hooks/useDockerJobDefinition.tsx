@@ -16,7 +16,7 @@ import {
 } from "/@/shared";
 
 import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query";
-import { useMetaframeAndInput } from "@metapages/metaframe-hook";
+import { useMetaframeAndInput } from "@metapages/metaframe-react-hook";
 import { DataRefSerialized, Metaframe } from "@metapages/metapage";
 
 import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
@@ -137,7 +137,11 @@ export const useDockerJobDefinition = () => {
 
       // at this point, these inputs *could* be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
+      
       definition.inputs = await copyLargeBlobsToCloud(definition.inputs, UPLOAD_DOWNLOAD_BASE_URL);
+      if (cancelled) {
+        return;
+      }
       definition.configFiles = await copyLargeBlobsToCloud(definition.configFiles, UPLOAD_DOWNLOAD_BASE_URL);
       if (cancelled) {
         return;
@@ -145,17 +149,20 @@ export const useDockerJobDefinition = () => {
 
       // if uploading a large blob means new inputs have arrived and replaced this set, break out
       const jobHashCurrent = await shaObject(definition);
+      if (cancelled) {
+        return;
+      }
       const newJobDefinition: DockerJobDefinitionMetadata = {
         hash: jobHashCurrent,
         definition,
         debug,
       };
 
-      setNewJobDefinition(newJobDefinition);
-
-      return () => {
-        cancelled = true;
-      };
+      setNewJobDefinition(newJobDefinition);      
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, debug]);
 };
