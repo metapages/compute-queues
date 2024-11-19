@@ -1,7 +1,7 @@
 import fetchRetry from "fetch-retry";
 import stringify from "safe-stable-stringify";
 import { create } from "mutative";
-import { DataRef, DockerJobDefinitionInputRefs } from "./types.js";
+import { DataRef, DockerJobDefinitionInputRefs } from "./types.ts";
 
 export const shaDockerJob = async (job: DockerJobDefinitionInputRefs): Promise<string> => {
 

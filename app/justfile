@@ -46,11 +46,17 @@ down +args="":
 
 # Quick compilation checks
 @check: _ensure-all
+  echo -n "worker check..."
   just worker/check
+  echo -n "api check..."
   just api/check
+  echo -n "browser check..."
   just browser/check
+  echo -n "test check..."
   just test/check
+  echo -n "shared check..."
   just shared/check
+  echo -n "cli check..."
   just cli/check
 
 status queue="local1":
