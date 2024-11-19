@@ -2,12 +2,14 @@
   "imports": {
     "/@/shared": "./src/mod.ts",
     "@metapages/hash-query": "npm:@metapages/hash-query@0.4.8",
-    "@metapages/metapage": "npm:@metapages/metapage@0.16.0",
+    "@metapages/metapage": "npm:@metapages/metapage@1.0.21",
     "fast-deep-equal/es6": "npm:fast-deep-equal/es6/index.js",
     "object-hash" : "npm:object-hash@3.0.0",
+    "mutative": "npm:mutative@1.0.11",
     "fetch-retry": "npm:fetch-retry@5.0.6",
     "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3",
     "oblivious-set": "npm:oblivious-set@1.4.0",
     "uuid": "npm:uuid@9.0.1"
-  }
+  },
+  "unstable": ["sloppy-imports"]
 }

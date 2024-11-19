@@ -1,7 +1,37 @@
 import fetchRetry from "fetch-retry";
 import stringify from "safe-stable-stringify";
+import { create } from "mutative";
+import { DataRef, DockerJobDefinitionInputRefs } from "./types.js";
 
-// eslint-disable-next-line
+export const shaDockerJob = async (job: DockerJobDefinitionInputRefs): Promise<string> => {
+
+  const jobReadyForSha = create(job, (draft :DockerJobDefinitionInputRefs) => {
+    // Remove any presignedurl/... from the URLs
+    const configFiles = draft.configFiles;
+    if (configFiles) {
+      Object.keys(configFiles).forEach(key => {
+        if (configFiles[key].type === "url" && (configFiles[key] as DataRef<string>)?.value.includes("/presignedurl/")) {
+          const tokens = (configFiles[key] as DataRef<string>).value.split("/presignedurl/");
+          configFiles[key].value = tokens[0];
+        }
+      });
+    }
+
+    // Remove any presignedurl/... from the URLs
+    const inputs = draft.inputs;
+    if (inputs) {
+      Object.keys(inputs).forEach(key => {
+        if (inputs[key].type === "url" && (inputs[key] as DataRef<string>)?.value.includes("/presignedurl/")) {
+          const tokens = (inputs[key] as DataRef<string>).value.split("/presignedurl/");
+          inputs[key].value = tokens[0];
+        }
+      });
+    }
+  });
+
+  return shaObject(jobReadyForSha);
+};
+
 export const shaObject = async (obj: any): Promise<string> => {
   const orderedStringFromObject = stringify(obj);
   const msgBuffer = new TextEncoder().encode(orderedStringFromObject);

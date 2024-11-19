@@ -12,6 +12,7 @@ import {
   DockerJobDefinitionParamsInUrlHash,
   isDataRef,
   JobInputs,
+  shaDockerJob,
   shaObject,
 } from "/@/shared";
 
@@ -148,7 +149,7 @@ export const useDockerJobDefinition = () => {
       }
 
       // if uploading a large blob means new inputs have arrived and replaced this set, break out
-      const jobHashCurrent = await shaObject(definition);
+      const jobHashCurrent = await shaDockerJob(definition);
       if (cancelled) {
         return;
       }
