@@ -20,6 +20,7 @@ import {
 } from './types.ts';
 import {
   fetchRobust as fetch,
+  shaDockerJob,
   shaObject,
 } from './util.ts';
 
@@ -56,7 +57,7 @@ export const createNewContainerJobMessage = async (opts: {
     time: Date.now(),
   };
   if (!jobId) {
-    jobId = await shaObject(definition);
+    jobId = await shaDockerJob(definition);
   }
   const payload: StateChange = {
     state: DockerJobState.Queued,
