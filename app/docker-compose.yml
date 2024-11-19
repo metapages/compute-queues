@@ -6,18 +6,13 @@ services:
     depends_on:
       api1: 
         condition: service_healthy
-      api2: 
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-      denokv:
-        condition: service_started
     image: denoland/deno:alpine-2.0.3
     command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
     working_dir: /app/test
     extra_hosts:
       - host.docker.internal:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
+      - worker-metaframe.localhost:host-gateway
     environment:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - API_URL=http://api1:8081
@@ -85,6 +80,7 @@ services:
       - host.docker.internal:host-gateway
       - local.graphql.nhost.run:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
+      - worker-metaframe.localhost:host-gateway
     labels:
       - "custom.label=worker-metaframe.localhost"
       - "traefik.enable=true"
@@ -138,6 +134,7 @@ services:
       - host.docker.internal:host-gateway
       - local.graphql.nhost.run:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
+      - worker-metaframe.localhost:host-gateway
     # labels:
     #   - "custom.label=worker-metaframe.localhost"
       # - "traefik.enable=true"
@@ -153,8 +150,6 @@ services:
         condition: service_healthy
       api2: 
         condition: service_healthy
-      minio: 
-        condition: service_started
     # Add dev useful stuff
     # "--unsafely-ignore-certificate-errors" is needed because the worker doesn't
     entrypoint: ["deno", "run", "--unsafely-ignore-certificate-errors", "--watch", "--allow-all", "src/cli.ts"]
@@ -177,11 +172,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - deno:/deno
       - node_modules_worker:/app/worker/node_modules
-    network_mode: "host"
-    # extra_hosts:
-    #   - host.docker.internal:host-gateway
-    #   - local.storage.local.nhost.run:host-gateway
-    #   - minio.worker-metaframe.localhost:host-gateway
+    # network_mode: "host"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - local.storage.local.nhost.run:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
+      - worker-metaframe.localhost:host-gateway
     # networks:
     #   - default
     logging:
@@ -283,8 +279,6 @@ services:
     command: server --address :9000 /data
     expose:
       - "9000"
-    ports:
-      - "9000:9000"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
@@ -345,7 +339,7 @@ services:
       - host.docker.internal:host-gateway
     ports:
       # The Traefik Web UI port (enabled by api:insecure: true in traefik.yml)
-      - "${TRAEFIK_WEB_UI_PORT:-8080}:8080"
+      # - "${TRAEFIK_WEB_UI_PORT:-8080}:8080"
       # HTTPS / SSL port
       - "${APP_PORT:-443}:${APP_PORT:-443}"
       # Disable the other ports to avoid conflicts
