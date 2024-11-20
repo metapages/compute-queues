@@ -3,8 +3,8 @@ import { Box, HStack, Spacer, Icon, Tooltip, useMediaQuery } from "@chakra-ui/re
 import { QuestionMark } from "@phosphor-icons/react";
 import { useStore } from "/@/store";
 
-import { JobStatus } from "/@/components/footer/JobStatus";
 import { QueueIconAndModal } from "/@/components/sections/queue/QueueIconAndModal";
+import { EditInput } from "./footer/EditInput";
 
 export const MainFooter: React.FC = () => {
   const [isLargerThan400] = useMediaQuery("(min-width: 400px)");
@@ -15,7 +15,7 @@ export const MainFooter: React.FC = () => {
   return (
     <Box bg={"gray.100"} px={3} borderTop={"1px"} minWidth="100vw" h={"footerHeight"}>
       <HStack justify={"space-between"} h={"3.5rem"}>
-        <JobStatus />
+        <EditInput />
         <Spacer />
         {isLargerThan400 && (
           <HStack gap={3}>
