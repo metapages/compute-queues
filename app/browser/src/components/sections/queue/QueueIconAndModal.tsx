@@ -19,11 +19,15 @@ export const QueueIconAndModal: React.FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const workers = useStore(state => state.workers);
   const [queue] = useHashParam("queue", "");
-  const isNoWorkers = !workers?.workers || Object.keys(workers.workers).length === 0;
+  const workerCount = workers?.workers ? Object.keys(workers.workers).length : 0;
+  const isNoWorkers = workerCount === 0;
+  // const backgroundColor = !queue ? "red.300" : isNoWorkers ? "orange" : "none";
+  const color = !queue ? undefined : isNoWorkers ? "orange" : "none";
+  const textColor = !queue ? (isOpen ? undefined : "red.300") : isNoWorkers ? undefined : undefined;
 
   return (
     <>
-      {!queue ? (
+      {/* {!queue ? (
         <Text align={"start"} color={"red"} fontWeight={500}>
           Please enter a queue:
         </Text>
@@ -31,12 +35,16 @@ export const QueueIconAndModal: React.FC = () => {
         <Text align={"start"} color={"red"} fontWeight={500}>
           No workers in the queue
         </Text>
-      ) : null}
-      <Tooltip label={"Queue"}>
+      ) : null} */}
+      <Tooltip defaultIsOpen={!queue && !isOpen} label={!queue ? "Set a queue key" : isNoWorkers ? `Queue workers: ${workerCount}` : `Queue workers: ${workerCount}`}>
         <Icon
           as={QueueIcon}
+
           _hover={{ bg: "gray.300" }}
+          color={color}
+          // bg={isOpen ? "gray.300" : backgroundColor}
           bg={isOpen ? "gray.300" : "none"}
+          textColor={textColor}
           p={"3px"}
           borderRadius={5}
           boxSize="6"

@@ -137,7 +137,7 @@ clean:
     just worker/publish-docker-images {{version}}
 
 # DEV: generate TLS certs for HTTPS over localhost https://blog.filippo.io/mkcert-valid-https-certificates-for-localhost/
-@_mkcert: _ensure_mkcert
+_mkcert: _ensure_mkcert
     #!/usr/bin/env bash
     rm -rf .cache/traefik/certs
     mkdir -p .cache/traefik/certs/ ;

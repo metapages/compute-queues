@@ -6,7 +6,7 @@ Run a worker pointing to a queue `public1` (you can change this queue name to an
 unguessable):
 
 ```
-docker run  --pull always --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.38.13 run --cpus=4 --gpus=1 public1
+docker run  --pull always --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.38.13 run --cpus=4 --gpus=0 public1
 ```
 
 ## Quickstart: Run a job from the browser
@@ -42,7 +42,7 @@ Use cases:
 - machine learning pipelines
 - data analysis workflows
 
-Any time the inputs change (and on start) the configured docker contaner is run:
+Any time the inputs change (and on start) the configured docker container is run:
 
 - `/inputs` is the location where inputs are copied as files
 - `/outputs`: any files here when the container exits are passed on as metaframe outputs
@@ -70,7 +70,7 @@ can run any programming language.
 ## Getting started
 
 1. Create a queue
-   - Click the connect button in the top-left
+   - Click the connect button in the bottom-right
    - A "queue" is simply string or key
    - The part of the URL that looks like `#?queue=my-queue-e7eebea2-c607-11ee-84de-b7a272dd08fc`
    - Best if the `queue` value is a long impossible to guess string e.g. a GUID
@@ -78,10 +78,10 @@ can run any programming language.
 2. Configure the docker job
 3. Run a worker (or a bunch) pointing to a queue: `public1` (warning: this is a public shared compute queue)
    ```
-   docker run --pull always --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.38.13 run --cpus=4 --gpus=1 public1
+   docker run --pull always --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.38.13 run --cpus=4 --gpus=0 public1
    ```
 
-**Coming soon:** GPU support
+If you have GPUs, you can add `--gpus=1` (or more) to the worker command.
 
 ## Example URL
 
