@@ -64,9 +64,6 @@ export const useSendJobOutputs = () => {
 
   // only maybe update metaframe outputs if the job updates and is finished (with outputs)
   useEffect(() => {
-    if (!jobStartsAutomatically && !userClickedRun) {
-      return;
-    }
 
     const metaframeObj = metaframeBlob?.metaframe;
 
@@ -78,11 +75,13 @@ export const useSendJobOutputs = () => {
     ) {
       // this is like a reset
       jobHashOutputsLastSent.current = undefined;
+      // console.log(`💔 useEffect not sending outputs because of conditions metaframeObj?.setOutputs=${metaframeObj?.setOutputs} dockerJobServer=${dockerJobServer} dockerJobServer?.state=${dockerJobServer?.state} isIframe=${isIframe()} `);
       return;
     }
     const stateFinished = dockerJobServer.value as StateChangeValueWorkerFinished;
     const result: DockerRunResultWithOutputs = stateFinished.result;
     if (!result) {
+      // console.log(`💔 useEffect not sending outputs because result is undefined`);
       return;
     }
     const { outputs } = result;
@@ -92,10 +91,10 @@ export const useSendJobOutputs = () => {
       return;
     }
 
-    // if (jobHashOutputsLastSent.current === dockerJobServer.hash) {
-    //   console.log(`💔 NOT sending outputs to metaframe, did it already`);
-    //   return;
-    // }
+    if (jobHashOutputsLastSent.current === dockerJobServer.hash) {
+      // console.log(`💔 NOT sending outputs to metaframe, did it already`);
+      return;
+    }
 
     (async () => {
       if (resolveDataRefs) {
@@ -126,9 +125,10 @@ export const useSendJobOutputs = () => {
       } else {
         // console.log(`💚 Sending outputs to metaframe`, outputs);
         const keysToUrlsOutputs = outputs ? await convertMetaframeOutputKeysToUrls(outputs) : outputs;
+        // console.log(`💚💚 Sending outputs to metaframe keysToUrlsOutputs`, keysToUrlsOutputs);
         metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
         jobHashOutputsLastSent.current = dockerJobServer.hash;
       }
     })();
-  }, [dockerJobServer, metaframeBlob?.metaframe, userClickedRun, jobStartsAutomatically]);
+  }, [dockerJobServer, metaframeBlob?.metaframe]);
 };
