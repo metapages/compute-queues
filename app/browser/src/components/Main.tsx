@@ -13,9 +13,11 @@ import { PanelSettings } from "/@/components/sections/PanelSettings";
 import { JobControlButton } from "/@/components/header/JobControlButton";
 import { JobStatus } from "/@/components/footer/JobStatus";
 import { PanelDocs } from "/@/components/sections/PanelDocs";
+import { PanelTerminal } from "/@/components/sections/PanelTerminal";
 
 export const Main: React.FC = () => {
   const rightPanelContext = useStore(state => state.rightPanelContext);
+  const showTerminal = useStore(state => state.showTerminal);
   const [isWiderThan1000] = useMediaQuery("(min-width: 1000px)");
   const [isTallerThan200] = useMediaQuery("(min-height: 200px)");
 
@@ -44,6 +46,9 @@ export const Main: React.FC = () => {
       rightWidth = "50%";
     }
   }
+  console.log(showTerminal)
+
+  const leftContent = showTerminal ? <PanelTerminal /> : <PanelLogs mode={stdErrShown ? "stdout" : "stdout+stderr"} />
   const leftWidth = `calc(100% - ${rightWidth})`;
 
   if (!isTallerThan200) {
@@ -61,7 +66,7 @@ export const Main: React.FC = () => {
       <MainHeader />
       <HStack gap={0} w={"100%"} minW="100vw" minH={"contentHeight"}>
         <Box minW={leftWidth} minH={"contentHeight"}>
-          <PanelLogs mode={stdErrShown ? "stdout" : "stdout+stderr"} />
+          {leftContent}
         </Box>
         <Box minW={rightWidth} minH={"contentHeight"} borderLeft={rightContent && "1px"}>
           {rightContent}

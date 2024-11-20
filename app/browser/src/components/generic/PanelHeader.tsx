@@ -8,9 +8,11 @@ interface PanelHeaderProps {
   title: string;
   onSave?: () => void;
   preserveCase?: boolean;
+  onClose?: () => void;
+  onClearTerminal?: () => void;
 }
 
-export const PanelHeader: React.FC<PanelHeaderProps> = ({ title, onSave, preserveCase }) => {
+export const PanelHeader: React.FC<PanelHeaderProps> = ({ title, onSave, preserveCase, onClose, onClearTerminal }) => {
   const setRightPanelContext = useStore(state => state.setRightPanelContext);
   const titleText = preserveCase ? title : title.toUpperCase();
   return (
@@ -23,7 +25,12 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({ title, onSave, preserv
               Save
             </Text>
           )}
-          <Icon boxSize={"1rem"} as={X} onClick={() => setRightPanelContext(null)}></Icon>
+          {onClearTerminal && (
+            <Text cursor={"pointer"} fontSize={"0.7rem"} onClick={onClearTerminal}>
+              Clear
+            </Text>
+          )}
+          <Icon boxSize={"1rem"} as={X} onClick={onClose ? onClose : () => setRightPanelContext(null)}></Icon>
         </HStack>
       </HStack>
     </PanelHeaderContainer>

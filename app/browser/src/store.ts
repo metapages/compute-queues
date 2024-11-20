@@ -74,6 +74,9 @@ interface MainStore {
   sendMessage: WebsocketMessageSenderClient;
   setSendMessage: (sendMessage: WebsocketMessageSenderClient) => void;
 
+  /** wrapper for sending messages from the terminal emulator */
+  sendConsoleMessage: (message: string, jobId: string) => void;
+
   /** Sends the websocket message to the API server */
   rawMessage: WebsocketMessageServerBroadcast | undefined;
   setRawMessage: (rawMessage: WebsocketMessageServerBroadcast) => void;
@@ -96,6 +99,9 @@ interface MainStore {
   appendRunLogs: (logs: ConsoleLogLine[] | null) => void;
 
   handleJobStatusPayload: (status: JobStatusPayload) => void;
+
+  setShowTerminal: (showTerminal: boolean) => void;
+  showTerminal: boolean;
 
   setRightPanelContext: (context: string | null) => void;
   rightPanelContext: string | null;
@@ -343,7 +349,6 @@ export const useStore = create<MainStore>((set, get) => ({
 
   // the initial sendMessage just caches the messages to send later
   sendMessage: cacheInsteadOfSendMessages,
-
   setSendMessage: (sendMessage: WebsocketMessageSenderClient) => {
     // Send the cached messages
     if (sendMessage !== cacheInsteadOfSendMessages) {
@@ -352,6 +357,20 @@ export const useStore = create<MainStore>((set, get) => ({
       sendMessage(msg);
     }
     set(() => ({ sendMessage }));
+  },
+
+  sendConsoleMessage: (message: string, jobId: string) => {
+    const payload: WebsocketMessageClientToServer = {
+      type: WebsocketMessageTypeClientToServer.ConsoleMessage,
+      payload: {
+        jobId,
+        message,
+      }
+    };
+    set((state) => {
+      state.sendMessage(payload);
+      return {};
+    })
   },
 
   rawMessage: undefined,
@@ -402,6 +421,11 @@ export const useStore = create<MainStore>((set, get) => ({
         break;
     }
   },
+
+  setShowTerminal: (showTerminal: boolean) => {
+    set(() => ({ showTerminal }));
+  },
+  showTerminal: false,
 
   setRightPanelContext: (rightPanelContext: string | null) => {
     set(() => ({ rightPanelContext }));

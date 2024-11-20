@@ -8,7 +8,6 @@ import {
   ModalHeader,
   ModalOverlay,
   Container,
-  Text,
 } from "@chakra-ui/react";
 import { Queue as QueueIcon } from "@phosphor-icons/react";
 import { Queue } from "/@/components/sections/queue/Queue";
@@ -20,26 +19,23 @@ export const QueueIconAndModal: React.FC = () => {
   const workers = useStore(state => state.workers);
   const [queue] = useHashParam("queue", "");
   const isNoWorkers = !workers?.workers || Object.keys(workers.workers).length === 0;
-
+  let toolTipText = "Queue";
+  if (!queue) {
+    toolTipText = "Enter a queue";
+  } else if (isNoWorkers) {
+    toolTipText = "No workers in queue";
+  }
   return (
     <>
-      {!queue ? (
-        <Text align={"start"} color={"red"} fontWeight={500}>
-          Please enter a queue:
-        </Text>
-      ) : isNoWorkers ? (
-        <Text align={"start"} color={"red"} fontWeight={500}>
-          No workers in the queue
-        </Text>
-      ) : null}
-      <Tooltip label={"Queue"}>
+      <Tooltip bg={toolTipText !== "Queue" && 'red.600'} label={toolTipText}>
         <Icon
           as={QueueIcon}
-          _hover={{ bg: "gray.300" }}
+          _hover={{ bg: queue ? "gray.300" : 'red.100' }}
           bg={isOpen ? "gray.300" : "none"}
           p={"3px"}
           borderRadius={5}
           boxSize="6"
+          color={(!queue || isNoWorkers) && 'red'}
           onClick={onOpen}
         />
       </Tooltip>

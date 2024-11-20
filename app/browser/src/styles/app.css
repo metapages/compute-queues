@@ -2,3 +2,31 @@
   justify-content: flex-end !important;
   opacity: 0.8;
 }
+
+.xterm {
+  height: 100%;
+  width: 100%;
+  padding: 1rem;
+  background-color: aqua !important;
+  overflow: hidden !important;
+}
+
+.xterm-dom-renderer-owner-1 .xterm-rows {
+  font-family: 'JetBrains Mono Variable', monospace !important;
+  /* font-size: 1rem; */
+  width: calc(100% - 2rem) !important;
+}
+
+.xterm-dom-renderer-owner-1 span {
+  font-family: 'JetBrains Mono Variable', monospace !important;
+  font-size: 0.8rem;
+}
+
+.xterm-dom-renderer-owner-1 .xterm-viewport {
+  background: #585858 !important;
+}
+
+body {
+  width: 100%;
+  overflow: hidden;
+}
