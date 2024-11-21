@@ -71,6 +71,7 @@ export interface DockerJobArgs {
   errStream?: Writable;
   deviceRequests?: DockerApiDeviceRequest[];
   durationMax?: number;
+  stdin?: boolean;
 }
 
 // this comes out

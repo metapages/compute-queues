@@ -73,6 +73,9 @@ export type DockerJobDefinitionInputsBase64V1 = {
   configFiles?: InputsBase64String;
   durationMax?: number;
   gpu?: boolean;
+  // if true, the worker will send stdin to the container
+  // and the container will run until stdin is closed
+  stdin?: boolean;
 };
 
 // as soon as the DockerJobDefinition hits the server, it is converted
