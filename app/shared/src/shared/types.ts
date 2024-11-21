@@ -258,9 +258,14 @@ export interface PayloadQueryJob {
   jobId: string;
 }
 
+export interface PayloadConsoleMessage {
+  jobId: string;
+  message: string;
+}
+
 export interface WebsocketMessageClientToServer {
   type: WebsocketMessageTypeClientToServer;
-  payload: StateChange | PayloadClearJobCache | PayloadResubmitJob | PayloadQueryJob;
+  payload: StateChange | PayloadClearJobCache | PayloadResubmitJob | PayloadQueryJob | PayloadConsoleMessage;
 }
 export type WebsocketMessageSenderClient = (message: WebsocketMessageClientToServer) => void;
 
