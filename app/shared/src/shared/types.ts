@@ -234,6 +234,7 @@ export enum WebsocketMessageTypeClientToServer {
   ClearJobCache = "ClearJobCache",
   ResubmitJob = "ResubmitJob",
   QueryJob = "QueryJob",
+  ConsoleMessage = "ConsoleMessage",
 }
 export interface PayloadClearJobCache {
   jobId: string;

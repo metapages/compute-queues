@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useJobSubmissionHook } from "/@/hooks/useJobSubmissionHook";
 import { DockerJobFinishedReason, DockerJobState, StateChangeValueWorkerFinished } from "/@/shared/types";
 
-import { Button, HStack, Icon, Spacer, Text, useMediaQuery } from "@chakra-ui/react";
+import { Button, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { useHashParam } from "@metapages/hash-query";
 import { Lock, Play, Queue as QueueIcon, Repeat, Stop } from "@phosphor-icons/react";
 
@@ -70,6 +70,7 @@ export const JobControlButton: React.FC = () => {
   const disabledButton = (
     <HeaderButton
       ariaLabel="Disabled"
+      tooltip="Disabled"
       text={isLargerThan600 ? "Disabled" : ""}
       icon={<Icon as={Lock} size={"1.2rem"} />}
     />
@@ -78,6 +79,7 @@ export const JobControlButton: React.FC = () => {
   const cancelButton = (
     <HeaderButton
       ariaLabel="Stop-job"
+      tooltip="Stop the job"
       icon={<Stop weight="duotone" color="red" size={"1.2rem"} />}
       onClick={onClickCancel}
       text={isLargerThan600 ? "Stop Job" : ""}
@@ -88,6 +90,7 @@ export const JobControlButton: React.FC = () => {
   const saveAndRunButton = (
     <HeaderButton
       ariaLabel="Save-and-run"
+      tooltip="Save and run the job"
       icon={<Play weight="duotone" color="green" size={"1.2rem"} />}
       onClick={onClickSaveAndRun}
       text={isLargerThan600 ? "Save+Run" : ""}
@@ -98,6 +101,7 @@ export const JobControlButton: React.FC = () => {
   const queuedButton = (
     <HeaderButton
       ariaLabel="Queued"
+      tooltip="Job is queued"
       icon={<QueueIcon color="green" size={"1.2rem"} />}
       onClick={() => {}}
       text={isLargerThan600 ? "queued..." : ""}
@@ -107,17 +111,19 @@ export const JobControlButton: React.FC = () => {
   const requeueButton = (
     <HeaderButton
       ariaLabel="Re-queue"
+      tooltip="Delete cache and re-run"
       icon={<Icon as={Repeat} color="green" size={"1.2rem"} />}
       onClick={onClickRetry}
       loading={isJobRequeued}
       text={isLargerThan600 ? "Run Again" : ""}
-      color={"green"}
+      // color={"green"}
     />
   );
 
   const runButton = (
     <HeaderButton
       ariaLabel="Run-job"
+      tooltip="Run the job"
       icon={<Play weight="duotone" color="green" size={"1.2rem"} />}
       onClick={onClickRun}
       text={isLargerThan600 ? "Run Job" : ""}
@@ -128,6 +134,7 @@ export const JobControlButton: React.FC = () => {
   const _runButtonDisabled = (
     <HeaderButton
       ariaLabel="Run-job"
+      tooltip=""
       icon={<Play weight="duotone" color="gray" size={"1.2rem"} />}
       text={isLargerThan600 ? "Run Job" : ""}
       color={"gray"}
@@ -180,15 +187,17 @@ export const JobControlButton: React.FC = () => {
 
 const HeaderButton: React.FC<{
   text: string;
+  tooltip: string;
   ariaLabel: string;
   onClick?: () => void;
   icon?: JSX.Element;
   color?: string;
   loading?: boolean;
-}> = ({ text, ariaLabel, onClick, icon, color, loading }) => {
+}> = ({ text, tooltip, ariaLabel, onClick, icon, color, loading }) => {
   return (
-    <Button
-      // why is this here?
+    <Tooltip label={tooltip}>
+      <Button
+        // why is this here?
       // disabled={true}
       w={text.length ? "7.5rem" : "3rem"}
       aria-label={ariaLabel}
@@ -205,5 +214,6 @@ const HeaderButton: React.FC<{
         {text}
       </Text>
     </Button>
+    </Tooltip>
   );
 };

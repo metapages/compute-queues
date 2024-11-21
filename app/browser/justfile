@@ -9,7 +9,7 @@ export APP_PORT_BROWSER            := env_var_or_default("APP_PORT_BROWSER", "44
 # Change SERVER_ORIGIN to e.g. point the local browser to any other stack, such as production
 SERVER_ORIGIN                      := env_var_or_default("SERVER_ORIGIN", "")
 # Common commands that require some preamble
-vite                               := "VITE_APP_FQDN=" + APP_FQDN + " VITE_APP_PORT=" + APP_PORT + " NODE_OPTIONS='--max_old_space_size=16384' ./node_modules/vite/bin/vite.js"
+vite                               := "VITE_APP_PORT=" + APP_PORT + " NODE_OPTIONS='--max_old_space_size=16384' ./node_modules/vite/bin/vite.js"
 tsc                                := "./node_modules/typescript/bin/tsc"
 # minimal formatting, bold is very useful
 bold                               := '\033[1m'

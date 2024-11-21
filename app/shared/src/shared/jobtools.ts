@@ -20,8 +20,11 @@ import {
 } from './types.ts';
 import {
   fetchRobust as fetch,
+  shaDockerJob,
   shaObject,
 } from './util.ts';
+
+const IGNORE_CERTIFICATE_ERRORS :boolean = Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
 
 const FileHashesUploaded = new LRUCache<string, boolean>({
   max: 10000,
@@ -54,7 +57,7 @@ export const createNewContainerJobMessage = async (opts: {
     time: Date.now(),
   };
   if (!jobId) {
-    jobId = await shaObject(definition);
+    jobId = await shaDockerJob(definition);
   }
   const payload: StateChange = {
     state: DockerJobState.Queued,
@@ -119,15 +122,18 @@ export const fileToDataref = async (
     // Hack to stream upload files, since fetch doesn't seem
     // to support streaming uploads (even though it should)
     let count = 0;
+    const args = IGNORE_CERTIFICATE_ERRORS
+      ? [json.url, "--insecure", "--upload-file", file]
+      : [json.url, "--upload-file", file];
     await retryAsync(async () => {
       const command = new Deno.Command("curl", {
-        args: [json.url, "--upload-file", file],
+        args,
       });
-      const { success, stdout, code } = await command.output();
+      const { success, stdout, stderr, code } = await command.output();
       if (!success) {
         count++;
         throw new Error(
-          `Failed attempt ${count} to upload ${file} to ${json.url} code=${code} stdout=${new TextDecoder().decode(stdout)}`
+          `Failed attempt ${count} to upload ${file} to ${json.url} code=${code} stdout=${new TextDecoder().decode(stdout)} stderr=${new TextDecoder().decode(stderr)}`
         );
       }
     }, {delay: 1000, maxTry: 5});

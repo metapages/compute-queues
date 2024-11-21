@@ -31,6 +31,7 @@ export const QueueIconAndModal: React.FC = () => {
         <Icon
           as={QueueIcon}
           _hover={{ bg: queue ? "gray.300" : 'red.100' }}
+
           bg={isOpen ? "gray.300" : "none"}
           p={"3px"}
           borderRadius={5}

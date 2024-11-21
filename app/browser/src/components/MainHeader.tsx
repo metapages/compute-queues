@@ -5,9 +5,10 @@ import { getDynamicInputsCount, getOutputs } from "/@/helpers";
 import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "/@/shared";
 import { useStore } from "/@/store";
 
-import { Badge, Box, Button, Flex, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
+import { Badge, Box, Flex, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { useHashParamJson } from "@metapages/hash-query";
-import { DownloadSimple, Gear, PencilSimple, Terminal, UploadSimple } from "@phosphor-icons/react";
+import { DownloadSimple, Gear, UploadSimple } from "@phosphor-icons/react";
+import { JobStatus } from "./footer/JobStatus";
 
 export const MainHeader: React.FC = () => {
   const [isLargerThan400] = useMediaQuery("(min-width: 400px)");
@@ -18,7 +19,6 @@ export const MainHeader: React.FC = () => {
   const setRightPanelContext = useStore(state => state.setRightPanelContext);
   const rightPanelContext = useStore(state => state.rightPanelContext);
   const setMainInputFile = useStore(state => state.setMainInputFile);
-  const mainInputFile = useStore(state => state.mainInputFile);
 
   const currentJobDefinition = useStore(state => state.newJobDefinition);
   const incomingInputsCount = getDynamicInputsCount(currentJobDefinition);
@@ -69,28 +69,12 @@ export const MainHeader: React.FC = () => {
     );
   };
 
-  const editorShown = rightPanelContext === "editScript";
   const rightSectionWidth = isLargerThan400 ? "11rem" : "0rem";
   return (
     <Flex w={"100%"} h={"headerHeight"} bg={"gray.100"} borderBottom={"1px"}>
       <HStack justify={"space-between"} px={2} w={`calc(100% - ${rightSectionWidth})`}>
-        <HStack>
-          <Icon as={Terminal} boxSize="4" />
-          {!mainInputFile ? (
-            <Text fontWeight={400}>{jobDefinitionBlob?.command}</Text>
-          ) : (
-            <Button
-              variant={"ghost"}
-              bg={editorShown ? "gray.300" : "none"}
-              onClick={() => setRightPanelContext(editorShown ? null : "editScript")}
-              _hover={{ bg: editorShown ? "gray.300" : "none" }}>
-              <HStack gap={2}>
-                <Text>{`${mainInputFile}`}</Text>
-                <Icon as={PencilSimple} />
-              </HStack>
-            </Button>
-          )}
-        </HStack>
+        <JobStatus />
+        {/* <EditInput /> */}
         <Spacer />
         <HStack>
           <JobControlButton />
@@ -98,9 +82,9 @@ export const MainHeader: React.FC = () => {
       </HStack>
       {isLargerThan400 && (
         <HStack borderLeft={"1px"} px={4} bg={"gray.100"} justifyContent={"space-around"} w={rightSectionWidth}>
+          {icon(Gear, "settings")}
           {icon(DownloadSimple, "inputs", incomingInputsCount ? incomingInputsCount.toString() : undefined)}
           {icon(UploadSimple, "outputs", outputsCount ? outputsCount.toString() : undefined)}
-          {icon(Gear, "settings")}
         </HStack>
       )}
     </Flex>

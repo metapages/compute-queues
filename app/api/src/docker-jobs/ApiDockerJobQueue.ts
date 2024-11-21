@@ -1461,7 +1461,7 @@ export class ApiDockerJobQueue {
         .flat(),
     };
     // use the BroadcastChannel to notify other servers
-    console.log(`[${this.address.substring(0, 6)}] 📡 broadcastMinimalJobsStatesToChannel`, message.value)
+    // console.log(`[${this.address.substring(0, 6)}] 📡 broadcastMinimalJobsStatesToChannel`, message.value)
     this.channel.postMessage(message);
   }
   /**

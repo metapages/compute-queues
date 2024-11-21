@@ -3,7 +3,6 @@ set dotenv-load  := true
 
 APP_FQDN         := "worker-metaframe.localhost"
 APP_PORT         := env_var_or_default("APP_PORT", "443")
-
 normal           := '\033[0m'
 green            := "\\e[32m"
 
@@ -32,8 +31,9 @@ up +args="": _ensure-all _mkcert
         export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
     fi
     # Having issues with the worker
-    docker compose --project-name=dev rm --force
-    docker rm dev-worker-1 || true
+    docker compose --project-name=dev rm --force 2>/dev/null || true
+    docker rm dev-worker-1 2>/dev/null || true
+    #  --build
     docker compose --project-name=dev up --remove-orphans {{args}}
 
 # Shut down the local stack: 'docker compose down'
@@ -46,11 +46,17 @@ down +args="":
 
 # Quick compilation checks
 @check: _ensure-all
+  echo -n "worker check..."
   just worker/check
+  echo -n "api check..."
   just api/check
+  echo -n "browser check..."
   just browser/check
+  echo -n "test check..."
   just test/check
+  echo -n "shared check..."
   just shared/check
+  echo -n "cli check..."
   just cli/check
 
 status queue="local1":
@@ -62,40 +68,97 @@ status-test queue="local1":
 status-prod queue="public1":
     curl https://container.mtfm.io/{{queue}}/status | jq .
 
-test:
+test: check
     #!/usr/bin/env bash
-    # Make sure there is no dev stack
-    docker compose --project-name=dev down -v
-    # A local NPM registry saves time, bandwidth, and avoids rate limits
-    STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873)
-    if [ $STATUS_CODE = "200" ]; then
-        export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
+    set -e # exit when any command fails, preserving the status of the failed command
+
+    cleanup() {
+        docker compose --project-name=test down 2>/dev/null || true
+    }
+
+    trap cleanup EXIT # cleanup when the script exits for any reason, including failure
+
+    cleanup
+
+    # Generate a random port between 10000-65535 and ensure it's not in use
+    get_free_port() {
+        while true; do
+            local port=$(shuf -i 10000-65535 -n 1)
+            # Check if port is in use using netstat or ss
+            # Check if port is in use using netstat/ss on Linux or lsof on macOS
+            if [ "$(uname)" == "Linux" ]; then
+                if ! ss -tuln | grep -q ":${port} "; then
+                    echo "${port}"
+                    break
+                fi
+            else
+                if ! lsof -i ":${port}" > /dev/null 2>&1; then
+                    echo "${port}"
+                    break
+                fi
+            fi
+        done
+    }
+
+    export APP_PORT=$(get_free_port)
+    echo -e "Using port ${APP_PORT}"
+    # Get host IP address for Linux
+    if [ "$(uname)" == "Linux" ]; then
+        HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
+    else
+        HOST_IP="host.docker.internal"
     fi
-    APP_PORT=4470 docker compose --project-name=test up --remove-orphans --detach
-    APP_PORT=4470 just worker/test
-    APP_PORT=4470 just test/test
-    APP_PORT=4470 just shared/test
-    APP_PORT=4470 just cli/test
-    docker compose --project-name=test down -v
+
+    # A local NPM registry saves time, bandwidth, and avoids rate limits
+    # This fails on specific npm modules, so we'll just not use it for now
+    # STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873 || true)
+    # if [ $STATUS_CODE = "200" ]; then
+    #     export NPM_CONFIG_REGISTRY=http://${HOST_IP}:4873
+    # fi
+    # This is causing currently unknown issues, a dangling worker 
+    docker rm test-worker-1 2>/dev/null || true
+    docker compose --project-name=test up --build --remove-orphans --detach
+    just worker/test
+    just test/test
+    just shared/test
+    just cli/test
 
 # Clean up the project
 @test-cleanup:
-    docker compose down -v
+    docker compose --project-name=test down || true
 
 clean:
-    rm -rf .cache
+    docker compose --project-name=dev down -v
     just browser/clean
-    docker compose down -v
+    rm -rf .cache
 
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":
-    just worker/docker-image-publish {{version}}
+    just worker/publish-docker-images {{version}}
 
 # DEV: generate TLS certs for HTTPS over localhost https://blog.filippo.io/mkcert-valid-https-certificates-for-localhost/
-@_mkcert: _ensure_mkcert
-    if [ ! -f .cache/traefik/certs/local-key.pem ]; then \
-        FQDN={{APP_FQDN}} CERT_NAME=local CERTS_DIR=.cache/traefik/certs deno run --allow-all https://deno.land/x/metapages@v0.0.27/commands/ensure_mkcert.ts ;\
+_mkcert: _ensure_mkcert
+    #!/usr/bin/env bash
+    rm -rf .cache/traefik/certs
+    mkdir -p .cache/traefik/certs/ ;
+    mkcert -cert-file .cache/traefik/certs/local-cert.pem -key-file .cache/traefik/certs/local-key.pem {{APP_FQDN}} minio.{{APP_FQDN}} localhost ;
+    if grep -q "{{APP_FQDN}}" /etc/hosts; then
+        echo -e "✅ Hostname {{APP_FQDN}} found in /etc/hosts"
+    else
+        echo -e "💥 Hostname {{APP_FQDN}} not found in /etc/hosts"
+        echo -e "👉 Add: '127.0.0.1   {{APP_FQDN}}' to /etc/hosts"
+        exit 1
     fi
+    if grep -q "minio.{{APP_FQDN}}" /etc/hosts; then
+        echo -e "✅ Hostname minio.{{APP_FQDN}} found in /etc/hosts"
+    else
+        echo -e "💥 Hostname minio.{{APP_FQDN}} not found in /etc/hosts"
+        echo -e "👉 Add: '127.0.0.1   minio.{{APP_FQDN}}' to /etc/hosts"
+        exit 1
+    fi
+    # if [ ! -f .cache/traefik/certs/local-key.pem ]; then \
+    #     FQDN={{APP_FQDN}} CERT_NAME=local CERTS_DIR=.cache/traefik/certs deno run --allow-all https://deno.land/x/metapages@v0.0.27/commands/ensure_mkcert.ts ;\
+    # fi
 
 @_ensure-all: _ensure_docker _ensure_deno
 

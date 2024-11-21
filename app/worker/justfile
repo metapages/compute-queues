@@ -51,7 +51,7 @@ dev +args="":
     deno test --trace-leaks --watch --allow-net --allow-read --allow-write --allow-env --allow-run {{args}}
 
 # Build docker image
-docker-image-publish version="": 
+publish-docker-images version="": 
     #!/usr/bin/env bash
     set -euo pipefail
     echo "$DOCKER_TOKEN" | docker login --username metapage --password-stdin
@@ -64,20 +64,35 @@ docker-image-publish version="":
     docker buildx build --push \
         --file worker/Dockerfile \
         --target worker \
-        --build-arg DOCKER_TAG=${DOCKER_TAG:-cache} \
+        --build-arg VERSION=${VERSION:-cache} \
         --platform linux/amd64,linux/arm64 \
         --tag metapage/metaframe-docker-worker:$VERSION .
-    # echo "✅ metapage/metaframe-docker-worker:$VERSION"
-    # docker buildx build --push \
-    #     --file worker/Dockerfile \
-    #     --target worker \
-    #     --build-arg DOCKER_TAG=${DOCKER_TAG:-cache} \
-    #     --platform linux/amd64,linux/arm64 \
-    #     --tag metapage/metaframe-docker-worker:latest .
-    # echo "✅ metapage/metaframe-docker-worker:latest"
     echo "✅ metapage/metaframe-docker-worker:$VERSION"
+    docker buildx build --push \
+        --file worker/Dockerfile \
+        --target worker \
+        --build-arg DOCKER_TAG=${DOCKER_TAG:-cache} \
+        --platform linux/amd64,linux/arm64 \
+        --tag metapage/metaframe-docker-worker:$VERSION-standalone .
+    echo "✅ metapage/metaframe-docker-worker:$VERSION-standalone"
 
-# This is different to docker-image-publish because buildx does not 
+# Build deno binary
+build-binary: 
+    deno compile --unstable --allow-all --output=dist/metapage-worker src/cli.ts
+    echo "✅ worker binary built"
+
+# Publish binary as a github release
+publish-binary version="": build-binary
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export VERSION={{version}}
+    if [ "$VERSION" = "" ]; then
+        export VERSION=$(cat mod.json | jq -r '.version')
+    fi
+    gh release create $VERSION dist/metapage-worker
+    echo "✅ worker binary published to github"
+
+# This is different to publish-docker-image because buildx does not 
 # put images in the local docker cache
 # Build docker image for local testing
 docker-image-build-for-local version="": 
@@ -93,6 +108,7 @@ docker-image-build-for-local version="":
         docker buildx build \
             --file worker/Dockerfile \
             --target worker \
+            --build-arg VERSION=${VERSION:-cache} \
             --platform $arch \
             --output type=docker \
             --tag metapage/metaframe-docker-worker:$VERSION \
