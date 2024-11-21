@@ -71,6 +71,7 @@ export interface DockerJobArgs {
   errStream?: Writable;
   deviceRequests?: DockerApiDeviceRequest[];
   durationMax?: number;
+  stdin?: boolean;
 }
 
 // this comes out
@@ -105,6 +106,7 @@ export const dockerJobExecute = async (
     outStream,
     errStream,
     deviceRequests,
+    durationMax,
   } = args;
 
   const result: DockerRunResult = {
@@ -194,10 +196,6 @@ export const dockerJobExecute = async (
   if (errStream) {
     grabberErrStream.pipe(errStream!);
   }
-
-  const runningContainers :any[] = await docker.listContainers({Labels: {
-    "container.mtfm.io/id": args.id,
-  }});
 
   const finish = async () => {
     try {

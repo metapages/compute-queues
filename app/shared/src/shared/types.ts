@@ -73,6 +73,9 @@ export type DockerJobDefinitionInputsBase64V1 = {
   configFiles?: InputsBase64String;
   durationMax?: number;
   gpu?: boolean;
+  // if true, the worker will send stdin to the container
+  // and the container will run until stdin is closed
+  stdin?: boolean;
 };
 
 // as soon as the DockerJobDefinition hits the server, it is converted
@@ -234,6 +237,7 @@ export enum WebsocketMessageTypeClientToServer {
   ClearJobCache = "ClearJobCache",
   ResubmitJob = "ResubmitJob",
   QueryJob = "QueryJob",
+  ConsoleMessage = "ConsoleMessage",
 }
 export interface PayloadClearJobCache {
   jobId: string;
@@ -257,9 +261,14 @@ export interface PayloadQueryJob {
   jobId: string;
 }
 
+export interface PayloadConsoleMessage {
+  jobId: string;
+  message: string;
+}
+
 export interface WebsocketMessageClientToServer {
   type: WebsocketMessageTypeClientToServer;
-  payload: StateChange | PayloadClearJobCache | PayloadResubmitJob | PayloadQueryJob;
+  payload: StateChange | PayloadClearJobCache | PayloadResubmitJob | PayloadQueryJob | PayloadConsoleMessage;
 }
 export type WebsocketMessageSenderClient = (message: WebsocketMessageClientToServer) => void;
 

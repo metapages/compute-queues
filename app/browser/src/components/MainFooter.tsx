@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Box, HStack, Spacer, Icon, Tooltip, useMediaQuery } from "@chakra-ui/react";
-import { QuestionMark } from "@phosphor-icons/react";
+import { QuestionMark, TerminalWindow } from "@phosphor-icons/react";
 import { useStore } from "/@/store";
 
 import { QueueIconAndModal } from "/@/components/sections/queue/QueueIconAndModal";

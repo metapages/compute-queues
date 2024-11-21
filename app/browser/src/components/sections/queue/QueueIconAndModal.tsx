@@ -8,7 +8,6 @@ import {
   ModalHeader,
   ModalOverlay,
   Container,
-  Text,
 } from "@chakra-ui/react";
 import { Queue as QueueIcon } from "@phosphor-icons/react";
 import { Queue } from "/@/components/sections/queue/Queue";
@@ -19,35 +18,25 @@ export const QueueIconAndModal: React.FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const workers = useStore(state => state.workers);
   const [queue] = useHashParam("queue", "");
-  const workerCount = workers?.workers ? Object.keys(workers.workers).length : 0;
-  const isNoWorkers = workerCount === 0;
-  // const backgroundColor = !queue ? "red.300" : isNoWorkers ? "orange" : "none";
-  const color = !queue ? undefined : isNoWorkers ? "orange" : "none";
-  const textColor = !queue ? (isOpen ? undefined : "red.300") : isNoWorkers ? undefined : undefined;
-
+  const isNoWorkers = !workers?.workers || Object.keys(workers.workers).length === 0;
+  let toolTipText = "Queue";
+  if (!queue) {
+    toolTipText = "Enter a queue";
+  } else if (isNoWorkers) {
+    toolTipText = "No workers in queue";
+  }
   return (
     <>
-      {/* {!queue ? (
-        <Text align={"start"} color={"red"} fontWeight={500}>
-          Please enter a queue:
-        </Text>
-      ) : isNoWorkers ? (
-        <Text align={"start"} color={"red"} fontWeight={500}>
-          No workers in the queue
-        </Text>
-      ) : null} */}
-      <Tooltip defaultIsOpen={!queue && !isOpen} label={!queue ? "Set a queue key" : isNoWorkers ? `Queue workers: ${workerCount}` : `Queue workers: ${workerCount}`}>
+      <Tooltip bg={toolTipText !== "Queue" && 'red.600'} label={toolTipText}>
         <Icon
           as={QueueIcon}
+          _hover={{ bg: queue ? "gray.300" : 'red.100' }}
 
-          _hover={{ bg: "gray.300" }}
-          color={color}
-          // bg={isOpen ? "gray.300" : backgroundColor}
           bg={isOpen ? "gray.300" : "none"}
-          textColor={textColor}
           p={"3px"}
           borderRadius={5}
           boxSize="6"
+          color={(!queue || isNoWorkers) && 'red'}
           onClick={onOpen}
         />
       </Tooltip>

@@ -428,6 +428,7 @@ export class DockerJobQueue {
                 volumes,
                 deviceRequests,
                 durationMax: definition.durationMax,
+                stdin: definition.stdin,
                 // outStream?: Writable;
                 // errStream?: Writable;
             }

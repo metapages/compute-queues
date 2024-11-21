@@ -30,6 +30,7 @@ import { useStore } from "../store";
 export const useDockerJobDefinition = () => {
   // TODO: unclear if this does anything anymore
   const [debug] = useHashParamBoolean("debug");
+  const showTerminal = useStore(state => state.showTerminal);
 
   // we listen to the job parameters embedded in the URL changing
   const [definitionParamsInUrl] = useHashParamJson<DockerJobDefinitionParamsInUrlHash | undefined>("job");
@@ -60,6 +61,7 @@ export const useDockerJobDefinition = () => {
     const definition: DockerJobDefinitionInputRefs = {
       ...definitionParamsInUrl,
     };
+    definition.stdin = showTerminal;
 
     // These are inputs set in the metaframe and stored in the url hash params. They
     // are always type: DataRefType.utf8 because they come from the text editor
@@ -165,5 +167,5 @@ export const useDockerJobDefinition = () => {
     return () => {
       cancelled = true;
     };
-  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, debug]);
+  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, debug, showTerminal]);
 };

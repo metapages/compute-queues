@@ -8,6 +8,7 @@ import { useHashParam } from "@metapages/hash-query";
 import { Lock, Play, Queue as QueueIcon, Repeat, Stop } from "@phosphor-icons/react";
 
 import { useStore } from "../../store";
+import { ErrorText } from "../generic/ErrorText";
 
 export const JobControlButton: React.FC = () => {
   const serverJobState = useStore(state => state.jobState);
@@ -61,10 +62,10 @@ export const JobControlButton: React.FC = () => {
   }, [submitJob, setUserClickedRun]);
 
   const noBuildButton = (
-    <HeaderButton tooltip="Add a docker build or image" ariaLabel="No docker build or image" color={"red"} text={isLargerThan600 ? "" : ""} />
+    isLargerThan600 ? <ErrorText ariaLabel={"No docker build or image"} text={"No docker image"}/> : null
   );
 
-  const noQueueButton = <HeaderButton tooltip="Add a queue (button below)" ariaLabel="No queue" color={"red"} text={isLargerThan600 ? "No queue 👇" : ""} />;
+  const noQueueButton = isLargerThan600 ? <ErrorText ariaLabel="No queue"  text={"No queue"} /> : null;
 
   const disabledButton = (
     <HeaderButton
@@ -145,8 +146,7 @@ export const JobControlButton: React.FC = () => {
   }
 
   if (!queue) {
-    // return noQueueButton;
-    return null;
+    return noQueueButton;
   }
 
   if (temporarilyForceShowQueued) {
