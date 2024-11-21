@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 import { JobControlButton } from "/@/components/header/JobControlButton";
 import { getDynamicInputsCount, getOutputs } from "/@/helpers";
@@ -7,7 +7,7 @@ import { useStore } from "/@/store";
 
 import { Badge, Box, Flex, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { useHashParamJson } from "@metapages/hash-query";
-import { DownloadSimple, Gear, UploadSimple } from "@phosphor-icons/react";
+import { DownloadSimple, Gear, TerminalWindow, UploadSimple } from "@phosphor-icons/react";
 import { JobStatus } from "./footer/JobStatus";
 
 export const MainHeader: React.FC = () => {
@@ -19,12 +19,21 @@ export const MainHeader: React.FC = () => {
   const setRightPanelContext = useStore(state => state.setRightPanelContext);
   const rightPanelContext = useStore(state => state.rightPanelContext);
   const setMainInputFile = useStore(state => state.setMainInputFile);
+  const setShowTerminal = useStore(state => state.setShowTerminal);
+  const showTerminal = useStore(state => state.showTerminal);
 
   const currentJobDefinition = useStore(state => state.newJobDefinition);
   const incomingInputsCount = getDynamicInputsCount(currentJobDefinition);
   const job = useStore(state => state.jobState);
   const outputs = getOutputs(job);
   const outputsCount = Object.keys(outputs).length;
+  
+  const [jobId, setJobId] = useState<string | undefined>();
+  const jobState = useStore(state => state.jobState);
+
+  useEffect(() => {
+    setJobId(jobState?.hash);
+  }, [jobState]);
 
   useEffect(() => {
     // TODO: make the primary editable file something that can he
@@ -76,8 +85,18 @@ export const MainHeader: React.FC = () => {
         <JobStatus />
         {/* <EditInput /> */}
         <Spacer />
-        <HStack>
+        <HStack pr={4}>
           <JobControlButton />
+          <Tooltip label={jobId && "Terminal"}>
+              <Icon
+                pointerEvents={!jobId ? 'none' : undefined}
+                as={TerminalWindow}
+                color={!jobId && "gray.300"}
+                bg={showTerminal ? "gray.300" : "none"}
+                borderRadius={5}
+                onClick={jobId ? () => setShowTerminal(!showTerminal) : undefined}
+              />
+            </Tooltip>
         </HStack>
       </HStack>
       {isLargerThan400 && (

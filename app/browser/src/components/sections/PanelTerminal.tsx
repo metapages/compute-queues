@@ -5,6 +5,7 @@ import { useXTerm } from 'react-xtermjs';
 import { PanelHeader } from "/@/components/generic/PanelHeader";
 import { PanelContainer } from "/@/components/generic/PanelContainer";
 import { useStore } from "/@/store";
+import { ConsoleLogLine } from "/@/shared";
 
 
 export const PanelTerminal: React.FC = () => {
@@ -25,37 +26,37 @@ export const PanelTerminal: React.FC = () => {
     runBuildCache.current = [];
   }, [jobState]);
 
+  const handleNewLine = (logs: ConsoleLogLine[]): string[] => {
+    let handledLogs = [];
+    for (let line of logs) {
+      const lines = line[0]?.split("\n");
+      handledLogs = handledLogs.concat(lines)
+    }
+    return handledLogs;
+  }
+
   // update logs
   useEffect(() => {
     if (!jobId) {
       return;
     }
-    if (runBuildCache.current.length !== buildLogs.length) {
-      const buildToWrite = buildLogs.slice(runBuildCache.current.length, buildLogs.length);
-      let buildNewlineHandled = [];
+    const buildLogsHandled = handleNewLine(buildLogs);
+    if (runBuildCache.current.length !== buildLogsHandled.length) {
+      const buildToWrite = buildLogsHandled.slice(runBuildCache.current.length, buildLogsHandled.length);
       for (let line of buildToWrite) {
-        const lines = line[0]?.split("\n");
-        buildNewlineHandled = buildNewlineHandled.concat(lines)
-        for (let l of lines) {
-          instance?.write(l);
-        }
+        instance?.write(line);
       }
-      runBuildCache.current = [...runBuildCache.current, ...buildNewlineHandled]
+      runBuildCache.current = [...runBuildCache.current, ...buildToWrite]
     }
 
-    if (runLogsCache.current.length !== runLogs.length) {
-      const runToWrite = buildLogs.slice(runBuildCache.current.length, buildLogs.length);
-      let runNewlineHandled = [];
+    const runLogsHandled = handleNewLine(runLogs);
+    if (runLogsCache.current.length !== runLogsHandled.length) {
+      const runToWrite = runLogsHandled.slice(runBuildCache.current.length, runLogsHandled.length);
       for (let line of runToWrite) {
-        const lines = line[0]?.split("\n");
-        runNewlineHandled = runNewlineHandled.concat(lines)
-        for (let l of lines) {
-          instance?.write(l);
-        }
+        instance?.write(line);
       }
-      runBuildCache.current = [...runBuildCache.current, ...runNewlineHandled]
+      runBuildCache.current = [...runBuildCache.current, ...runToWrite]
     }
-
   }, [buildLogs, runLogs]);
 
   const { instance, ref } = useXTerm()
