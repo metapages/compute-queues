@@ -46,7 +46,7 @@ export const useDockerJobDefinition = () => {
   // get a source string from the URL hash
   const [metapage] = useHashParam("metapage");
   const [metaframe] = useHashParam("metaframe");
-  const sourceKey = `${metapage}/${metaframe}`;
+  const sourceKey = metapage && metaframe ? `${metapage}/${metaframe}` : undefined;
 
   // this changes when the metaframe inputs change
   const metaframeBlob = useMetaframeAndInput();

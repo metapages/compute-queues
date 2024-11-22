@@ -195,6 +195,7 @@ export const JobControlButton: React.FC = () => {
           case DockerJobFinishedReason.Success:
           case DockerJobFinishedReason.Cancelled:
           case DockerJobFinishedReason.TimedOut:
+          case DockerJobFinishedReason.JobReplacedByClient:
             return requeueButton;
           case DockerJobFinishedReason.WorkerLost:
             return cancelButton;
