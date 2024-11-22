@@ -1,11 +1,26 @@
-import React, { useCallback } from "react";
-import { DockerJobDefinitionRow, DockerJobState, InputsRefs, StateChangeValueWorkerFinished } from "/@/shared";
-import { useStore } from "/@/store";
+import React, { useCallback } from 'react';
 
-import { Box, Center, HStack, Icon, Text, VStack } from "@chakra-ui/react";
-import { ArrowDown } from "@phosphor-icons/react";
+import {
+  downloadFile,
+  zipAndDownloadDatarefs,
+} from '/@/helpers';
+import {
+  DockerJobDefinitionRow,
+  DockerJobState,
+  InputsRefs,
+  StateChangeValueFinished,
+} from '/@/shared';
+import { useStore } from '/@/store';
 
-import { downloadFile, zipAndDownloadDatarefs } from "/@/helpers";
+import {
+  Box,
+  Center,
+  HStack,
+  Icon,
+  Text,
+  VStack,
+} from '@chakra-ui/react';
+import { ArrowDown } from '@phosphor-icons/react';
 
 export const OUTPUT_TABLE_ROW_HEIGHT = 35;
 
@@ -57,7 +72,7 @@ export const getOutputs = (job?: DockerJobDefinitionRow): InputsRefs => {
   if (!job?.state || job.state !== DockerJobState.Finished) {
     return {};
   }
-  const result = (job.value as StateChangeValueWorkerFinished).result;
+  const result = (job.value as StateChangeValueFinished).result;
   if (result && result.outputs) {
     return result.outputs;
   }

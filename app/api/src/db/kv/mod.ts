@@ -25,9 +25,7 @@ export class DB {
         // deno kv has a 64kb limit, so we store the job in s3, and store a reference to it in kv
         const dataRef = await putJsonToS3(id, job);
         const res = await kv.atomic()
-        // .check({ key, versionstamp: null }) // `null` versionstamps mean 'no value'
             .set(["queue", queue, id], dataRef, { expireIn: expireIn1Week })
-            // .set(["queue", "job", id], job, { expireIn: expireIn1Week })
             .commit();
     }
 

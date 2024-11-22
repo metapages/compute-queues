@@ -13,15 +13,14 @@ import {
   DockerJobDefinitionInputRefs,
   DockerJobState,
   StateChange,
+  StateChangeValueFinished,
   StateChangeValueQueued,
-  StateChangeValueWorkerFinished,
   WebsocketMessageClientToServer,
   WebsocketMessageTypeClientToServer,
 } from './types.ts';
 import {
   fetchRobust as fetch,
   shaDockerJob,
-  shaObject,
 } from './util.ts';
 
 const IGNORE_CERTIFICATE_ERRORS :boolean = Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
@@ -45,16 +44,18 @@ export const createNewContainerJobMessage = async (opts: {
   definition: DockerJobDefinitionInputRefs;
   debug?: boolean;
   jobId?: string;
+  source?: string;
 }): Promise<{
   message: WebsocketMessageClientToServer;
   jobId: string;
   stageChange: StateChange;
 }> => {
-  let { definition, debug, jobId } = opts;
+  let { definition, debug, jobId, source } = opts;
   const value: StateChangeValueQueued = {
     definition,
     debug,
     time: Date.now(),
+    source,
   };
   if (!jobId) {
     jobId = await shaDockerJob(definition);
@@ -148,7 +149,7 @@ export const fileToDataref = async (
 };
 
 export const finishedJobOutputsToFiles = async (
-  finishedState: StateChangeValueWorkerFinished,
+  finishedState: StateChangeValueFinished,
   outputsDirectory: string,
   address: string
 ): Promise<void> => {

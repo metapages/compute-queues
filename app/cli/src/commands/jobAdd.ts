@@ -6,7 +6,7 @@ import {
   DockerJobState,
   fileToDataref,
   finishedJobOutputsToFiles,
-  StateChangeValueWorkerFinished,
+  StateChangeValueFinished,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from '/@/shared';
@@ -171,7 +171,7 @@ export const jobAdd = new Command()
               }
               if (jobDefinitionRow.state === DockerJobState.Finished) {
                 const finishedState =
-                  jobDefinitionRow.value as StateChangeValueWorkerFinished;
+                  jobDefinitionRow.value as StateChangeValueFinished;
                 (async () => {
                   await finishedJobOutputsToFiles(
                     finishedState,

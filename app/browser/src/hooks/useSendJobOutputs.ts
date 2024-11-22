@@ -1,4 +1,7 @@
-import { useEffect, useRef } from "react";
+import {
+  useEffect,
+  useRef,
+} from 'react';
 
 import {
   convertJobOutputDataRefsToExpectedFormat,
@@ -6,17 +9,22 @@ import {
   DataRefType,
   DockerJobState,
   fetchJsonFromUrl,
-  StateChangeValueWorkerFinished,
-} from "/@/shared";
+  StateChangeValueFinished,
+} from '/@/shared';
 
-import { useMetaframeAndInput } from "@metapages/metaframe-react-hook";
-import { isIframe, MetaframeInputMap } from "@metapages/metapage";
+import { useMetaframeAndInput } from '@metapages/metaframe-react-hook';
+import {
+  isIframe,
+  MetaframeInputMap,
+} from '@metapages/metapage';
 
-import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
-import { DockerRunResultWithOutputs } from "../shared";
-import { useStore } from "../store";
-import { useOptionJobStartAutomatically } from "./useOptionJobStartAutomatically";
-import { useOptionResolveDataRefs } from "./useOptionResolveDataRefs";
+import { UPLOAD_DOWNLOAD_BASE_URL } from '../config';
+import { DockerRunResultWithOutputs } from '../shared';
+import { useStore } from '../store';
+import {
+  useOptionJobStartAutomatically,
+} from './useOptionJobStartAutomatically';
+import { useOptionResolveDataRefs } from './useOptionResolveDataRefs';
 
 const datarefKeyToUrl = async (ref: DataRef): Promise<DataRef> => {
   if (ref.type === DataRefType.key) {
@@ -78,7 +86,7 @@ export const useSendJobOutputs = () => {
       // console.log(`💔 useEffect not sending outputs because of conditions metaframeObj?.setOutputs=${metaframeObj?.setOutputs} dockerJobServer=${dockerJobServer} dockerJobServer?.state=${dockerJobServer?.state} isIframe=${isIframe()} `);
       return;
     }
-    const stateFinished = dockerJobServer.value as StateChangeValueWorkerFinished;
+    const stateFinished = dockerJobServer.value as StateChangeValueFinished;
     const result: DockerRunResultWithOutputs = stateFinished.result;
     if (!result) {
       // console.log(`💔 useEffect not sending outputs because result is undefined`);

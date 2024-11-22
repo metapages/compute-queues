@@ -12,9 +12,9 @@ import {
   DockerJobState,
   DockerRunResult,
   DockerRunResultWithOutputs,
+  StateChangeValueFinished,
   StateChangeValueQueued,
   StateChangeValueRunning,
-  StateChangeValueWorkerFinished,
   WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
   WebsocketMessageWorkerToServer,
@@ -392,7 +392,7 @@ export class DockerJobQueue {
                 // TODO: cache locally before attempting to send
                 delete this.queue[jobBlob.hash];
 
-                const valueError: StateChangeValueWorkerFinished = {
+                const valueError: StateChangeValueFinished = {
                     reason: DockerJobFinishedReason.Error,
                     worker: this.workerId,
                     time: Date.now(),
@@ -464,7 +464,7 @@ export class DockerJobQueue {
                 const resultWithOutputs: DockerRunResultWithOutputs = result as DockerRunResultWithOutputs;
                 resultWithOutputs.outputs = {};
 
-                let valueFinished: StateChangeValueWorkerFinished | undefined;
+                let valueFinished: StateChangeValueFinished | undefined;
                 if (result.error) {
                     valueFinished = {
                         reason: DockerJobFinishedReason.Error,
@@ -520,7 +520,7 @@ export class DockerJobQueue {
                 // TODO: cache locally before attempting to send
                 delete this.queue[jobBlob.hash];
 
-                const valueError: StateChangeValueWorkerFinished = {
+                const valueError: StateChangeValueFinished = {
                     reason: DockerJobFinishedReason.Error,
                     worker: this.workerId,
                     time: Date.now(),

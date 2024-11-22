@@ -115,13 +115,14 @@ export enum DockerJobFinishedReason {
   Success = "Success",
   Error = "Error",
   WorkerLost = "WorkerLost",
+  JobReplacedByClient = "JobReplacedByClient",
 }
 
 export type DockerJobStateValue =
   | StateChangeValueQueued
   | StateChangeValueReQueued
   | StateChangeValueRunning
-  | StateChangeValueWorkerFinished;
+  | StateChangeValueFinished;
 
 export interface StateChange {
   // 'id' implies permanence, and you should never delete it
@@ -140,6 +141,14 @@ export interface StateChangeValueQueued {
   definition: DockerJobDefinitionInputRefs;
   time: number;
   debug?: boolean;
+  // the client that submitted the job
+  // if there are multiple jobs from the same source,
+  // only the most recent one is kept, all others are killed
+  // TODO: handle the edge case where two different sources
+  // submit the exact same job definition. In that case, just
+  // don't kill the job unless you add a record of claimed jobs
+  // A ttl simple record would do here.
+  source?: string;
 }
 
 export interface StateChangeValueReQueued {
@@ -151,7 +160,7 @@ export interface StateChangeValueRunning {
   time: number;
 }
 
-export interface StateChangeValueWorkerFinished {
+export interface StateChangeValueFinished {
   result?: DockerRunResultWithOutputs;
   reason: DockerJobFinishedReason;
   worker?: string;
@@ -170,9 +179,9 @@ export const isDockerJobDefinitionRowFinished = (row: DockerJobDefinitionRow) =>
   return row.state === DockerJobState.Finished;
 };
 
-export const getFinishedJobState = (row: DockerJobDefinitionRow): StateChangeValueWorkerFinished | undefined => {
+export const getFinishedJobState = (row: DockerJobDefinitionRow): StateChangeValueFinished | undefined => {
   if (isDockerJobDefinitionRowFinished(row)) {
-    return row.value as StateChangeValueWorkerFinished;
+    return row.value as StateChangeValueFinished;
   }
 };
 
@@ -327,6 +336,7 @@ export interface DockerJobDefinitionMetadata {
   hash: string;
   definition: DockerJobDefinitionInputRefs;
   debug?: boolean;
+  source?: string;
 }
 
 /************************************************************

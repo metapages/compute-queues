@@ -1,13 +1,35 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 
-import { useJobSubmissionHook } from "/@/hooks/useJobSubmissionHook";
-import { DockerJobFinishedReason, DockerJobState, StateChangeValueWorkerFinished } from "/@/shared/types";
+import { useJobSubmissionHook } from '/@/hooks/useJobSubmissionHook';
+import {
+  DockerJobFinishedReason,
+  DockerJobState,
+  StateChangeValueFinished,
+} from '/@/shared/types';
 
-import { Button, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
-import { useHashParam } from "@metapages/hash-query";
-import { Lock, Play, Queue as QueueIcon, Repeat, Stop } from "@phosphor-icons/react";
+import {
+  Button,
+  HStack,
+  Icon,
+  Spacer,
+  Text,
+  Tooltip,
+  useMediaQuery,
+} from '@chakra-ui/react';
+import { useHashParam } from '@metapages/hash-query';
+import {
+  Lock,
+  Play,
+  Queue as QueueIcon,
+  Repeat,
+  Stop,
+} from '@phosphor-icons/react';
 
-import { useStore } from "../../store";
+import { useStore } from '../../store';
 
 export const JobControlButton: React.FC = () => {
   const serverJobState = useStore(state => state.jobState);
@@ -166,7 +188,7 @@ export const JobControlButton: React.FC = () => {
     case DockerJobState.Running:
       return cancelButton;
     case DockerJobState.Finished: {
-      const value: StateChangeValueWorkerFinished | undefined = serverJobState?.value as StateChangeValueWorkerFinished;
+      const value: StateChangeValueFinished | undefined = serverJobState?.value as StateChangeValueFinished;
       if (value) {
         switch (value.reason) {
           case DockerJobFinishedReason.Error:

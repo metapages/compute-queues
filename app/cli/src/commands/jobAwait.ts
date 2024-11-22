@@ -3,7 +3,7 @@ import {
   DockerJobDefinitionRow,
   DockerJobState,
   finishedJobOutputsToFiles,
-  StateChangeValueWorkerFinished,
+  StateChangeValueFinished,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from '/@/shared';
@@ -37,7 +37,7 @@ export const jobAwait = new Command()
         promise: jobCompleteDeferred,
         resolve,
         reject,
-      } = Promise.withResolvers<StateChangeValueWorkerFinished>();
+      } = Promise.withResolvers<StateChangeValueFinished>();
 
       const socket = new WebSocket(`${url.replace("http", "ws")}`);
   
@@ -64,7 +64,7 @@ export const jobAwait = new Command()
             }
 
             if (jobState.state === DockerJobState.Finished) {
-              const finishedState = jobState.value as StateChangeValueWorkerFinished;
+              const finishedState = jobState.value as StateChangeValueFinished;
               (async () => {
                 await finishedJobOutputsToFiles(finishedState, outputs as string, address);
                 resolved = true;

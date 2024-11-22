@@ -1,9 +1,15 @@
-import pDebounce from "p-debounce";
-import { create } from "zustand";
+import pDebounce from 'p-debounce';
+import { create } from 'zustand';
 
-import { getHashParamValueJsonFromWindow, setHashParamJsonInWindow } from "@metapages/hash-query";
+import {
+  getHashParamValueJsonFromWindow,
+  setHashParamJsonInWindow,
+} from '@metapages/hash-query';
 
-import { deleteFinishedJob, getFinishedJob } from "./cache";
+import {
+  deleteFinishedJob,
+  getFinishedJob,
+} from './cache';
 import {
   BroadcastWorkers,
   DockerJobState,
@@ -13,7 +19,7 @@ import {
   WebsocketMessageClientToServer,
   WebsocketMessageSenderClient,
   WebsocketMessageTypeClientToServer,
-} from "./shared";
+} from './shared';
 import {
   ConsoleLogLine,
   DockerJobDefinitionMetadata,
@@ -22,9 +28,9 @@ import {
   getFinishedJobState,
   JobStatusPayload,
   PayloadQueryJob,
-  StateChangeValueWorkerFinished,
+  StateChangeValueFinished,
   WebsocketMessageServerBroadcast,
-} from "./shared/types";
+} from './shared/types';
 
 let _cachedMostRecentSubmit: WebsocketMessageClientToServer | undefined;
 
@@ -169,6 +175,7 @@ export const useStore = create<MainStore>((set, get) => ({
     const value: StateChangeValueQueued = {
       definition: definitionBlob.definition,
       time: Date.now(),
+      source: definitionBlob.source,
     };
     if (definitionBlob.debug) {
       value.debug = true;
@@ -226,7 +233,7 @@ export const useStore = create<MainStore>((set, get) => ({
     } else if (jobState?.state === DockerJobState.Finished) {
       // if the job is finished, logs come from the result
       // not the cached streaming logs
-      const resultFinished = jobState?.value as StateChangeValueWorkerFinished;
+      const resultFinished = jobState?.value as StateChangeValueFinished;
       set(() => ({
         runLogs: resultFinished.result?.logs,
       }));
