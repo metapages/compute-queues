@@ -1,7 +1,11 @@
-import fetchRetry from "fetch-retry";
-import stringify from "safe-stable-stringify";
-import { create } from "mutative";
-import { DataRef, DockerJobDefinitionInputRefs } from "./types.ts";
+import fetchRetry from 'fetch-retry';
+import { create } from 'mutative';
+import stringify from 'safe-stable-stringify';
+
+import {
+  DataRef,
+  DockerJobDefinitionInputRefs,
+} from './types.ts';
 
 export const shaDockerJob = async (job: DockerJobDefinitionInputRefs): Promise<string> => {
 
@@ -10,9 +14,8 @@ export const shaDockerJob = async (job: DockerJobDefinitionInputRefs): Promise<s
     const configFiles = draft.configFiles;
     if (configFiles) {
       Object.keys(configFiles).forEach(key => {
-        if (configFiles[key].type === "url" && (configFiles[key] as DataRef<string>)?.value.includes("/presignedurl/")) {
-          const tokens = (configFiles[key] as DataRef<string>).value.split("/presignedurl/");
-          configFiles[key].value = tokens[0];
+        if (configFiles[key].type === "url") {
+          configFiles[key].value = reduceUrlToHashVersion((configFiles[key] as DataRef<string>)?.value);
         }
       });
     }
@@ -21,15 +24,29 @@ export const shaDockerJob = async (job: DockerJobDefinitionInputRefs): Promise<s
     const inputs = draft.inputs;
     if (inputs) {
       Object.keys(inputs).forEach(key => {
-        if (inputs[key].type === "url" && (inputs[key] as DataRef<string>)?.value.includes("/presignedurl/")) {
-          const tokens = (inputs[key] as DataRef<string>).value.split("/presignedurl/");
-          inputs[key].value = tokens[0];
+        if (inputs[key].type === "url") {
+          inputs[key].value = reduceUrlToHashVersion((inputs[key] as DataRef<string>)?.value);
         }
       });
     }
   });
 
   return shaObject(jobReadyForSha);
+};
+
+const reduceUrlToHashVersion = (url: string): string => {
+  if (url.includes("/presignedurl/")) {
+    const tokens = url.split("/presignedurl/");
+    return tokens[0];
+  }
+  if (url.startsWith('https://metaframe-asman-test.s3.us-west-1.amazonaws.com')) {
+    const urlBlob = new URL(url);
+    urlBlob.search = "";
+    urlBlob.hash = "";
+    return urlBlob.href;
+  }
+
+  return url;
 };
 
 export const shaObject = async (obj: any): Promise<string> => {
