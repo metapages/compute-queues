@@ -25,10 +25,10 @@ import {
   PayloadResubmitJob,
   resolvePreferredWorker,
   StateChange,
+  StateChangeValueFinished,
   StateChangeValueQueued,
   StateChangeValueReQueued,
   StateChangeValueRunning,
-  StateChangeValueWorkerFinished,
   WebsocketMessageClientToServer,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeClientToServer,
@@ -49,8 +49,8 @@ import {
 import { BroadcastChannelRedis } from '@metapages/deno-redis-broadcastchannel';
 
 import { db } from '../db/kv/mod.ts';
-import { resolveMostCorrectJob } from './util.ts';
 import { PayloadQueryJob } from '../shared/mod.ts';
+import { resolveMostCorrectJob } from './util.ts';
 
 // 60 seconds
 const MAX_TIME_FINISHED_JOB_IN_QUEUE = ms("60 seconds") as number;
@@ -58,6 +58,7 @@ const INTERVAL_UNTIL_WORKERS_ASSUMED_LOST = ms("30 seconds") as number;
 const INTERVAL_WORKERS_BROADCAST = ms("10 seconds") as number;
 const INTERVAL_JOB_STATES_MINIMAL_BROADCAST = ms("5 seconds") as number;
 const INTERVAL_JOBS_BROADCAST = ms("10 seconds") as number;
+const INTERVAL_CHECK_FOR_DUPLICATE_JOBS_SAME_SOURCE = ms("10 seconds") as number;
 
 type ServerWorkersObject = { [key: string]: WorkerRegistration[] };
 
@@ -152,6 +153,7 @@ export class ApiDockerJobQueue {
   _intervalWorkerBroadcast: number | undefined;
   _intervalJobsStatesMinimalBroadcast: number | undefined;
   _intervalJobsBroadcast: number | undefined;
+  _intervalCheckForDuplicateJobsSameSource: number | undefined;
 
   constructor(opts: { serverId: string; address: string }) {
     const { serverId, address } = opts;
@@ -360,6 +362,10 @@ export class ApiDockerJobQueue {
       this.broadcastJobStatesToWebsockets();
       this.broadcastJobStatesToChannel();
     }, INTERVAL_JOBS_BROADCAST);
+
+    this._intervalCheckForDuplicateJobsSameSource = setInterval(() => {
+      this.checkForSourceConflicts();
+    }, INTERVAL_CHECK_FOR_DUPLICATE_JOBS_SAME_SOURCE);
   }
 
   /**
@@ -632,6 +638,7 @@ export class ApiDockerJobQueue {
     clearInterval(this._intervalWorkerBroadcast);
     clearInterval(this._intervalJobsStatesMinimalBroadcast);
     clearInterval(this._intervalJobsBroadcast);
+    clearInterval(this._intervalCheckForDuplicateJobsSameSource);
     delete userJobQueues[this.address];
     console.log(`➖ 🗑️ 🎾 UserDockerJobQueue ${this.address}`);
   }
@@ -679,6 +686,7 @@ export class ApiDockerJobQueue {
       }
       if (change.state === DockerJobState.Queued) {
         jobRow!.history = [change];
+        this.checkForSourceConflicts();
       } else {
         if (replace) {
           jobRow!.history[jobRow!.history.length - 1] = change;
@@ -814,9 +822,9 @@ export class ApiDockerJobQueue {
                 await broadcastCurrentStateBecauseIDoubtStateIsSynced();
                 break;
               case DockerJobState.Finished:
-                const previousFinishedState: StateChangeValueWorkerFinished =
+                const previousFinishedState: StateChangeValueFinished =
                   this.state.jobs[jobId]
-                    .value as StateChangeValueWorkerFinished;
+                    .value as StateChangeValueFinished;
                 switch (previousFinishedState.reason) {
                   case DockerJobFinishedReason.Cancelled:
                     console.log(
@@ -969,7 +977,7 @@ export class ApiDockerJobQueue {
     )) {
       if (job?.state === DockerJobState.Finished) {
         const stateChange = this.state.jobs[jobId]
-          ?.value as StateChangeValueWorkerFinished;
+          ?.value as StateChangeValueFinished;
         if (
           stateChange &&
           now - stateChange.time > MAX_TIME_FINISHED_JOB_IN_QUEUE
@@ -1566,6 +1574,63 @@ export class ApiDockerJobQueue {
     const messageString = JSON.stringify(message);
     return messageString;
   }
+
+  checkForSourceConflicts() {
+    // check all the jobs
+    const sourceJobs = new Map<string, string[]>(); // source -> [jobId, ...]
+    for (const [jobId, job] of Object.entries<DockerJobDefinitionRow>(
+      this.state.jobs
+    )) {
+      if (job.state === DockerJobState.Finished) {
+        continue;
+      }
+      const source = (job.history[0].value as StateChangeValueQueued).source;
+      if (source) {
+        sourceJobs.set(source, [...(sourceJobs.get(source) || []), jobId]);
+      }
+    }
+    const now = Date.now();
+    for (const [source, jobIds] of sourceJobs.entries()) {
+      if (jobIds.length > 1) {
+        console.log(`🚨 source conflict for ${source}: ${jobIds}`);
+        // what do I do? keep the newest job, and kill the others.
+        // we should hesitate to kill long running jobs, but we also
+        // don't want to end up with a lot of them, so we have to strike
+        // a balance.
+        // If a) the older jobs are less than a minute old, or b) the difference
+        // between the newest job running time and the others is over a minute,
+        // then we kill the older jobs.
+        // Otherwise, we keep the newest job.
+        // latest last
+        const sortedJobIds = jobIds.toSorted((a, b) => {
+          const aJobTime = (this.state.jobs[a]?.history[0].value as StateChangeValueQueued).time;
+          const bJobTime = (this.state.jobs[b]?.history[0].value as StateChangeValueQueued).time;
+          return aJobTime - bJobTime;
+        });
+        const newestJobId = sortedJobIds.pop()!;
+        const newestJobTime = (this.state.jobs[newestJobId]?.history[0].value as StateChangeValueQueued).time;
+        for (const jobId of sortedJobIds) {
+          const job = this.state.jobs[jobId];
+          const jobTime = (job.history[0].value as StateChangeValueQueued).time;
+          const timeDifference = newestJobTime - jobTime;
+          const jobAge = now - jobTime;
+          if (jobAge < 60000 || timeDifference > 60000) {
+            // kill it
+            this.stateChange({
+              state: DockerJobState.Finished,
+              job: jobId,
+              value: {
+                reason: DockerJobFinishedReason.JobReplacedByClient,
+                time: Date.now(),
+              },
+            } as StateChange);
+          }
+        } 
+      }
+    }
+  }
+
+ 
 
   // utility method used for testing and poking, not actually used normally,
   // all modifications are state change requests

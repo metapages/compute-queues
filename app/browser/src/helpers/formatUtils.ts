@@ -3,9 +3,9 @@ import {
   DockerJobDefinitionRow,
   DockerJobState,
   InputsRefs,
-  StateChangeValueWorkerFinished,
-} from "/@/shared";
-import stringify from "safe-stable-stringify";
+  StateChangeValueFinished,
+} from '/@/shared';
+import stringify from 'safe-stable-stringify';
 
 // eslint-disable-next-line
 export const encodeOptions = (options: any): string => {
@@ -31,7 +31,7 @@ export const getOutputs = (job?: DockerJobDefinitionRow) => {
   if (!job?.state || job.state !== DockerJobState.Finished) {
     return {};
   }
-  const result = (job.value as StateChangeValueWorkerFinished).result;
+  const result = (job.value as StateChangeValueFinished).result;
   if (result && result.outputs) {
     return result.outputs;
   }

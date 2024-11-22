@@ -2,7 +2,7 @@
  * Via Context provide the current docker job definition which is combined from metaframe inputs
  * and URL query parameters, and the means to change (some of) them
  */
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
 import {
   copyLargeBlobsToCloud,
@@ -13,15 +13,21 @@ import {
   isDataRef,
   JobInputs,
   shaDockerJob,
-  shaObject,
-} from "/@/shared";
+} from '/@/shared';
 
-import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query";
-import { useMetaframeAndInput } from "@metapages/metaframe-react-hook";
-import { DataRefSerialized, Metaframe } from "@metapages/metapage";
+import {
+  useHashParam,
+  useHashParamBoolean,
+  useHashParamJson,
+} from '@metapages/hash-query';
+import { useMetaframeAndInput } from '@metapages/metaframe-react-hook';
+import {
+  DataRefSerialized,
+  Metaframe,
+} from '@metapages/metapage';
 
-import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
-import { useStore } from "../store";
+import { UPLOAD_DOWNLOAD_BASE_URL } from '../config';
+import { useStore } from '../store';
 
 /**
  * Gets the configuration from 1) the URL hash parameters and 2) the metaframe inputs,
@@ -36,6 +42,11 @@ export const useDockerJobDefinition = () => {
 
   // input text files are stored in the URL hash
   const [jobInputsFromUrl] = useHashParamJson<JobInputs | undefined>("inputs");
+
+  // get a source string from the URL hash
+  const [metapage] = useHashParam("metapage");
+  const [metaframe] = useHashParam("metaframe");
+  const sourceKey = `${metapage}/${metaframe}`;
 
   // this changes when the metaframe inputs change
   const metaframeBlob = useMetaframeAndInput();
@@ -157,6 +168,7 @@ export const useDockerJobDefinition = () => {
         hash: jobHashCurrent,
         definition,
         debug,
+        source: sourceKey,
       };
 
       setNewJobDefinition(newJobDefinition);      
@@ -165,5 +177,5 @@ export const useDockerJobDefinition = () => {
     return () => {
       cancelled = true;
     };
-  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, debug]);
+  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, sourceKey, debug]);
 };

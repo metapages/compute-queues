@@ -1,17 +1,30 @@
-import React from "react";
+import React from 'react';
 
 import {
   ConsoleLogLine,
   DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
-  StateChangeValueWorkerFinished,
-} from "/@/shared";
-import { useStore } from "/@/store";
+  StateChangeValueFinished,
+} from '/@/shared';
+import { useStore } from '/@/store';
 
-import { Box, HStack, Icon, Spinner, Text, VStack, useToast } from "@chakra-ui/react";
-import { useHashParam } from "@metapages/hash-query";
-import { Check, HourglassMedium, Prohibit, WarningCircle } from "@phosphor-icons/react";
+import {
+  Box,
+  HStack,
+  Icon,
+  Spinner,
+  Text,
+  useToast,
+  VStack,
+} from '@chakra-ui/react';
+import { useHashParam } from '@metapages/hash-query';
+import {
+  Check,
+  HourglassMedium,
+  Prohibit,
+  WarningCircle,
+} from '@phosphor-icons/react';
 
 const STATUS_ICON_SIZE = 6;
 export const JobStatus: React.FC = () => {
@@ -94,7 +107,7 @@ const getJobStateValues = (
   let exitCode = null;
   let showExitCodeRed = false;
   const jobId = job?.hash;
-  const resultFinished = job.value as StateChangeValueWorkerFinished;
+  const resultFinished = job.value as StateChangeValueFinished;
   const errorBlob: { statusCode: number; json: { message: string } } | undefined = resultFinished?.result?.error;
 
   if (!job) {

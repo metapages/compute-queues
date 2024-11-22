@@ -1,13 +1,30 @@
-import React, { useEffect, useRef, useState } from "react";
-import linkifyHtml from "linkify-html";
-import { AnsiUp } from "ansi_up";
-import { ConsoleLogLine, DockerJobState, StateChangeValueWorkerFinished } from "/@/shared/types";
-import { useStore } from "/@/store";
-import { VariableSizeList as List } from "react-window";
-import AutoSizer from "react-virtualized-auto-sizer";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
-import { Box, Code, VStack } from "@chakra-ui/react";
-import { OUTPUT_TABLE_ROW_HEIGHT, OutputTable } from "./OutputTable";
+import {
+  ConsoleLogLine,
+  DockerJobState,
+  StateChangeValueFinished,
+} from '/@/shared/types';
+import { useStore } from '/@/store';
+import { AnsiUp } from 'ansi_up';
+import linkifyHtml from 'linkify-html';
+import AutoSizer from 'react-virtualized-auto-sizer';
+import { VariableSizeList as List } from 'react-window';
+
+import {
+  Box,
+  Code,
+  VStack,
+} from '@chakra-ui/react';
+
+import {
+  OUTPUT_TABLE_ROW_HEIGHT,
+  OutputTable,
+} from './OutputTable';
 
 export type LogsMode = "stdout+stderr" | "stdout" | "stderr" | "build";
 
@@ -30,7 +47,7 @@ export const DisplayLogs: React.FC<{
   useEffect(() => {
     if (!job?.state || job.state !== DockerJobState.Finished) return;
 
-    const result = (job.value as StateChangeValueWorkerFinished).result;
+    const result = (job.value as StateChangeValueFinished).result;
     if (result && result.outputs && mode.includes("stdout")) {
       setShowOutputTable(true);
       setOutputCount(Object.keys(result.outputs).length);
