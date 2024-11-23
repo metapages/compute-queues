@@ -1,17 +1,7 @@
 {
-  "version": "0.3",
+  "version": "1",
   "metadata": {
-    "title": "Docker compute",
+    "title": "Run a docker container",
     "author": "Dion Whitehead"
-  },
-  "inputs": {
-    "*": {
-      "type": "application/octet-stream:base64"
-    }
-  },
-  "outputs": {
-    "*": {
-      "type": "application/octet-stream:base64"
-    }
   }
 }
