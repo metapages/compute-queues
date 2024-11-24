@@ -22,7 +22,7 @@
     "@metapages/hash-query": "^0.4.19",
     "@metapages/metaframe-chakra-theme": "^0.0.8",
     "@metapages/metaframe-react-hook": "^1.0.7",
-    "@metapages/metapage": "^1.1.0",
+    "@metapages/metapage": "^1.1.3",
     "@metapages/metapage-embed-react": "^0.0.33",
     "@phosphor-icons/react": "^2.1.7",
     "@popperjs/core": "^2.11.6",
