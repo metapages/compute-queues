@@ -49,7 +49,7 @@ export const DisplayLogs: React.FC<{
 
     const result = (job.value as StateChangeValueFinished).result;
     if (result && result.outputs && mode.includes("stdout")) {
-      setShowOutputTable(true);
+      // setShowOutputTable(true);
       setOutputCount(Object.keys(result.outputs).length);
     }
   }, [job, mode]);
@@ -121,7 +121,8 @@ export const DisplayLogs: React.FC<{
       const lines = line[0]?.split("\n");
       logsNewlineHandled = logsNewlineHandled.concat(lines);
     });
-    logsRef.current = outputCount ? [...logsNewlineHandled, "OUTPUT_TABLE_PLACEHOLDER"] : logsNewlineHandled;
+    // logsRef.current = outputCount ? [...logsNewlineHandled, "OUTPUT_TABLE_PLACEHOLDER"] : logsNewlineHandled;
+    logsRef.current =  logsNewlineHandled;
     setLogs(logsRef.current);
   }, [mode, jobState, jobId, buildLogs, runLogs, showOutputTable, outputCount]);
 
@@ -130,7 +131,7 @@ export const DisplayLogs: React.FC<{
   }
 
   const getItemSize = index => {
-    if (logs[index] === "OUTPUT_TABLE_PLACEHOLDER") return OUTPUT_TABLE_ROW_HEIGHT * (outputCount + 1) + LINE_HEIGHT;
+    // if (logs[index] === "OUTPUT_TABLE_PLACEHOLDER") return OUTPUT_TABLE_ROW_HEIGHT * (outputCount + 1) + LINE_HEIGHT;
     return LINE_HEIGHT;
   };
 
@@ -138,13 +139,13 @@ export const DisplayLogs: React.FC<{
   const Row: React.FC<{ index: number; style: any }> = ({ index, style }) => {
     // if this is the last log in the list, add the output table
     // this will allow the table to scroll with the other log content
-    if (logs[index] === "OUTPUT_TABLE_PLACEHOLDER") {
-      return (
-        <Box style={style}>
-          <OutputTable />
-        </Box>
-      );
-    }
+    // if (logs[index] === "OUTPUT_TABLE_PLACEHOLDER") {
+    //   return (
+    //     <Box style={style}>
+    //       <OutputTable />
+    //     </Box>
+    //   );
+    // }
     const formattedLog = linkifyHtml(ansi_up.ansi_to_html(logs[index]), options);
     return (
       <Code
@@ -174,7 +175,7 @@ export const DisplayLogs: React.FC<{
           );
         }}
       </AutoSizer>
-      {!logs.length && showOutputTable && <OutputTable />}
+      {/* {!logs.length && showOutputTable && <OutputTable />} */}
     </VStack>
   );
 };
