@@ -679,6 +679,8 @@ export class ApiDockerJobQueue {
 
     let jobRow: DockerJobDefinitionRow | undefined = this.state.jobs[jobId];
 
+    // create a big inline function to handle the details and
+    // checks when actually making the state update
     const updateState = async (replace = false) => {
       if (!jobRow) {
         console.log(`💥 updateState but missing jobRow, maybe cache is bad?`);
@@ -817,8 +819,10 @@ export class ApiDockerJobQueue {
                     this.state.jobs[jobId].state
                   } ignoring queue request, job already queued or running`
                 );
-
+                // If this is a new submission
                 // TODO: what is happening here? It could be a lost job
+                // 
+                (this.state.jobs[jobId].history[0].value as StateChangeValueQueued).definition = valueQueued.definition;
                 await broadcastCurrentStateBecauseIDoubtStateIsSynced();
                 break;
               case DockerJobState.Finished:
@@ -1205,12 +1209,15 @@ export class ApiDockerJobQueue {
                 .jobId;
               const isCleared = await this.broadcastAndDeleteCachedJob(jobId);
               if (isCleared) {
-                connection.socket.send(
-                  JSON.stringify({
+                // wait a bit for the other workers to clear their caches
+                setTimeout(() => {
+                  connection.socket.send(
+                    JSON.stringify({
                     type: WebsocketMessageTypeServerBroadcast.ClearJobCacheConfirm,
                     payload: possibleMessage.payload,
                   } as WebsocketMessageServerBroadcast)
-                );
+                  );
+                }, 100);
               }
             })();
             break;
@@ -1219,6 +1226,8 @@ export class ApiDockerJobQueue {
               // Send a message to our local workers to clear their respective caches
               const jobId = (possibleMessage.payload as PayloadResubmitJob)
                 .jobId;
+              const updatedDefinition = (possibleMessage.payload as PayloadResubmitJob)
+                .definition;
               const job = this.state.jobs[jobId];
               const isCleared = await this.broadcastAndDeleteCachedJob(jobId);
               if (isCleared) {
@@ -1239,7 +1248,9 @@ export class ApiDockerJobQueue {
                 job: jobId,
                 value: {
                   ...job.history[0].value,
+                  definition: updatedDefinition,
                   time: Date.now(),
+                  
                 } as StateChangeValueQueued,
               };
               this.stateChange(resubmitStateChange);

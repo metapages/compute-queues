@@ -252,6 +252,10 @@ export interface PayloadClearJobCache {
 
 export interface PayloadResubmitJob {
   jobId: string;
+  // send the definition again, so we can update the state
+  // with the new definition (that may have changed the content (presigned URLS)
+  // that do not alter the hash (job id) )
+  definition: DockerJobDefinitionInputRefs;
 }
 
 export interface PayloadClearJobCacheConfirm {
@@ -355,7 +359,7 @@ export const isJobCacheAllowedToBeDeleted = (state: StateChange): boolean => {
     case DockerJobState.Queued:
     case DockerJobState.ReQueued:
     case DockerJobState.Running:
-      // not touching the job since it's active
+      // not touching the job since it's active. Finish it first.
       return false;
     case DockerJobState.Finished:
       return true;

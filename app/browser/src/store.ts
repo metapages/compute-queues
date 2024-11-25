@@ -290,6 +290,9 @@ export const useStore = create<MainStore>((set, get) => ({
     if (!jobState) {
       return;
     }
+    if (!get().newJobDefinition?.definition) {
+      return;
+    }
     get().setJobState(undefined);
     // delete the finished job from the local cache
     deleteFinishedJob(jobState.hash);
@@ -297,6 +300,7 @@ export const useStore = create<MainStore>((set, get) => ({
       type: WebsocketMessageTypeClientToServer.ResubmitJob,
       payload: {
         jobId: jobState.hash,
+        definition: get().newJobDefinition.definition,
       },
     };
     get().sendMessage(messageClientToServer);
