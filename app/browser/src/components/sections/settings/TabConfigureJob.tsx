@@ -46,11 +46,8 @@ export const TabConfigureJob: React.FC = () => {
   const onSubmit = useCallback(
     (values: FormType) => {
       const newJobDefinitionBlob = { ...jobDefinitionBlob };
-
-      if (values.workdir) {
-        newJobDefinitionBlob.workdir = values.workdir;
-      }
-
+      
+      newJobDefinitionBlob.workdir = values.workdir;
       newJobDefinitionBlob.command = values.command;
       newJobDefinitionBlob.entrypoint = values.entrypoint;
       newJobDefinitionBlob.gpu = values.gpu;
