@@ -140,6 +140,15 @@ export const ensureDockerImage = async (args: {
 
       console.log('args', args);
 
+      sender({
+        type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+        payload: {
+          jobId,
+          step: "docker build",
+          logs: [[`👉 STARTED docker ${args.join(" ")}`, Date.now()]],
+        } as JobStatusPayload,
+      });
+
       const command = new Deno.Command("docker", {
         cwd: buildDir,
         clearEnv: true,
@@ -151,8 +160,6 @@ export const ensureDockerImage = async (args: {
       const process = command.spawn();
 
       const consoleOut: ConsoleLogLine[] = [];
-      // const stdout: string[] = [];
-      // const stderr: string[] = [];
 
       (async () => {
         for await (const data of process.stdout.pipeThrough(
@@ -637,15 +644,39 @@ const downloadContextIntoDirectory = async (args: {
       downloadUrl.includes("tarball")
     ) {
       console.log(`tgz.uncompress ${filePathForDownload} into ${destination}`);
+      sender({
+        type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+        payload: {
+          jobId,
+          step: "cloning repo",
+          logs: [[`tgz uncompressing context: ${context}`, Date.now()]],
+        } as JobStatusPayload,
+      });
       await tgz.uncompress(filePathForDownload, destination);
       console.log(`tgz.uncompressed`);
     } else if (filePathForDownload.endsWith(".zip")) {
+      sender({
+        type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+        payload: {
+          jobId,
+          step: "cloning repo",
+          logs: [[`zip uncompressing context: ${context}`, Date.now()]],
+        } as JobStatusPayload,
+      });
       await decompress(filePathForDownload, destination);
     } else {
       throw new Error(
         `Downloaded context as ${downloadUrl} but do not know how to convert to a context folder`
       );
     }
+    sender({
+      type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+      payload: {
+        jobId,
+        step: "cloning repo",
+        logs: [[`✅ uncompressed context`, Date.now()]],
+      } as JobStatusPayload,
+    });
 
     // github downloads create a parent folder with the repo name and branch/tag/commit
     // move the contents of that folder to the destination
