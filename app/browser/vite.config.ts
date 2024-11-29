@@ -23,7 +23,6 @@ export default defineConfig(({ mode }) => ({
     preserveSymlinks: true,
   },
 
-  // this is really stupid this should not be necessary
   plugins: [react()],
 
   esbuild: {
