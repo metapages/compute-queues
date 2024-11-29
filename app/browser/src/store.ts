@@ -3,7 +3,7 @@ import { create } from 'zustand';
 
 import {
   getHashParamValueJsonFromWindow,
-  setHashParamJsonInWindow,
+  setHashParamValueJsonInWindow,
 } from '@metapages/hash-query';
 
 import {
@@ -442,7 +442,7 @@ export const useStore = create<MainStore>((set, get) => ({
     });
     const inputs: Record<string, string> = getHashParamValueJsonFromWindow("inputs") || {};
     inputs[get().mainInputFile] = get().mainInputFileContent;
-    setHashParamJsonInWindow("inputs", inputs);
+    setHashParamValueJsonInWindow("inputs", inputs);
     get().setMainInputFileContent(null);
   },
 }));

@@ -149,7 +149,7 @@ export const ensureDockerImage = async (args: {
         } as JobStatusPayload,
       });
 
-      const command = new Deno.Command("docker", {
+      const command = new Deno.Command("/usr/bin/docker", {
         cwd: buildDir,
         clearEnv: true,
         // env: Record<string, string>
@@ -568,9 +568,26 @@ const downloadContextIntoDirectory = async (args: {
       isFile: true,
       isReadable: true,
     });
-    console.log(`downloadContextIntoDirectory fileExists=${fileExists}`);
+    // console.log(`downloadContextIntoDirectory fileExists=${fileExists}`);
+    sender({
+      type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+      payload: {
+        jobId,
+        step: "cloning repo",
+        logs: [[`repo file exists...`, Date.now()]],
+      } as JobStatusPayload,
+    });
     if (!fileExists) {
-      console.log(`downloadContextIntoDirectory downloading...`);
+      sender({
+        type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+        payload: {
+          jobId,
+          step: "cloning repo",
+          logs: [[`downloading...`, Date.now()]],
+        } as JobStatusPayload,
+      });
+
+      // console.log(`downloadContextIntoDirectory downloading...`);
       // TODO: secrets and tokens
       // Create needed headers
       const headers: Record<string, string> = {};
@@ -599,9 +616,27 @@ const downloadContextIntoDirectory = async (args: {
         write: true,
       });
 
-      console.log(`downloadContextIntoDirectory created file and piping...`);
+      sender({
+        type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+        payload: {
+          jobId,
+          step: "cloning repo",
+          logs: [[`created file and piping...`, Date.now()]],
+        } as JobStatusPayload,
+      });
+
+
+      // console.log(`downloadContextIntoDirectory created file and piping...`);
       await res.body.pipeTo(file.writable);
-      console.log(`downloadContextIntoDirectory finished piping...`);
+      // console.log(`downloadContextIntoDirectory finished piping...`);
+      sender({
+        type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+        payload: {
+          jobId,
+          step: "cloning repo",
+          logs: [[`finished piping...`, Date.now()]],
+        } as JobStatusPayload,
+      });
       try {
         // https://github.com/denoland/deno/issues/14210
         file.close();

@@ -20,7 +20,7 @@ import {
   Tooltip,
   useMediaQuery,
 } from '@chakra-ui/react';
-import { useHashParam } from '@metapages/hash-query';
+import { useHashParam } from '@metapages/hash-query/react-hooks';
 import {
   Lock,
   Play,

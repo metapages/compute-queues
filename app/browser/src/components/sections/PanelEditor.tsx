@@ -6,12 +6,12 @@ import { encodeOptions } from "/@/helpers";
 import { JobInputs } from "/@/shared";
 import { useStore } from "/@/store";
 
-import { useHashParamJson } from "@metapages/hash-query";
+import { useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { MetaframeStandaloneComponent } from "@metapages/metapage-embed-react";
 
 export const PanelEditor: React.FC = () => {
   const [value, setValue] = useState(null);
-  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
+const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
   const mainInputFile = useStore(state => state.mainInputFile);
   const setMainInputFileContent = useStore(state => state.setMainInputFileContent);
 

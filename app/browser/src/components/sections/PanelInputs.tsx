@@ -9,7 +9,7 @@ import { InputsRefs, JobInputs } from "/@/shared/types";
 import { useStore } from "/@/store";
 
 import { Container, HStack, Icon, Spacer, Table, Tbody, Td, Text, Tr } from "@chakra-ui/react";
-import { useHashParamJson } from "@metapages/hash-query";
+import { useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { ArrowDown } from "@phosphor-icons/react";
 
 export const PanelInputs: React.FC = () => {

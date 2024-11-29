@@ -21,6 +21,17 @@ to run a simple python job using the worker above:
 - env var `JOB_OUTPUTS` is the directory where job output files will be copied when the job finishes successfully.
   Defaults to `/outputs`
 
+### Define Inputs and Outputs
+
+In `Settings / Definition` you can define inputs and outputs. This doesn't change how the code runs, but it allows much easier connecting upstream and downstream metaframes when editing [metapages](https://metapage.io).
+
+In this example, we defined an input: `input.json` and an output `data.csv`:
+
+![inputs](/readme-images/io.png "Inputs and outputs defined in Settings")
+
+You will see these inputs and outputs automatically in the metapage editor.
+
+
 ### Directory for caching data and large ML models
 
 The directory defined in the env var `JOB_CACHE` (defaults to `/job-cache`) is shared between all jobs running on a
