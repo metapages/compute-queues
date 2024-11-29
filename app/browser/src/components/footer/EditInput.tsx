@@ -4,7 +4,7 @@ import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "/@/shared";
 import { useStore } from "/@/store";
 
 import { Button, HStack, Icon, Text, Tooltip } from "@chakra-ui/react";
-import { useHashParamJson } from "@metapages/hash-query";
+import { useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { PencilSimple, Terminal } from "@phosphor-icons/react";
 
 export const EditInput: React.FC = () => {

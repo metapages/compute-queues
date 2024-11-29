@@ -13,7 +13,7 @@ import {
 import { Queue as QueueIcon } from "@phosphor-icons/react";
 import { Queue } from "/@/components/sections/queue/Queue";
 import { useStore } from "/@/store";
-import { useHashParam } from "@metapages/hash-query";
+import { useHashParam } from "@metapages/hash-query/react-hooks";
 
 export const QueueIconAndModal: React.FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();

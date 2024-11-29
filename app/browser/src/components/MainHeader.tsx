@@ -6,7 +6,7 @@ import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "/@/shared";
 import { useStore } from "/@/store";
 
 import { Badge, Box, Flex, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
-import { useHashParamJson } from "@metapages/hash-query";
+import { useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { DownloadSimple, Gear, UploadSimple } from "@phosphor-icons/react";
 import { JobStatus } from "./footer/JobStatus";
 

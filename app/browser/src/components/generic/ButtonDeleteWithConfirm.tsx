@@ -20,7 +20,8 @@ import { TrashSimple } from "@phosphor-icons/react";
 export const ButtonDeleteWithConfirm: React.FC<{
   callback: () => void;
   modalHeader?: string;
-}> = ({ callback, modalHeader = "Confirm deletion?" }) => {
+  iconColor?: string;
+}> = ({ callback, iconColor, modalHeader = "Confirm deletion?" }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const onClickDelete = useCallback(() => {
@@ -38,7 +39,7 @@ export const ButtonDeleteWithConfirm: React.FC<{
 
   return (
     <>
-      <Icon as={TrashSimple} aria-label="delete" onClick={onOpen} />
+      <Icon color={iconColor} as={TrashSimple} aria-label="delete" onClick={onOpen} />
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>

@@ -13,7 +13,7 @@ import {
 } from "/@/shared";
 import ReconnectingWebSocket from "reconnecting-websocket";
 
-import { useHashParam } from "@metapages/hash-query";
+import { useHashParam } from "@metapages/hash-query/react-hooks";
 
 import { websocketConnectionUrl } from "../config";
 import { cacheInsteadOfSendMessages, useStore } from "../store";

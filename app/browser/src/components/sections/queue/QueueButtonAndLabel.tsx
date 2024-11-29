@@ -7,7 +7,7 @@ import { WifiHigh, WifiSlash } from "@phosphor-icons/react";
 import * as yup from "yup";
 
 import { Alert, AlertIcon, Button, FormControl, HStack, Icon, Input, InputGroup, Tag, Text } from "@chakra-ui/react";
-import { useHashParam } from "@metapages/hash-query";
+import { useHashParam } from "@metapages/hash-query/react-hooks";
 
 const validationSchema = yup.object({
   queue: yup.string(),

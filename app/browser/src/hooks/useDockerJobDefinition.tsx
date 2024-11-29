@@ -19,7 +19,7 @@ import {
   useHashParam,
   useHashParamBoolean,
   useHashParamJson,
-} from '@metapages/hash-query';
+} from '@metapages/hash-query/react-hooks';
 import { useMetaframeAndInput } from '@metapages/metaframe-react-hook';
 import {
   DataRefSerialized,

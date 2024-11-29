@@ -1,19 +1,35 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Tab, TabList, TabPanel, TabPanels, Tabs, Text, VStack } from "@chakra-ui/react";
 
 import { TabConfigureImage } from "/@/components/sections/settings/TabConfigureImage";
 import { TabConfigureJob } from "/@/components/sections/settings/TabConfigureJob";
+import { TabConfigureDefinition } from "./TabConfigureDefinition";
 
 export const PanelImageAndContainer: React.FC = () => {
+
+  // local caching of user patterns
+  const [tabIndex, setTabIndex] = useState<number>(
+    localStorage.getItem("settings-tab")
+      ? parseInt(localStorage.getItem("settings-tab")!)
+      : 0
+  );
+  useEffect(() => {
+    localStorage.setItem("settings-tab", tabIndex.toString());
+  }, [tabIndex]);
+
+  
   return (
     <VStack w="100%" alignItems="stretch" overflow={"scroll"}>
-      <Tabs isFitted={true}>
+      <Tabs isFitted={true} index={tabIndex} onChange={setTabIndex}>
         <TabList mb="1em">
-          <Tab>
+          <Tab onClick={() => setTabIndex(0)}>
             <Text>Configure Job</Text>
           </Tab>
           <Tab>
             <Text>Docker Image</Text>
+          </Tab>
+          <Tab>
+            <Text>Definition</Text>
           </Tab>
         </TabList>
 
@@ -23,6 +39,9 @@ export const PanelImageAndContainer: React.FC = () => {
           </TabPanel>
           <TabPanel>
             <TabConfigureImage />
+          </TabPanel>
+          <TabPanel>
+            <TabConfigureDefinition />
           </TabPanel>
         </TabPanels>
       </Tabs>

@@ -19,7 +19,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query";
+import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
 
 const validationSchema = yup.object({
   command: yup.string().optional(),
