@@ -15,7 +15,7 @@ import {
   Text,
   useDisclosure,
 } from "@chakra-ui/react";
-import { MetaframeStandaloneComponent } from "@metapages/metapage-embed-react";
+import { MetaframeStandaloneComponent } from "@metapages/metapage-react";
 import { Check } from "@phosphor-icons/react";
 
 export interface EditorJsonProps {

@@ -7,7 +7,7 @@ import { JobInputs } from "/@/shared";
 import { useStore } from "/@/store";
 
 import { useHashParamJson } from "@metapages/hash-query/react-hooks";
-import { MetaframeStandaloneComponent } from "@metapages/metapage-embed-react";
+import { MetaframeStandaloneComponent } from "@metapages/metapage-react";
 
 export const PanelEditor: React.FC = () => {
   const [value, setValue] = useState(null);

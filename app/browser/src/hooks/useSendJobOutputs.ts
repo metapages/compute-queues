@@ -12,7 +12,7 @@ import {
   StateChangeValueFinished,
 } from '/@/shared';
 
-import { useMetaframeAndInput } from '@metapages/metaframe-react-hook';
+import { useMetaframeAndInput } from '@metapages/metapage-react';
 import {
   isIframe,
   MetaframeInputMap,
