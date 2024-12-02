@@ -153,7 +153,6 @@ export const convertJobOutputDataRefsToExpectedFormat = async (
         }
         case DataRefType.key: {
           arrayBuffer = await fetchBlobFromHash(outputs[name].value, address);
-          arrayBuffer = new Uint8Array(arrayBuffer);
 
           const internalBlobRefFromHash: DataRefSerializedBlob = {
             _c: Blob.name,
