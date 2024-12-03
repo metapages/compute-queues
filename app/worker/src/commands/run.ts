@@ -23,35 +23,6 @@ import { join } from "std/path";
 
 const VERSION: string = mod.version;
 
-let jobList: JobStates = { jobs: {} };
-
-// Create a simple HTTP server
-const metricsHandler = (req: Request): Response => {
-  const url = new URL(req.url);
-  // Route the metrics endpoint
-  if (url.pathname === "/metrics") {
-    const unfinishedJobs = Object.values(jobList.jobs).filter((job) =>
-      job.state !== DockerJobState.Finished
-    );
-    const unfinishedQueueLength = unfinishedJobs.length;
-    // Simple Prometheus-compatible metric response
-    const response = `
-# HELP queue_length The number of outstanding jobs in the queue
-# TYPE queue_length gauge
-queue_length ${unfinishedQueueLength}
-`;
-    return new Response(response, {
-      status: 200,
-      headers: {
-        "content-type": "text/plain",
-      },
-    });
-  }
-
-  // We don't serve anything else
-  return new Response("Not Found", { status: 404 });
-};
-
 /**
  * Connect via websocket to the API server, and attach the DockerJobQueue object
  * TODO: listen to multiple job queues?
@@ -165,7 +136,6 @@ export function connectToServer(
         case WebsocketMessageTypeServerBroadcast.JobStates: {
           const allJobsStatesPayload = possibleMessage
             .payload as BroadcastJobStates;
-          jobList = allJobsStatesPayload.state;
           if (!allJobsStatesPayload) {
             console.log({
               error: "Missing payload in message",
@@ -264,7 +234,6 @@ export const runCommand = new Command()
       dataDirectory: string;
       id: string;
      };
-
     if (!queue) {
       throw new Error("Must supply the queue id");
     }
