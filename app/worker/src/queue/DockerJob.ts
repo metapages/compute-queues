@@ -2,6 +2,7 @@ import { Buffer } from 'https://deno.land/std@0.177.0/node/buffer.ts';
 import { Writable } from 'https://deno.land/std@0.177.0/node/stream.ts';
 import { existsSync } from 'https://deno.land/std@0.224.0/fs/exists.ts';
 import Docker from 'npm:dockerode@4.0.2';
+import bytes from 'bytes';
 
 import * as StreamTools from '../docker/streamtools.ts';
 import { DockerJobSharedVolumeName } from '../docker/volume.ts';
@@ -66,6 +67,7 @@ export interface DockerJobArgs {
   env?: any;
   entrypoint?: string[] | undefined;
   workdir?: string;
+  shmSize?: string;
   volumes?: Array<Volume>;
   outStream?: Writable;
   errStream?: Writable;
@@ -100,6 +102,7 @@ export const dockerJobExecute = async (
     command,
     env,
     workdir,
+    shmSize,
     entrypoint,
     volumes,
     outStream,
@@ -153,6 +156,10 @@ export const dockerJobExecute = async (
         `${volume.host}:${volume.container}:Z`
       );
     });
+  }
+
+  if (shmSize) {
+    createOptions.HostConfig!.ShmSize = bytes(shmSize);
   }
 
   // Add a volume shared between all job containers
@@ -225,6 +232,8 @@ export const dockerJobExecute = async (
     if (existingJobContainer) {
       container = docker.getContainer(existingJobContainer.Id);
     }
+
+    console.log('🚀 createOptions', createOptions);
 
     if (!container) {
       container = await docker.createContainer(createOptions);

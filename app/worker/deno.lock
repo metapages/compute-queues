@@ -5,6 +5,7 @@
     "jsr:@std/encoding@1.0.3": "1.0.3",
     "jsr:@std/io@*": "0.225.0",
     "npm:@metapages/metapage@1.0.21": "1.0.21",
+    "npm:bytes@3.1.2": "3.1.2",
     "npm:dockerode@4.0.2": "4.0.2",
     "npm:fetch-retry@5.0.6": "5.0.6",
     "npm:klaw@4.1.0": "4.1.0",
@@ -77,6 +78,9 @@
     },
     "buildcheck@0.0.6": {
       "integrity": "sha512-8f9ZJCUXyT1M35Jx7MkBgmBMo3oHTTBIPLiY9xyL0pl3T5RwcPEY8cUHr5LBNfu/fk6c2T4DJZuVM/8ZZT2D2A=="
+    },
+    "bytes@3.1.2": {
+      "integrity": "sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg=="
     },
     "chownr@1.1.4": {
       "integrity": "sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg=="
@@ -646,6 +650,7 @@
   "workspace": {
     "dependencies": [
       "npm:@metapages/metapage@1.0.21",
+      "npm:bytes@3.1.2",
       "npm:fetch-retry@5.0.6",
       "npm:mutative@1.0.11",
       "npm:object-hash@3.0.0",

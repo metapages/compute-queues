@@ -27,14 +27,23 @@ const validationSchema = yup.object({
   entrypoint: yup.string().optional(),
   gpu: yup.boolean().optional(),
   workdir: yup.string().optional(),
+  shmSize: yup.string().optional(),
   jobStartAutomatically: yup.boolean().optional(),
 });
 interface FormType extends yup.InferType<typeof validationSchema> {}
+
+const labelToName = {
+  command: "Command  (--cmd)",
+  entrypoint: "Entrypoint  (--entrypoint)",
+  workdir: "Workdir  (--workdir)",
+  shmSize: "Shared Memory Size  (--shm-size)",
+};
 
 const linkMap = {
   workdir: "https://docs.docker.com/reference/dockerfile/#workdir",
   entrypoint: "https://docs.docker.com/reference/dockerfile/#entrypoint",
   command: "https://docs.docker.com/reference/dockerfile/#cmd",
+  shmSize: "https://docs.docker.com/engine/containers/run/#user-memory-constraints",
 };
 
 export const TabConfigureJob: React.FC = () => {
@@ -51,6 +60,7 @@ export const TabConfigureJob: React.FC = () => {
       newJobDefinitionBlob.command = values.command;
       newJobDefinitionBlob.entrypoint = values.entrypoint;
       newJobDefinitionBlob.gpu = values.gpu;
+      newJobDefinitionBlob.shmSize = values.shmSize;
 
       setJobDefinitionBlob(newJobDefinitionBlob);
       setDebug(!!values.debug);
@@ -66,6 +76,7 @@ export const TabConfigureJob: React.FC = () => {
       gpu: jobDefinitionBlob?.gpu,
       workdir: jobDefinitionBlob?.workdir,
       jobStartAutomatically,
+      shmSize: jobDefinitionBlob?.shmSize,
     },
     onSubmit,
     validationSchema,
@@ -90,8 +101,8 @@ export const TabConfigureJob: React.FC = () => {
               Container Settings
             </Text>
 
-            {["command", "entrypoint", "workdir"].map(key => {
-              const labelJsx: ReactNode = <FormLink href={linkMap[key]} label={key} />;
+            {["command", "entrypoint", "workdir", "shmSize"].map(key => {
+              const labelJsx: ReactNode = <FormLink href={linkMap[key]} label={labelToName[key]} />;
               return (
                 <FormControl key={key}>
                   <FormLabel htmlFor={key}>{labelJsx}</FormLabel>
