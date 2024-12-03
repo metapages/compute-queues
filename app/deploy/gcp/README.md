@@ -11,6 +11,8 @@ This worker infrastructure uses [terraform](https://www.terraform.io/) to create
 3. `terraform apply plan.out` to apply the plan
 4. `terraform destroy` to tear down the infrastructure
 
+**NOTE**: If you intend to deploy workers with GPUs, you'll need to make sure your project has GPU quota available for the kind of GPUS you're requesting in the region you're deploying to. `GPUS-ALL-REGIONS-per-project` is often set to `0` by default, so you may need to request a quota increase on that in order to use GPUs at all. Beyond that, there may be specific quotas for the kind of GPU you're requesting which have to be raised.
+
 ## Design
 
 This module deploys metapage workers as one or more [Managed Instance Groups](https://cloud.google.com/compute/docs/instance-groups) (MIGs) in GCP. The MIGs which should be created are defined via the `worker_groups` variable. Each MIG is assigned a job queue ID as part of its definition, and autoscales based on the `queue_length` Prometheus-style metric its own workers expose at the `/metrics` endpoint. This means as more jobs are added to the job queue, the MIG will automatically scale up to handle the increased load. As the number of unfinished jobs decreases, the MIG will conservatively scale in to save costs.
