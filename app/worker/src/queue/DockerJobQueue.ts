@@ -425,6 +425,7 @@ export class DockerJobQueue {
                 entrypoint: definition.entrypoint ? convertStringToDockerCommand(definition.entrypoint, definition.env) : undefined,
                 workdir: definition.workdir,
                 env: definition.env,
+                shmSize: definition.shmSize,
                 volumes,
                 deviceRequests,
                 durationMax: definition.durationMax,

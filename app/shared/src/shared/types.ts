@@ -66,6 +66,8 @@ export type DockerJobDefinitionInputsBase64V1 = {
   // entrypoint?: string[];
   entrypoint?: string;
   workdir?: string;
+  // https://docs.docker.com/engine/containers/run/#user-memory-constraints
+  shmSize?: string;
 
   // these are dynamic
   inputs?: InputsBase64String;
