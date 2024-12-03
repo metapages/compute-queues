@@ -14,6 +14,7 @@ export interface Arguments {
     // This is the most GPUs this worker will claim.
     // https://docs.docker.com/engine/containers/resource_constraints/#gpu
     gpus?: number;
+    mode?: string;
 }
 /**
  * Global configuration for the worker.
@@ -26,4 +27,5 @@ export const config :Arguments = {
     queue: "", //{ type: String, alias: 'q', description: 'Queue id. Browser links to this queue ' },
     id: MACHINE_ID, //{ type: String, alias: 'i', description: `Worker Id (default:${MACHINE_ID})`, defaultValue: MACHINE_ID },
     gpus: 0, //{ type: Number, alias: 'g', description: `Enable "--gpus all" flag if the job requests and the worker supports`, optional: true },
+    mode: "remote",
 };
