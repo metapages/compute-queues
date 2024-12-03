@@ -226,14 +226,14 @@ export const runCommand = new Command()
       dataDirectory,
       id,
     } = options as {
-       cpus: number;
-       gpus: number;
-       apiServerAddress: string;
+      cpus: number;
+      gpus: number;
+      apiServerAddress: string;
       mode: string;
       port: number;
       dataDirectory: string;
       id: string;
-     };
+    };
     if (!queue) {
       throw new Error("Must supply the queue id");
     }

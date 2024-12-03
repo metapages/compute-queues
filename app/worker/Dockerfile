@@ -10,7 +10,18 @@ ENV DOCKER_VERSION=5:27.1.1-1~debian.12~bookworm
 
 RUN apt-get update && apt-get -y install \
 	curl \
+	gnupg
+
+# Set up nvidia repository for GPU support in docker
+RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+	|  gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+	&& curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+	sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+	tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+RUN apt-get update && apt-get -y install \
 	ca-certificates \
+	nvidia-container-toolkit \
 	fuse-overlayfs \
 	uuid-runtime && \
 	install -m 0755 -d /etc/apt/keyrings && \

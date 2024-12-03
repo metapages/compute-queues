@@ -15,6 +15,10 @@ fi
 if [ -z "$METAPAGE_WORKER_GPUS" ]; then
     # Default to 0 GPUs
     METAPAGE_WORKER_GPUS=0
+else
+    # Running ldconfig here helps make nvidia libraries available to containers in
+    # environments where they're mounted as part of initialization we don't control
+    ldconfig
 fi
 
 if [ -n "$METAPAGE_GENERATE_WORKER_ID" ]; then
