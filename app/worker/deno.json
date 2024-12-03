@@ -1,5 +1,6 @@
 {
   "imports": {
+    "bytes": "npm:bytes@3.1.2",
     "@metapages/metapage": "npm:@metapages/metapage@1.0.21",
     "/@/shared": "./src/shared/mod.ts",
     "fetch-retry": "npm:fetch-retry@5.0.6",
