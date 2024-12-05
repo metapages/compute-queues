@@ -48,9 +48,19 @@ flowchart LR
 
 ## Local development
 
-### Quickstart
+### Host requirements:
 
-**Start the local dev stack (requires [just](https://github.com/casey/just?tab=readme-ov-file#installation)):**
+ - `just`: https://just.systems/man/en/chapter_1.html
+ - `docker`: https://docs.docker.com/engine/install/
+ - `deno`: https://docs.deno.com/runtime/manual/getting_started/installation
+ - `mkcert`: https://github.com/FiloSottile/mkcert
+   - ❗ 👉 Make sure you run `mkcert -install` ❗
+   - Add `127.0.0.1   app.metapage.localhost` to `/etc/hosts` by
+    - `sudo vi /etc/hosts`
+    - Then paste in:
+      - `127.0.0.1       app.metapage.localhost`
+
+
 
 ```
   just dev
@@ -87,16 +97,6 @@ You can develop the browser locally, pointing to prod or local API
   # or
   just browser prod
 ```
-
-### Local development: host system prerequisites
-
- - [docker](https://docs.docker.com/engine/install/)
- - [just](https://github.com/casey/just?tab=readme-ov-file#installation)
- - [deno](https://docs.deno.com/runtime/manual/getting_started/installation)
- - [mkcert](https://github.com/FiloSottile/mkcert?tab=readme-ov-file#installation)
-
-If you want to do browser development outside of docker compose, I assume you will know how to set up a local browser environment (`npm` etc).
-
 
 ### Submit jobs via the CLI
 
