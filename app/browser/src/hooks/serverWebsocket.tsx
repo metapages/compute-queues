@@ -15,14 +15,14 @@ import ReconnectingWebSocket from "reconnecting-websocket";
 
 import { useHashParam } from "@metapages/hash-query/react-hooks";
 
-import { websocketConnectionUrl } from "../config";
+import { websocketConnectionUrl, websocketConnectionUrlLocalmode } from "../config";
 import { cacheInsteadOfSendMessages, useStore } from "../store";
 
 /**
  * Sets states bits in the store
  */
 export const serverWebsocket = (): void => {
-  const [address] = useHashParam("queue");
+  const [queue] = useHashParam("queue");
 
   const setIsServerConnected = useStore(state => state.setIsServerConnected);
 
@@ -37,10 +37,10 @@ export const serverWebsocket = (): void => {
   const handleJobStatusPayload = useStore(state => state.handleJobStatusPayload);
 
   useEffect(() => {
-    if (!address || address === "") {
+    if (!queue || queue === "") {
       return;
     }
-    const url = `${websocketConnectionUrl}${address}/client`;
+    const url = `${queue === "local" ? websocketConnectionUrlLocalmode : websocketConnectionUrl}${queue}/client`;
     setIsServerConnected(false);
     const rws = new ReconnectingWebSocket(url);
     let timeLastPong = Date.now();
@@ -151,5 +151,5 @@ export const serverWebsocket = (): void => {
       setIsServerConnected(false);
       setSendMessage(cacheInsteadOfSendMessages);
     };
-  }, [address, setSendMessage, setIsServerConnected, setRawMessage]);
+  }, [queue, setSendMessage, setIsServerConnected, setRawMessage]);
 };
