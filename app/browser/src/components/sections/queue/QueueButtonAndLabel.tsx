@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import { useStore } from "/@/store";
 import { useFormik } from "formik";
@@ -6,8 +6,21 @@ import { useFormik } from "formik";
 import { WifiHigh, WifiSlash } from "@phosphor-icons/react";
 import * as yup from "yup";
 
-import { Alert, AlertIcon, Button, FormControl, HStack, Icon, Input, InputGroup, Tag, Text } from "@chakra-ui/react";
+import {
+  Alert,
+  AlertIcon,
+  Button,
+  FormControl,
+  HStack,
+  Icon,
+  Input,
+  InputGroup,
+  Tag,
+  Text,
+  Tooltip,
+} from "@chakra-ui/react";
 import { useHashParam } from "@metapages/hash-query/react-hooks";
+import { LocalModeToggle } from "./LocalModeToggle";
 
 const validationSchema = yup.object({
   queue: yup.string(),
@@ -16,6 +29,10 @@ interface FormType extends yup.InferType<typeof validationSchema> {}
 
 export const QueueButtonAndLabel: React.FC = () => {
   const [queue, setQueue] = useHashParam("queue", "");
+  const [isLocalMode, setIsLocalMode] = useState<boolean>(queue === "local");
+  useEffect(() => {
+    setIsLocalMode(queue === "local");
+  }, [queue]);
   const [showInput, setShowInput] = useState(false);
   const isServerConnected = useStore(state => state.isServerConnected);
 
@@ -41,12 +58,22 @@ export const QueueButtonAndLabel: React.FC = () => {
 
   return (
     <HStack width="100%" pl={"1rem"}>
-      <Icon
-        as={queue && isServerConnected ? WifiHigh : WifiSlash}
-        color={!(queue && isServerConnected) && "red"}
-        aria-label="edit docker job queue"
-        boxSize="7"
-      />
+      <LocalModeToggle />
+      <Tooltip
+        label={
+          isServerConnected
+            ? `${isLocalMode ? "Local worker" : "Server"} is connected`
+            : `${isLocalMode ? "Local worker" : "Server"} is not connected`
+        }>
+        <Icon
+          // onFocus https://github.com/chakra-ui/chakra-ui/issues/5304#issuecomment-1102836734
+          onFocus={e => e.preventDefault()}
+          as={queue && isServerConnected ? WifiHigh : WifiSlash}
+          color={!(queue && isServerConnected) && "red"}
+          aria-label="edit docker job queue"
+          boxSize="7"
+        />
+      </Tooltip>
       <Text p={2}>Queue key:</Text>
       {showInput ? (
         <>
@@ -58,21 +85,24 @@ export const QueueButtonAndLabel: React.FC = () => {
                     id="queue"
                     name="queue"
                     type="text"
+                    disabled={isLocalMode}
                     onChange={formik.handleChange}
                     value={formik.values.queue}
                   />
                 </InputGroup>
               </FormControl>
-              <Button type="submit" colorScheme="green" size={"sm"} mr={0}>
-                Add
-              </Button>
+              {isLocalMode ? null : (
+                <Button type="submit" colorScheme="green" size={"sm"} mr={0}>
+                  OK
+                </Button>
+              )}
             </HStack>
             {/* {error ? <Message type="error" message={error} /> : null} */}
           </form>
         </>
       ) : (
         <HStack gap={5}>
-          {queue ? <Tag>{queue}</Tag> : null} <Text onClick={() => setShowInput(true)}>Edit</Text>
+          {queue ? <Tag>{queue}</Tag> : null} { isLocalMode ? null : <Text onClick={() => setShowInput(true)}>Edit</Text>}
         </HStack>
       )}
 

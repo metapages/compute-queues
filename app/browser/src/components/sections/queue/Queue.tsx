@@ -1,12 +1,12 @@
+import { QuestionIcon } from "@chakra-ui/icons";
+import { HStack, Tab, TabList, TabPanel, TabPanels, Tabs, VStack } from "@chakra-ui/react";
 import React from "react";
-import { HStack, VStack, Tab, TabList, TabPanel, TabPanels, Tabs } from "@chakra-ui/react";
 import { useActiveJobsCount } from "/@/hooks/useActiveJobsCount";
 import { useWorkersCount } from "/@/hooks/useWorkersCount";
-import { QuestionIcon } from "@chakra-ui/icons";
 
+import { QueueButtonAndLabel } from "./QueueButtonAndLabel";
 import { JobsTable } from "/@/components/sections/queue/JobsTable";
 import { WorkersTable } from "/@/components/sections/queue/WorkersTable";
-import { QueueButtonAndLabel } from "./QueueButtonAndLabel";
 
 export const Queue: React.FC = () => {
   const activeJobsCount = useActiveJobsCount();
