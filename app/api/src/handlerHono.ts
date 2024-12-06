@@ -11,6 +11,7 @@ import {
 
 import { downloadHandler } from './routes/download.ts';
 import { statusHandler } from './routes/status.ts';
+import { metricsHandler } from './routes/metrics.ts';
 import { uploadHandler } from './routes/upload.ts';
 
 const app = new Hono()
