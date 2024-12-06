@@ -21,7 +21,7 @@ export const LocalModeToggle: React.FC = () => {
         setQueue("");
       }
     } else {
-      localStorage.setItem("previous-queue", queue);
+      localStorage.setItem("previous-queue", queue ?? "");
       setQueue("local");
     }
   }, [queue, setQueue]);
