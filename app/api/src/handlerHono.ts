@@ -40,6 +40,7 @@ app.get('/healthz', (c :Context) => c.text('OK'))
 app.get('/download/:key', downloadHandler)
 app.get('/upload/:key', uploadHandler)
 app.get('/:queue/status', statusHandler)
+app.get('/:queue/metrics', metricsHandler)
 
 // Serve static assets, and the index.html as the fallback
 app.get('/*', serveStatic({ root: './assets' }));
