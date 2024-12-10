@@ -12,7 +12,10 @@ export const InputRow: React.FC<{
   onDelete: (name: string) => void;
   onUpdate: (name: string, content: string) => void;
 }> = ({ name, content, onDelete, onUpdate }) => {
-  const onUpdateMemoized = useCallback((contentUpdate: string) => onUpdate(name, contentUpdate), [name, onUpdate]);
+  const onUpdateMemoized = useCallback(
+    (contentUpdate: string) => onUpdate(name, contentUpdate),
+    [name, onUpdate],
+  );
 
   return (
     <Tr>
@@ -25,7 +28,11 @@ export const InputRow: React.FC<{
       </Td>
       <Td>
         <Flex align={"center"} justify={"flex-end"} gap={3}>
-          <ButtonModalEditor fileName={name} content={content} onUpdate={onUpdateMemoized} />
+          <ButtonModalEditor
+            fileName={name}
+            content={content}
+            onUpdate={onUpdateMemoized}
+          />
           <ButtonDeleteWithConfirm callback={() => onDelete(name)} />
         </Flex>
       </Td>

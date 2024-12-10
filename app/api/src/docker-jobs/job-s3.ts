@@ -1,17 +1,11 @@
-import {
-  DataRef,
-  DataRefType,
-} from '/@/shared';
+import { DataRef, DataRefType } from "/@/shared";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
-} from 'npm:@aws-sdk/client-s3@3.600.0';
+} from "npm:@aws-sdk/client-s3@3.600.0";
 
-import {
-  bucketParams,
-  s3Client as client,
-} from '../routes/s3config.ts';
+import { bucketParams, s3Client as client } from "../routes/s3config.ts";
 
 export const putJsonToS3 = async (key: string, data: any): Promise<DataRef> => {
   const command = new PutObjectCommand({
@@ -31,7 +25,9 @@ export const putJsonToS3 = async (key: string, data: any): Promise<DataRef> => {
   return ref;
 };
 
-export const resolveDataRefFromS3 = async <T>(ref: DataRef<T>): Promise<T | undefined> => {
+export const resolveDataRefFromS3 = async <T>(
+  ref: DataRef<T>,
+): Promise<T | undefined> => {
   if (!(ref?.type === DataRefType.key)) {
     console.error("DataRef type is not a key", ref.type);
   }
@@ -42,15 +38,14 @@ export const resolveDataRefFromS3 = async <T>(ref: DataRef<T>): Promise<T | unde
   return await getJsonFromS3(ref.value);
 };
 
-
-export const getJsonFromS3 = async <T>(key: string): Promise<T|undefined> => {
+export const getJsonFromS3 = async <T>(key: string): Promise<T | undefined> => {
   try {
     const result = await getObject(key);
     if (!result) {
       return undefined;
     }
     return JSON.parse(result) as T;
-  } catch(err) {
+  } catch (err) {
     console.log(`getJsonFromS3 error for key ${key} ${err}`);
   }
 };

@@ -1,8 +1,5 @@
 import React from "react";
-import {
-  Divider,
-  VStack
-} from "@chakra-ui/react";
+import { Divider, VStack } from "@chakra-ui/react";
 import { SectionIO } from "./SectionIO";
 
 export const TabConfigureDefinition: React.FC = () => {

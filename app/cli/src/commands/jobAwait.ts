@@ -6,19 +6,20 @@ import {
   StateChangeValueFinished,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
-} from '/@/shared';
-import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
-import {
-  closed,
-  open,
-} from 'jsr:@korkje/wsi@^0.3.2';
+} from "/@/shared";
+import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
+import { closed, open } from "jsr:@korkje/wsi@^0.3.2";
 
 export const jobAwait = new Command()
   .arguments("<queue:string> <jobId:string>")
   .description("Wait for a job on a queue to finish")
-  .option("-o, --outputs [outputs:string]", "Directory to copy output files (if any)", {
-    default: "./outputs",
-  })
+  .option(
+    "-o, --outputs [outputs:string]",
+    "Directory to copy output files (if any)",
+    {
+      default: "./outputs",
+    },
+  )
   .action(
     async (
       options: {
@@ -26,13 +27,13 @@ export const jobAwait = new Command()
         apiServerAddress?: string | undefined;
       },
       queue: string,
-      jobId: string
+      jobId: string,
     ) => {
       const { apiServerAddress, outputs } = options;
 
       const address = apiServerAddress || globalThis.location.origin;
       const url = `${address}/${queue}/client`;
-      
+
       let {
         promise: jobCompleteDeferred,
         resolve,
@@ -40,7 +41,7 @@ export const jobAwait = new Command()
       } = Promise.withResolvers<StateChangeValueFinished>();
 
       const socket = new WebSocket(`${url.replace("http", "ws")}`);
-  
+
       let resolved = false;
       socket.onmessage = (message: MessageEvent) => {
         if (resolved) {
@@ -49,16 +50,19 @@ export const jobAwait = new Command()
 
         const messageString = message.data.toString();
         // console.log('messageString', messageString);
-        const possibleMessage: WebsocketMessageServerBroadcast =
-          JSON.parse(messageString);
+        const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(
+          messageString,
+        );
         switch (possibleMessage.type) {
           case WebsocketMessageTypeServerBroadcast.JobStates:
           case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
-            const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
+            const someJobsPayload = possibleMessage
+              .payload as BroadcastJobStates;
             if (!someJobsPayload) {
               break;
-              }
-            const jobState :DockerJobDefinitionRow = someJobsPayload.state.jobs[jobId];
+            }
+            const jobState: DockerJobDefinitionRow =
+              someJobsPayload.state.jobs[jobId];
             if (!jobState) {
               break;
             }
@@ -66,18 +70,22 @@ export const jobAwait = new Command()
             if (jobState.state === DockerJobState.Finished) {
               const finishedState = jobState.value as StateChangeValueFinished;
               (async () => {
-                await finishedJobOutputsToFiles(finishedState, outputs as string, address);
+                await finishedJobOutputsToFiles(
+                  finishedState,
+                  outputs as string,
+                  address,
+                );
                 resolved = true;
                 resolve(finishedState);
               })();
             }
-            
+
             break;
           default:
             //ignored
         }
       };
-  
+
       // console.log("Opening socket...")
       await open(socket);
       // console.log("Opened socket ✅")
@@ -87,5 +95,5 @@ export const jobAwait = new Command()
       await closed(socket);
       // console.log("Socket closed ✅")
       console.log(JSON.stringify(result));
-    }
+    },
   );

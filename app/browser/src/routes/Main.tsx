@@ -1,5 +1,11 @@
 import React from "react";
-import { Box, Container, HStack, useMediaQuery, VStack } from "@chakra-ui/react";
+import {
+  Box,
+  Container,
+  HStack,
+  useMediaQuery,
+  VStack,
+} from "@chakra-ui/react";
 
 import { useStore } from "../store";
 
@@ -15,7 +21,7 @@ import { JobStatus } from "/@/components/footer/JobStatus";
 import { PanelDocs } from "/@/components/sections/PanelDocs";
 
 export const Main: React.FC = () => {
-  const rightPanelContext = useStore(state => state.rightPanelContext);
+  const rightPanelContext = useStore((state) => state.rightPanelContext);
   const [isWiderThan1000] = useMediaQuery("(min-width: 1000px)");
   const [isTallerThan200] = useMediaQuery("(min-height: 200px)");
 
@@ -29,7 +35,8 @@ export const Main: React.FC = () => {
     help: <PanelDocs />,
     stderr: <PanelLogs mode={"stderr"} />,
   };
-  const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
+  const rightContent = rightPanelContext &&
+    rightPanelOptions[rightPanelContext];
   let rightWidth = "0%";
   if (rightPanelContext) {
     if (!isWiderThan1000) {
@@ -48,7 +55,14 @@ export const Main: React.FC = () => {
 
   if (!isTallerThan200) {
     return (
-      <Container m={0} bg={"gray.300"} minW={"100%"} minH={"100%"} h={"100vh"} w={"100vw"}>
+      <Container
+        m={0}
+        bg={"gray.300"}
+        minW={"100%"}
+        minH={"100%"}
+        h={"100vh"}
+        w={"100vw"}
+      >
         <HStack justifyContent={"space-around"} minH={"100%"}>
           <JobStatus />
           <JobControlButton />
@@ -63,7 +77,11 @@ export const Main: React.FC = () => {
         <Box minW={leftWidth} minH={"contentHeight"}>
           <PanelLogs mode={stdErrShown ? "stdout" : "stdout+stderr"} />
         </Box>
-        <Box minW={rightWidth} minH={"contentHeight"} borderLeft={rightContent && "1px"}>
+        <Box
+          minW={rightWidth}
+          minH={"contentHeight"}
+          borderLeft={rightContent && "1px"}
+        >
           {rightContent}
         </Box>
       </HStack>

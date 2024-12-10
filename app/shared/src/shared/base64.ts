@@ -181,6 +181,8 @@ export function validateBinaryLike(source: unknown): Uint8Array {
     return new Uint8Array(source);
   }
   throw new TypeError(
-    `The input must be a Uint8Array, a string, or an ArrayBuffer. Received a value of the type ${getTypeName(source)}.`,
+    `The input must be a Uint8Array, a string, or an ArrayBuffer. Received a value of the type ${
+      getTypeName(source)
+    }.`,
   );
 }

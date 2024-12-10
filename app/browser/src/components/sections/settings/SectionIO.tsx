@@ -26,10 +26,12 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useHashParamJson } from "@metapages/hash-query/react-hooks";
-import { isEmptyMetaframeDefinition, MetaframeDefinitionV1 } from "@metapages/metapage";
+import {
+  isEmptyMetaframeDefinition,
+  MetaframeDefinitionV1,
+} from "@metapages/metapage";
 import { DownloadSimple, Plus, UploadSimple } from "@phosphor-icons/react";
 import { ButtonDeleteWithConfirm } from "../../generic/ButtonDeleteWithConfirm";
-
 
 const validationSchema = yup.object({
   name: yup.string(),
@@ -60,7 +62,7 @@ export const SectionIO: React.FC = () => {
         setDefinition(newIoValues);
       }
     },
-    [definition, setDefinition]
+    [definition, setDefinition],
   );
 
   const onSubmit = useCallback(
@@ -83,7 +85,7 @@ export const SectionIO: React.FC = () => {
       }
       onClose();
     },
-    [onClose, isInput, definition, setDefinition]
+    [onClose, isInput, definition, setDefinition],
   );
 
   const formik = useFormik({
@@ -114,12 +116,15 @@ export const SectionIO: React.FC = () => {
         justifyContent="flex-start"
         alignItems="stretch"
       >
-        <HStack alignItems="flex-start" width="100%" justifyContent="space-between">
-        <VStack alignItems={'flex-start'}>
-          <Text fontWeight={600}>Define Inputs and Outputs</Text>
-        </VStack>
-        
-      </HStack>
+        <HStack
+          alignItems="flex-start"
+          width="100%"
+          justifyContent="space-between"
+        >
+          <VStack alignItems={"flex-start"}>
+            <Text fontWeight={600}>Define Inputs and Outputs</Text>
+          </VStack>
+        </HStack>
         <HStack w="100%" justifyContent="space-between" alignItems="flex-start">
           <VStack justifyContent="flex-start" w="50%">
             <Button
@@ -143,7 +148,7 @@ export const SectionIO: React.FC = () => {
                       type={definition.inputs[name].type}
                       onDelete={() => deleteInput(true, name)}
                     />
-                  )
+                  ),
                 )}
               </Tbody>
             </Table>
@@ -162,18 +167,16 @@ export const SectionIO: React.FC = () => {
 
             <Table px={5} variant="simple">
               <Tbody>
-                {(definition?.outputs
-                  ? Object.keys(definition.outputs)
-                  : []
-                ).map((name, i) => (
-                  <IORow
-                    key={name}
-                    isInput={false}
-                    name={name}
-                    type={definition.outputs[name].type}
-                    onDelete={() => deleteInput(false, name)}
-                  />
-                ))}
+                {(definition?.outputs ? Object.keys(definition.outputs) : [])
+                  .map((name, i) => (
+                    <IORow
+                      key={name}
+                      isInput={false}
+                      name={name}
+                      type={definition.outputs[name].type}
+                      onDelete={() => deleteInput(false, name)}
+                    />
+                  ))}
               </Tbody>
             </Table>
           </VStack>

@@ -7,7 +7,7 @@ const fetchGraphQL = async (
   headers: Record<string, string>,
   operationsDoc: string,
   operationName: string,
-  variables: Record<string, any>
+  variables: Record<string, any>,
 ) => {
   return fetch(url, {
     method: "POST",
@@ -20,13 +20,12 @@ const fetchGraphQL = async (
     }),
   }).then(async (result) => {
     const textJson = await result.text();
-    if (!textJson.startsWith('{')) {
+    if (!textJson.startsWith("{")) {
       console.error(`fetchGraphQL error ${textJson}`);
     }
     return JSON.parse(textJson);
   });
 };
-
 
 const operationGetPublicMetapage = `
   query GetPublicMetapage($id: uuid!) {
@@ -47,32 +46,30 @@ const operationGetPublicMetaframe = `
   }
 `;
 
-
-
 export const fetchGetPublicMetapage = (
   url: string,
   headers: Record<string, string>,
-  variables: { id: string }
+  variables: { id: string },
 ) => {
   return fetchGraphQL(
     url,
     headers,
     operationGetPublicMetapage,
     "GetPublicMetapage",
-    variables
+    variables,
   );
 };
 
 export const fetchGetPublicMetaframe = (
   url: string,
   headers: Record<string, string>,
-  variables: { mfk: string }
+  variables: { mfk: string },
 ) => {
   return fetchGraphQL(
     url,
     headers,
     operationGetPublicMetaframe,
     "MetaframeGetPublic",
-    variables
+    variables,
   );
 };

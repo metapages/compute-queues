@@ -14,7 +14,9 @@ export enum DataRefType {
   key = "key",
 }
 
-const DataRefTypeKeys: string[] = Object.keys(DataRefType).filter(key => isNaN(Number(key)));
+const DataRefTypeKeys: string[] = Object.keys(DataRefType).filter((key) =>
+  isNaN(Number(key))
+);
 export const DataRefTypesSet = new Set(DataRefTypeKeys);
 export const DataRefTypeDefault = DataRefType.utf8;
 
@@ -81,10 +83,12 @@ export type DockerJobDefinitionInputsBase64V1 = {
 // immediately to this version, otherwise big lumps in the inputs will
 // completely clog up the data pipes. Stay small out there, definitions,
 // you're the living entities flowing
-export type DockerJobDefinitionInputRefs = Omit<DockerJobDefinitionInputsBase64V1, "inputs" | "configFiles"> & {
-  inputs?: InputsRefs;
-  configFiles?: InputsRefs;
-};
+export type DockerJobDefinitionInputRefs =
+  & Omit<DockerJobDefinitionInputsBase64V1, "inputs" | "configFiles">
+  & {
+    inputs?: InputsRefs;
+    configFiles?: InputsRefs;
+  };
 
 export interface DockerRunResult {
   StatusCode?: number;
@@ -177,11 +181,15 @@ export interface DockerJobDefinitionRow {
   history: StateChange[];
 }
 
-export const isDockerJobDefinitionRowFinished = (row: DockerJobDefinitionRow) => {
+export const isDockerJobDefinitionRowFinished = (
+  row: DockerJobDefinitionRow,
+) => {
   return row.state === DockerJobState.Finished;
 };
 
-export const getFinishedJobState = (row: DockerJobDefinitionRow): StateChangeValueFinished | undefined => {
+export const getFinishedJobState = (
+  row: DockerJobDefinitionRow,
+): StateChangeValueFinished | undefined => {
   if (isDockerJobDefinitionRowFinished(row)) {
     return row.value as StateChangeValueFinished;
   }
@@ -212,7 +220,12 @@ export interface WorkerStatusResponse {
 
 export interface JobStatusPayload {
   jobId: string;
-  step: "docker image pull" | "cloning repo" | "docker build" | `${DockerJobState.Running}` | "docker image push";
+  step:
+    | "docker image pull"
+    | "cloning repo"
+    | "docker build"
+    | `${DockerJobState.Running}`
+    | "docker image push";
   logs: ConsoleLogLine[];
 }
 
@@ -233,9 +246,15 @@ export enum WebsocketMessageTypeWorkerToServer {
 }
 export interface WebsocketMessageWorkerToServer {
   type: WebsocketMessageTypeWorkerToServer;
-  payload: StateChange | WorkerRegistration | WorkerStatusResponse | JobStatusPayload;
+  payload:
+    | StateChange
+    | WorkerRegistration
+    | WorkerStatusResponse
+    | JobStatusPayload;
 }
-export type WebsocketMessageSenderWorker = (message: WebsocketMessageWorkerToServer) => void;
+export type WebsocketMessageSenderWorker = (
+  message: WebsocketMessageWorkerToServer,
+) => void;
 
 /**
  * These are all the messsages types the (browser) clients send to the api server
@@ -274,9 +293,15 @@ export interface PayloadQueryJob {
 
 export interface WebsocketMessageClientToServer {
   type: WebsocketMessageTypeClientToServer;
-  payload: StateChange | PayloadClearJobCache | PayloadResubmitJob | PayloadQueryJob;
+  payload:
+    | StateChange
+    | PayloadClearJobCache
+    | PayloadResubmitJob
+    | PayloadQueryJob;
 }
-export type WebsocketMessageSenderClient = (message: WebsocketMessageClientToServer) => void;
+export type WebsocketMessageSenderClient = (
+  message: WebsocketMessageClientToServer,
+) => void;
 
 /**
  * These are all the messsages types the server sends to:
@@ -335,7 +360,10 @@ export type BroadcastStatusRequest = undefined;
  * Client specific
  ************************************************************/
 
-export type DockerJobDefinitionParamsInUrlHash = Omit<DockerJobDefinitionInputRefs, "inputs" | "configInputs">;
+export type DockerJobDefinitionParamsInUrlHash = Omit<
+  DockerJobDefinitionInputRefs,
+  "inputs" | "configInputs"
+>;
 
 // this is the actual job definition consumed by the workers
 export interface DockerJobDefinitionMetadata {

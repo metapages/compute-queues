@@ -4,7 +4,7 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-export const handleOptions = async (request: Request) :Promise<Response> => {
+export const handleOptions = async (request: Request): Promise<Response> => {
   if (
     request.headers.get("Origin") !== null &&
     request.headers.get("Access-Control-Request-Method") !== null &&
@@ -15,7 +15,7 @@ export const handleOptions = async (request: Request) :Promise<Response> => {
       headers: {
         ...corsHeaders,
         "Access-Control-Allow-Headers": request.headers.get(
-          "Access-Control-Request-Headers"
+          "Access-Control-Request-Headers",
         )!,
       },
     });
@@ -27,5 +27,4 @@ export const handleOptions = async (request: Request) :Promise<Response> => {
       },
     });
   }
-}
-
+};

@@ -1,5 +1,5 @@
-import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
-import { compareVersions } from 'https://deno.land/x/compare_versions/mod.ts';
+import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
+import { compareVersions } from "https://deno.land/x/compare_versions/mod.ts";
 
 export const workerUpgrade = new Command()
   .description("Update all workers to a new version")
@@ -10,8 +10,11 @@ export const workerUpgrade = new Command()
         version?: string | undefined | boolean;
       },
     ) => {
-      await updateContainers("metapage/metaframe-docker-worker", options?.version as string|undefined);
-    }
+      await updateContainers(
+        "metapage/metaframe-docker-worker",
+        options?.version as string | undefined,
+      );
+    },
   );
 
 // Function to execute shell commands
@@ -45,7 +48,7 @@ async function runCommand(cmd: string, args: string[], captureOutput = true) {
 
 // Function to get all running containers
 async function getAllRunningContainers() {
-  const output = await runCommand("docker",[
+  const output = await runCommand("docker", [
     "ps",
     "--format",
     "{{.ID}}:{{.Image}}",
@@ -67,7 +70,7 @@ async function getRunningContainersByImagePrefix(imagePrefix: string) {
 
 // Function to get container details
 async function getContainerDetails(containerId: string) {
-  const inspectOutput = await runCommand("docker",[    
+  const inspectOutput = await runCommand("docker", [
     "inspect",
     containerId,
     "--format",
@@ -105,7 +108,9 @@ async function startNewContainer(details: any, newImageVersion: string) {
     details.RestartPolicy,
     // "--label",
     // "app=my-app", // Keep label or customize as needed
-    ...details.Volumes.flatMap((v: any) => ["-v", `${v.Source}:${v.Destination}`]), // Map volumes
+    ...details.Volumes.flatMap((
+      v: any,
+    ) => ["-v", `${v.Source}:${v.Destination}`]), // Map volumes
     newImage,
     ...details.Cmd, // Start with the same command
   ];
@@ -123,43 +128,52 @@ async function stopAndRemoveContainer(containerId: string) {
 
 // Main function to update containers
 async function updateContainers(imagePrefix: string, newVersion?: string) {
-
-  getLatestVersionFromDockerHub
+  getLatestVersionFromDockerHub;
   if (!newVersion) {
     const latestVersion = await getLatestVersionFromDockerHub(imagePrefix);
     if (!latestVersion) {
-      console.error(`Failed to fetch the latest version for image: ${imagePrefix}`);
+      console.error(
+        `Failed to fetch the latest version for image: ${imagePrefix}`,
+      );
       return;
     }
     newVersion = latestVersion;
   }
-  const runningContainers = await getRunningContainersByImagePrefix(imagePrefix);  
+  const runningContainers = await getRunningContainersByImagePrefix(
+    imagePrefix,
+  );
   for (const containerId of runningContainers) {
     const details = await getContainerDetails(containerId);
     const currentVersion = details.Image.split(":")[1];
     if (currentVersion !== newVersion) {
-      
       // Stop and remove old container
       await stopAndRemoveContainer(containerId);
 
       // Start new container with updated version
       await startNewContainer(details, newVersion);
     } else {
-      console.log(`Container ${details.Name} is already using version ${newVersion}`);
+      console.log(
+        `Container ${details.Name} is already using version ${newVersion}`,
+      );
     }
   }
 }
 
 // Function to fetch the latest version from DockerHub
-async function getLatestVersionFromDockerHub(imageName: string): Promise<string | null> {
+async function getLatestVersionFromDockerHub(
+  imageName: string,
+): Promise<string | null> {
   // DockerHub API URL for listing tags
-  const url = `https://registry.hub.docker.com/v2/repositories/${imageName}/tags?page_size=100`;
+  const url =
+    `https://registry.hub.docker.com/v2/repositories/${imageName}/tags?page_size=100`;
 
   try {
     // Fetch the tag information from DockerHub
     const response = await fetch(url);
     if (!response.ok) {
-      console.error(`Failed to fetch tags from DockerHub for image: ${imageName}`);
+      console.error(
+        `Failed to fetch tags from DockerHub for image: ${imageName}`,
+      );
       return null;
     }
 
@@ -177,7 +191,7 @@ async function getLatestVersionFromDockerHub(imageName: string): Promise<string 
     // Use your semver comparison function to get the latest version
     const latestVersion = getLatestSemverVersion(tags);
     return latestVersion;
-  } catch (error:any) {
+  } catch (error: any) {
     console.error(`Error fetching tags from DockerHub: ${error.message}`);
     return null;
   }
