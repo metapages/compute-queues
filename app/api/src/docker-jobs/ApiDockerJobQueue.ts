@@ -59,6 +59,7 @@ const INTERVAL_WORKERS_BROADCAST = ms("10 seconds") as number;
 const INTERVAL_JOB_STATES_MINIMAL_BROADCAST = ms("5 seconds") as number;
 const INTERVAL_JOBS_BROADCAST = ms("10 seconds") as number;
 const INTERVAL_CHECK_FOR_DUPLICATE_JOBS_SAME_SOURCE = ms("10 seconds") as number;
+const INTERVAL_REMOVE_OLD_FINISHED_JOBS_FROM_QUEUE = ms("10 seconds") as number;
 
 type ServerWorkersObject = { [key: string]: WorkerRegistration[] };
 
@@ -154,6 +155,7 @@ export class ApiDockerJobQueue {
   _intervalJobsStatesMinimalBroadcast: number | undefined;
   _intervalJobsBroadcast: number | undefined;
   _intervalCheckForDuplicateJobsSameSource: number | undefined;
+  _intervalRemoveOldFinishedJobsFromQueue: number | undefined;
 
   constructor(opts: { serverId: string; address: string }) {
     const { serverId, address } = opts;
@@ -366,6 +368,10 @@ export class ApiDockerJobQueue {
     this._intervalCheckForDuplicateJobsSameSource = setInterval(() => {
       this.checkForSourceConflicts();
     }, INTERVAL_CHECK_FOR_DUPLICATE_JOBS_SAME_SOURCE);
+
+    this._intervalRemoveOldFinishedJobsFromQueue = setInterval(() => {
+      this.removeOldFinishedJobsFromQueue();
+    }, INTERVAL_REMOVE_OLD_FINISHED_JOBS_FROM_QUEUE);
   }
 
   /**
@@ -707,9 +713,9 @@ export class ApiDockerJobQueue {
         // Finished jobs are cached in the db
         if (change.state === DockerJobState.Finished) {
           await db.resultCacheAdd(jobId, jobRow);
-        }
-
-        if (change.state === DockerJobState.Queued) {
+          // remove from the persisted cache so that metrics will be accurate
+          await db.queueJobRemove(this.address, jobId);
+        } else if (change.state === DockerJobState.Queued) {
           await db.queueJobAdd(this.address, jobRow!);
         } else {
           await db.queueJobUpdate(this.address, jobRow!);
