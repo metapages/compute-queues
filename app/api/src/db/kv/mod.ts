@@ -57,7 +57,6 @@ export class DB {
     }
 
     async queueGetAll(queue: string): Promise<DockerJobDefinitionRow[]> {
-
         const entries = kv.list<DataRef<DockerJobDefinitionRow>>({ prefix: ["queue", queue] });
         const results : DockerJobDefinitionRow[] = [];
         for await (const entry of entries) {
@@ -73,6 +72,16 @@ export class DB {
             }
         }
         return results;
+    }
+
+    async queueGetCount(queue: string): Promise<number> {
+        const entries = kv.list<DataRef<DockerJobDefinitionRow>>({ prefix: ["queue", queue] });
+        
+        let count = 0;
+        for await (const _ of entries) {
+            count++;
+        }
+        return count;
     }
 
     async resultCacheAdd(id: string, result: DockerJobDefinitionRow): Promise<void> {
