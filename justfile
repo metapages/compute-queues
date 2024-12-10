@@ -1,6 +1,7 @@
 set shell          := ["bash", "-c"]
 set dotenv-load    := true
 set export         := true
+set quiet          := true
 
 normal             := '\033[0m'
 green              := "\\e[32m"
@@ -24,24 +25,34 @@ cyan               := "\\e[36m"
   echo -e "       github repo:           {{green}}https://github.com/metapages/compute-queues{{normal}}"
   echo -e "       api deployment config: {{green}}https://dash.deno.com/projects/compute-queue-api{{normal}}"
   
+# Validate mode
+@_validate_mode mode="":
+  @if [ "{{mode}}" = "remote" ] || [ "{{mode}}" = "local" ]; then :; else echo "Error: Mode must be 'remote' or 'local'" >&2; exit 1; fi
 
-# (_app "dev" args)
-# Run the local development stack
-@dev +args="": 
-  just app/dev {{args}}
+# Start Development Environment
+@dev mode="remote" +args="": (_validate_mode mode)
+  just app/dev {{mode}} {{args}}
 
-@down +args="": 
-  just app/down {{args}}
+# Shut Down Development Environment
+@down mode="remote" +args="": (_validate_mode mode)
+  just app/down {{mode}} {{args}}
 
+# Clean Up Project
+@clean mode="remote" +args="": (_validate_mode mode)
+  just app/clean {{mode}} {{args}}
+
+# Run Linting
 @lint:
   echo "does work?"
   just app/browser/lint
 
-# Publish e.g. docker images with whatever versioning scheme is appropriate
+# Publish Versioned Artifacts
+# Usage: just publish-versioned-artifacts [version]
 @publish-versioned-artifacts version="":
   just app/publish-versioned-artifacts {{version}}
 
-# Local special development: remove local workers, rebuild, and run two workers
+# Run Local Workers
+# Usage: just run-local-workers
 run-local-workers: publish-versioned-artifacts
   #!/usr/bin/env bash
   # Replace this with your image name (without tag)
@@ -75,10 +86,6 @@ run-local-workers: publish-versioned-artifacts
 # Quick compilation checks
 @check:
   just app check
-
-# Remove all caches, generated files, etc.
-@clean:
-  just app/clean
 
 # app subdirectory commands
 alias app := _app

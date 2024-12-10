@@ -1,0 +1,239 @@
+services:
+  test:
+    depends_on:
+      api1:
+        condition: service_healthy
+    image: denoland/deno:alpine-2.0.3
+    command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+    working_dir: /app/test
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
+      - worker-metaframe.localhost:host-gateway
+    environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+      - API_URL=http://api1:8081
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
+      - AWS_ENDPOINT=${AWS_ENDPOINT:-https://minio.worker-metaframe.localhost}:${APP_PORT:-443}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
+      - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
+      - DENO_KV_URL=http://denokv:4512
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - deno:/deno
+      - .:/app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api1.rule=Host(`worker-metaframe.localhost`)"
+      - "traefik.http.routers.api1.entrypoints=websecure"
+      - "traefik.http.routers.api1.tls=true"
+      - "traefik.http.services.api1.loadbalancer.server.port=8081"
+    networks:
+      - default
+    logging:
+      driver: ${LOGGING_TESTS:-json-file}
+
+  api1:
+    depends_on:
+      traefik:
+        condition: service_started
+      minio:
+        condition: service_healthy
+      denokv:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    image: denoland/deno:alpine-2.0.3
+    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
+    working_dir: /app/api
+    healthcheck:
+      test: sh -c 'PORT=8081 deno run --allow-net --allow-env src/util/healthcheck.ts'
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    expose:
+      - "8081"
+    ports:
+      - "8081:8081"
+    environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+      - PORT=8081
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
+      - AWS_ENDPOINT=${AWS_ENDPOINT:-https://minio.worker-metaframe.localhost}:${APP_PORT:-443}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
+      - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
+      - DENO_KV_URL=http://denokv:4512
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - deno:/deno
+      - ./shared:/app/shared
+      - ./browser/dist:/app/browser/dist
+      - ./api:/app/api
+    networks:
+      - default
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - local.graphql.nhost.run:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
+      - worker-metaframe.localhost:host-gateway
+    labels:
+      - "custom.label=worker-metaframe.localhost"
+      - "traefik.enable=true"
+      - "traefik.http.routers.api1.rule=Host(`worker-metaframe.localhost`)"
+      - "traefik.http.routers.api1.tls=true"
+      - "traefik.http.routers.api1.entrypoints=websecure"
+    logging:
+      driver: ${LOGGING_API:-json-file}
+
+  api2:
+    depends_on:
+      minio:
+        condition: service_started
+      denokv:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    image: denoland/deno:alpine-2.0.3
+    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
+    working_dir: /app/api
+    healthcheck:
+      test: sh -c 'PORT=8082 deno run --allow-net --allow-env src/util/healthcheck.ts'
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    expose:
+      - "8082"
+    environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+      - PORT=8082
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
+      - AWS_ENDPOINT=${AWS_ENDPOINT:-https://minio.worker-metaframe.localhost}:${APP_PORT:-443}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
+      - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
+      - DENO_KV_URL=http://denokv:4512
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - deno:/deno
+      - ./shared:/app/shared
+      - ./browser/dist:/app/browser/dist
+      - ./api:/app/api
+    networks:
+      - default
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - local.graphql.nhost.run:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
+      - worker-metaframe.localhost:host-gateway
+    logging:
+      driver: ${LOGGING_API:-json-file}
+
+  worker:
+    depends_on:
+      api1:
+        condition: service_healthy
+      api2:
+        condition: service_healthy
+    entrypoint: [
+      "deno",
+      "run",
+      "--unsafely-ignore-certificate-errors",
+      "--watch",
+      "--allow-all",
+      "src/cli.ts",
+    ]
+    command: run --cpus=2 --gpus=0 --api-server-address=https://worker-metaframe.localhost:${APP_PORT:-443} local1
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+      target: worker
+    environment:
+      - IGNORE_CERTIFICATE_ERRORS=true
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+    volumes:
+      - ./shared:/app/shared
+      - ./worker:/app/worker
+      - /tmp:/tmp
+      - /var/run/docker.sock:/var/run/docker.sock
+      - deno:/deno
+      - node_modules_worker:/app/worker/node_modules
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - local.storage.local.nhost.run:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
+      - worker-metaframe.localhost:host-gateway
+    logging:
+      driver: ${LOGGING_WORKER:-json-file}
+
+  create-browser-assets:
+    build:
+      context: .
+      dockerfile: browser/Dockerfile
+    command: just watch
+    working_dir: /app/browser
+    environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+      - SERVER_ORIGIN=https://worker-metaframe.localhost:${APP_PORT:-443}
+    volumes:
+      - ../.git:/.git
+      - ./browser/dist:/app/browser/dist
+      - ./browser/index.html:/app/browser/index.html
+      - ./browser/justfile:/app/browser/justfile
+      - ./browser/package-lock.json:/app/browser/package-lock.json
+      - ./browser/package.json:/app/browser/package.json
+      - ./browser/public:/app/browser/public
+      - ./browser/src:/app/browser/src
+      - ./browser/tsconfig.json:/app/browser/tsconfig.json
+      - ./browser/vite.config.ts:/app/browser/vite.config.ts
+      - ./shared:/app/shared
+      - node_modules:/app/browser/node_modules
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  create-s3-bucket:
+    depends_on:
+      minio:
+        condition: service_started
+    image: denoland/deno:alpine-2.0.3
+    command: deno run --watch --allow-all ./src/s3/create-bucket-development.ts
+    working_dir: /app/api
+    environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+      - AWS_ACCESS_KEY_ID=minioaccesskey123123
+      - AWS_SECRET_ACCESS_KEY=minioaccesskey123123
+      - AWS_ENDPOINT=https://minio.worker-metaframe.localhost:${APP_PORT:-443}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+      - AWS_REGION=${AWS_REGION:-us-west-2}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
+    volumes:
+      - ./api/src:/app/api/src
+      - deno:/deno
+
+volumes:
+  deno:
+    driver: local
+  node_modules:
+    driver: local
+  node_modules_worker:
+    driver: local
+
+networks:
+  default:
+    driver: bridge

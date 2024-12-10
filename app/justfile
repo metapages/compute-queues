@@ -1,5 +1,6 @@
 set shell        := ["bash", "-c"]
 set dotenv-load  := true
+set quiet        := true
 
 APP_FQDN         := "worker-metaframe.localhost"
 APP_PORT         := env_var_or_default("APP_PORT", "443")
@@ -16,11 +17,15 @@ green            := "\\e[32m"
 
 
 
+# Validate mode
+@_validate_mode mode="":
+    @if [ "{{mode}}" = "remote" ] || [ "{{mode}}" = "local" ]; then :; else echo "Error: Mode must be 'remote' or 'local'" >&2; exit 1; fi
+
 # Develop: open the browser and start the dev stack
-dev +args="": _ensure-all open (up args)
+@dev mode="remote" +args="": (_validate_mode mode) _ensure-all open (_up mode args)
 
 # Start the docker compose local stack
-up +args="": _ensure-all _mkcert
+@_up mode="remote" +args="": (_validate_mode mode) _ensure-all _mkcert
     #!/usr/bin/env bash
     # A local NPM registry saves time, bandwidth, and avoids rate limits
     # If a local npm registry cache is running, use that for all npm modules (faster and better when internet not great)
@@ -30,15 +35,21 @@ up +args="": _ensure-all _mkcert
     if [ $STATUS_CODE = "200" ]; then
         export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
     fi
-    # Having issues with the worker
-    docker compose --project-name=dev rm --force 2>/dev/null || true
+    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{mode}}.yml rm --force 2>/dev/null || true
     docker rm dev-worker-1 2>/dev/null || true
-    #  --build
-    docker compose --project-name=dev up --remove-orphans {{args}}
+    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{mode}}.yml up --remove-orphans {{args}}
 
 # Shut down the local stack: 'docker compose down'
-down +args="":
-    docker compose --project-name=dev down {{args}}
+@down mode="remote" +args="": (_validate_mode mode)
+    #!/usr/bin/env bash
+    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{mode}}.yml down {{args}}
+
+# Clean up the project
+@clean mode="remote" +args="": (_validate_mode mode)
+    #!/usr/bin/env bash
+    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{mode}}.yml down -v
+    just browser/clean
+    rm -rf .cache
 
 # Open the browser to the local frontend
 @open: _ensure-all
@@ -73,7 +84,7 @@ test: check
     set -e # exit when any command fails, preserving the status of the failed command
 
     cleanup() {
-        docker compose --project-name=test down 2>/dev/null || true
+        docker compose --project-name=test -f docker-compose.yml -f docker-compose-remote.yml down 2>/dev/null || true
     }
 
     trap cleanup EXIT # cleanup when the script exits for any reason, including failure
@@ -117,7 +128,7 @@ test: check
     # fi
     # This is causing currently unknown issues, a dangling worker 
     docker rm test-worker-1 2>/dev/null || true
-    docker compose --project-name=test up --build --remove-orphans --detach
+    docker compose --project-name=test -f docker-compose.yml -f docker-compose-remote.yml up --build --remove-orphans --detach
     just worker/test
     just test/test
     just shared/test
@@ -125,12 +136,7 @@ test: check
 
 # Clean up the project
 @test-cleanup:
-    docker compose --project-name=test down || true
-
-clean:
-    docker compose --project-name=dev down -v
-    just browser/clean
-    rm -rf .cache
+    docker compose --project-name=test -f docker-compose.yml -f docker-compose-remote.yml down || true
 
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":
