@@ -1,30 +1,19 @@
-import React, {
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
 import {
   ConsoleLogLine,
   DockerJobState,
   StateChangeValueFinished,
-} from '/@/shared/types';
-import { useStore } from '/@/store';
-import { AnsiUp } from 'ansi_up';
-import linkifyHtml from 'linkify-html';
-import AutoSizer from 'react-virtualized-auto-sizer';
-import { VariableSizeList as List } from 'react-window';
+} from "/@/shared/types";
+import { useStore } from "/@/store";
+import { AnsiUp } from "ansi_up";
+import linkifyHtml from "linkify-html";
+import AutoSizer from "react-virtualized-auto-sizer";
+import { VariableSizeList as List } from "react-window";
 
-import {
-  Box,
-  Code,
-  VStack,
-} from '@chakra-ui/react';
+import { Box, Code, VStack } from "@chakra-ui/react";
 
-import {
-  OUTPUT_TABLE_ROW_HEIGHT,
-  OutputTable,
-} from './OutputTable';
+import { OUTPUT_TABLE_ROW_HEIGHT, OutputTable } from "./OutputTable";
 
 export type LogsMode = "stdout+stderr" | "stdout" | "stderr" | "build";
 
@@ -42,7 +31,7 @@ export const DisplayLogs: React.FC<{
   const [showOutputTable, setShowOutputTable] = useState(false);
   const [outputCount, setOutputCount] = useState(0);
   const myref = useRef(null);
-  const job = useStore(state => state.jobState);
+  const job = useStore((state) => state.jobState);
 
   useEffect(() => {
     if (!job?.state || job.state !== DockerJobState.Finished) return;
@@ -56,7 +45,11 @@ export const DisplayLogs: React.FC<{
 
   const showRef = () => {
     if (myref.current) {
-      myref.current._outerRef.scroll({ top: myref.current._outerRef.scrollHeight, left: 0, behavior: "smooth" });
+      myref.current._outerRef.scroll({
+        top: myref.current._outerRef.scrollHeight,
+        left: 0,
+        behavior: "smooth",
+      });
     }
   };
 
@@ -71,9 +64,9 @@ export const DisplayLogs: React.FC<{
     setLogs(logsRef.current);
   }, [jobId]);
 
-  const jobState = useStore(state => state.jobState);
-  const buildLogs = useStore(state => state.buildLogs);
-  const runLogs = useStore(state => state.runLogs);
+  const jobState = useStore((state) => state.jobState);
+  const buildLogs = useStore((state) => state.buildLogs);
+  const runLogs = useStore((state) => state.runLogs);
 
   // update the job id
   useEffect(() => {
@@ -114,7 +107,7 @@ export const DisplayLogs: React.FC<{
         break;
     }
     let logsNewlineHandled: string[] = [];
-    currentLogs.forEach(line => {
+    currentLogs.forEach((line) => {
       if (!line) {
         return;
       }
@@ -122,7 +115,7 @@ export const DisplayLogs: React.FC<{
       logsNewlineHandled = logsNewlineHandled.concat(lines);
     });
     // logsRef.current = outputCount ? [...logsNewlineHandled, "OUTPUT_TABLE_PLACEHOLDER"] : logsNewlineHandled;
-    logsRef.current =  logsNewlineHandled;
+    logsRef.current = logsNewlineHandled;
     setLogs(logsRef.current);
   }, [mode, jobState, jobId, buildLogs, runLogs, showOutputTable, outputCount]);
 
@@ -130,7 +123,7 @@ export const DisplayLogs: React.FC<{
     return <VStack alignItems={"flex-start"} h={"100%"} pl={3}></VStack>;
   }
 
-  const getItemSize = index => {
+  const getItemSize = (index) => {
     // if (logs[index] === "OUTPUT_TABLE_PLACEHOLDER") return OUTPUT_TABLE_ROW_HEIGHT * (outputCount + 1) + LINE_HEIGHT;
     return LINE_HEIGHT;
   };
@@ -146,7 +139,10 @@ export const DisplayLogs: React.FC<{
     //     </Box>
     //   );
     // }
-    const formattedLog = linkifyHtml(ansi_up.ansi_to_html(logs[index]), options);
+    const formattedLog = linkifyHtml(
+      ansi_up.ansi_to_html(logs[index]),
+      options,
+    );
     return (
       <Code
         style={style}
@@ -167,9 +163,10 @@ export const DisplayLogs: React.FC<{
               itemSize={getItemSize}
               itemCount={logsRef.current.length}
               width={width}
-              ref={el => {
+              ref={(el) => {
                 myref.current = el;
-              }}>
+              }}
+            >
               {Row}
             </List>
           );

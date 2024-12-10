@@ -1,21 +1,21 @@
-import fetchRetry from 'fetch-retry';
-import { create } from 'mutative';
-import stringify from 'safe-stable-stringify';
+import fetchRetry from "fetch-retry";
+import { create } from "mutative";
+import stringify from "safe-stable-stringify";
 
-import {
-  DataRef,
-  DockerJobDefinitionInputRefs,
-} from './types.ts';
+import { DataRef, DockerJobDefinitionInputRefs } from "./types.ts";
 
-export const shaDockerJob = async (job: DockerJobDefinitionInputRefs): Promise<string> => {
-
-  const jobReadyForSha = create(job, (draft :DockerJobDefinitionInputRefs) => {
+export const shaDockerJob = async (
+  job: DockerJobDefinitionInputRefs,
+): Promise<string> => {
+  const jobReadyForSha = create(job, (draft: DockerJobDefinitionInputRefs) => {
     // Remove any presignedurl/... from the URLs
     const configFiles = draft.configFiles;
     if (configFiles) {
-      Object.keys(configFiles).forEach(key => {
+      Object.keys(configFiles).forEach((key) => {
         if (configFiles[key].type === "url") {
-          configFiles[key].value = reduceUrlToHashVersion((configFiles[key] as DataRef<string>)?.value);
+          configFiles[key].value = reduceUrlToHashVersion(
+            (configFiles[key] as DataRef<string>)?.value,
+          );
         }
       });
     }
@@ -23,9 +23,11 @@ export const shaDockerJob = async (job: DockerJobDefinitionInputRefs): Promise<s
     // Remove any presignedurl/... from the URLs
     const inputs = draft.inputs;
     if (inputs) {
-      Object.keys(inputs).forEach(key => {
+      Object.keys(inputs).forEach((key) => {
         if (inputs[key].type === "url") {
-          inputs[key].value = reduceUrlToHashVersion((inputs[key] as DataRef<string>)?.value);
+          inputs[key].value = reduceUrlToHashVersion(
+            (inputs[key] as DataRef<string>)?.value,
+          );
         }
       });
     }
@@ -39,7 +41,9 @@ const reduceUrlToHashVersion = (url: string): string => {
     const tokens = url.split("/presignedurl/");
     return tokens[0];
   }
-  if (url.startsWith('https://metaframe-asman-test.s3.us-west-1.amazonaws.com')) {
+  if (
+    url.startsWith("https://metaframe-asman-test.s3.us-west-1.amazonaws.com")
+  ) {
     const urlBlob = new URL(url);
     urlBlob.search = "";
     urlBlob.hash = "";
@@ -58,7 +62,9 @@ export const shaObject = async (obj: any): Promise<string> => {
 export const sha256Buffer = async (buffer: Uint8Array): Promise<string> => {
   const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join(
+    "",
+  );
   return hashHex;
 };
 
@@ -77,7 +83,9 @@ export const fetchRobust = fetchRetry(fetch, {
           console.error(error);
         }
         console.log(
-          `Retried too many times: response.status=${response?.status} response.statusText=${response?.statusText} attempt number ${attempt + 1} url=${response?.url}`,
+          `Retried too many times: response.status=${response?.status} response.statusText=${response?.statusText} attempt number ${
+            attempt + 1
+          } url=${response?.url}`,
         );
         return false;
       }

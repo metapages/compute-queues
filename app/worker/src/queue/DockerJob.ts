@@ -1,11 +1,11 @@
-import { Buffer } from 'https://deno.land/std@0.177.0/node/buffer.ts';
-import { Writable } from 'https://deno.land/std@0.177.0/node/stream.ts';
-import { existsSync } from 'https://deno.land/std@0.224.0/fs/exists.ts';
-import Docker from 'npm:dockerode@4.0.2';
-import bytes from 'bytes';
+import { Buffer } from "https://deno.land/std@0.177.0/node/buffer.ts";
+import { Writable } from "https://deno.land/std@0.177.0/node/stream.ts";
+import { existsSync } from "https://deno.land/std@0.224.0/fs/exists.ts";
+import Docker from "npm:dockerode@4.0.2";
+import bytes from "bytes";
 
-import * as StreamTools from '../docker/streamtools.ts';
-import { DockerJobSharedVolumeName } from '../docker/volume.ts';
+import * as StreamTools from "../docker/streamtools.ts";
+import { DockerJobSharedVolumeName } from "../docker/volume.ts";
 import {
   DockerApiDeviceRequest,
   DockerJobImageBuild,
@@ -14,12 +14,9 @@ import {
   JobStatusPayload,
   WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
-} from '../shared/mod.ts';
-import { docker } from './dockerClient.ts';
-import {
-  DockerBuildError,
-  ensureDockerImage,
-} from './dockerImage.ts';
+} from "../shared/mod.ts";
+import { docker } from "./dockerClient.ts";
+import { DockerBuildError, ensureDockerImage } from "./dockerImage.ts";
 
 // Minimal interface for interacting with docker jobs:
 //  inputs:
@@ -62,7 +59,7 @@ export interface DockerJobArgs {
   sender: WebsocketMessageSenderWorker;
   id: string;
   image?: string;
-  build?:DockerJobImageBuild;
+  build?: DockerJobImageBuild;
   command?: string[] | undefined;
   env?: any;
   entrypoint?: string[] | undefined;
@@ -83,7 +80,7 @@ export interface DockerJobExecution {
 
 if (!existsSync("/var/run/docker.sock")) {
   console.error(
-    'You must give access to the local docker daemon via: " -v /var/run/docker.sock:/var/run/docker.sock"'
+    'You must give access to the local docker daemon via: " -v /var/run/docker.sock:/var/run/docker.sock"',
   );
   Deno.exit(1);
 }
@@ -91,9 +88,8 @@ if (!existsSync("/var/run/docker.sock")) {
 export const JobCacheDirectory = "/job-cache";
 
 export const dockerJobExecute = async (
-  args: DockerJobArgs
+  args: DockerJobArgs,
 ): Promise<DockerJobExecution> => {
-
   // console.log('dockerJobExecute args', args);
   const {
     sender,
@@ -128,16 +124,13 @@ export const dockerJobExecute = async (
     WorkingDir: workdir,
     Entrypoint: entrypoint,
     HostConfig: {},
-    Env:
-      env != null
-        ? Object.keys(env).map((key) => `${key}=${env[key]}`)
-        : [],
+    Env: env != null ? Object.keys(env).map((key) => `${key}=${env[key]}`) : [],
     Tty: false, // needed for splitting stdout/err
     AttachStdout: true,
     AttachStderr: true,
     Labels: {
       "container.mtfm.io/id": args.id,
-    }
+    },
   };
 
   createOptions.Env.push("JOB_INPUTS=/inputs");
@@ -153,7 +146,7 @@ export const dockerJobExecute = async (
     createOptions.HostConfig!.Binds = [];
     volumes.forEach((volume) => {
       createOptions.HostConfig!.Binds!.push(
-        `${volume.host}:${volume.container}:Z`
+        `${volume.host}:${volume.container}:Z`,
       );
     });
   }
@@ -166,8 +159,8 @@ export const dockerJobExecute = async (
   // For e.g. big downloaded models
   // Security issue? Maybe. Don't store your job
   // data there, store it in /inputs and /outputs.
-    createOptions.HostConfig!.Binds!.push(
-    `${DockerJobSharedVolumeName}:${JobCacheDirectory}:Z`
+  createOptions.HostConfig!.Binds!.push(
+    `${DockerJobSharedVolumeName}:${JobCacheDirectory}:Z`,
   );
 
   var grabberOutStream = StreamTools.createTransformStream((s: string) => {
@@ -202,38 +195,53 @@ export const dockerJobExecute = async (
     grabberErrStream.pipe(errStream!);
   }
 
-  const runningContainers :any[] = await docker.listContainers({Labels: {
-    "container.mtfm.io/id": args.id,
-  }});
+  const runningContainers: any[] = await docker.listContainers({
+    Labels: {
+      "container.mtfm.io/id": args.id,
+    },
+  });
 
   const finish = async () => {
     try {
-      createOptions.image = await ensureDockerImage({jobId: id, image, build: args.build, sender});
-    } catch (err:any) {
+      createOptions.image = await ensureDockerImage({
+        jobId: id,
+        image,
+        build: args.build,
+        sender,
+      });
+    } catch (err: any) {
       result.logs = err.logs ? err.logs : [];
       if (err instanceof DockerBuildError) {
         result.error = "Error building image";
         result.logs.push([`${err.message}`, Date.now(), true]);
         return result;
       } else {
-        console.error('💥 ensureDockerImage error', err);
-        result.logs.push([`Failure to pull or build the docker image:  ${err?.message}`, Date.now(), true]);
+        console.error("💥 ensureDockerImage error", err);
+        result.logs.push([
+          `Failure to pull or build the docker image:  ${err?.message}`,
+          Date.now(),
+          true,
+        ]);
         result.error = "Error";
         return result;
       }
     }
 
     // Check for existing job container
-    const runningContainers = await docker.listContainers({Labels: {
-      "container.mtfm.io/id": args.id,
-    }});
-    const existingJobContainer = runningContainers.find((container :any) => container?.Labels["container.mtfm.io/id"] === args.id);
+    const runningContainers = await docker.listContainers({
+      Labels: {
+        "container.mtfm.io/id": args.id,
+      },
+    });
+    const existingJobContainer = runningContainers.find((container: any) =>
+      container?.Labels["container.mtfm.io/id"] === args.id
+    );
 
     if (existingJobContainer) {
       container = docker.getContainer(existingJobContainer.Id);
     }
 
-    console.log('🚀 createOptions', createOptions);
+    console.log("🚀 createOptions", createOptions);
 
     if (!container) {
       container = await docker.createContainer(createOptions);
@@ -249,12 +257,15 @@ export const dockerJobExecute = async (
     if (!existingJobContainer) {
       // is buffer
       const startData: Buffer = await container!.start();
-      console.log('🚀 container started, startData', new TextDecoder().decode(startData));
+      console.log(
+        "🚀 container started, startData",
+        new TextDecoder().decode(startData),
+      );
     }
 
-    console.log('🚀 container started, waiting...', id);
+    console.log("🚀 container started, waiting...", id);
     const dataWait = await container!.wait();
-    console.log('🚀 container finished', dataWait);
+    console.log("🚀 container finished", dataWait);
 
     result.StatusCode = dataWait != null ? dataWait.StatusCode : null;
 
@@ -287,7 +298,6 @@ const killAndRemove = async (container?: Docker.Container): Promise<any> => {
     return killResult;
   }
 };
-
 
 const dockerUrlMatches = (a: DockerUrlBlob, b: DockerUrlBlob) => {
   if (a.repository == b.repository) {

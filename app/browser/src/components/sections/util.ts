@@ -7,15 +7,21 @@ import {
   DockerJobState,
   InputsRefs,
   StateChangeValueFinished,
-} from '/@/shared';
-import { saveAs } from 'file-saver';
-import JSZip from 'jszip';
+} from "/@/shared";
+import { saveAs } from "file-saver";
+import JSZip from "jszip";
 
-export const getDynamicInputsCount = (currentJobDefinition: DockerJobDefinitionMetadata | undefined) => {
-  return currentJobDefinition?.definition?.inputs ? Object.keys(currentJobDefinition.definition.inputs).length : 0;
+export const getDynamicInputsCount = (
+  currentJobDefinition: DockerJobDefinitionMetadata | undefined,
+) => {
+  return currentJobDefinition?.definition?.inputs
+    ? Object.keys(currentJobDefinition.definition.inputs).length
+    : 0;
 };
 
-export const getConfigInputs = (currentJobDefinition: DockerJobDefinitionMetadata | undefined): InputsRefs => {
+export const getConfigInputs = (
+  currentJobDefinition: DockerJobDefinitionMetadata | undefined,
+): InputsRefs => {
   return currentJobDefinition.definition?.configFiles || {};
 };
 
@@ -52,7 +58,10 @@ export const downloadFile = async (name: string, ref: DataRef) => {
   document.body.removeChild(link);
 };
 
-export const zipAndDownloadDatarefs = async (refs: InputsRefs, name: string) => {
+export const zipAndDownloadDatarefs = async (
+  refs: InputsRefs,
+  name: string,
+) => {
   const blobs: { blob: Blob; name: string }[] = [];
   for (const [name, ref] of Object.entries(refs)) {
     const buffer = await dataRefToBuffer(ref);
@@ -62,7 +71,10 @@ export const zipAndDownloadDatarefs = async (refs: InputsRefs, name: string) => 
   zipAndDownloadBlobs(name, blobs);
 };
 
-export const zipAndDownloadBlobs = (name: string, blobs: { blob: Blob; name: string }[]) => {
+export const zipAndDownloadBlobs = (
+  name: string,
+  blobs: { blob: Blob; name: string }[],
+) => {
   const zip = new JSZip();
 
   // Add blobs to zip

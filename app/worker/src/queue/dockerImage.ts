@@ -1,25 +1,16 @@
-import {
-  ensureDir,
-  exists,
-} from 'https://deno.land/std@0.224.0/fs/mod.ts';
-import {
-  dirname,
-  join,
-} from 'https://deno.land/std@0.224.0/path/mod.ts';
-import { tgz } from 'https://deno.land/x/compress@v0.4.5/mod.ts';
-import { decompress } from 'https://deno.land/x/zip@v1.2.5/mod.ts';
+import { ensureDir, exists } from "https://deno.land/std@0.224.0/fs/mod.ts";
+import { dirname, join } from "https://deno.land/std@0.224.0/path/mod.ts";
+import { tgz } from "https://deno.land/x/compress@v0.4.5/mod.ts";
+import { decompress } from "https://deno.land/x/zip@v1.2.5/mod.ts";
 
-import {
-  ConsoleLogLine,
-  JobStatusPayload,
-} from '../../../shared/src/mod.ts';
+import { ConsoleLogLine, JobStatusPayload } from "../../../shared/src/mod.ts";
 import {
   DockerJobImageBuild,
   shaObject,
   WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
-} from '../shared/mod.ts';
-import { docker } from './dockerClient.ts';
+} from "../shared/mod.ts";
+import { docker } from "./dockerClient.ts";
 
 // assume that no images are deleted while we are running
 const CACHED_DOCKER_IMAGES: { [key: string]: boolean } = {};
@@ -55,11 +46,10 @@ export class DockerBuildError extends Error {
   logs?: ConsoleLogLine[];
 
   constructor(message: string, logs?: ConsoleLogLine[]) {
-      super(message);
-      this.logs = logs;
+    super(message);
+    this.logs = logs;
   }
 }
-
 
 export const ensureDockerImage = async (args: {
   jobId: string;
@@ -85,7 +75,7 @@ export const ensureDockerImage = async (args: {
 
     image = getDockerImageName(buildSha);
 
-    imageExists = await checkForDockerImage({jobId, image, sender});
+    imageExists = await checkForDockerImage({ jobId, image, sender });
     if (imageExists) {
       console.log("✅ ensureDockerImage: image exists");
       return image;
@@ -95,7 +85,7 @@ export const ensureDockerImage = async (args: {
 
     if (!dockerfile && !context) {
       throw new DockerBuildError(
-        "Missing Dockerfile or context. Where does the Dockerfile come from?"
+        "Missing Dockerfile or context. Where does the Dockerfile come from?",
       );
     }
 
@@ -114,11 +104,11 @@ export const ensureDockerImage = async (args: {
 
     if (dockerfile) {
       console.log(
-        `👀 ensureDockerImage: ${image} building from user Dockerfile`
+        `👀 ensureDockerImage: ${image} building from user Dockerfile`,
       );
       await Deno.writeTextFile(`${buildDir}/Dockerfile`, dockerfile);
       console.log(
-        `✅ ensureDockerImage: wrote Dockerfile to ${buildDir}/Dockerfile`
+        `✅ ensureDockerImage: wrote Dockerfile to ${buildDir}/Dockerfile`,
       );
     }
 
@@ -127,7 +117,7 @@ export const ensureDockerImage = async (args: {
       // So intead, just use the docker cli
       // start the process
       const args = ["build"];
-      
+
       if (filename) {
         args.push(`--file=${filename}`);
       }
@@ -137,8 +127,7 @@ export const ensureDockerImage = async (args: {
       args.push(`--tag=${image}`);
       args.push(".");
 
-
-      console.log('args', args);
+      console.log("args", args);
 
       sender({
         type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
@@ -162,13 +151,17 @@ export const ensureDockerImage = async (args: {
       const consoleOut: ConsoleLogLine[] = [];
 
       (async () => {
-        for await (const data of process.stdout.pipeThrough(
-          new TextDecoderStream()
-        )) {
+        for await (
+          const data of process.stdout.pipeThrough(
+            new TextDecoderStream(),
+          )
+        ) {
           console.log(`DOCKER BUILD stdout: ${data}`);
           const time = Date.now();
-          const decodedLines: ConsoleLogLine[] = data.trim().split("\n").map((l: string) => [l, time]);
-          decodedLines.forEach(l => {
+          const decodedLines: ConsoleLogLine[] = data.trim().split("\n").map((
+            l: string,
+          ) => [l, time]);
+          decodedLines.forEach((l) => {
             consoleOut.push(l);
           });
 
@@ -184,12 +177,16 @@ export const ensureDockerImage = async (args: {
       })();
 
       (async () => {
-        for await (const data of process.stderr.pipeThrough(
-          new TextDecoderStream()
-        )) {
+        for await (
+          const data of process.stderr.pipeThrough(
+            new TextDecoderStream(),
+          )
+        ) {
           const time = Date.now();
-          const decodedLines: ConsoleLogLine[] = data.trim().split("\n").map((l: string) => [l, time, true]);
-          decodedLines.forEach(l => {
+          const decodedLines: ConsoleLogLine[] = data.trim().split("\n").map((
+            l: string,
+          ) => [l, time, true]);
+          decodedLines.forEach((l) => {
             consoleOut.push(l);
           });
 
@@ -212,19 +209,22 @@ export const ensureDockerImage = async (args: {
 
       if (!success) {
         console.error(
-          `💥 DOCKER BUILD FAILED: ${code} ${signal}\n ${consoleOut.map(l => l[0]).join(
-            "\n"
-          )}`
+          `💥 DOCKER BUILD FAILED: ${code} ${signal}\n ${
+            consoleOut.map((l) => l[0]).join(
+              "\n",
+            )
+          }`,
         );
         throw new DockerBuildError(
-          "Failure to build the docker image", consoleOut
+          "Failure to build the docker image",
+          consoleOut,
         );
       }
 
       if (success) {
         try {
           const dockerimage = docker.getImage(image);
-          const info :{Size:number} = await dockerimage.inspect();
+          const info: { Size: number } = await dockerimage.inspect();
           CACHED_DOCKER_IMAGES[image!] = true;
           // TODO put this parameter in the cli configuration
           if (info.Size < 536870912) { // 0.5gb
@@ -233,9 +233,9 @@ export const ensureDockerImage = async (args: {
                 if (err) {
                   console.log(`💥 DOCKER PUSH: ${err}`);
                 }
-  
+
                 console.log(`DOCKER PUSHING...`);
-  
+
                 docker.modem.followProgress(
                   stream,
                   (err: any, output: any) => {
@@ -247,7 +247,7 @@ export const ensureDockerImage = async (args: {
                   },
                   (progressEvent: Event) => {
                     console.log(progressEvent);
-  
+
                     sender({
                       type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
                       payload: {
@@ -256,14 +256,16 @@ export const ensureDockerImage = async (args: {
                         logs: [[`${progressEvent}`, Date.now()]],
                       } as JobStatusPayload,
                     });
-                  }
+                  },
                 );
               } catch (err) {
                 console.error("pushed error", err);
               }
             });
           } else {
-            console.log(`DOCKER NOT pushing since image is too large: ${info.Size}`);
+            console.log(
+              `DOCKER NOT pushing since image is too large: ${info.Size}`,
+            );
           }
         } catch (err) {
           //ignored
@@ -275,7 +277,6 @@ export const ensureDockerImage = async (args: {
       throw err;
     }
   } else {
-    
     if (CACHED_DOCKER_IMAGES[image!]) {
       // returning because we think we have already check, but just in case
       // the image has gone missing, we check out-of-band, so retries will
@@ -286,7 +287,9 @@ export const ensureDockerImage = async (args: {
           await imageInfo.inspect();
         } catch (err) {
           delete CACHED_DOCKER_IMAGES[image!];
-          console.log(`❗ out-of-band check: image ${image} does not exist, so removing it my record`);
+          console.log(
+            `❗ out-of-band check: image ${image} does not exist, so removing it my record`,
+          );
         }
       })();
       console.log("ensureDockerImage I think the image already exists");
@@ -319,7 +322,6 @@ export const ensureDockerImage = async (args: {
 
       docker.modem.followProgress(stream, onFinished, onProgress);
     });
-    
   }
   return image!;
 };
@@ -486,7 +488,7 @@ const getDownloadLinkFromContext = async (context: string): Promise<string> => {
     // Create a personal access token at https://github.com/settings/tokens/new?scopes=repo
     // const octokit = new Octokit({ auth: `personal-access-token123` });
     const matches = new RegExp(
-      /https:\/\/github.com\/([-\w]{6,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([\/-\w\.]{1,100}))?/
+      /https:\/\/github.com\/([-\w]{6,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([\/-\w\.]{1,100}))?/,
     ).exec(context);
     console.log("matches", matches);
     if (!matches) {
@@ -546,8 +548,7 @@ const downloadContextIntoDirectory = async (args: {
     payload: {
       jobId,
       step: "cloning repo",
-      logs: [[`Downloading context: ${context}`, Date.now() ]],
-        
+      logs: [[`Downloading context: ${context}`, Date.now()]],
     } as JobStatusPayload,
   });
   // Download git repo, unpack, and use as context
@@ -560,7 +561,7 @@ const downloadContextIntoDirectory = async (args: {
 
   console.log(`downloadContextIntoDirectory downloadUrl=${downloadUrl}`);
   console.log(
-    `downloadContextIntoDirectory filePathForDownload=${filePathForDownload}`
+    `downloadContextIntoDirectory filePathForDownload=${filePathForDownload}`,
   );
   let file: Deno.FsFile | null = null;
   try {
@@ -601,12 +602,12 @@ const downloadContextIntoDirectory = async (args: {
       });
       if (res.status !== 200) {
         throw new Error(
-          `Failure to download context from ${downloadUrl} [status=${res.status}]:  ${res?.statusText}`
+          `Failure to download context from ${downloadUrl} [status=${res.status}]:  ${res?.statusText}`,
         );
       }
       if (!res.body) {
         throw new Error(
-          `Failure to download context from ${downloadUrl} [status=${res.status}]: missing response body`
+          `Failure to download context from ${downloadUrl} [status=${res.status}]: missing response body`,
         );
       }
       const pathToFile = dirname(filePathForDownload);
@@ -624,7 +625,6 @@ const downloadContextIntoDirectory = async (args: {
           logs: [[`created file and piping...`, Date.now()]],
         } as JobStatusPayload,
       });
-
 
       // console.log(`downloadContextIntoDirectory created file and piping...`);
       await res.body.pipeTo(file.writable);
@@ -701,7 +701,7 @@ const downloadContextIntoDirectory = async (args: {
       await decompress(filePathForDownload, destination);
     } else {
       throw new Error(
-        `Downloaded context as ${downloadUrl} but do not know how to convert to a context folder`
+        `Downloaded context as ${downloadUrl} but do not know how to convert to a context folder`,
       );
     }
     sender({
@@ -716,12 +716,16 @@ const downloadContextIntoDirectory = async (args: {
     // github downloads create a parent folder with the repo name and branch/tag/commit
     // move the contents of that folder to the destination
     const tempDirectory = `/tmp/${Math.random().toString(36).substring(7)}`;
-    const dir = [...Deno.readDirSync(destination)].filter(e => e.isDirectory)[0].name;
+    const dir = [...Deno.readDirSync(destination)].filter((e) =>
+      e.isDirectory
+    )[0].name;
 
     await Deno.rename(join(destination, dir), tempDirectory);
     await Deno.remove(destination, { recursive: true });
     await Deno.rename(tempDirectory, destination);
-    console.log(`Moved ${join(destination, dir)} => ${tempDirectory} => ${destination}`);
+    console.log(
+      `Moved ${join(destination, dir)} => ${tempDirectory} => ${destination}`,
+    );
 
     sender({
       type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
@@ -731,9 +735,9 @@ const downloadContextIntoDirectory = async (args: {
         logs: [["✅ copied context, ready to build", Date.now()]],
       } as JobStatusPayload,
     });
-  } catch (err:any) {
+  } catch (err: any) {
     throw new DockerBuildError(
-      `Failure to build the docker image context: ${err?.message}`
+      `Failure to build the docker image context: ${err?.message}`,
     );
   } finally {
     try {

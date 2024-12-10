@@ -1,12 +1,12 @@
-import { ensureDir } from 'https://deno.land/std@0.224.0/fs/ensure_dir.ts';
-import { dirname } from 'https://deno.land/std@0.224.0/path/mod.ts';
-import { retryAsync } from 'https://deno.land/x/retry@v2.0.0/mod.ts';
-import { crypto } from 'jsr:@std/crypto@1.0.3';
-import { encodeHex } from 'jsr:@std/encoding@1.0.3';
-import { LRUCache } from 'npm:lru-cache@11.0.1';
+import { ensureDir } from "https://deno.land/std@0.224.0/fs/ensure_dir.ts";
+import { dirname } from "https://deno.land/std@0.224.0/path/mod.ts";
+import { retryAsync } from "https://deno.land/x/retry@v2.0.0/mod.ts";
+import { crypto } from "jsr:@std/crypto@1.0.3";
+import { encodeHex } from "jsr:@std/encoding@1.0.3";
+import { LRUCache } from "npm:lru-cache@11.0.1";
 
-import { decodeBase64 } from './base64.ts';
-import { ENV_VAR_DATA_ITEM_LENGTH_MAX } from './dataref.ts';
+import { decodeBase64 } from "./base64.ts";
+import { ENV_VAR_DATA_ITEM_LENGTH_MAX } from "./dataref.ts";
 import {
   DataRef,
   DataRefType,
@@ -17,13 +17,11 @@ import {
   StateChangeValueQueued,
   WebsocketMessageClientToServer,
   WebsocketMessageTypeClientToServer,
-} from './types.ts';
-import {
-  fetchRobust as fetch,
-  shaDockerJob,
-} from './util.ts';
+} from "./types.ts";
+import { fetchRobust as fetch, shaDockerJob } from "./util.ts";
 
-const IGNORE_CERTIFICATE_ERRORS :boolean = Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
+const IGNORE_CERTIFICATE_ERRORS: boolean =
+  Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
 
 const FileHashesUploaded = new LRUCache<string, boolean>({
   max: 10000,
@@ -75,7 +73,7 @@ export const createNewContainerJobMessage = async (opts: {
 };
 
 export const bufferToBase64Ref = async (
-  buffer: Uint8Array
+  buffer: Uint8Array,
 ): Promise<DataRef> => {
   var decoder = new TextDecoder("utf8");
   var value = btoa(decoder.decode(buffer));
@@ -85,35 +83,33 @@ export const bufferToBase64Ref = async (
   };
 };
 
-
 /**
  * Uses streams to upload files to the bucket
- * @param file 
- * @param address 
- * @returns 
+ * @param file
+ * @param address
+ * @returns
  */
 export const fileToDataref = async (
   file: string,
-  address: string
+  address: string,
 ): Promise<DataRef> => {
   const { size } = await Deno.stat(file);
   const hash = await hashFileOnDisk(file);
 
   if (size > ENV_VAR_DATA_ITEM_LENGTH_MAX) {
-
     if (FileHashesUploaded.has(hash)) {
-      const existsRef :DataRef = {
-          value: hash,
-          type: DataRefType.key,
-      }
+      const existsRef: DataRef = {
+        value: hash,
+        type: DataRefType.key,
+      };
       return existsRef;
     }
 
     const urlGetUpload = `${address}/upload/${hash}`;
-    const resp = await fetch(urlGetUpload, {redirect: "follow"});
+    const resp = await fetch(urlGetUpload, { redirect: "follow" });
     if (!resp.ok) {
       throw new Error(
-        `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`
+        `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`,
       );
     }
 
@@ -134,10 +130,12 @@ export const fileToDataref = async (
       if (!success) {
         count++;
         throw new Error(
-          `Failed attempt ${count} to upload ${file} to ${json.url} code=${code} stdout=${new TextDecoder().decode(stdout)} stderr=${new TextDecoder().decode(stderr)}`
+          `Failed attempt ${count} to upload ${file} to ${json.url} code=${code} stdout=${
+            new TextDecoder().decode(stdout)
+          } stderr=${new TextDecoder().decode(stderr)}`,
         );
       }
-    }, {delay: 1000, maxTry: 5});
+    }, { delay: 1000, maxTry: 5 });
     FileHashesUploaded.set(hash, true);
 
     return json.ref; // the server gave us this ref to use
@@ -151,7 +149,7 @@ export const fileToDataref = async (
 export const finishedJobOutputsToFiles = async (
   finishedState: StateChangeValueFinished,
   outputsDirectory: string,
-  address: string
+  address: string,
 ): Promise<void> => {
   const outputs = finishedState.result?.outputs;
   if (!outputs) {
@@ -164,21 +162,21 @@ export const finishedJobOutputsToFiles = async (
       const ref = outputs[name];
       const filename = `${outputsDirectory}/${name}`;
       await dataRefToFile(ref, filename, address);
-    })
+    }),
   );
 };
 
 /**
  * Copies the data from a DataRef to a file
- * @param ref 
- * @param filename 
- * @param address 
- * @returns 
+ * @param ref
+ * @param filename
+ * @param address
+ * @returns
  */
 export const dataRefToFile = async (
   ref: DataRef,
   filename: string,
-  address: string
+  address: string,
 ): Promise<void> => {
   const dir = dirname(filename);
   await ensureDir(dir);
@@ -202,12 +200,14 @@ export const dataRefToFile = async (
 
       const responseUrl = await fetch(ref.value, { redirect: "follow" });
       if (!responseUrl.ok) {
-        errString = `Failed to download="${ref.value}" status=${responseUrl.status} statusText=${responseUrl.statusText}`;
+        errString =
+          `Failed to download="${ref.value}" status=${responseUrl.status} statusText=${responseUrl.statusText}`;
         console.error(errString);
         throw new Error(errString);
       }
       if (!responseUrl.body) {
-        errString = `Failed to download="${ref.value}" status=${responseUrl.status} no body in response`;
+        errString =
+          `Failed to download="${ref.value}" status=${responseUrl.status} no body in response`;
         console.error(errString);
         throw new Error(errString);
       }
@@ -218,18 +218,18 @@ export const dataRefToFile = async (
     case DataRefType.key:
       // we know how to get this internal cloud referenced
       const cloudRefUrl = `${address}/download/${ref.value}`;
-      const responseHash = await fetch(cloudRefUrl, {redirect: "follow"});
+      const responseHash = await fetch(cloudRefUrl, { redirect: "follow" });
 
       const json: { url: string; ref: DataRef } = await responseHash.json();
       const responseHashUrl = await fetch(json.url, { redirect: "follow" });
       if (!responseHashUrl.ok) {
         throw new Error(
-          `Failed to download="${json.url}" status=${responseHashUrl.status} statusText=${responseHashUrl.statusText}`
+          `Failed to download="${json.url}" status=${responseHashUrl.status} statusText=${responseHashUrl.statusText}`,
         );
       }
       if (!responseHashUrl.body) {
         throw new Error(
-          `Failed to download="${json.url}" status=${responseHashUrl.status} no body in response`
+          `Failed to download="${json.url}" status=${responseHashUrl.status} no body in response`,
         );
       }
 

@@ -2,17 +2,17 @@ import React, { useCallback, useEffect } from "react";
 import { useKeyPress } from "@react-typed-hooks/use-key-press";
 import {
   Button,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
-  Icon,
-  useDisclosure,
-  Text,
   Container,
   HStack,
+  Icon,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalOverlay,
+  Text,
+  useDisclosure,
 } from "@chakra-ui/react";
 import { TrashSimple } from "@phosphor-icons/react";
 
@@ -39,7 +39,12 @@ export const ButtonDeleteWithConfirm: React.FC<{
 
   return (
     <>
-      <Icon color={iconColor} as={TrashSimple} aria-label="delete" onClick={onOpen} />
+      <Icon
+        color={iconColor}
+        as={TrashSimple}
+        aria-label="delete"
+        onClick={onOpen}
+      />
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>

@@ -1,34 +1,33 @@
-import {
-  parse,
-  ParseEntry,
-} from 'npm:shell-quote@1.8.1';
+import { parse, ParseEntry } from "npm:shell-quote@1.8.1";
 
 const sanitizeForDockerTag = (input: string): string => {
   return input.replace(/[^a-zA-Z0-9_.-]/g, "-").toLowerCase();
-}
+};
 
-const extractOwnerAndRepoName = (url: string): { owner: string, repo: string } => {
+const extractOwnerAndRepoName = (
+  url: string,
+): { owner: string; repo: string } => {
   // Remove the fragment part if it exists
-  const urlWithoutFragment = url.split('#')[0];
-  
+  const urlWithoutFragment = url.split("#")[0];
+
   // Extract the owner and repository name from the URL
   const urlParts = urlWithoutFragment.replace(/\.git$/, "").split("/");
   const repo = urlParts.pop()!;
   const owner = urlParts.pop()!;
   return { owner, repo };
-}
+};
 
 const extractFragment = (url: string): string | null => {
   const fragmentIndex = url.indexOf("#");
   return fragmentIndex !== -1 ? url.substring(fragmentIndex + 1) : null;
-}
+};
 
 export function generateDockerImageTag(url: string): string {
   const { owner, repo } = extractOwnerAndRepoName(url);
   const sanitizedOwner = sanitizeForDockerTag(owner);
   const sanitizedRepo = sanitizeForDockerTag(repo);
   const fragment = extractFragment(url);
-  
+
   if (fragment) {
     const sanitizedFragment = sanitizeForDockerTag(fragment);
     return `${sanitizedOwner}/${sanitizedRepo}:${sanitizedFragment}`;
@@ -37,22 +36,25 @@ export function generateDockerImageTag(url: string): string {
   }
 }
 
-
-export const convertStringToDockerCommand = (command: string, env?:Record<string, string>): string[] | undefined => {
+export const convertStringToDockerCommand = (
+  command: string,
+  env?: Record<string, string>,
+): string[] | undefined => {
   if (!command) {
-      return
+    return;
   }
-  if (typeof command !== 'string') {
-      return command;
+  if (typeof command !== "string") {
+    return command;
   }
   const parsed = parse(command, env);
-  const containsOperations = parsed.some((item :ParseEntry) => typeof item === "object");
+  const containsOperations = parsed.some((item: ParseEntry) =>
+    typeof item === "object"
+  );
   if (containsOperations) {
-      return [command];
+    return [command];
   }
   return parsed as string[];
-}
-
+};
 
 // function sanitizeForDockerTag(input: string): string {
 //   return input.replace(/[^a-zA-Z0-9_.-]/g, "").toLowerCase();
@@ -70,7 +72,7 @@ export const convertStringToDockerCommand = (command: string, env?:Record<string
 //   const sanitizedUrl = sanitizeForDockerTag(url);
 //   const repoName = extractRepoName(url);
 //   const sanitizedRepoName = sanitizeForDockerTag(repoName);
-  
+
 //   // Example tag format: "repo-name-hash-of-sanitized-url"
 //   const hashOfUrl = sanitizedUrl.split("").reduce((hash, char) => {
 //     hash = ((hash << 5) - hash) + char.charCodeAt(0);

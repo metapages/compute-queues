@@ -1,4 +1,9 @@
-import { DataRef, dataRefToBuffer, dataRefToDownloadLink, InputsRefs } from "/@/shared";
+import {
+  DataRef,
+  dataRefToBuffer,
+  dataRefToDownloadLink,
+  InputsRefs,
+} from "/@/shared";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
@@ -24,7 +29,10 @@ export const downloadFile = async (name: string, ref: DataRef) => {
   document.body.removeChild(link);
 };
 
-export const zipAndDownloadDatarefs = async (refs: InputsRefs, name: string) => {
+export const zipAndDownloadDatarefs = async (
+  refs: InputsRefs,
+  name: string,
+) => {
   const blobs: { blob: Blob; name: string }[] = [];
   for (const [name, ref] of Object.entries(refs)) {
     const buffer = await dataRefToBuffer(ref);
@@ -34,7 +42,10 @@ export const zipAndDownloadDatarefs = async (refs: InputsRefs, name: string) => 
   zipAndDownloadBlobs(name, blobs);
 };
 
-export const zipAndDownloadBlobs = (name: string, blobs: { blob: Blob; name: string }[]) => {
+export const zipAndDownloadBlobs = (
+  name: string,
+  blobs: { blob: Blob; name: string }[],
+) => {
   const zip = new JSZip();
 
   // Add blobs to zip

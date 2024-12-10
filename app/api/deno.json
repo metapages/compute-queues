@@ -7,7 +7,7 @@
     "@metapages/metapage": "npm:@metapages/metapage@1.0.21",
     "ms": "https://deno.land/x/ms@v0.1.0/ms.ts",
     "nanoevents": "npm:nanoevents@9.0.0",
-    "object-hash" : "npm:object-hash@3.0.0",
+    "object-hash": "npm:object-hash@3.0.0",
     "/@/kv": "./src/db/kv/getKv.ts",
     "fast-deep-equal/es6": "npm:fast-deep-equal/es6/index.js",
     "fetch-retry": "npm:fetch-retry@5.0.6",

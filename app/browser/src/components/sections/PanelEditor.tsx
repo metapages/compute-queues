@@ -11,9 +11,13 @@ import { MetaframeStandaloneComponent } from "@metapages/metapage-react";
 
 export const PanelEditor: React.FC = () => {
   const [value, setValue] = useState(null);
-const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
-  const mainInputFile = useStore(state => state.mainInputFile);
-  const setMainInputFileContent = useStore(state => state.setMainInputFileContent);
+  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>(
+    "inputs",
+  );
+  const mainInputFile = useStore((state) => state.mainInputFile);
+  const setMainInputFileContent = useStore((state) =>
+    state.setMainInputFileContent
+  );
 
   // clear the main input file content on unmount
   useEffect(() => {
@@ -71,7 +75,8 @@ const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>("input
       <PanelHeader title={mainInputFile} preserveCase={true} onSave={onSave} />
       <div
         style={{ height: "100%", width: "100%", position: "relative" }}
-        id={"mf-editor"}>
+        id={"mf-editor"}
+      >
         <MetaframeStandaloneComponent
           url={`https://editor.mtfm.io/#?hm=disabled&options=${options.current}`}
           inputs={{ text: value }}

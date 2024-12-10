@@ -8,13 +8,25 @@ import { downloadFile, getDynamicInputs } from "/@/helpers";
 import { InputsRefs, JobInputs } from "/@/shared/types";
 import { useStore } from "/@/store";
 
-import { Container, HStack, Icon, Spacer, Table, Tbody, Td, Text, Tr } from "@chakra-ui/react";
+import {
+  Container,
+  HStack,
+  Icon,
+  Spacer,
+  Table,
+  Tbody,
+  Td,
+  Text,
+  Tr,
+} from "@chakra-ui/react";
 import { useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { ArrowDown } from "@phosphor-icons/react";
 
 export const PanelInputs: React.FC = () => {
-  const clientJobDefinition = useStore(state => state.newJobDefinition);
-  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
+  const clientJobDefinition = useStore((state) => state.newJobDefinition);
+  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>(
+    "inputs",
+  );
   const [dynamicInputs, setDynamicInputs] = useState<InputsRefs>({});
   useEffect(() => {
     setDynamicInputs(getDynamicInputs(clientJobDefinition));
@@ -57,7 +69,7 @@ export const PanelInputs: React.FC = () => {
       <Container>
         <Table px={5} variant="simple">
           <Tbody>
-            {names.map(name => (
+            {names.map((name) => (
               <InputRow
                 key={name}
                 name={name}
@@ -71,21 +83,28 @@ export const PanelInputs: React.FC = () => {
       </Container>
 
       <HStack px={4} py={10} width="100%" justifyContent="space-between">
-        <Text>{`/inputs/<dynamic from upstream>   (${dynamicInputs ? Object.keys(dynamicInputs).length : 0})`}</Text>
+        <Text>
+          {`/inputs/<dynamic from upstream>   (${
+            dynamicInputs ? Object.keys(dynamicInputs).length : 0
+          })`}
+        </Text>
         <Spacer />
       </HStack>
       <Container>
         <Table variant="simple">
           <Tbody>
-            {Object.keys(dynamicInputs).map(name => (
+            {Object.keys(dynamicInputs).map((name) => (
               <Tr key={name} justifyContent={"space-between"}>
                 <Td>
                   <HStack p={2} justifyContent={"space-between"}>
                     <Text>{name}</Text>
                     <Icon
-                      onClick={() => downloadFile(name, dynamicInputs[name])}
+                      onClick={() =>
+                        downloadFile(name, dynamicInputs[name])}
                       boxSize={"1.4rem"}
-                      as={ArrowDown}></Icon>
+                      as={ArrowDown}
+                    >
+                    </Icon>
                   </HStack>
                 </Td>
               </Tr>

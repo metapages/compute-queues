@@ -1,25 +1,20 @@
-import type {
-  Reader,
-  Writer,
-} from 'jsr:@std/io/types';
-import Docker from 'npm:dockerode@4.0.2';
+import type { Reader, Writer } from "jsr:@std/io/types";
+import Docker from "npm:dockerode@4.0.2";
 
 /******************************************************
  * Begin workarounds for this showstopper issue:
  * https://github.com/apocas/dockerode/issues/747
  * https://github.com/denoland/deno/issues/20255
-*/
+ */
 
 export const createDockerClient = (port = 3000) => {
-
-
   let tcpListener: Deno.Listener<Deno.Conn>;
   let unixConn: Deno.UnixConn;
   let closed = false;
   async function startProxy() {
     // Listen on TCP port 3000
     tcpListener = Deno.listen({ port });
-    
+
     console.log(`Listening on TCP port ${port}`);
 
     for await (const tcpConn of tcpListener) {
@@ -31,7 +26,10 @@ export const createDockerClient = (port = 3000) => {
     try {
       if (closed) return;
       // Connect to the Unix socket at /var/run/docker.sock
-      unixConn = await Deno.connect({ transport: "unix", path: "/var/run/docker.sock" });
+      unixConn = await Deno.connect({
+        transport: "unix",
+        path: "/var/run/docker.sock",
+      });
 
       // Bidirectional forwarding
       const tcpToUnix = copySocket(tcpConn, unixConn);
@@ -39,7 +37,6 @@ export const createDockerClient = (port = 3000) => {
 
       // Wait for both copy operations to complete
       await Promise.all([tcpToUnix, unixToTcp]);
-
     } catch (error) {
       // console.error("Error handling connection:", error);
     } finally {
@@ -56,7 +53,9 @@ export const createDockerClient = (port = 3000) => {
       let offset = 0;
       while (offset < bytesRead) {
         if (closed) break;
-        const bytesWritten = await dst.write(buffer.subarray(offset, bytesRead));
+        const bytesWritten = await dst.write(
+          buffer.subarray(offset, bytesRead),
+        );
         offset += bytesWritten;
       }
     }
@@ -65,17 +64,17 @@ export const createDockerClient = (port = 3000) => {
   startProxy();
   // and this now needs to be changed because of the above:
   // const docker = new Docker({socketPath: "/var/run/docker.sock"});
-  const docker = new Docker({protocol: 'http', host: 'localhost', port});
+  const docker = new Docker({ protocol: "http", host: "localhost", port });
   const close = () => {
-    console.log('tcpListener', tcpListener);
-    closed = true; 
+    console.log("tcpListener", tcpListener);
+    closed = true;
     tcpListener?.close();
     unixConn?.close();
-  }
-  return {docker, close};
-}
+  };
+  return { docker, close };
+};
 /******************************************************
  * End workarounds for this showstopper issue:
  * https://github.com/apocas/dockerode/issues/747
  * https://github.com/denoland/deno/issues/20255
-*/
+ */

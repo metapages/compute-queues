@@ -5,7 +5,7 @@ export const useKeypress = (key: string, action: () => void) => {
     const onKeyup = (e: KeyboardEvent) => {
       if (e.key === key) action();
     };
-    window.addEventListener("keyup", onKeyup);
-    return () => window.removeEventListener("keyup", onKeyup);
+    globalThis.addEventListener("keyup", onKeyup);
+    return () => globalThis.removeEventListener("keyup", onKeyup);
   }, [action]);
 };
