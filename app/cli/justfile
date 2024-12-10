@@ -1,36 +1,35 @@
 # Always use locally installed tools (always pin versions)
-set shell                          := ["bash", "-c"]
-set dotenv-load                    := true
-set export                         := true
+
+set shell := ["bash", "-c"]
+set dotenv-load := true
+set export := true
 
 # minimal formatting, bold is very useful
-bold                  := '\033[1m'
-normal                := '\033[0m'
+
+bold := '\033[1m'
+normal := '\033[0m'
 
 @_help:
-  just --list --unsorted --list-heading $'Commands:\n'
-  echo -e ""
-  echo -e "   Run the cli anywhere:"
-  echo -e "       deno run -A --config https://raw.githubusercontent.com/metapages/compute-queues/main/app/cli/deno.json https://raw.githubusercontent.com/metapages/compute-queues/main/app/cli/src/cli.ts"
-  
+    just --list --unsorted --list-heading $'Commands:\n'
+    echo -e ""
+    echo -e "   Run the cli anywhere:"
+    echo -e "       deno run -A --config https://raw.githubusercontent.com/metapages/compute-queues/main/app/cli/deno.json https://raw.githubusercontent.com/metapages/compute-queues/main/app/cli/src/cli.ts"
 
 # Run the cli
 mtpg +args="":
-  deno run --unsafely-ignore-certificate-errors --location https://worker-metaframe.localhost --allow-all src/cli.ts {{args}}
+    deno run --unsafely-ignore-certificate-errors --location https://worker-metaframe.localhost --allow-all src/cli.ts {{ args }}
 
 # Run the cli
 mtpg-prod +args="":
-  deno run --location https://container.mtfm.io --allow-all src/cli.ts {{args}}
-
-
+    deno run --location https://container.mtfm.io --allow-all src/cli.ts {{ args }}
 
 compile:
-  deno compile --location https://worker-metaframe.localhost --allow-net --allow-read --allow-write --output dist/mtpg src/cli.ts
+    deno compile --location https://worker-metaframe.localhost --allow-net --allow-read --allow-write --output dist/mtpg src/cli.ts
 
 # Quick compile checks
 @check:
-  deno check src/cli.ts
-  echo "✅ cli typescript compilation"
+    deno check src/cli.ts
+    echo "✅ cli typescript compilation"
 
 @test:
-  echo "❗ no cli tests yet"
+    echo "❗ no cli tests yet"

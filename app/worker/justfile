@@ -1,13 +1,16 @@
 # Always use locally installed tools (always pin versions)
-set shell             := ["bash", "-c"]
-set dotenv-load       := true
-set export            := true
-APP_PORT              := env_var_or_default("APP_PORT", "443")
-API_URL               := "https://worker-metaframe.localhost:" + APP_PORT
-# minimal formatting, bold is very useful
-bold                  := '\033[1m'
-normal                := '\033[0m'
 
+set shell := ["bash", "-c"]
+set dotenv-load := true
+set export := true
+
+APP_PORT := env_var_or_default("APP_PORT", "443")
+API_URL := "https://worker-metaframe.localhost:" + APP_PORT
+
+# minimal formatting, bold is very useful
+
+bold := '\033[1m'
+normal := '\033[0m'
 
 @_help:
     just --list --unsorted --list-heading $'Worker Commands:\n'
@@ -32,11 +35,11 @@ normal                := '\033[0m'
 
 # Run the worker locally, pointing to the local API
 dev +args="":
-    deno run --allow-all --unsafely-ignore-certificate-errors src/cli.ts run {{args}}
+    deno run --allow-all --unsafely-ignore-certificate-errors src/cli.ts run {{ args }}
 
 # Run the worker locally, pointing to production API
 @prod queue="local1":
-    deno run --allow-all src/cli.ts run --cpus=1 --api-server-address=https://container.mtfm.io {{queue}}
+    deno run --allow-all src/cli.ts run --cpus=1 --api-server-address=https://container.mtfm.io {{ queue }}
 
 # Quick type check
 @check:
@@ -44,19 +47,19 @@ dev +args="":
     echo "✅ worker typescript compilation"
 
 @test +args="":
-    deno test --allow-net --allow-read --allow-env --allow-write --allow-run {{args}}
+    deno test --allow-net --allow-read --allow-env --allow-write --allow-run {{ args }}
     echo "✅ worker unit tests"
 
 @watch +args="":
-    deno test --trace-leaks --watch --allow-net --allow-read --allow-write --allow-env --allow-run {{args}}
+    deno test --trace-leaks --watch --allow-net --allow-read --allow-write --allow-env --allow-run {{ args }}
 
 # Build docker image
-publish-docker-images version="": 
+publish-docker-images version="":
     #!/usr/bin/env bash
     set -euo pipefail
     echo "$DOCKER_TOKEN" | docker login --username metapage --password-stdin
-    
-    export VERSION={{version}}
+
+    export VERSION={{ version }}
     if [ "$VERSION" = "" ]; then
         export VERSION=$(cat mod.json | jq -r '.version')
     fi
@@ -77,7 +80,7 @@ publish-docker-images version="":
     echo "✅ metapage/metaframe-docker-worker:$VERSION-standalone"
 
 # Build deno binary
-build-binary: 
+build-binary:
     deno compile --unstable --allow-all --output=dist/metapage-worker src/cli.ts
     echo "✅ worker binary built"
 
@@ -85,21 +88,22 @@ build-binary:
 publish-binary version="": build-binary
     #!/usr/bin/env bash
     set -euo pipefail
-    export VERSION={{version}}
+    export VERSION={{ version }}
     if [ "$VERSION" = "" ]; then
         export VERSION=$(cat mod.json | jq -r '.version')
     fi
     gh release create $VERSION dist/metapage-worker
     echo "✅ worker binary published to github"
 
-# This is different to publish-docker-image because buildx does not 
+# This is different to publish-docker-image because buildx does not
 # put images in the local docker cache
+
 # Build docker image for local testing
-docker-image-build-for-local version="": 
+docker-image-build-for-local version="":
     #!/usr/bin/env bash
     set -euo pipefail
-    
-    export VERSION={{version}}
+
+    export VERSION={{ version }}
     if [ "$VERSION" = "" ]; then
         export VERSION=$(cat mod.json | jq -r '.version')
     fi
@@ -116,10 +120,9 @@ docker-image-build-for-local version="":
     done
     echo "✅ metapage/metaframe-docker-worker:$VERSION"
 
-
 # Build and run a worker docker image, pointing to the local API
 docker-image-run-local queue="local1": (docker-image-build-for-local "local")
-    docker run --net=host --entrypoint "" --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local deno run --allow-net --allow-read --allow-env --allow-run --unsafely-ignore-certificate-errors src/cli.ts run --cpus=1 --api-server-address=https://worker-metaframe.localhost {{queue}}
+    docker run --net=host --entrypoint "" --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local deno run --allow-net --allow-read --allow-env --allow-run --unsafely-ignore-certificate-errors src/cli.ts run --cpus=1 --api-server-address=https://worker-metaframe.localhost {{ queue }}
 
 docker-image-run-prod queue="public1": (docker-image-build-for-local "local")
-    docker run -ti -v /Users/dion/dev/git/metapages/worker.metapage.io/app:/app -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local run --cpus=1 --api-server-address=https://container.mtfm.io {{queue}}
+    docker run -ti -v /Users/dion/dev/git/metapages/worker.metapage.io/app:/app -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local run --cpus=1 --api-server-address=https://container.mtfm.io {{ queue }}
