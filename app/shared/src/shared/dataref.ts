@@ -14,7 +14,9 @@ export const ENV_VAR_DATA_ITEM_LENGTH_MAX = 200;
 
 export const dataRefToDownloadLink = async (ref: DataRef): Promise<string> => {
   const buffer = await dataRefToBuffer(ref);
-  return URL.createObjectURL(new Blob([buffer], { type: "application/octet-stream" }));
+  return URL.createObjectURL(
+    new Blob([buffer], { type: "application/octet-stream" }),
+  );
 };
 
 export const dataRefToBuffer = async (ref: DataRef): Promise<Uint8Array> => {
@@ -31,7 +33,10 @@ export const dataRefToBuffer = async (ref: DataRef): Promise<Uint8Array> => {
     }
     case DataRefType.key: {
       // hard code this for now
-      const arrayBufferFromKey = await fetchBlobFromHash(ref.value, "https://container.mtfm.io");
+      const arrayBufferFromKey = await fetchBlobFromHash(
+        ref.value,
+        "https://container.mtfm.io",
+      );
       return new Uint8Array(arrayBufferFromKey);
     }
     default: // undefined assume DataRefType.Base64
@@ -55,7 +60,7 @@ export const copyLargeBlobsToCloud = async (
   const result: InputsRefs = {};
 
   await Promise.all(
-    Object.keys(inputs).map(async name => {
+    Object.keys(inputs).map(async (name) => {
       const type: DataRefType = inputs[name]?.type || DataRefTypeDefault;
       let uint8ArrayIfBig: Uint8Array | undefined;
       switch (type) {
@@ -97,7 +102,9 @@ export const copyLargeBlobsToCloud = async (
           // console.log('urlGetUpload', urlGetUpload);
           const resp = await fetch(urlGetUpload, { redirect: "follow" });
           if (!resp.ok) {
-            throw new Error(`Failed to get upload URL from ${urlGetUpload} status=${resp.status}`);
+            throw new Error(
+              `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`,
+            );
           }
           const json: { url: string; ref: DataRef } = await resp.json();
           const responseUpload = await fetch(json.url, {
@@ -218,8 +225,13 @@ export const urlToUint8Array = async (url: string): Promise<Uint8Array> => {
   return new Uint8Array(arrayBuffer);
 };
 
-const fetchBlobFromHash = async (hash: string, address: string): Promise<ArrayBuffer> => {
-  const resp = await fetch(`${address}/download/${hash}`, { redirect: "follow" });
+const fetchBlobFromHash = async (
+  hash: string,
+  address: string,
+): Promise<ArrayBuffer> => {
+  const resp = await fetch(`${address}/download/${hash}`, {
+    redirect: "follow",
+  });
   const json: { url: string; ref: DataRef } = await resp.json();
   const arrayBuffer = await fetchBlobFromUrl(json.url);
   return arrayBuffer;

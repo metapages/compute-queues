@@ -9,9 +9,7 @@ export const getKv = async (): Promise<Deno.Kv> => {
       return localkv;
     }
     localkv = thiskv;
-    console.log(`🗝️  ✅ DenoKv Connected ${DENO_KV_URL || "" }`);
+    console.log(`🗝️  ✅ DenoKv Connected ${DENO_KV_URL || ""}`);
   }
   return localkv;
 };
-
-

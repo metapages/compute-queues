@@ -3,6 +3,7 @@ import { resolve } from "path";
 import { defineConfig } from "vite";
 
 import react from "@vitejs/plugin-react";
+import process from "node:process";
 
 const HOST: string = process.env.HOST || "server1.localhost";
 const PORT: string = process.env.PORT || "4440";
@@ -38,13 +39,15 @@ export default defineConfig(({ mode }) => ({
   server: {
     open: INSIDE_CONTAINER ? undefined : "/",
     host: INSIDE_CONTAINER ? "0.0.0.0" : HOST,
-    port: parseInt(CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) ? PORT : "8000"),
-    https:
-      CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) && CERT_FILE && fs.existsSync(CERT_FILE)
-        ? {
-            key: fs.readFileSync(CERT_KEY_FILE),
-            cert: fs.readFileSync(CERT_FILE),
-          }
-        : undefined,
+    port: parseInt(
+      CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) ? PORT : "8000",
+    ),
+    https: CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) && CERT_FILE &&
+        fs.existsSync(CERT_FILE)
+      ? {
+        key: fs.readFileSync(CERT_KEY_FILE),
+        cert: fs.readFileSync(CERT_FILE),
+      }
+      : undefined,
   },
 }));

@@ -1,4 +1,4 @@
-import { docker } from '../queue/dockerClient.ts';
+import { docker } from "../queue/dockerClient.ts";
 
 export const DockerJobSharedVolumeName = "worker-job-cache";
 

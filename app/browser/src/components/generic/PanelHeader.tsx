@@ -1,5 +1,5 @@
 import React from "react";
-import { HStack, Text, Icon } from "@chakra-ui/react";
+import { HStack, Icon, Text } from "@chakra-ui/react";
 import { X } from "@phosphor-icons/react";
 import { useStore } from "../../store";
 import { PanelHeaderContainer } from "./PanelHeaderContainer";
@@ -10,8 +10,10 @@ interface PanelHeaderProps {
   preserveCase?: boolean;
 }
 
-export const PanelHeader: React.FC<PanelHeaderProps> = ({ title, onSave, preserveCase }) => {
-  const setRightPanelContext = useStore(state => state.setRightPanelContext);
+export const PanelHeader: React.FC<PanelHeaderProps> = (
+  { title, onSave, preserveCase },
+) => {
+  const setRightPanelContext = useStore((state) => state.setRightPanelContext);
   const titleText = preserveCase ? title : title.toUpperCase();
   return (
     <PanelHeaderContainer>
@@ -23,7 +25,12 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({ title, onSave, preserv
               Save
             </Text>
           )}
-          <Icon boxSize={"1rem"} as={X} onClick={() => setRightPanelContext(null)}></Icon>
+          <Icon
+            boxSize={"1rem"}
+            as={X}
+            onClick={() => setRightPanelContext(null)}
+          >
+          </Icon>
         </HStack>
       </HStack>
     </PanelHeaderContainer>

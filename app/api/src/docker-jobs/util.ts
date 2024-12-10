@@ -3,8 +3,8 @@ import {
   DockerJobState,
   resolvePreferredWorker,
   StateChangeValueRunning,
-} from '/@/shared';
-import equal from 'fast-deep-equal/es6';
+} from "/@/shared";
+import equal from "fast-deep-equal/es6";
 
 /**
  * The situation here is fluid and dynamic, workers and servers and clients coming
@@ -17,12 +17,11 @@ import equal from 'fast-deep-equal/es6';
  *  - if two jobs seem the same, the one queued first is priority
  *  - other conflicts: check the time, the earliest wins
  *  - otherwise, whoever has the longest history is priority
- *
  */
 export const resolveMostCorrectJob = (
   // jobA is the DEFAULT, if that matters
   jobA: DockerJobDefinitionRow,
-  jobB: DockerJobDefinitionRow
+  jobB: DockerJobDefinitionRow,
 ): DockerJobDefinitionRow | null => {
   if (equal(jobA, jobB)) {
     return jobA;
@@ -83,7 +82,7 @@ export const resolveMostCorrectJob = (
   } else {
     // They have different states? This is more complex
     console.log(
-      `🇨🇭🇨🇭🇨🇭 🌘 resolving but jobA=${jobA.state} jobB=${jobB.state}`
+      `🇨🇭🇨🇭🇨🇭 🌘 resolving but jobA=${jobA.state} jobB=${jobB.state}`,
     );
     if (jobA.state === DockerJobState.Running) {
       return jobA;

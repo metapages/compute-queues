@@ -1,15 +1,12 @@
-import {
-  ListBucketsCommand,
-  S3Client,
-} from 'npm:@aws-sdk/client-s3@3.582.0';
+import { ListBucketsCommand, S3Client } from "npm:@aws-sdk/client-s3@3.582.0";
 
 // import { S3Client } from 'https://deno.land/x/s3_lite_client@0.7.0/mod.ts';
 
 const Bucket: string = Deno.env.get("AWS_S3_BUCKET") || "metaframe-asman-test";
 const AWS_REGION: string = Deno.env.get("AWS_REGION") || "us-west-2";
 const AWS_ENDPOINT: string | undefined = Deno.env.get("AWS_ENDPOINT");
-const AWS_ACCESS_KEY_ID :string = Deno.env.get("AWS_ACCESS_KEY_ID")!;
-const AWS_SECRET_ACCESS_KEY :string = Deno.env.get("AWS_SECRET_ACCESS_KEY")!;
+const AWS_ACCESS_KEY_ID: string = Deno.env.get("AWS_ACCESS_KEY_ID")!;
+const AWS_SECRET_ACCESS_KEY: string = Deno.env.get("AWS_SECRET_ACCESS_KEY")!;
 
 console.log("Bucket", Bucket);
 console.log("AWS_REGION", AWS_REGION);
@@ -38,7 +35,7 @@ try {
   const data = await s3Client.send(new ListBucketsCommand({ ...bucketParams }));
   console.log(
     "ListBucketsCommand Buckets:",
-    data?.Buckets?.map((b) => b.Name)
+    data?.Buckets?.map((b) => b.Name),
   );
 } catch (err) {
   console.error(`Failed to ListBucketsCommand: ${err}`);

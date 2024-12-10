@@ -5,7 +5,7 @@
     "/@/shared": "./src/shared/mod.ts",
     "fetch-retry": "npm:fetch-retry@5.0.6",
     "ms": "https://deno.land/x/ms@v0.1.0/ms.ts",
-    "object-hash" : "npm:object-hash@3.0.0",
+    "object-hash": "npm:object-hash@3.0.0",
     "mutative": "npm:mutative@1.0.11",
     "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3"
   },

@@ -9,7 +9,14 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
-    entrypoint: ["deno", "run", "--unsafely-ignore-certificate-errors", "--watch", "--allow-all", "src/cli.ts"]
+    entrypoint: [
+      "deno",
+      "run",
+      "--unsafely-ignore-certificate-errors",
+      "--watch",
+      "--allow-all",
+      "src/cli.ts",
+    ]
     command: run --mode=local --cpus=2 --gpus=0 local1
     working_dir: /app/worker
     healthcheck:

@@ -14,6 +14,7 @@
 			"**/app/api/assets": true,
 			"**/dist": true,
 			"**/node_modules": true
-		}
+		},
+		"editor.defaultFormatter": "denoland.vscode-deno"
 	}
 }

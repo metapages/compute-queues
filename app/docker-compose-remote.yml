@@ -145,7 +145,14 @@ services:
         condition: service_healthy
       api2:
         condition: service_healthy
-    entrypoint: ["deno", "run", "--unsafely-ignore-certificate-errors", "--watch", "--allow-all", "src/cli.ts"]
+    entrypoint: [
+      "deno",
+      "run",
+      "--unsafely-ignore-certificate-errors",
+      "--watch",
+      "--allow-all",
+      "src/cli.ts",
+    ]
     command: run --cpus=2 --gpus=0 --api-server-address=https://worker-metaframe.localhost:${APP_PORT:-443} local1
     build:
       context: .

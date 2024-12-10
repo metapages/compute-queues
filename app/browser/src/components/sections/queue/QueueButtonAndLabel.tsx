@@ -34,7 +34,7 @@ export const QueueButtonAndLabel: React.FC = () => {
     setIsLocalMode(queue === "local");
   }, [queue]);
   const [showInput, setShowInput] = useState(false);
-  const isServerConnected = useStore(state => state.isServerConnected);
+  const isServerConnected = useStore((state) => state.isServerConnected);
 
   const onSubmit = useCallback(
     (values: FormType) => {
@@ -60,14 +60,13 @@ export const QueueButtonAndLabel: React.FC = () => {
     <HStack width="100%" pl={"1rem"}>
       <LocalModeToggle />
       <Tooltip
-        label={
-          isServerConnected
-            ? `${isLocalMode ? "Local worker" : "Server"} is connected`
-            : `${isLocalMode ? "Local worker" : "Server"} is not connected`
-        }>
+        label={isServerConnected
+          ? `${isLocalMode ? "Local worker" : "Server"} is connected`
+          : `${isLocalMode ? "Local worker" : "Server"} is not connected`}
+      >
         <Icon
           // onFocus https://github.com/chakra-ui/chakra-ui/issues/5304#issuecomment-1102836734
-          onFocus={e => e.preventDefault()}
+          onFocus={(e) => e.preventDefault()}
           as={queue && isServerConnected ? WifiHigh : WifiSlash}
           color={!(queue && isServerConnected) && "red"}
           aria-label="edit docker job queue"
@@ -75,43 +74,54 @@ export const QueueButtonAndLabel: React.FC = () => {
         />
       </Tooltip>
       <Text p={2}>Queue key:</Text>
-      {showInput ? (
-        <>
-          <form onSubmit={formik.handleSubmit}>
-            <HStack>
-              <FormControl>
-                <InputGroup>
-                  <Input
-                    id="queue"
-                    name="queue"
-                    type="text"
-                    disabled={isLocalMode}
-                    onChange={formik.handleChange}
-                    value={formik.values.queue}
-                  />
-                </InputGroup>
-              </FormControl>
-              {isLocalMode ? null : (
-                <Button type="submit" colorScheme="green" size={"sm"} mr={0}>
-                  OK
-                </Button>
-              )}
-            </HStack>
-            {/* {error ? <Message type="error" message={error} /> : null} */}
-          </form>
-        </>
-      ) : (
-        <HStack gap={5}>
-          {queue ? <Tag>{queue}</Tag> : null} { isLocalMode ? null : <Text onClick={() => setShowInput(true)}>Edit</Text>}
-        </HStack>
-      )}
+      {showInput
+        ? (
+          <>
+            <form onSubmit={formik.handleSubmit}>
+              <HStack>
+                <FormControl>
+                  <InputGroup>
+                    <Input
+                      id="queue"
+                      name="queue"
+                      type="text"
+                      disabled={isLocalMode}
+                      onChange={formik.handleChange}
+                      value={formik.values.queue}
+                    />
+                  </InputGroup>
+                </FormControl>
+                {isLocalMode ? null : (
+                  <Button
+                    type="submit"
+                    colorScheme="green"
+                    size={"sm"}
+                    mr={0}
+                  >
+                    OK
+                  </Button>
+                )}
+              </HStack>
+              {/* {error ? <Message type="error" message={error} /> : null} */}
+            </form>
+          </>
+        )
+        : (
+          <HStack gap={5}>
+            {queue ? <Tag>{queue}</Tag> : null} {isLocalMode
+              ? null
+              : <Text onClick={() => setShowInput(true)}>Edit</Text>}
+          </HStack>
+        )}
 
-      {!queue || queue === "" ? (
-        <Alert status="error">
-          <AlertIcon />
-          ◀️ You must connect to a queue
-        </Alert>
-      ) : null}
+      {!queue || queue === ""
+        ? (
+          <Alert status="error">
+            <AlertIcon />
+            ◀️ You must connect to a queue
+          </Alert>
+        )
+        : null}
     </HStack>
   );
 };

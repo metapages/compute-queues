@@ -2,8 +2,13 @@ import { ChangeEvent, useCallback } from "react";
 
 import { useHashParamBoolean } from "@metapages/hash-query/react-hooks";
 
-export const useOptionResolveDataRefs = (): [boolean, (event?: ChangeEvent<HTMLInputElement>) => void] => {
-  const [resolveDatarefs, setResolveDatarefs] = useHashParamBoolean("resolverefs");
+export const useOptionResolveDataRefs = (): [
+  boolean,
+  (event?: ChangeEvent<HTMLInputElement>) => void,
+] => {
+  const [resolveDatarefs, setResolveDatarefs] = useHashParamBoolean(
+    "resolverefs",
+  );
   const toggleResolveDataRefs = useCallback(
     (_: ChangeEvent<HTMLInputElement>): void => {
       setResolveDatarefs(!resolveDatarefs);

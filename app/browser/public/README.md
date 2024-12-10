@@ -2,8 +2,8 @@
 
 ## Quickstart: Run a worker
 
-Run a worker pointing to a queue `public1` (you can change this queue name to anything you like, just make it long and
-unguessable):
+Run a worker pointing to a queue `public1` (you can change this queue name to
+anything you like, just make it long and unguessable):
 
 ```
 docker run  --pull always --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.38.15 run --cpus=4 --gpus=0 public1
@@ -17,13 +17,16 @@ to run a simple python job using the worker above:
 
 ## Inputs, outputs, and caching
 
-- env var `JOB_INPUTS` is the directory where job input files are copied. Defaults to `/inputs`
-- env var `JOB_OUTPUTS` is the directory where job output files will be copied when the job finishes successfully.
-  Defaults to `/outputs`
+- env var `JOB_INPUTS` is the directory where job input files are copied.
+  Defaults to `/inputs`
+- env var `JOB_OUTPUTS` is the directory where job output files will be copied
+  when the job finishes successfully. Defaults to `/outputs`
 
 ### Define Inputs and Outputs
 
-In `Settings / Definition` you can define inputs and outputs. This doesn't change how the code runs, but it allows much easier connecting upstream and downstream metaframes when editing [metapages](https://metapage.io).
+In `Settings / Definition` you can define inputs and outputs. This doesn't
+change how the code runs, but it allows much easier connecting upstream and
+downstream metaframes when editing [metapages](https://metapage.io).
 
 In this example, we defined an input: `input.json` and an output `data.csv`:
 
@@ -31,32 +34,38 @@ In this example, we defined an input: `input.json` and an output `data.csv`:
 
 You will see these inputs and outputs automatically in the metapage editor.
 
-
 ### Directory for caching data and large ML models
 
-The directory defined in the env var `JOB_CACHE` (defaults to `/job-cache`) is shared between all jobs running on a
-host. Use this location to store large data sets and models.
+The directory defined in the env var `JOB_CACHE` (defaults to `/job-cache`) is
+shared between all jobs running on a host. Use this location to store large data
+sets and models.
 
-The cache is not shared between worker instances, only between jobs running on a single instance or computer.
+The cache is not shared between worker instances, only between jobs running on a
+single instance or computer.
 
 ## Description
 
 `container.mtfm.io` runs docker containers on workers. It is currently in beta.
 
-- Run any publicly available docker image: `Python`, `R`, `C++`, `Java`, ... anything.
+- Run any publicly available docker image: `Python`, `R`, `C++`, `Java`, ...
+  anything.
 - Bring your own workers
-  - Currently individual machines are supported, but kubernetes and nomad support coming soon
-- Your queue is simply an unguessable hash. Do not share it without consideration.
+  - Currently individual machines are supported, but kubernetes and nomad
+    support coming soon
+- Your queue is simply an unguessable hash. Do not share it without
+  consideration.
 
 Use cases:
 
 - machine learning pipelines
 - data analysis workflows
 
-Any time the inputs change (and on start) the configured docker container is run:
+Any time the inputs change (and on start) the configured docker container is
+run:
 
 - `/inputs` is the location where inputs are copied as files
-- `/outputs`: any files here when the container exits are passed on as metaframe outputs
+- `/outputs`: any files here when the container exits are passed on as metaframe
+  outputs
 
 ```mermaid
 flowchart TD
@@ -72,22 +81,23 @@ flowchart TD
   browser --- |docker image,inputs,outouts| server
   worker --> container["docker job"]
   linkStyle 0,1 stroke:#31AEE4,stroke-width:2px;
-
 ```
 
-Versioned. Reproducible. No client install requirements, as long as you have at least one worker running somewhere, you
-can run any programming language.
+Versioned. Reproducible. No client install requirements, as long as you have at
+least one worker running somewhere, you can run any programming language.
 
 ## Getting started
 
 1. Create a queue
    - Click the connect button in the bottom-right
    - A "queue" is simply string or key
-   - The part of the URL that looks like `#?queue=my-queue-e7eebea2-c607-11ee-84de-b7a272dd08fc`
+   - The part of the URL that looks like
+     `#?queue=my-queue-e7eebea2-c607-11ee-84de-b7a272dd08fc`
    - Best if the `queue` value is a long impossible to guess string e.g. a GUID
    - Workers point to this queue, and run the configured docker jobs
 2. Configure the docker job
-3. Run a worker (or a bunch) pointing to a queue: `public1` (warning: this is a public shared compute queue)
+3. Run a worker (or a bunch) pointing to a queue: `public1` (warning: this is a
+   public shared compute queue)
    ```
    docker run --pull always --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.38.15 run --cpus=4 --gpus=0 public1
    ```

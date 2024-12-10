@@ -9,16 +9,13 @@ import {
   StateChangeValueFinished,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
-} from '/@/shared';
-import { exists } from 'https://deno.land/std@0.224.0/fs/mod.ts';
-import { basename } from 'https://deno.land/std@0.224.0/path/mod.ts';
-import { Command } from 'https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts';
-import {
-  closed,
-  open,
-} from 'jsr:@korkje/wsi@^0.3.2';
-import { readAll } from 'jsr:@std/io/read-all';
-import { writeAllSync } from 'jsr:@std/io/write-all';
+} from "/@/shared";
+import { exists } from "https://deno.land/std@0.224.0/fs/mod.ts";
+import { basename } from "https://deno.land/std@0.224.0/path/mod.ts";
+import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
+import { closed, open } from "jsr:@korkje/wsi@^0.3.2";
+import { readAll } from "jsr:@std/io/read-all";
+import { writeAllSync } from "jsr:@std/io/write-all";
 
 export const jobAdd = new Command()
   .arguments("<queue:string> [stdin:string]")
@@ -32,17 +29,16 @@ export const jobAdd = new Command()
   .option("-c, --command [command:string]", "Container command")
   .option(
     "-w, --wait [wait:boolean]",
-    "Wait until job is finished before returning"
+    "Wait until job is finished before returning",
   )
   .option(
     "-o, --outputs [outputs:string]",
     "Directory to copy output files (if any)",
     {
       default: "./outputs",
-    }
+    },
   )
   .option("--debug", "Debug flag for slower running but more logging")
-
   // .option("-g, --gpu [gpu:boolean]", "Enable GPU access", { default: false })
   .action(
     async (
@@ -57,7 +53,7 @@ export const jobAdd = new Command()
         apiServerAddress?: string | undefined;
       },
       queue: string,
-      stdin?: string
+      stdin?: string,
     ) => {
       (async () => {
         const {
@@ -70,15 +66,14 @@ export const jobAdd = new Command()
           wait,
           outputs,
         } = options;
-        
-        const address =
-          apiServerAddress ||
+
+        const address = apiServerAddress ||
           globalThis?.location?.origin ||
           "https://container.mtfm.io";
         const url = `${address}/${queue}/client`;
 
-        const imageOrGit: string =
-          (git as string) || (image as string) || "alpine:latest";
+        const imageOrGit: string = (git as string) || (image as string) ||
+          "alpine:latest";
         let definition: DockerJobDefinitionInputRefs = {
           image: imageOrGit,
           command: command as string,
@@ -123,17 +118,16 @@ export const jobAdd = new Command()
           reject,
         } = Promise.withResolvers<DockerJobDefinitionRow>();
 
-
         const socket = new WebSocket(`${url.replace("http", "ws")}`);
 
         socket.addEventListener("error", (event) => {
           writeAllSync(
             Deno.stderr,
-            new TextEncoder().encode("💥 WebSocket error:")
+            new TextEncoder().encode("💥 WebSocket error:"),
           );
           writeAllSync(
             Deno.stderr,
-            new TextEncoder().encode(`${event}`)
+            new TextEncoder().encode(`${event}`),
           );
           reject(event);
         });
@@ -145,13 +139,14 @@ export const jobAdd = new Command()
 
           const messageString = message.data.toString();
           // console.log('messageString', messageString);
-          const possibleMessage: WebsocketMessageServerBroadcast =
-            JSON.parse(messageString);
+          const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(
+            messageString,
+          );
           switch (possibleMessage.type) {
             case WebsocketMessageTypeServerBroadcast.JobStates:
             case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
-              const someJobsPayload =
-                possibleMessage.payload as BroadcastJobStates;
+              const someJobsPayload = possibleMessage
+                .payload as BroadcastJobStates;
               if (!someJobsPayload) {
                 break;
               }
@@ -170,13 +165,13 @@ export const jobAdd = new Command()
                 return;
               }
               if (jobDefinitionRow.state === DockerJobState.Finished) {
-                const finishedState =
-                  jobDefinitionRow.value as StateChangeValueFinished;
+                const finishedState = jobDefinitionRow
+                  .value as StateChangeValueFinished;
                 (async () => {
                   await finishedJobOutputsToFiles(
                     finishedState,
                     outputs as string,
-                    address
+                    address,
                   );
                   resolved = true;
                   resolve(jobDefinitionRow);
@@ -184,14 +179,14 @@ export const jobAdd = new Command()
               }
               break;
             default:
-            //ignored
+              //ignored
           }
         };
 
         // or, sychronously
         writeAllSync(
           Deno.stderr,
-          new TextEncoder().encode("Opening socket...")
+          new TextEncoder().encode("Opening socket..."),
         );
         await open(socket);
         writeAllSync(Deno.stderr, new TextEncoder().encode("✅\n"));
@@ -199,7 +194,7 @@ export const jobAdd = new Command()
 
         writeAllSync(
           Deno.stderr,
-          new TextEncoder().encode("Awaiting on job to be queued...\n")
+          new TextEncoder().encode("Awaiting on job to be queued...\n"),
         );
 
         const result = await jobQueuedOrCompleteDeferred;
@@ -210,5 +205,5 @@ export const jobAdd = new Command()
         await closed(socket);
         // writeAllSync(Deno.stderr, new TextEncoder().encode("Socket closed ✅\n"));
       })();
-    }
+    },
   );

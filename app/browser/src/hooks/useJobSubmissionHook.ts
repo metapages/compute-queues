@@ -9,18 +9,18 @@ import { useOptionJobStartAutomatically } from "./useOptionJobStartAutomatically
  */
 export const useJobSubmissionHook = () => {
   const [isJobStartingAutomatically] = useOptionJobStartAutomatically();
-  const dockerJobClient = useStore(state => state.newJobDefinition);
+  const dockerJobClient = useStore((state) => state.newJobDefinition);
   const dockerJobClientRef = useRef(dockerJobClient);
-  const dockerJobServer = useStore(state => state.jobState);
+  const dockerJobServer = useStore((state) => state.jobState);
   const dockerJobServerRef = useRef(dockerJobServer);
   // Check this efficiently
   useEffect(() => {
     dockerJobServerRef.current = dockerJobServer;
   }, [dockerJobServer]);
 
-  const connected = useStore(state => state.isServerConnected);
-  const submitJobFromStore = useStore(state => state.submitJob);
-  const queryJob = useStore(state => state.queryJob);
+  const connected = useStore((state) => state.isServerConnected);
+  const submitJobFromStore = useStore((state) => state.submitJob);
+  const queryJob = useStore((state) => state.queryJob);
   const [loading, setLoading] = useState<boolean>(false);
 
   // Start job automatically? Only do this for the first job
@@ -34,7 +34,12 @@ export const useJobSubmissionHook = () => {
       dockerJobClientRef.current = dockerJobClient;
       submitJobFromStore();
     }
-  }, [dockerJobClient, isJobStartingAutomatically, submitJobFromStore, queryJob]);
+  }, [
+    dockerJobClient,
+    isJobStartingAutomatically,
+    submitJobFromStore,
+    queryJob,
+  ]);
 
   // track the job state that matches our job definition (created by URL query params and inputs)
   // when we get the correct job state, it's straightforward to just show it

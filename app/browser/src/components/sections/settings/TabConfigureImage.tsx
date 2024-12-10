@@ -1,9 +1,4 @@
-import React, {
-  ReactNode,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import React, { ReactNode, useCallback, useEffect, useState } from "react";
 
 import { ButtonModalEditor } from "/@/components/generic/ButtonModalEditor";
 import { FormLink } from "/@/components/generic/FormLink";
@@ -44,8 +39,10 @@ const linkMap = {
   dockerfile: "https://docs.docker.com/build/building/packaging/#dockerfile",
   context: "https://docs.docker.com/build/building/context/#git-repositories",
   filename: "https://docs.docker.com/build/building/packaging/#filenames",
-  target: "https://docs.docker.com/build/building/multi-stage/#stop-at-a-specific-build-stage",
-  buildArgs: "https://docs.docker.com/reference/cli/docker/buildx/build/#build-arg",
+  target:
+    "https://docs.docker.com/build/building/multi-stage/#stop-at-a-specific-build-stage",
+  buildArgs:
+    "https://docs.docker.com/reference/cli/docker/buildx/build/#build-arg",
 };
 
 const labelMap = {
@@ -63,8 +60,12 @@ type TabType = "useExisting" | "fromRepo";
 export const TabConfigureImage: React.FC<{
   onSave?: () => void;
 }> = ({ onSave }) => {
-  const [jobDefinitionBlob, setJobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
-  const [tab, setTab] = useState<TabType>(jobDefinitionBlob?.image ? "useExisting" : "fromRepo");
+  const [jobDefinitionBlob, setJobDefinitionBlob] = useHashParamJson<
+    DockerJobDefinitionParamsInUrlHash
+  >("job");
+  const [tab, setTab] = useState<TabType>(
+    jobDefinitionBlob?.image ? "useExisting" : "fromRepo",
+  );
 
   useEffect(() => {
     if (!tab && jobDefinitionBlob) {
@@ -82,20 +83,24 @@ export const TabConfigureImage: React.FC<{
       if (values.image) {
         newJobDefinitionBlob.image = values.image;
         delete newJobDefinitionBlob.build;
-      } else if (!values.buildArgs && !values.context && !values.filename && !values.dockerfile && !values.target) {
+      } else if (
+        !values.buildArgs && !values.context && !values.filename &&
+        !values.dockerfile && !values.target
+      ) {
         delete newJobDefinitionBlob.build;
       } else {
         newJobDefinitionBlob.build = {};
         if (jobDefinitionBlob?.build?.dockerfile) {
-          newJobDefinitionBlob.build.dockerfile = jobDefinitionBlob.build.dockerfile;
+          newJobDefinitionBlob.build.dockerfile =
+            jobDefinitionBlob.build.dockerfile;
         }
         // build and image are mutually exclusive
         delete newJobDefinitionBlob.image;
         if (values.buildArgs) {
           newJobDefinitionBlob.build.buildArgs = values.buildArgs
             .split(",")
-            .map(s => s.trim())
-            .filter(s => s.length > 0);
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
         }
 
         if (values.context) {
@@ -172,8 +177,7 @@ export const TabConfigureImage: React.FC<{
   }, [formik, jobDefinitionBlob, onSave, setJobDefinitionBlob]);
 
   const isImageSet = !!formik.values.image;
-  const isBuildSet =
-    !!jobDefinitionBlob?.build?.dockerfile ||
+  const isBuildSet = !!jobDefinitionBlob?.build?.dockerfile ||
     !!formik.values.buildArgs ||
     !!formik.values.context ||
     !!formik.values.filename ||
@@ -203,31 +207,49 @@ export const TabConfigureImage: React.FC<{
       <VStack pl={"1rem"} gap={"1.5rem"} w={"100%"}>
         <FormControl>
           <Box key={"dockerfile"}>
-            <HStack w="100%" justifyContent="space-between" alignContent={"flex-start"}>
+            <HStack
+              w="100%"
+              justifyContent="space-between"
+              alignContent={"flex-start"}
+            >
               <VStack gap={0} alignItems={"flex-start"}>
                 <FormLabel h={"1rem"}>
                   <FormLink href={linkMap["dockerfile"]} label={"dockerfile"} />
                 </FormLabel>
                 <Text fontSize={"xs"} color="gray.400">
-                  {jobDefinitionBlob?.build?.dockerfile?.split("\n").find(s => s.startsWith("FROM "))}
+                  {jobDefinitionBlob?.build?.dockerfile?.split("\n").find((s) =>
+                    s.startsWith("FROM ")
+                  )}
                 </Text>
               </VStack>
               <HStack>
                 <ButtonModalEditor
                   content={jobDefinitionBlob?.build?.dockerfile}
                   onUpdate={updateDockerfile}
-                  button={{ isDisabled: isImageSet, ["aria-label"]: "edit dockerfile" }}
+                  button={{
+                    isDisabled: isImageSet,
+                    ["aria-label"]: "edit dockerfile",
+                  }}
                   fileName="Dockerfile"
                 />
-                {jobDefinitionBlob?.build?.dockerfile ? (
-                  <Icon aria-label="delete dockerfile" onClick={deleteDockerfile} as={TrashSimple}></Icon>
-                ) : null}
+                {jobDefinitionBlob?.build?.dockerfile
+                  ? (
+                    <Icon
+                      aria-label="delete dockerfile"
+                      onClick={deleteDockerfile}
+                      as={TrashSimple}
+                    >
+                    </Icon>
+                  )
+                  : null}
               </HStack>
             </HStack>
           </Box>
         </FormControl>
-        {["context", "filename", "target", "buildArgs"].map(key => {
-          const labelJsx: ReactNode = <FormLink href={linkMap[key]} label={labelMap[key] || key} />;
+        {["context", "filename", "target", "buildArgs"].map((key) => {
+          const labelJsx: ReactNode = (
+            <FormLink href={linkMap[key]} label={labelMap[key] || key} />
+          );
           return (
             <VStack w="100%" key={key}>
               <FormControl key={key}>
@@ -248,9 +270,8 @@ export const TabConfigureImage: React.FC<{
                       size={"sm"}
                       type="text"
                       variant="outline"
-                      isDisabled={
-                        (key !== "image" && isImageSet) || (key === "image" && isBuildSet && !formik.values.image)
-                      }
+                      isDisabled={(key !== "image" && isImageSet) ||
+                        (key === "image" && isBuildSet && !formik.values.image)}
                       onChange={formik.handleChange}
                       value={formik.values[key] || ""}
                     />
@@ -264,7 +285,7 @@ export const TabConfigureImage: React.FC<{
     );
   };
 
-  const onSetValue = tab => {
+  const onSetValue = (tab) => {
     if (tab === "fromRepo") {
       localStorage.setItem("dockerImage", formik.values.image);
       deleteImage();

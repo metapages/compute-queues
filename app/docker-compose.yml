@@ -1,7 +1,7 @@
 services:
   minio:
     depends_on:
-      traefik: 
+      traefik:
         condition: service_started
     image: minio/minio:RELEASE.2024-04-28T17-53-50Z
     command: server --address :9000 /data
@@ -59,8 +59,8 @@ services:
       - --entrypoints.websecure.address=:${APP_PORT:-443}
       - --entrypoints.websecure.http.tls=true
     labels:
-     - "traefik.enable=true"
-     - "traefik.http.routers.traefik=true"
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik=true"
     # Define the CORS middleware in the config.yml
     # I tried so hard to define it here but it would not work
     extra_hosts:
@@ -80,7 +80,7 @@ services:
   redis:
     image: redis:7.2.4
     healthcheck:
-      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
 
 networks:
   default:

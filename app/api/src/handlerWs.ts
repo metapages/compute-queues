@@ -1,7 +1,4 @@
-import {
-  wsHandlerClient,
-  wsHandlerWorker,
-} from './routes/websocket.ts';
+import { wsHandlerClient, wsHandlerWorker } from "./routes/websocket.ts";
 
 export const handleWebsocketConnection = (
   socket: WebSocket,
@@ -29,4 +26,3 @@ export const handleWebsocketConnection = (
     return;
   }
 };
-

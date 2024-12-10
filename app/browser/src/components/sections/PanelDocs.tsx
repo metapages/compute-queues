@@ -8,7 +8,7 @@ export const PanelDocs: React.FC = () => {
       <PanelHeader title={"docs"} />
       <iframe
         style={{ width: "100%", height: "100vh", background: "white" }}
-        src={`https://markdown.mtfm.io/#?url=${window.location.origin}${window.location.pathname}/README.md`}
+        src={`https://markdown.mtfm.io/#?url=${globalThis.location.origin}${globalThis.location.pathname}/README.md`}
       />
       ,
     </PanelContainer>
