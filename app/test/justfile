@@ -1,11 +1,11 @@
-set shell        := ["bash", "-c"]
-set dotenv-load  := true
-set export       := true
-normal           := '\033[0m'
-green            := "\\e[32m"
+set shell := ["bash", "-c"]
+set dotenv-load := true
+set export := true
 
-APP_PORT         := env_var_or_default("APP_PORT", "443")
-API_URL          := "https://worker-metaframe.localhost:" + APP_PORT
+normal := '\033[0m'
+green := "\\e[32m"
+APP_PORT := env_var_or_default("APP_PORT", "443")
+API_URL := "https://worker-metaframe.localhost:" + APP_PORT
 
 @_help:
     just --list --unsorted --list-heading $'Testing commands:\n'

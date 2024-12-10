@@ -1,25 +1,23 @@
-set shell        := ["bash", "-c"]
-set dotenv-load  := true
-set quiet        := true
+set shell := ["bash", "-c"]
+set dotenv-load := true
+set quiet := true
 
-APP_FQDN         := "worker-metaframe.localhost"
-APP_PORT         := env_var_or_default("APP_PORT", "443")
-normal           := '\033[0m'
-green            := "\\e[32m"
+APP_FQDN := "worker-metaframe.localhost"
+APP_PORT := env_var_or_default("APP_PORT", "443")
+normal := '\033[0m'
+green := "\\e[32m"
 
 @_help:
     just --list --unsorted --list-heading $'Commands: (all services)\n'
     echo -e ""
     echo -e "    Sub-commands (e.g. just browser dev):"
-    echo -e "       {{green}}browser{{normal}}       -> just browser"
-    echo -e "       {{green}}worker{{normal}}        -> just worker"
-    echo -e "       {{green}}api{{normal}}           -> just api"
-
-
+    echo -e "       {{ green }}browser{{ normal }}       -> just browser"
+    echo -e "       {{ green }}worker{{ normal }}        -> just worker"
+    echo -e "       {{ green }}api{{ normal }}           -> just api"
 
 # Validate mode
 @_validate_mode mode="":
-    @if [ "{{mode}}" = "remote" ] || [ "{{mode}}" = "local" ]; then :; else echo "Error: Mode must be 'remote' or 'local'" >&2; exit 1; fi
+    @if [ "{{ mode }}" = "remote" ] || [ "{{ mode }}" = "local" ]; then :; else echo "Error: Mode must be 'remote' or 'local'" >&2; exit 1; fi
 
 # Develop: open the browser and start the dev stack
 @dev mode="remote" +args="": (_validate_mode mode) _ensure-all open (_up mode args)
@@ -35,49 +33,54 @@ green            := "\\e[32m"
     if [ $STATUS_CODE = "200" ]; then
         export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
     fi
-    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{mode}}.yml rm --force 2>/dev/null || true
+    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml rm --force 2>/dev/null || true
     docker rm dev-worker-1 2>/dev/null || true
-    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{mode}}.yml up --remove-orphans {{args}}
+    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml up --remove-orphans {{ args }}
 
 # Shut down the local stack: 'docker compose down'
 @down mode="remote" +args="": (_validate_mode mode)
     #!/usr/bin/env bash
-    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{mode}}.yml down {{args}}
+    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml down {{ args }}
 
 # Clean up the project
 @clean mode="remote" +args="": (_validate_mode mode)
     #!/usr/bin/env bash
-    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{mode}}.yml down -v
+    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml down -v
     just browser/clean
     rm -rf .cache
 
 # Open the browser to the local frontend
 @open: _ensure-all
-    deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{APP_FQDN}}:{{APP_PORT}}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1' || true
+    deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{ APP_FQDN }}:{{ APP_PORT }}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1' || true
 
 # Quick compilation checks
 @check: _ensure-all
-  echo -n "worker check..."
-  just worker/check
-  echo -n "api check..."
-  just api/check
-  echo -n "browser check..."
-  just browser/check
-  echo -n "test check..."
-  just test/check
-  echo -n "shared check..."
-  just shared/check
-  echo -n "cli check..."
-  just cli/check
+    echo -n "worker check..."
+    just worker/check
+    echo -n "api check..."
+    just api/check
+    echo -n "browser check..."
+    just browser/check
+    echo -n "test check..."
+    just test/check
+    echo -n "shared check..."
+    just shared/check
+    echo -n "cli check..."
+    just cli/check
+
+# Format all supported files
+@fmt +args="":
+    deno fmt {{ args }}
+    find . -name justfile -exec just --fmt --unstable -f {} {{ args }} \;
 
 status queue="local1":
-    curl https://{{APP_FQDN}}:{{APP_PORT}}/{{queue}}/status | jq .
+    curl https://{{ APP_FQDN }}:{{ APP_PORT }}/{{ queue }}/status | jq .
 
 status-test queue="local1":
-    APP_PORT=4470 curl https://{{APP_FQDN}}:4470/{{queue}}/status | jq .
+    APP_PORT=4470 curl https://{{ APP_FQDN }}:4470/{{ queue }}/status | jq .
 
 status-prod queue="public1":
-    curl https://container.mtfm.io/{{queue}}/status | jq .
+    curl https://container.mtfm.io/{{ queue }}/status | jq .
 
 test: check
     #!/usr/bin/env bash
@@ -140,63 +143,69 @@ test: check
 
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":
-    just worker/publish-docker-images {{version}}
+    just worker/publish-docker-images {{ version }}
 
 # DEV: generate TLS certs for HTTPS over localhost https://blog.filippo.io/mkcert-valid-https-certificates-for-localhost/
 _mkcert: _ensure_mkcert
     #!/usr/bin/env bash
     rm -rf .cache/traefik/certs
     mkdir -p .cache/traefik/certs/ ;
-    mkcert -cert-file .cache/traefik/certs/local-cert.pem -key-file .cache/traefik/certs/local-key.pem {{APP_FQDN}} minio.{{APP_FQDN}} localhost ;
-    if grep -q "{{APP_FQDN}}" /etc/hosts; then
-        echo -e "✅ Hostname {{APP_FQDN}} found in /etc/hosts"
+    mkcert -cert-file .cache/traefik/certs/local-cert.pem -key-file .cache/traefik/certs/local-key.pem {{ APP_FQDN }} minio.{{ APP_FQDN }} localhost ;
+    if grep -q "{{ APP_FQDN }}" /etc/hosts; then
+        echo -e "✅ Hostname {{ APP_FQDN }} found in /etc/hosts"
     else
-        echo -e "💥 Hostname {{APP_FQDN}} not found in /etc/hosts"
-        echo -e "👉 Add: '127.0.0.1   {{APP_FQDN}}' to /etc/hosts"
+        echo -e "💥 Hostname {{ APP_FQDN }} not found in /etc/hosts"
+        echo -e "👉 Add: '127.0.0.1   {{ APP_FQDN }}' to /etc/hosts"
         exit 1
     fi
-    if grep -q "minio.{{APP_FQDN}}" /etc/hosts; then
-        echo -e "✅ Hostname minio.{{APP_FQDN}} found in /etc/hosts"
+    if grep -q "minio.{{ APP_FQDN }}" /etc/hosts; then
+        echo -e "✅ Hostname minio.{{ APP_FQDN }} found in /etc/hosts"
     else
-        echo -e "💥 Hostname minio.{{APP_FQDN}} not found in /etc/hosts"
-        echo -e "👉 Add: '127.0.0.1   minio.{{APP_FQDN}}' to /etc/hosts"
+        echo -e "💥 Hostname minio.{{ APP_FQDN }} not found in /etc/hosts"
+        echo -e "👉 Add: '127.0.0.1   minio.{{ APP_FQDN }}' to /etc/hosts"
         exit 1
     fi
     # if [ ! -f .cache/traefik/certs/local-key.pem ]; then \
-    #     FQDN={{APP_FQDN}} CERT_NAME=local CERTS_DIR=.cache/traefik/certs deno run --allow-all https://deno.land/x/metapages@v0.0.27/commands/ensure_mkcert.ts ;\
+    #     FQDN={{ APP_FQDN }} CERT_NAME=local CERTS_DIR=.cache/traefik/certs deno run --allow-all https://deno.land/x/metapages@v0.0.27/commands/ensure_mkcert.ts ;\
     # fi
 
 @_ensure-all: _ensure_docker _ensure_deno
 
 @_ensure_docker:
     if ! command -v docker > /dev/null; then \
-        echo -e "\nDocker is not installed. Please install Docker and try again: 👉 {{green}}https://docs.docker.com/engine/install/{{normal}}\n"; \
+        echo -e "\nDocker is not installed. Please install Docker and try again: 👉 {{ green }}https://docs.docker.com/engine/install/{{ normal }}\n"; \
         exit 1; \
     fi
 
 @_ensure_deno:
     if ! command -v deno > /dev/null; then \
-        echo -e "\nDeno is not installed. Please install Deno and try again: 👉 {{green}}https://docs.deno.com/runtime/manual/getting_started/installation{{normal}}\n"; \
+        echo -e "\nDeno is not installed. Please install Deno and try again: 👉 {{ green }}https://docs.deno.com/runtime/manual/getting_started/installation{{ normal }}\n"; \
         exit 1; \
     fi
 
 @_ensure_mkcert:
     if ! command -v mkcert > /dev/null; then \
-        echo -e "\nmkcert is not installed. Please install mkcert and try again: 👉 {{green}}https://github.com/FiloSottile/mkcert?tab=readme-ov-file#installation{{normal}}\n"; \
+        echo -e "\nmkcert is not installed. Please install mkcert and try again: 👉 {{ green }}https://github.com/FiloSottile/mkcert?tab=readme-ov-file#installation{{ normal }}\n"; \
         exit 1; \
     fi
 
 # app subdirectory commands
+
 alias browser := _browser
+
 @_browser +args="":
-    just browser/{{args}}
+    just browser/{{ args }}
 
 # app subdirectory commands
+
 alias worker := _worker
+
 @_worker +args="":
-    just worker/{{args}}
+    just worker/{{ args }}
 
 # app subdirectory commands
+
 alias api := _api
+
 @_api +args="":
-    just api/{{args}}
+    just api/{{ args }}
