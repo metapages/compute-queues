@@ -31,6 +31,7 @@ app.use("/*", cors() // cors({
 );
 
 // Put your custom routes here
+app.get("/", (c: Context) => c.text("HELLO WORLD"));
 app.get("/healthz", (c: Context) => c.text("OK"));
 app.get("/download/:key", downloadHandler);
 app.get("/upload/:key", uploadHandler);

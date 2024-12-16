@@ -4,6 +4,7 @@ import { config } from "../config.ts";
 import { ensureSharedVolume } from "../docker/volume.ts";
 import { localHandler } from "../lib/local-handler.ts";
 import { connectToServer, metricsHandler } from "../lib/remote-handler.ts";
+import { createHandler } from "https://deno.land/x/metapages@v0.0.27/worker/routing/handlerDeno.ts";
 
 export const runCommand = new Command()
   .name("run")
@@ -23,11 +24,13 @@ export const runCommand = new Command()
     "Custom API queue server",
   )
   .option("-g, --gpus [gpus:number]", "Available GPUs", { default: 0 })
+  .option("-m, --mode [mode:string]", "Mode", { default: "local" })
   .action(async (options, queue: string) => {
-    const { cpus, gpus, apiServerAddress } = options as {
+    const { cpus, gpus, apiServerAddress, mode } = options as {
       cpus: number;
       gpus: number;
       apiServerAddress: string;
+      mode: string;
     };
     if (!queue) {
       throw "Must supply the queue id ";
@@ -39,6 +42,7 @@ export const runCommand = new Command()
     if (apiServerAddress) {
       config.server = apiServerAddress;
     }
+    config.mode = mode;
 
     console.log(
       "run %s mode %s with cpus=%s gpu=%s at server %s",
@@ -48,10 +52,24 @@ export const runCommand = new Command()
       config.gpus,
       config.server,
     );
+    await ensureSharedVolume();
     if (config.mode === "local") {
-      Deno.serve({ port: 8000 }, localHandler);
+      // Create a request handler that can handle both HTTP and WebSocket
+      const requestHandler = createHandler(localHandler);
+
+      Deno.serve({
+        port: 8000,
+        onError: (e: unknown) => {
+          console.error(e);
+          return Response.error();
+        },
+        onListen: ({ hostname, port }) => {
+          console.log(
+            `🚀 Local mode listening on hostname=${hostname} port=${port}`,
+          );
+        },
+      }, requestHandler);
     } else {
-      await ensureSharedVolume();
       connectToServer({
         server: config.server || "",
         queueId: queue,
