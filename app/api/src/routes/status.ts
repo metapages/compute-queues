@@ -21,5 +21,5 @@ export const statusHandler = async (c: Context) => {
 
   const response = await dockerQueue.status();
 
-  return c.json(response);
+  return c.json(response as any);
 };

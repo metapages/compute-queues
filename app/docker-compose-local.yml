@@ -1,4 +1,44 @@
 services:
+  test:
+    depends_on:
+      worker:
+        condition: service_healthy
+    image: denoland/deno:alpine-2.0.3
+    command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+    working_dir: /app/test
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
+      - worker-metaframe.localhost:host-gateway
+    environment:
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+      - API_URL=http://worker:8000
+      - QUEUE_ID=local
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
+      - AWS_ENDPOINT=${AWS_ENDPOINT:-https://minio.worker-metaframe.localhost}:${APP_PORT:-443}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
+      - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
+      - DENO_KV_URL=http://denokv:4512
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - deno:/deno
+      - .:/app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.worker.rule=Host(`worker-metaframe.localhost`)"
+      - "traefik.http.routers.worker.tls=true"
+      - "traefik.http.routers.worker.entrypoints=websecure"
+      - "traefik.http.services.worker.loadbalancer.server.port=8000"
+      - "traefik.http.services.worker.loadbalancer.server.scheme=http"
+    networks:
+      - default
+    logging:
+      driver: ${LOGGING_TESTS:-json-file}
+
   worker:
     depends_on:
       traefik:
@@ -22,7 +62,7 @@ services:
     command: run --mode=local --cpus=2 --gpus=0 local
     working_dir: /app/worker
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/metrics"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -52,6 +92,7 @@ services:
       - ./shared:/app/shared
       - ./worker:/app/worker
       - ./api:/app/api
+      - ./browser/dist:/app/browser/dist
       - /tmp:/tmp
       - /var/run/docker.sock:/var/run/docker.sock
       - deno:/deno

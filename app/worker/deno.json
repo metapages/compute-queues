@@ -12,6 +12,6 @@
     "nanoevents": "npm:nanoevents@9.0.0",
     "fast-deep-equal/es6": "npm:fast-deep-equal/es6/index.js"
   },
-  "nodeModulesDir": "none",
-  "unstable": ["sloppy-imports"]
+  "unstable": ["sloppy-imports"],
+  "nodeModulesDir": "auto"
 }

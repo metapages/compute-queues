@@ -1,12 +1,18 @@
 import { Context, Hono } from "https://deno.land/x/hono@v4.1.0-rc.1/mod.ts";
-import { cors } from "https://deno.land/x/hono@v4.1.0-rc.1/middleware/cors/index.ts";
 import { serveStatic } from "https://deno.land/x/hono@v4.1.0-rc.1/middleware.ts";
 import { DockerJobState, JobStates } from "/@/shared";
-import { ApiDockerJobQueue } from "../../../api/src/docker-jobs/ApiDockerJobQueue.ts";
+import { createHandler } from "https://deno.land/x/metapages@v0.0.27/worker/routing/handlerDeno.ts";
+
+import { BaseDockerJobQueue, userJobQueues } from "/@/shared";
+
+export class LocalDockerJobQueue extends BaseDockerJobQueue {
+  constructor(opts: { serverId: string; address: string }) {
+    super(opts);
+  }
+}
 
 const jobList: JobStates = { jobs: {} };
 const app = new Hono();
-const userJobQueues: Record<string, ApiDockerJobQueue> = {};
 
 app.use("*", async (c, next) => {
   const req = c.req;
@@ -25,52 +31,9 @@ app.use("*", async (c, next) => {
   await next();
 });
 
-app.get("/", (c: Context) => {
-  return c.text("HELLO WORLD");
-});
+app.get("/health", (c: Context) => c.text("OK"));
 
-// Health check endpoint
-app.get("/healthz", (c: Context) => c.text("OK"));
-
-// WebSocket handler
-app.get("/:queue/:type", async (c) => {
-  const upgrade = c.req.header("upgrade");
-  if (!upgrade || upgrade.toLowerCase() !== "websocket") {
-    return c.text("Not a websocket request", 400);
-  }
-
-  const { response, socket } = Deno.upgradeWebSocket(c.req.raw);
-  const queue = c.req.param("queue");
-  const type = c.req.param("type");
-
-  if (!queue) {
-    socket.close();
-    return response;
-  }
-
-  // Initialize queue if it doesn't exist
-  if (!userJobQueues[queue]) {
-    userJobQueues[queue] = new ApiDockerJobQueue({
-      serverId: "local",
-      address: queue,
-    });
-    await userJobQueues[queue].setup();
-  }
-
-  // Handle client or worker connections
-  if (type === "browser" || type === "client") {
-    userJobQueues[queue].connectClient({ socket });
-  } else if (type === "worker") {
-    userJobQueues[queue].connectWorker({ socket }, queue);
-  } else {
-    socket.close();
-  }
-
-  return response;
-});
-
-// Metrics endpoint
-app.get("/metrics", (c) => {
+app.get("/metrics", () => {
   const unfinishedJobs = Object.values(jobList.jobs).filter(
     (job) => job.state !== DockerJobState.Finished,
   );
@@ -90,7 +53,6 @@ queue_length ${unfinishedQueueLength}
   });
 });
 
-// Queue status endpoint
 app.get("/:queue/status", (c) => {
   const queue = c.req.param("queue");
   if (!queue) {
@@ -100,7 +62,6 @@ app.get("/:queue/status", (c) => {
   return c.json({ queue: jobList });
 });
 
-// Queue metrics endpoint
 app.get("/:queue/metrics", (c) => {
   const queue = c.req.param("queue");
   if (!queue) {
@@ -125,10 +86,47 @@ queue_length ${unfinishedJobs.length}
   });
 });
 
-// Serve static assets
 app.get("/*", serveStatic({ root: "./assets" }));
 app.get("/", serveStatic({ path: "./assets/index.html" }));
 app.get("*", serveStatic({ path: "./assets/index.html" }));
 
-// Export the handler
-export const localHandler = app.fetch;
+const handleWebsocket = async (socket: WebSocket, request: Request) => {
+  const url = new URL(request.url);
+  const pathTokens = url.pathname.split("/").filter((x) => x !== "");
+  const queue = pathTokens[0];
+  const type = pathTokens[1];
+
+  if (!queue) {
+    console.log("No queue key, closing socket");
+    socket.close();
+    return;
+  }
+
+  // Initialize queue if it doesn't exist
+  if (!userJobQueues[queue]) {
+    userJobQueues[queue] = new LocalDockerJobQueue({
+      serverId: "local",
+      address: queue,
+    });
+    await userJobQueues[queue].setup();
+  }
+
+  // Handle client or worker connections
+  if (type === "browser" || type === "client") {
+    userJobQueues[queue].connectClient({ socket });
+  } else if (type === "worker") {
+    userJobQueues[queue].connectWorker({ socket }, queue);
+  } else {
+    console.log("Unknown type, closing socket");
+    socket.close();
+    return;
+  }
+};
+
+export const localHandler = createHandler(
+  app.fetch as () => Promise<
+    | Response
+    | undefined
+  >,
+  handleWebsocket,
+);

@@ -35,11 +35,11 @@ normal := '\033[0m'
 
 # Run the worker locally, pointing to the local API
 dev +args="":
-    deno run --allow-all --unsafely-ignore-certificate-errors src/cli.ts run {{ args }}
+    deno run --allow-all --unsafely-ignore-certificate-errors --unstable-kv src/cli.ts run {{ args }}
 
 # Run the worker locally, pointing to production API
 @prod queue="local1":
-    deno run --allow-all src/cli.ts run --cpus=1 --api-server-address=https://container.mtfm.io {{ queue }}
+    deno run --allow-all --unstable-kv src/cli.ts run --cpus=1 --api-server-address=https://container.mtfm.io {{ queue }}
 
 # Quick type check
 @check:
@@ -122,7 +122,7 @@ docker-image-build-for-local version="":
 
 # Build and run a worker docker image, pointing to the local API
 docker-image-run-local queue="local1": (docker-image-build-for-local "local")
-    docker run --net=host --entrypoint "" --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local deno run --allow-net --allow-read --allow-env --allow-run --unsafely-ignore-certificate-errors src/cli.ts run --cpus=1 --api-server-address=https://worker-metaframe.localhost {{ queue }}
+    docker run --net=host --entrypoint "" --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local deno run --allow-net --allow-read --allow-env --allow-run --unsafely-ignore-certificate-errors --unstable-kv src/cli.ts run --cpus=1 --api-server-address=https://worker-metaframe.localhost {{ queue }}
 
 docker-image-run-prod queue="public1": (docker-image-build-for-local "local")
     docker run -ti -v /Users/dion/dev/git/metapages/worker.metapage.io/app:/app -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local run --cpus=1 --api-server-address=https://container.mtfm.io {{ queue }}

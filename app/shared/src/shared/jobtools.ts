@@ -106,6 +106,7 @@ export const fileToDataref = async (
     }
 
     const urlGetUpload = `${address}/upload/${hash}`;
+    // @ts-ignore: TS2353
     const resp = await fetch(urlGetUpload, { redirect: "follow" });
     if (!resp.ok) {
       throw new Error(
@@ -198,6 +199,7 @@ export const dataRefToFile = async (
         write: true,
       });
 
+      // @ts-ignore: TS2353
       const responseUrl = await fetch(ref.value, { redirect: "follow" });
       if (!responseUrl.ok) {
         errString =
@@ -218,9 +220,11 @@ export const dataRefToFile = async (
     case DataRefType.key:
       // we know how to get this internal cloud referenced
       const cloudRefUrl = `${address}/download/${ref.value}`;
+      // @ts-ignore: TS2353
       const responseHash = await fetch(cloudRefUrl, { redirect: "follow" });
 
       const json: { url: string; ref: DataRef } = await responseHash.json();
+      // @ts-ignore: TS2353
       const responseHashUrl = await fetch(json.url, { redirect: "follow" });
       if (!responseHashUrl.ok) {
         throw new Error(

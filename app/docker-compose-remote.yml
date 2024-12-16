@@ -151,9 +151,11 @@ services:
       "--unsafely-ignore-certificate-errors",
       "--watch",
       "--allow-all",
+      "--unstable-kv",
+      "--unstable-broadcast-channel",
       "src/cli.ts",
     ]
-    command: run --cpus=2 --gpus=0 --api-server-address=https://worker-metaframe.localhost:${APP_PORT:-443} local1
+    command: run --mode=remote --cpus=2 --gpus=0 --api-server-address=https://worker-metaframe.localhost:${APP_PORT:-443} local1
     build:
       context: .
       dockerfile: worker/Dockerfile
@@ -163,9 +165,19 @@ services:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
+      - REDIS_URL=redis://redis:6379
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
+      - AWS_ENDPOINT=${AWS_ENDPOINT:-https://minio.worker-metaframe.localhost}:${APP_PORT:-443}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
+      - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
+      - DENO_KV_URL=http://denokv:4512
     volumes:
       - ./shared:/app/shared
       - ./worker:/app/worker
+      - ./browser/dist:/app/browser/dist
+      - ./api:/app/api
       - /tmp:/tmp
       - /var/run/docker.sock:/var/run/docker.sock
       - deno:/deno
