@@ -100,6 +100,7 @@ export const copyLargeBlobsToCloud = async (
         if (!AlreadyUploaded[hash]) {
           const urlGetUpload = `${address}/upload/${hash}`;
           // console.log('urlGetUpload', urlGetUpload);
+          // @ts-ignore: TS2353
           const resp = await fetch(urlGetUpload, { redirect: "follow" });
           if (!resp.ok) {
             throw new Error(
@@ -108,7 +109,9 @@ export const copyLargeBlobsToCloud = async (
           }
           const json: { url: string; ref: DataRef } = await resp.json();
           const responseUpload = await fetch(json.url, {
+            // @ts-ignore: TS2353
             method: "PUT",
+            // @ts-ignore: TS2353
             redirect: "follow",
             body: uint8ArrayIfBig,
             headers: { "Content-Type": "application/octet-stream" },
@@ -198,7 +201,9 @@ export const convertJobOutputDataRefsToExpectedFormat = async (
 
 const fetchBlobFromUrl = async (url: string): Promise<ArrayBuffer> => {
   const response = await fetch(url, {
+    // @ts-ignore: TS2353
     method: "GET",
+    // @ts-ignore: TS2353
     redirect: "follow",
     headers: { "Content-Type": "application/octet-stream" },
   });
@@ -208,7 +213,9 @@ const fetchBlobFromUrl = async (url: string): Promise<ArrayBuffer> => {
 
 export const fetchJsonFromUrl = async <T>(url: string): Promise<T> => {
   const response = await fetch(url, {
+    // @ts-ignore: TS2353
     method: "GET",
+    // @ts-ignore: TS2353
     redirect: "follow",
     headers: { "Content-Type": "application/json" },
   });
@@ -217,6 +224,7 @@ export const fetchJsonFromUrl = async <T>(url: string): Promise<T> => {
 };
 
 export const urlToUint8Array = async (url: string): Promise<Uint8Array> => {
+  // @ts-ignore: TS2353
   const response = await fetch(url, { redirect: "follow" });
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
@@ -230,6 +238,7 @@ const fetchBlobFromHash = async (
   address: string,
 ): Promise<ArrayBuffer> => {
   const resp = await fetch(`${address}/download/${hash}`, {
+    // @ts-ignore: TS2353
     redirect: "follow",
   });
   const json: { url: string; ref: DataRef } = await resp.json();

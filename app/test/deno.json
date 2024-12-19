@@ -1,6 +1,7 @@
 {
   "imports": {
     "/@/shared": "../shared/src/mod.ts",
+    "/@/api/": "../api/src/",
     "@korkje/wsi": "jsr:@korkje/wsi@^0.3.2",
     "@metapages/deno-redis-broadcastchannel": "jsr:@metapages/deno-redis-broadcastchannel@^0.2.0",
     "@metapages/hash-query": "npm:@metapages/hash-query@0.4.8",

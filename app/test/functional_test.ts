@@ -13,13 +13,14 @@ import {
 import { createNewContainerJobMessage } from "../shared/src/shared/jobtools.ts";
 
 const API_URL = Deno.env.get("API_URL") || "http://api1:8081";
+const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 // console.log('API_URL', API_URL);
 
 Deno.test(
   "pretend to be a client: submit job and get expected results",
   async () => {
     const socket = new WebSocket(
-      `${API_URL.replace("http", "ws")}/local1/client`,
+      `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
 
     const definition = {
@@ -86,7 +87,7 @@ Deno.test(
   "submit multiple jobs and get expected results",
   async () => {
     const socket = new WebSocket(
-      `${API_URL.replace("http", "ws")}/local1/client`,
+      `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
     const count = 3;
     const definitions = Array.from(Array(count).keys()).map((i) => ({
@@ -167,7 +168,7 @@ Deno.test(
   "submit multiple jobs from the same client source: older jobs are killed",
   async () => {
     const socket = new WebSocket(
-      `${API_URL.replace("http", "ws")}/local1/client`,
+      `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
     const count = 3;
     const definitions = Array.from(Array(count).keys()).map((i) => ({

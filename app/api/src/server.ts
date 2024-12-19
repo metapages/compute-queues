@@ -11,7 +11,7 @@ const requestHandler = createHandler(handlerHttp, handleWebsocketConnection);
 
 Deno.serve({
   port,
-  onError: (e: any) => {
+  onError: (e: unknown) => {
     console.error(e);
     return Response.error();
   },

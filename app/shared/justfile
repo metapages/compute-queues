@@ -19,4 +19,4 @@ normal := '\033[0m'
     echo "✅ shared typescript compilation"
 
 @test:
-    deno test --allow-all src
+    deno test --allow-all --unstable-kv src

@@ -50,7 +50,7 @@ services:
       - --providers.docker.exposedbydefault=false
       - --providers.file.filename=/etc/traefik/config.yml
       - --providers.file.watch=true
-      - --log.level=INFO
+      - --log.level=DEBUG
       - --log.format=common
       - --entrypoints.web.address=:80
       # Automatically redirecting HTTP to HTTPS
@@ -58,6 +58,7 @@ services:
       # - --entrypoints.http.http.redirections.entryPoint.scheme=https
       - --entrypoints.websecure.address=:${APP_PORT:-443}
       - --entrypoints.websecure.http.tls=true
+
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik=true"

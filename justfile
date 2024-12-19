@@ -41,6 +41,10 @@ cyan := "\\e[36m"
 @clean mode="remote" +args="": (_validate_mode mode)
     just app/clean {{ mode }} {{ args }}
 
+# Clean Up Project
+@test mode="remote" +args="": (_validate_mode mode)
+    just app/test {{ mode }} {{ args }}
+
 # Run Linting
 @lint:
     echo "does work?"
@@ -81,9 +85,6 @@ run-local-workers: publish-versioned-artifacts
     docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:$VERSION run --cpus=2 public1
     docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:$VERSION run --cpus=2 ${DIONS_SECRET_QUEUE}
 
-# Checks and tests
-@test:
-    just app test
 
 # Quick compilation checks
 @check:
