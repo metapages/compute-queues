@@ -6,7 +6,7 @@ import {
   StateChangeValueFinished,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
-} from "/@/shared";
+} from "@metapages/compute-queues-shared";
 import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
 import { closed, open } from "jsr:@korkje/wsi@^0.3.2";
 

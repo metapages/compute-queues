@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 
 import { JobControlButton } from "/@/components/header/JobControlButton";
 import { getDynamicInputsCount, getOutputs } from "/@/helpers";
-import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "/@/shared";
+import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "@metapages/compute-queues-shared";
 import { useStore } from "/@/store";
 
 import {

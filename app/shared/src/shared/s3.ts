@@ -1,4 +1,4 @@
-import { DataRef, DataRefType } from "/@/shared";
+import { DataRef, DataRefType } from "@metapages/compute-queues-shared";
 import {
   DeleteObjectCommand,
   GetObjectCommand,

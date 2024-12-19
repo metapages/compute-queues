@@ -17,7 +17,7 @@ import {
   WebsocketMessageTypeServerBroadcast,
   WebsocketMessageTypeWorkerToServer,
   WebsocketMessageWorkerToServer,
-} from "/@/shared";
+} from "@metapages/compute-queues-shared";
 
 const VERSION: string = mod.version;
 

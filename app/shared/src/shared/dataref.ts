@@ -6,7 +6,7 @@ import {
   fetchRobust as fetch,
   InputsRefs,
   sha256Buffer,
-} from "/@/shared";
+} from "@metapages/compute-queues-shared";
 
 import { DataRefSerializedBlob, MetaframeInputMap } from "@metapages/metapage";
 

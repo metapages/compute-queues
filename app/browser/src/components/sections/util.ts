@@ -7,7 +7,7 @@ import {
   DockerJobState,
   InputsRefs,
   StateChangeValueFinished,
-} from "/@/shared";
+} from "@metapages/compute-queues-shared";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 

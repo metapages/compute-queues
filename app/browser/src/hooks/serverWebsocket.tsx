@@ -10,7 +10,7 @@ import {
   WebsocketMessageClientToServer,
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
-} from "/@/shared";
+} from "@metapages/compute-queues-shared";
 import ReconnectingWebSocket from "reconnecting-websocket";
 
 import { useHashParam } from "@metapages/hash-query/react-hooks";

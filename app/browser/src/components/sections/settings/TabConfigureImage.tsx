@@ -2,7 +2,7 @@ import React, { ReactNode, useCallback, useEffect, useState } from "react";
 
 import { ButtonModalEditor } from "/@/components/generic/ButtonModalEditor";
 import { FormLink } from "/@/components/generic/FormLink";
-import { DockerJobDefinitionParamsInUrlHash } from "/@/shared";
+import { DockerJobDefinitionParamsInUrlHash } from "@metapages/compute-queues-shared";
 import { useFormik } from "formik";
 import * as yup from "yup";
 

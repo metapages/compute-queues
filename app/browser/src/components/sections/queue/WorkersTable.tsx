@@ -3,7 +3,7 @@ import {
   DockerJobState,
   JobsStateMap,
   StateChangeValueRunning,
-} from "/@/shared";
+} from "@metapages/compute-queues-shared";
 import { useStore } from "/@/store";
 
 import {

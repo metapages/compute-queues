@@ -1,9 +1,9 @@
 import { Context, Hono } from "https://deno.land/x/hono@v4.1.0-rc.1/mod.ts";
 import { serveStatic } from "https://deno.land/x/hono@v4.1.0-rc.1/middleware.ts";
-import { DockerJobState, JobStates } from "/@/shared";
+import { DockerJobState, JobStates } from "@metapages/compute-queues-shared";
 import { createHandler } from "https://deno.land/x/metapages@v0.0.27/worker/routing/handlerDeno.ts";
 
-import { BaseDockerJobQueue, userJobQueues } from "/@/shared";
+import { BaseDockerJobQueue, userJobQueues } from "@metapages/compute-queues-shared";
 
 export class LocalDockerJobQueue extends BaseDockerJobQueue {
   constructor(opts: { serverId: string; address: string }) {
