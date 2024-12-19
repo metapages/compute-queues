@@ -1,18 +1,4 @@
 {
-  "imports": {
-    "/@/shared": "./src/mod.ts",
-    "@metapages/deno-redis-broadcastchannel": "jsr:@metapages/deno-redis-broadcastchannel@^0.2.0",
-    "@metapages/hash-query": "npm:@metapages/hash-query@0.4.8",
-    "@metapages/metapage": "npm:@metapages/metapage@1.0.21",
-    "fast-deep-equal/es6": "npm:fast-deep-equal/es6/index.js",
-    "ms": "https://deno.land/x/ms@v0.1.0/ms.ts",
-    "nanoevents": "npm:nanoevents@9.0.0",
-    "object-hash": "npm:object-hash@3.0.0",
-    "mutative": "npm:mutative@1.0.11",
-    "fetch-retry": "npm:fetch-retry@5.0.6",
-    "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3",
-    "oblivious-set": "npm:oblivious-set@1.4.0",
-    "uuid": "npm:uuid@9.0.1"
-  },
-  "unstable": ["sloppy-imports"]
+  "name": "@metapages/compute-queues-shared",
+  "exports": "./src/mod.ts"
 }

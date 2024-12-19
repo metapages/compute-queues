@@ -1,0 +1,27 @@
+{
+  "workspace": [
+    "./app/api",
+    "./app/cli",
+    "./app/shared",
+    "./app/test",
+    "./app/worker"
+  ],
+  "imports": {
+    "@metapages/deno-redis-broadcastchannel": "jsr:@metapages/deno-redis-broadcastchannel@^0.2.0",
+    "@metapages/hash-query": "npm:@metapages/hash-query@0.4.8",
+    "@metapages/metapage": "npm:@metapages/metapage@1.0.21",
+    "fast-deep-equal/es6": "npm:fast-deep-equal/es6/index.js",
+    "fetch-retry": "npm:fetch-retry@5.0.6",
+    "ms": "https://deno.land/x/ms@v0.1.0/ms.ts",
+    "nanoevents": "npm:nanoevents@9.0.0",
+    "object-hash": "npm:object-hash@3.0.0",
+    "mutative": "npm:mutative@1.0.11",
+    "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3",
+    "uuid": "npm:uuid@9.0.1",
+    "bytes": "npm:bytes@3.1.2",
+    "oblivious-set": "npm:oblivious-set@1.4.0",
+    "@korkje/wsi": "jsr:@korkje/wsi@^0.3.2"
+  },
+  "unstable": ["kv", "broadcast-channel", "sloppy-imports"],
+  "nodeModulesDir": "auto"
+}
