@@ -76,7 +76,7 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = (
         size="full"
       >
         <ModalOverlay backdropFilter="blur(1px)" />
-        <ModalContent maxW="90%">
+        <ModalContent maxW="90%" height="100vh">
           <ModalHeader p={0} h={"headerHeight"} borderBottom={"1px"}>
             <HStack w="100%" justifyContent="space-between">
               <Text px={"2rem"} fontWeight={400}>
@@ -106,13 +106,11 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = (
               </Button>
             </HStack>
           </ModalHeader>
-          <div>
-            <MetaframeStandaloneComponent
-              url={`https://editor.mtfm.io/#?hm=disabled&options=${options.current}`}
-              inputs={{ [fileName]: value }}
-              onOutputs={onOutputs}
-            />
-          </div>
+          <MetaframeStandaloneComponent
+            url={`https://editor.mtfm.io/#?hm=disabled&options=${options.current}`}
+            inputs={{ [fileName]: value }}
+            onOutputs={onOutputs}
+          />
         </ModalContent>
       </Modal>
     </>

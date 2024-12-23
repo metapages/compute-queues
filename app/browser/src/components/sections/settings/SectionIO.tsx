@@ -31,6 +31,7 @@ import {
   MetaframeDefinitionV1,
 } from "@metapages/metapage";
 import { DownloadSimple, Plus, UploadSimple } from "@phosphor-icons/react";
+
 import { ButtonDeleteWithConfirm } from "../../generic/ButtonDeleteWithConfirm";
 
 const validationSchema = yup.object({
@@ -122,7 +123,9 @@ export const SectionIO: React.FC = () => {
           justifyContent="space-between"
         >
           <VStack alignItems={"flex-start"}>
-            <Text fontWeight={600}>Define Inputs and Outputs</Text>
+            <Text fontWeight={600}>
+              Define Inputs and Outputs (for the metapage connection editor)
+            </Text>
           </VStack>
         </HStack>
         <HStack w="100%" justifyContent="space-between" alignItems="flex-start">
