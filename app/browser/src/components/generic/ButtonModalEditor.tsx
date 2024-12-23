@@ -1,11 +1,6 @@
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import { encodeOptions } from '/@/helpers';
+import { encodeOptions } from "/@/helpers";
 
 import {
   Button,
@@ -19,9 +14,9 @@ import {
   ModalOverlay,
   Text,
   useDisclosure,
-} from '@chakra-ui/react';
-import { MetaframeStandaloneComponent } from '@metapages/metapage-react';
-import { Check } from '@phosphor-icons/react';
+} from "@chakra-ui/react";
+import { MetaframeStandaloneComponent } from "@metapages/metapage-react";
+import { Check } from "@phosphor-icons/react";
 
 export interface EditorJsonProps {
   content: string;
@@ -30,7 +25,9 @@ export interface EditorJsonProps {
   fileName?: string;
 }
 
-export const ButtonModalEditor: React.FC<EditorJsonProps> = ({ content, onUpdate, button, fileName }) => {
+export const ButtonModalEditor: React.FC<EditorJsonProps> = (
+  { content, onUpdate, button, fileName },
+) => {
   // 650
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [value, setValue] = useState(content);
@@ -72,7 +69,12 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({ content, onUpdate
       <IconButton size="md" variant={"unstyled"} onClick={onOpen} {...button}>
         <Text>Edit</Text>
       </IconButton>
-      <Modal id={"edit-modal-right"} isOpen={isOpen} onClose={onClose} size="full">
+      <Modal
+        id={"edit-modal-right"}
+        isOpen={isOpen}
+        onClose={onClose}
+        size="full"
+      >
         <ModalOverlay backdropFilter="blur(1px)" />
         <ModalContent maxW="90%" height="100vh">
           <ModalHeader p={0} h={"headerHeight"} borderBottom={"1px"}>
@@ -86,10 +88,18 @@ export const ButtonModalEditor: React.FC<EditorJsonProps> = ({ content, onUpdate
                 px={"2rem"}
                 borderLeft={"1px"}
                 borderRadius={0}
-                leftIcon={<Icon color="green" pb={"0.2rem"} boxSize={"1.5rem"} as={Check} />}
+                leftIcon={
+                  <Icon
+                    color="green"
+                    pb={"0.2rem"}
+                    boxSize={"1.5rem"}
+                    as={Check}
+                  />
+                }
                 variant={"unstyled"}
                 onClick={onSave}
-                display={"flex"}>
+                display={"flex"}
+              >
                 <Text pr={"1rem"} display={"flex"} color="green">
                   Save
                 </Text>

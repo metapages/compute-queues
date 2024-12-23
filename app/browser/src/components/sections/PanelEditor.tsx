@@ -1,24 +1,23 @@
-import React, {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import { PanelContainer } from '/@/components/generic/PanelContainer';
-import { PanelHeader } from '/@/components/generic/PanelHeader';
-import { encodeOptions } from '/@/helpers';
-import { JobInputs } from '/@/shared';
-import { useStore } from '/@/store';
+import { PanelContainer } from "/@/components/generic/PanelContainer";
+import { PanelHeader } from "/@/components/generic/PanelHeader";
+import { encodeOptions } from "/@/helpers";
+import { JobInputs } from "/@/shared";
+import { useStore } from "/@/store";
 
-import { useHashParamJson } from '@metapages/hash-query/react-hooks';
-import { MetaframeStandaloneComponent } from '@metapages/metapage-react';
+import { useHashParamJson } from "@metapages/hash-query/react-hooks";
+import { MetaframeStandaloneComponent } from "@metapages/metapage-react";
 
 export const PanelEditor: React.FC = () => {
   const [value, setValue] = useState(null);
-  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
-  const mainInputFile = useStore(state => state.mainInputFile);
-  const setMainInputFileContent = useStore(state => state.setMainInputFileContent);
+  const [jobInputs, setJobInputs] = useHashParamJson<JobInputs | undefined>(
+    "inputs",
+  );
+  const mainInputFile = useStore((state) => state.mainInputFile);
+  const setMainInputFileContent = useStore((state) =>
+    state.setMainInputFileContent
+  );
 
   // clear the main input file content on unmount
   useEffect(() => {
