@@ -3,5 +3,8 @@
   "exports": "./src/mod.ts",
   "tasks": {
     "build": "deno run --allow-read --allow-env --allow-run --allow-write ./bundle.ts"
+  },
+  "imports": {
+    "/@/": "./src/"
   }
 }

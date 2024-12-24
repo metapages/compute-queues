@@ -1,20 +1,16 @@
-import {
-  emptyDir,
-  ensureDir,
-  exists,
-} from "https://deno.land/std@0.224.0/fs/mod.ts";
-import { join } from "https://deno.land/std@0.224.0/path/mod.ts";
-import klaw from "npm:klaw@4.1.0";
+import { emptyDir, ensureDir, exists } from "std/fs";
+import { join } from "std/path";
+import klaw from "klaw";
 
-import { config } from "../config.ts";
+import { config } from "/@/config.ts";
 import {
   dataRefToFile,
-  DockerJobDefinitionInputRefs,
-  DockerJobDefinitionRow,
+  type DockerJobDefinitionInputRefs,
+  type DockerJobDefinitionRow,
   fileToDataref,
-  InputsRefs,
-} from "../shared/mod.ts";
-import { Volume } from "./DockerJob.ts";
+  type InputsRefs,
+} from "@metapages/compute-queues-shared";
+import type { Volume } from "/@/queue/DockerJob.ts";
 
 // const TMPDIR = process.env.XDG_RUNTIME_DIR || process.env.TMPDIR || '/tmp';
 const TMPDIR = "/tmp/worker-metapage-io";
@@ -78,7 +74,7 @@ export const convertIOToVolumeMounts = async (
   if (definition?.configFiles) {
     for (const [name, ref] of Object.entries(definition.configFiles)) {
       const isAbsolutePath = name.startsWith("/");
-      let hostFilePath = isAbsolutePath
+      const hostFilePath = isAbsolutePath
         ? join(configFilesDir, name)
         : join(inputsDir, name);
       await dataRefToFile(ref, hostFilePath, address);
@@ -140,10 +136,25 @@ const getFiles = async (path: string): Promise<string[]> => {
     const files: string[] = []; // files, full path
     klaw(path)
       // .pipe(excludeDirFilter)
-      .on("data", (item: any) => {
-        if (item && !item.stats.isDirectory()) files.push(item.path);
+      .on("data", (item: unknown) => {
+        if (
+          typeof item === "object" &&
+          item != null &&
+          "stats" in item &&
+          "path" in item &&
+          typeof item.path === "string" &&
+          item.stats != null &&
+          typeof item.stats === "object" &&
+          "isDirectory" in item.stats &&
+          typeof item.stats.isDirectory === "function" &&
+          !item.stats.isDirectory()
+        ) {
+          files.push(item.path);
+        }
+
+        // if (item && !item.stats.isDirectory()) files.push(item.path);
       })
-      .on("error", (err: any, item: any) => {
+      .on("error", (err: unknown, item: unknown) => {
         console.error(`error on item`, item);
         console.error(err);
         reject(err);

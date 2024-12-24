@@ -1,50 +1,32 @@
-import { ms } from "https://deno.land/x/ms@v0.1.0/ms.ts";
-
-import { resolvePreferredWorker } from "../../../shared/src/mod.ts";
+import { resolvePreferredWorker } from "@metapages/compute-queues-shared";
 import mod from "../../mod.json" with { type: "json" };
-import { config } from "../config.ts";
+import { config } from "/@/config.ts";
+import * as computeQueuesShared from "@metapages/compute-queues-shared";
 import {
-  BroadcastJobStates,
-  DockerApiDeviceRequest,
-  DockerJobDefinitionInputRefs,
-  DockerJobDefinitionRow,
-  DockerJobFinishedReason,
-  DockerJobState,
-  DockerRunResult,
-  DockerRunResultWithOutputs,
-  StateChangeValueFinished,
-  StateChangeValueQueued,
-  StateChangeValueRunning,
-  WebsocketMessageSenderWorker,
-  WebsocketMessageTypeWorkerToServer,
-  WebsocketMessageWorkerToServer,
-  WorkerRegistration,
-  WorkerStatusResponse,
-} from "../shared/mod.ts";
-import {
-  DockerJobArgs,
+  type DockerJobArgs,
   dockerJobExecute,
-  DockerJobExecution,
-  Volume,
-} from "./DockerJob.ts";
-import { convertIOToVolumeMounts, getOutputs } from "./IO.ts";
-import { convertStringToDockerCommand } from "./utils.ts";
+  type DockerJobExecution,
+  type Volume,
+} from "/@/queue/DockerJob.ts";
+import { convertIOToVolumeMounts, getOutputs } from "/@/queue/IO.ts";
+import { convertStringToDockerCommand } from "/@/queue/utils.ts";
 
 const Version: string = mod.version;
 
-export interface DockerJobQueueArgs extends WorkerRegistration {
-  sender: WebsocketMessageSenderWorker;
+export interface DockerJobQueueArgs
+  extends computeQueuesShared.WorkerRegistration {
+  sender: computeQueuesShared.WebsocketMessageSenderWorker;
 }
 
 type WorkerJobQueueItem = {
   execution: DockerJobExecution | null;
-  definition: DockerJobDefinitionInputRefs;
+  definition: computeQueuesShared.DockerJobDefinitionInputRefs;
   // We might have to send this multiple times, so keep it around
-  runningMessageToServer: WebsocketMessageWorkerToServer;
+  runningMessageToServer: computeQueuesShared.WebsocketMessageWorkerToServer;
   gpuIndices?: number[];
 };
 
-const UPDATE_WORKERS_INTERVAL = ms("5s");
+// const UPDATE_WORKERS_INTERVAL = ms("5s");
 
 export class DockerJobQueue {
   workerId: string;
@@ -60,7 +42,7 @@ export class DockerJobQueue {
   // server reconnects, we can send the results
   // cachedResults: any = {};
   // Tell the server our state change requests
-  sender: WebsocketMessageSenderWorker;
+  sender: computeQueuesShared.WebsocketMessageSenderWorker;
 
   // jobs: { [hash in string]: DockerJobDefinitionInputRefs } = {};
 
@@ -146,7 +128,7 @@ export class DockerJobQueue {
     throw `getGPUDeviceIndex but could not find an available GPU`;
   }
 
-  status(): WorkerStatusResponse {
+  status(): computeQueuesShared.WorkerStatusResponse {
     return {
       time: Date.now(),
       id: this.workerId,
@@ -168,7 +150,7 @@ export class DockerJobQueue {
   }
 
   register() {
-    const registration: WorkerRegistration = {
+    const registration: computeQueuesShared.WorkerRegistration = {
       time: Date.now(),
       version: Version,
       id: this.workerId,
@@ -176,7 +158,8 @@ export class DockerJobQueue {
       gpus: this.gpus,
     };
     this.sender({
-      type: WebsocketMessageTypeWorkerToServer.WorkerRegistration,
+      type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
+        .WorkerRegistration,
       payload: registration,
     });
     for (const runningQueueObject of Object.values(this.queue)) {
@@ -192,19 +175,21 @@ export class DockerJobQueue {
   //     this._claimJobs(state);
   // }
 
-  async onUpdateUpdateASubsetOfJobs(message: BroadcastJobStates) {
+  async onUpdateUpdateASubsetOfJobs(
+    message: computeQueuesShared.BroadcastJobStates,
+  ) {
     message.isSubset = true;
     this._checkRunningJobs(message);
     await this._claimJobs(message);
   }
 
-  onUpdateSetAllJobStates(message: BroadcastJobStates) {
+  onUpdateSetAllJobStates(message: computeQueuesShared.BroadcastJobStates) {
     // console.log(`workerState ${JSON.stringify(state, null, '  ')}`)
     this._checkRunningJobs(message);
     this._claimJobs(message);
   }
 
-  _checkRunningJobs(message: BroadcastJobStates) {
+  _checkRunningJobs(message: computeQueuesShared.BroadcastJobStates) {
     const jobStates = message.state.jobs;
     // we get
     const isAllJobs = !message.isSubset;
@@ -233,7 +218,7 @@ export class DockerJobQueue {
       const serverJobState = jobStates[locallyRunningJobId];
 
       switch (serverJobState.state) {
-        case DockerJobState.Finished:
+        case computeQueuesShared.DockerJobState.Finished:
           // FINE it finished elsewhere, how rude
           console.log(
             `[${this.workerIdShort}] [${
@@ -242,8 +227,8 @@ export class DockerJobQueue {
           );
           this._killJobAndIgnore(locallyRunningJobId);
           break;
-        case DockerJobState.ReQueued:
-        case DockerJobState.Queued:
+        case computeQueuesShared.DockerJobState.ReQueued:
+        case computeQueuesShared.DockerJobState.Queued:
           // server says queued, I say running, remind the server
           // this can easily happen if I submit Running, but then
           // the worker gets another update immediately
@@ -254,11 +239,12 @@ export class DockerJobQueue {
             }] server says queued, I say running, sending running again`,
           );
           this.sender({
-            type: WebsocketMessageTypeWorkerToServer.StateChange,
+            type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
+              .StateChange,
             payload: {
               tag: this.workerId,
               job: locallyRunningJobId,
-              state: DockerJobState.Running,
+              state: computeQueuesShared.DockerJobState.Running,
               value: {
                 worker: this.workerId,
                 time: Date.now(),
@@ -266,16 +252,18 @@ export class DockerJobQueue {
             },
           });
           break;
-        case DockerJobState.Running:
+        case computeQueuesShared.DockerJobState.Running:
           // good!
           // except if another worker has taken it, then kill ours (server is dictator)
           if (
-            (serverJobState.value as StateChangeValueRunning).worker !==
+            (serverJobState
+              .value as computeQueuesShared.StateChangeValueRunning).worker !==
               this.workerId
           ) {
             const preferredWorker = resolvePreferredWorker(
               this.workerId,
-              (serverJobState.value as StateChangeValueRunning).worker,
+              (serverJobState
+                .value as computeQueuesShared.StateChangeValueRunning).worker,
             );
             if (preferredWorker === this.workerId) {
               console.log(
@@ -298,7 +286,9 @@ export class DockerJobQueue {
       }
 
       // are any jobs running locally actually killed by the server? or running
-      if (serverJobState.state === DockerJobState.Finished) {
+      if (
+        serverJobState.state === computeQueuesShared.DockerJobState.Finished
+      ) {
         console.log(
           `[${this.workerIdShort}] Cannot find local job ${
             locallyRunningJobId.substring(0, 6)
@@ -317,15 +307,16 @@ export class DockerJobQueue {
     // }
   }
 
-  async _claimJobs(message: BroadcastJobStates) {
+  async _claimJobs(message: computeQueuesShared.BroadcastJobStates) {
     const jobStates = message.state.jobs;
     // check if the server says I have a job running (that I told it)
     // but I don't have it running now (I restarted?) and didn't reconnect
     // to the running container
 
     const jobsServerSaysAreRunningOnMe = Object.keys(jobStates).filter((key) =>
-      jobStates[key].state === DockerJobState.Running &&
-      (jobStates[key].value as StateChangeValueRunning).worker === this.workerId
+      jobStates[key].state === computeQueuesShared.DockerJobState.Running &&
+      (jobStates[key].value as computeQueuesShared.StateChangeValueRunning)
+          .worker === this.workerId
     );
     for (const runningJobId of jobsServerSaysAreRunningOnMe) {
       if (!this.queue[runningJobId]) {
@@ -336,8 +327,8 @@ export class DockerJobQueue {
     // only care about queued jobs
     const queuedJobKeys: string[] = Object.keys(jobStates)
       .filter((key) =>
-        jobStates[key].state === DockerJobState.Queued ||
-        jobStates[key].state === DockerJobState.ReQueued
+        jobStates[key].state === computeQueuesShared.DockerJobState.Queued ||
+        jobStates[key].state === computeQueuesShared.DockerJobState.ReQueued
       );
     // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
     // Go through the queued jobs and start them if we have capacity
@@ -346,7 +337,8 @@ export class DockerJobQueue {
       const jobKey = queuedJobKeys.pop()!;
       const job = jobStates[jobKey];
       const definition =
-        (job.history[0].value as StateChangeValueQueued).definition;
+        (job.history[0].value as computeQueuesShared.StateChangeValueQueued)
+          .definition;
       // Can I start this job?
       // This logic *could* be above in the while loop, but it's going to get
       // more complicated when we add more features, so make the check steps explicit
@@ -369,12 +361,13 @@ export class DockerJobQueue {
     }
   }
 
-  async _startJob(jobBlob: DockerJobDefinitionRow): Promise<void> {
+  _startJob(jobBlob: computeQueuesShared.DockerJobDefinitionRow): void {
     console.log(
       `[${this.workerIdShort}] [${jobBlob.hash.substring(0, 6)}] starting...`,
     );
     const definition =
-      (jobBlob.history[0].value as StateChangeValueQueued).definition;
+      (jobBlob.history[0].value as computeQueuesShared.StateChangeValueQueued)
+        .definition;
     if (!definition) {
       console.log(
         `💥 [${this.workerIdShort}] _startJob but no this.jobs[${
@@ -385,19 +378,21 @@ export class DockerJobQueue {
     }
 
     // tell the server we've started the job
-    const valueRunning: StateChangeValueRunning = {
+    const valueRunning: computeQueuesShared.StateChangeValueRunning = {
       worker: this.workerId,
       time: Date.now(),
     };
-    const runningMessageToServer: WebsocketMessageWorkerToServer = {
-      type: WebsocketMessageTypeWorkerToServer.StateChange,
-      payload: {
-        job: jobBlob.hash,
-        tag: this.workerId,
-        state: DockerJobState.Running,
-        value: valueRunning,
-      },
-    };
+    const runningMessageToServer:
+      computeQueuesShared.WebsocketMessageWorkerToServer = {
+        type:
+          computeQueuesShared.WebsocketMessageTypeWorkerToServer.StateChange,
+        payload: {
+          job: jobBlob.hash,
+          tag: this.workerId,
+          state: computeQueuesShared.DockerJobState.Running,
+          value: valueRunning,
+        },
+      };
 
     // add a placeholder on the queue for this job
     this.queue[jobBlob.hash] = {
@@ -405,7 +400,9 @@ export class DockerJobQueue {
       definition,
       runningMessageToServer,
     };
-    let deviceRequests: DockerApiDeviceRequest[] | undefined;
+    let deviceRequests:
+      | computeQueuesShared.DockerApiDeviceRequest[]
+      | undefined;
     if (definition.gpu) {
       const deviceIndex = this.getGPUDeviceIndex();
       this.queue[jobBlob.hash].gpuIndices = [deviceIndex];
@@ -436,22 +433,23 @@ export class DockerJobQueue {
         // TODO: cache locally before attempting to send
         delete this.queue[jobBlob.hash];
 
-        const valueError: StateChangeValueFinished = {
-          reason: DockerJobFinishedReason.Error,
+        const valueError: computeQueuesShared.StateChangeValueFinished = {
+          reason: computeQueuesShared.DockerJobFinishedReason.Error,
           worker: this.workerId,
           time: Date.now(),
           result: ({
             error: `${err}`,
             logs: [[`💥 ${err}`, Date.now(), true]],
-          } as DockerRunResultWithOutputs),
+          } as computeQueuesShared.DockerRunResultWithOutputs),
         };
 
         this.sender({
-          type: WebsocketMessageTypeWorkerToServer.StateChange,
+          type:
+            computeQueuesShared.WebsocketMessageTypeWorkerToServer.StateChange,
           payload: {
             job: jobBlob.hash,
             tag: this.workerId,
-            state: DockerJobState.Finished,
+            state: computeQueuesShared.DockerJobState.Finished,
             value: valueError,
           },
         });
@@ -506,103 +504,109 @@ export class DockerJobQueue {
       }
       this.queue[jobBlob.hash].execution = dockerExecution;
 
-      dockerExecution.finish.then(async (result: DockerRunResult) => {
-        console.log(
-          `[${jobBlob.hash.substring(0, 6)}] result ${
-            JSON.stringify(result, null, "  ").substring(0, 200)
-          }`,
-        );
-        result.logs = result.logs || [];
-        if (result.StatusCode !== 0) {
-          result.logs.push([
-            `💥 StatusCode: ${result.StatusCode}`,
-            Date.now(),
-            true,
-          ]);
+      dockerExecution.finish.then(
+        async (result: computeQueuesShared.DockerRunResult) => {
           console.log(
-            `[${this.workerIdShort}] [${
-              jobBlob.hash.substring(0, 6)
-            }] 💥 StatusCode: ${result.StatusCode}`,
+            `[${jobBlob.hash.substring(0, 6)}] result ${
+              JSON.stringify(result, null, "  ").substring(0, 200)
+            }`,
           );
-          console.log(
-            `[${this.workerIdShort}] [${
-              jobBlob.hash.substring(0, 6)
-            }] 💥 stderr: ${result.logs?.join("\n")?.substring(0, 200)}`,
-          );
-        }
-        if (result.error) {
-          result.logs.push([`💥 ${result.error}`, Date.now(), true]);
-          result.error = "Error";
-          console.log(
-            `[${this.workerIdShort}] [${
-              jobBlob.hash.substring(0, 6)
-            }] 💥 error: ${result.error}`,
-          );
-        }
-
-        const resultWithOutputs: DockerRunResultWithOutputs =
-          result as DockerRunResultWithOutputs;
-        resultWithOutputs.outputs = {};
-
-        let valueFinished: StateChangeValueFinished | undefined;
-        if (result.error) {
-          valueFinished = {
-            reason: DockerJobFinishedReason.Error,
-            worker: this.workerId,
-            time: Date.now(),
-            result: resultWithOutputs,
-          };
-        } else {
-          // get outputs
-          try {
-            console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] uploading outputs`,
-            );
-            const outputs = await getOutputs(jobBlob, this.workerId);
-            valueFinished = {
-              reason: DockerJobFinishedReason.Success,
-              worker: this.workerId,
-              time: Date.now(),
-              result: { ...result, outputs },
-            };
-          } catch (err) {
-            console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] 💥 failed to upload outputs ${err}`,
-            );
-            resultWithOutputs.logs = resultWithOutputs.logs || [];
-            console.error(err);
-            resultWithOutputs.logs.push([
-              `💥 failed to get job outputs`,
+          result.logs = result.logs || [];
+          if (result.StatusCode !== 0) {
+            result.logs.push([
+              `💥 StatusCode: ${result.StatusCode}`,
               Date.now(),
               true,
-            ], [`err=${err}`, Date.now(), true]);
+            ]);
+            console.log(
+              `[${this.workerIdShort}] [${
+                jobBlob.hash.substring(0, 6)
+              }] 💥 StatusCode: ${result.StatusCode}`,
+            );
+            console.log(
+              `[${this.workerIdShort}] [${
+                jobBlob.hash.substring(0, 6)
+              }] 💥 stderr: ${result.logs?.join("\n")?.substring(0, 200)}`,
+            );
+          }
+          if (result.error) {
+            result.logs.push([`💥 ${result.error}`, Date.now(), true]);
+            result.error = "Error";
+            console.log(
+              `[${this.workerIdShort}] [${
+                jobBlob.hash.substring(0, 6)
+              }] 💥 error: ${result.error}`,
+            );
+          }
+
+          const resultWithOutputs:
+            computeQueuesShared.DockerRunResultWithOutputs =
+              result as computeQueuesShared.DockerRunResultWithOutputs;
+          resultWithOutputs.outputs = {};
+
+          let valueFinished:
+            | computeQueuesShared.StateChangeValueFinished
+            | undefined;
+          if (result.error) {
             valueFinished = {
-              reason: DockerJobFinishedReason.Error,
+              reason: computeQueuesShared.DockerJobFinishedReason.Error,
               worker: this.workerId,
               time: Date.now(),
-              result: { ...resultWithOutputs, error: `${err}` },
+              result: resultWithOutputs,
             };
+          } else {
+            // get outputs
+            try {
+              console.log(
+                `[${this.workerIdShort}] [${
+                  jobBlob.hash.substring(0, 6)
+                }] uploading outputs`,
+              );
+              const outputs = await getOutputs(jobBlob, this.workerId);
+              valueFinished = {
+                reason: computeQueuesShared.DockerJobFinishedReason.Success,
+                worker: this.workerId,
+                time: Date.now(),
+                result: { ...result, outputs },
+              };
+            } catch (err) {
+              console.log(
+                `[${this.workerIdShort}] [${
+                  jobBlob.hash.substring(0, 6)
+                }] 💥 failed to upload outputs ${err}`,
+              );
+              resultWithOutputs.logs = resultWithOutputs.logs || [];
+              console.error(err);
+              resultWithOutputs.logs.push([
+                `💥 failed to get job outputs`,
+                Date.now(),
+                true,
+              ], [`err=${err}`, Date.now(), true]);
+              valueFinished = {
+                reason: computeQueuesShared.DockerJobFinishedReason.Error,
+                worker: this.workerId,
+                time: Date.now(),
+                result: { ...resultWithOutputs, error: `${err}` },
+              };
+            }
           }
-        }
 
-        // Delete from our local queue first
-        // TODO: cache locally before attempting to send
-        delete this.queue[jobBlob.hash];
+          // Delete from our local queue first
+          // TODO: cache locally before attempting to send
+          delete this.queue[jobBlob.hash];
 
-        this.sender({
-          type: WebsocketMessageTypeWorkerToServer.StateChange,
-          payload: {
-            job: jobBlob.hash,
-            tag: this.workerId,
-            state: DockerJobState.Finished,
-            value: valueFinished,
-          },
-        });
-      }).catch((err) => {
+          this.sender({
+            type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
+              .StateChange,
+            payload: {
+              job: jobBlob.hash,
+              tag: this.workerId,
+              state: computeQueuesShared.DockerJobState.Finished,
+              value: valueFinished,
+            },
+          });
+        },
+      ).catch((err) => {
         console.log(
           `[${this.workerIdShort}] [${
             jobBlob.hash.substring(0, 6)
@@ -613,8 +617,8 @@ export class DockerJobQueue {
         // TODO: cache locally before attempting to send
         delete this.queue[jobBlob.hash];
 
-        const valueError: StateChangeValueFinished = {
-          reason: DockerJobFinishedReason.Error,
+        const valueError: computeQueuesShared.StateChangeValueFinished = {
+          reason: computeQueuesShared.DockerJobFinishedReason.Error,
           worker: this.workerId,
           time: Date.now(),
           result: ({
@@ -624,15 +628,16 @@ export class DockerJobQueue {
               Date.now(),
               true,
             ]],
-          } as DockerRunResultWithOutputs),
+          } as computeQueuesShared.DockerRunResultWithOutputs),
         };
 
         this.sender({
-          type: WebsocketMessageTypeWorkerToServer.StateChange,
+          type:
+            computeQueuesShared.WebsocketMessageTypeWorkerToServer.StateChange,
           payload: {
             job: jobBlob.hash,
             tag: this.workerId,
-            state: DockerJobState.Finished,
+            state: computeQueuesShared.DockerJobState.Finished,
             value: valueError,
           },
         });

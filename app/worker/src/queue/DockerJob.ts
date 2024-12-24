@@ -1,22 +1,22 @@
-import { Buffer } from "https://deno.land/std@0.177.0/node/buffer.ts";
-import { Writable } from "https://deno.land/std@0.177.0/node/stream.ts";
-import { existsSync } from "https://deno.land/std@0.224.0/fs/exists.ts";
-import Docker from "npm:dockerode@4.0.2";
+import type { Buffer } from "std/node/buffer";
+import type { Writable } from "std/node/stream";
+import { existsSync } from "std/fs";
+import type Docker from "dockerode";
 import bytes from "bytes";
 
-import * as StreamTools from "../docker/streamtools.ts";
-import { DockerJobSharedVolumeName } from "../docker/volume.ts";
+import * as StreamTools from "/@/docker/streamtools.ts";
+import { DockerJobSharedVolumeName } from "/@/docker/volume.ts";
 import {
-  DockerApiDeviceRequest,
-  DockerJobImageBuild,
+  type DockerApiDeviceRequest,
+  type DockerJobImageBuild,
   DockerJobState,
-  DockerRunResult,
-  JobStatusPayload,
-  WebsocketMessageSenderWorker,
+  type DockerRunResult,
+  type JobStatusPayload,
+  type WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
-} from "../shared/mod.ts";
-import { docker } from "./dockerClient.ts";
-import { DockerBuildError, ensureDockerImage } from "./dockerImage.ts";
+} from "@metapages/compute-queues-shared";
+import { docker } from "/@/queue/dockerClient.ts";
+import { DockerBuildError, ensureDockerImage } from "/@/queue/dockerImage.ts";
 
 // Minimal interface for interacting with docker jobs:
 //  inputs:
@@ -61,7 +61,7 @@ export interface DockerJobArgs {
   image?: string;
   build?: DockerJobImageBuild;
   command?: string[] | undefined;
-  env?: any;
+  env?: Record<string, string>;
   entrypoint?: string[] | undefined;
   workdir?: string;
   shmSize?: string;
@@ -112,7 +112,7 @@ export const dockerJobExecute = async (
 
   let container: Docker.Container | undefined;
 
-  const kill = async (): Promise<any> => {
+  const kill = async () => {
     if (container) {
       await killAndRemove(container);
     }
@@ -163,7 +163,7 @@ export const dockerJobExecute = async (
     `${DockerJobSharedVolumeName}:${JobCacheDirectory}:Z`,
   );
 
-  var grabberOutStream = StreamTools.createTransformStream((s: string) => {
+  const grabberOutStream = StreamTools.createTransformStream((s: string) => {
     result.logs.push([s.toString(), Date.now()]);
     sender({
       type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
@@ -179,7 +179,7 @@ export const dockerJobExecute = async (
     grabberOutStream.pipe(outStream!);
   }
 
-  var grabberErrStream = StreamTools.createTransformStream((s: string) => {
+  const grabberErrStream = StreamTools.createTransformStream((s: string) => {
     result.logs.push([s.toString(), Date.now(), true]);
     sender({
       type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
@@ -195,7 +195,7 @@ export const dockerJobExecute = async (
     grabberErrStream.pipe(errStream!);
   }
 
-  const runningContainers: any[] = await docker.listContainers({
+  /* const runningContainers: any[] = */ void await docker.listContainers({
     Labels: {
       "container.mtfm.io/id": args.id,
     },
@@ -209,8 +209,14 @@ export const dockerJobExecute = async (
         build: args.build,
         sender,
       });
-    } catch (err: any) {
-      result.logs = err.logs ? err.logs : [];
+    } catch (err: unknown) {
+      const message = err && typeof err === "object" && "message" in err
+        ? err.message
+        : `Unknown error: ${String(err)}`;
+      result.logs = err && typeof err === "object" && "logs" in err &&
+          Array.isArray(err.logs)
+        ? err.logs
+        : [];
       if (err instanceof DockerBuildError) {
         result.error = "Error building image";
         result.logs.push([`${err.message}`, Date.now(), true]);
@@ -218,7 +224,7 @@ export const dockerJobExecute = async (
       } else {
         console.error("💥 ensureDockerImage error", err);
         result.logs.push([
-          `Failure to pull or build the docker image:  ${err?.message}`,
+          `Failure to pull or build the docker image:  ${message}`,
           Date.now(),
           true,
         ]);
@@ -233,8 +239,14 @@ export const dockerJobExecute = async (
         "container.mtfm.io/id": args.id,
       },
     });
-    const existingJobContainer = runningContainers.find((container: any) =>
-      container?.Labels["container.mtfm.io/id"] === args.id
+    const existingJobContainer = runningContainers.find((container: unknown) =>
+      container &&
+      typeof container === "object" &&
+      "Labels" in container &&
+      typeof container.Labels === "object" &&
+      container.Labels != null &&
+      "container.mtfm.io/id" in container.Labels &&
+      container.Labels["container.mtfm.io/id"] === args.id
     );
 
     if (existingJobContainer) {
@@ -281,12 +293,16 @@ export const dockerJobExecute = async (
   };
 };
 
-const killAndRemove = async (container?: Docker.Container): Promise<any> => {
+const killAndRemove = async (
+  container?: Docker.Container,
+): Promise<unknown> => {
   if (container) {
-    let killResult: any;
+    let killResult: unknown;
     try {
       killResult = await container.kill();
-    } catch (err) {}
+    } catch (_err) {
+      /* do nothing */
+    }
     (async () => {
       try {
         await container.remove();
@@ -299,67 +315,67 @@ const killAndRemove = async (container?: Docker.Container): Promise<any> => {
   }
 };
 
-const dockerUrlMatches = (a: DockerUrlBlob, b: DockerUrlBlob) => {
-  if (a.repository == b.repository) {
-    const tagA = a.tag;
-    const tagB = b.tag;
-    return !tagA || !tagB ? true : tagA === tagB;
-  } else {
-    return false;
-  }
-};
+// const dockerUrlMatches = (a: DockerUrlBlob, b: DockerUrlBlob) => {
+//   if (a.repository == b.repository) {
+//     const tagA = a.tag;
+//     const tagB = b.tag;
+//     return !tagA || !tagB ? true : tagA === tagB;
+//   } else {
+//     return false;
+//   }
+// };
 
-interface DockerUrlBlob {
-  repository: string;
-  registry?: string;
-  tag?: string;
-}
+// interface DockerUrlBlob {
+//   repository: string;
+//   registry?: string;
+//   tag?: string;
+// }
 
-const parseDockerUrl = (s: string): DockerUrlBlob => {
-  s = s.trim();
-  const r = /(.*\/)?([a-z0-9_-]+)(:[a-z0-9_\.-]+)?/i;
-  const result = r.exec(s);
-  if (!result) {
-    throw `Not a docker URL: ${s}`;
-  }
-  let registryAndNamespace: string | undefined = result[1];
-  const repository = result[2];
-  let tag = result[3];
-  if (tag) {
-    tag = tag.substring(1);
-  }
-  registryAndNamespace = registryAndNamespace
-    ? registryAndNamespace.substring(0, registryAndNamespace.length - 1)
-    : undefined;
-  let namespace: string | undefined;
-  let registry: string | undefined;
-  if (registryAndNamespace) {
-    var tokens = registryAndNamespace.split("/");
-    if (tokens.length > 1) {
-      namespace = tokens.pop();
-      registry = tokens.length > 0 ? tokens.join("/") : undefined;
-    } else {
-      //If the registry and namespace does not contain /
-      //and there's no '.'/':' then there's no registry
-      if (
-        registryAndNamespace.indexOf(".") > -1 ||
-        registryAndNamespace.indexOf(":") > -1
-      ) {
-        registry = registryAndNamespace;
-      } else {
-        namespace = registryAndNamespace;
-      }
-    }
-  }
+// const parseDockerUrl = (s: string): DockerUrlBlob => {
+//   s = s.trim();
+//   const r = /(.*\/)?([a-z0-9_-]+)(:[a-z0-9_\.-]+)?/i;
+//   const result = r.exec(s);
+//   if (!result) {
+//     throw `Not a docker URL: ${s}`;
+//   }
+//   let registryAndNamespace: string | undefined = result[1];
+//   const repository = result[2];
+//   let tag = result[3];
+//   if (tag) {
+//     tag = tag.substring(1);
+//   }
+//   registryAndNamespace = registryAndNamespace
+//     ? registryAndNamespace.substring(0, registryAndNamespace.length - 1)
+//     : undefined;
+//   let namespace: string | undefined;
+//   let registry: string | undefined;
+//   if (registryAndNamespace) {
+//     const tokens = registryAndNamespace.split("/");
+//     if (tokens.length > 1) {
+//       namespace = tokens.pop();
+//       registry = tokens.length > 0 ? tokens.join("/") : undefined;
+//     } else {
+//       //If the registry and namespace does not contain /
+//       //and there's no '.'/':' then there's no registry
+//       if (
+//         registryAndNamespace.indexOf(".") > -1 ||
+//         registryAndNamespace.indexOf(":") > -1
+//       ) {
+//         registry = registryAndNamespace;
+//       } else {
+//         namespace = registryAndNamespace;
+//       }
+//     }
+//   }
 
-  var url: DockerUrlBlob = {
-    repository: namespace == null ? repository : `${namespace}/${repository}`,
-  };
-  if (tag != null) {
-    url.tag = tag;
-  }
-  if (registry != null) {
-    url.registry = registry;
-  }
-  return url;
-};
+//   const url: DockerUrlBlob = {
+//     repository: namespace == null ? repository : `${namespace}/${repository}`,
+//   };
+//   if (tag != null) {
+//     url.tag = tag;
+//   }
+//   if (registry != null) {
+//     url.registry = registry;
+//   }
+//   return url;
+// };

@@ -1,6 +1,7 @@
 {
   "name": "@metapages/compute-queues-api",
-  "exports": {
-    "./src/": "./src/"
+  "exports": {},
+  "imports": {
+    "/@/": "./src/"
   }
 }

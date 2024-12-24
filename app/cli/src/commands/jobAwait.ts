@@ -1,14 +1,14 @@
 import {
-  BroadcastJobStates,
-  DockerJobDefinitionRow,
+  type BroadcastJobStates,
+  type DockerJobDefinitionRow,
   DockerJobState,
   finishedJobOutputsToFiles,
-  StateChangeValueFinished,
-  WebsocketMessageServerBroadcast,
+  type StateChangeValueFinished,
+  type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
-import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
-import { closed, open } from "jsr:@korkje/wsi@^0.3.2";
+import { Command } from "cliffy/command";
+import { closed, open } from "@korkje/wsi";
 
 export const jobAwait = new Command()
   .arguments("<queue:string> <jobId:string>")
@@ -34,10 +34,10 @@ export const jobAwait = new Command()
       const address = apiServerAddress || globalThis.location.origin;
       const url = `${address}/${queue}/client`;
 
-      let {
+      const {
         promise: jobCompleteDeferred,
         resolve,
-        reject,
+        /* reject, */
       } = Promise.withResolvers<StateChangeValueFinished>();
 
       const socket = new WebSocket(`${url.replace("http", "ws")}`);
@@ -55,7 +55,7 @@ export const jobAwait = new Command()
         );
         switch (possibleMessage.type) {
           case WebsocketMessageTypeServerBroadcast.JobStates:
-          case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
+          case WebsocketMessageTypeServerBroadcast.JobStateUpdates: {
             const someJobsPayload = possibleMessage
               .payload as BroadcastJobStates;
             if (!someJobsPayload) {
@@ -81,6 +81,7 @@ export const jobAwait = new Command()
             }
 
             break;
+          }
           default:
             //ignored
         }

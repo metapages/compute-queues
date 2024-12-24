@@ -1,4 +1,4 @@
-import { createDockerClient } from "../docker/client.ts";
+import { createDockerClient } from "/@/docker/client.ts";
 
 Deno.addSignalListener("SIGUSR1", () => {
   console.log("GOT SIGUSR1");

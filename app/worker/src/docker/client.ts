@@ -1,5 +1,5 @@
-import type { Reader, Writer } from "jsr:@std/io/types";
-import Docker from "npm:dockerode@4.0.2";
+import type { Reader, Writer } from "std/io";
+import Docker from "dockerode";
 
 /******************************************************
  * Begin workarounds for this showstopper issue:
@@ -37,7 +37,7 @@ export const createDockerClient = (port = 3000) => {
 
       // Wait for both copy operations to complete
       await Promise.all([tcpToUnix, unixToTcp]);
-    } catch (error) {
+    } catch (_error) {
       // console.error("Error handling connection:", error);
     } finally {
       tcpConn.close();

@@ -1,22 +1,22 @@
-import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
-import { config } from "../config.ts";
-import { ensureSharedVolume } from "../docker/volume.ts";
-import { localHandler } from "../lib/local-handler.ts";
+import { Command } from "cliffy/command";
+import { config } from "/@/config.ts";
+import { ensureSharedVolume } from "/@/docker/volume.ts";
+import { localHandler } from "/@/lib/local-handler.ts";
 import { ms } from "ms";
-import ReconnectingWebSocket from "npm:reconnecting-websocket@4.4.0";
-import { clearCache } from "../queue/dockerImage.ts";
-import { DockerJobQueue, DockerJobQueueArgs } from "../queue/index.ts";
+import ReconnectingWebSocket from "reconnecting-websocket";
+import { clearCache } from "/@/queue/dockerImage.ts";
+import { DockerJobQueue, type DockerJobQueueArgs } from "/@/queue/index.ts";
 import mod from "../../mod.json" with { type: "json" };
 import {
-  BroadcastJobStates,
+  type BroadcastJobStates,
   DockerJobState,
-  JobStates,
-  PayloadClearJobCache,
-  WebsocketMessageSenderWorker,
-  WebsocketMessageServerBroadcast,
+  type JobStates,
+  type PayloadClearJobCache,
+  type WebsocketMessageSenderWorker,
+  type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
   WebsocketMessageTypeWorkerToServer,
-  WebsocketMessageWorkerToServer,
+  type WebsocketMessageWorkerToServer,
 } from "@metapages/compute-queues-shared";
 
 const VERSION: string = mod.version;

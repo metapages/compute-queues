@@ -1,4 +1,4 @@
-import machineId from "https://deno.land/x/deno_machine_id@1.0.0/mod.ts";
+import machineId from "deno-machine-id";
 
 export const VERSION: string = "0.2.0";
 const MACHINE_ID: string = await machineId();
