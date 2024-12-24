@@ -5,7 +5,7 @@ services:
         condition: service_healthy
     image: denoland/deno:alpine-2.0.3
     command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
-    working_dir: /app/test
+    working_dir: /app/app/test
     extra_hosts:
       - host.docker.internal:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
@@ -49,7 +49,7 @@ services:
         condition: service_healthy
     image: denoland/deno:alpine-2.0.3
     command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
-    working_dir: /app/api
+    working_dir: /app/app/api
     healthcheck:
       test: sh -c 'PORT=8081 deno run --allow-net --allow-env src/util/healthcheck.ts'
       interval: 5s
@@ -74,9 +74,9 @@ services:
       - REDIS_URL=redis://redis:6379
     volumes:
       - deno:/deno
-      - ./shared:/app/shared
-      - ./browser/dist:/app/browser/dist
-      - ./api:/app/api
+      - ./app/shared:/app/app/shared
+      - ./app/browser/dist:/app/app/browser/dist
+      - ./app/api:/app/app/api
     networks:
       - default
     extra_hosts:
@@ -103,7 +103,7 @@ services:
         condition: service_healthy
     image: denoland/deno:alpine-2.0.3
     command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
-    working_dir: /app/api
+    working_dir: /app/app/api
     healthcheck:
       test: sh -c 'PORT=8082 deno run --allow-net --allow-env src/util/healthcheck.ts'
       interval: 5s
@@ -126,9 +126,9 @@ services:
       - REDIS_URL=redis://redis:6379
     volumes:
       - deno:/deno
-      - ./shared:/app/shared
-      - ./browser/dist:/app/browser/dist
-      - ./api:/app/api
+      - ./app/shared:/app/app/shared
+      - ./app/browser/dist:/app/app/browser/dist
+      - ./app/api:/app/app/api
     networks:
       - default
     extra_hosts:
@@ -158,7 +158,7 @@ services:
     command: run --mode=remote --cpus=2 --gpus=0 --api-server-address=https://worker-metaframe.localhost:${APP_PORT:-443} local1
     build:
       context: .
-      dockerfile: worker/Dockerfile
+      dockerfile: app/worker/Dockerfile
       target: worker
     environment:
       - IGNORE_CERTIFICATE_ERRORS=true
@@ -174,14 +174,14 @@ services:
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
     volumes:
-      - ./shared:/app/shared
-      - ./worker:/app/worker
-      - ./browser/dist:/app/browser/dist
-      - ./api:/app/api
+      - ./app/shared:/app/app/shared
+      - ./app/worker:/app/app/worker
+      - ./app/browser/dist:/app/app/browser/dist
+      - ./app/api:/app/app/api
       - /tmp:/tmp
       - /var/run/docker.sock:/var/run/docker.sock
       - deno:/deno
-      - node_modules_worker:/app/worker/node_modules
+      - node_modules:/app/node_modules
     extra_hosts:
       - host.docker.internal:host-gateway
       - local.storage.local.nhost.run:host-gateway
@@ -193,25 +193,16 @@ services:
   create-browser-assets:
     build:
       context: .
-      dockerfile: browser/Dockerfile
+      dockerfile: app/browser/Dockerfile
     command: just watch
-    working_dir: /app/browser
+    working_dir: /app/app/browser
     environment:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - SERVER_ORIGIN=https://worker-metaframe.localhost:${APP_PORT:-443}
     volumes:
-      - ../.git:/.git
-      - ./browser/dist:/app/browser/dist
-      - ./browser/index.html:/app/browser/index.html
-      - ./browser/justfile:/app/browser/justfile
-      - ./browser/package-lock.json:/app/browser/package-lock.json
-      - ./browser/package.json:/app/browser/package.json
-      - ./browser/public:/app/browser/public
-      - ./browser/src:/app/browser/src
-      - ./browser/tsconfig.json:/app/browser/tsconfig.json
-      - ./browser/vite.config.ts:/app/browser/vite.config.ts
-      - ./shared:/app/shared
-      - node_modules:/app/browser/node_modules
+      - deno:/deno
+      - .:/app
+      - browser_node_modules:/app/app/browser/node_modules
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -221,7 +212,7 @@ services:
         condition: service_started
     image: denoland/deno:alpine-2.0.3
     command: deno run --watch --allow-all ./src/s3/create-bucket-development.ts
-    working_dir: /app/api
+    working_dir: /app/app/api
     environment:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - AWS_ACCESS_KEY_ID=minioaccesskey123123
@@ -235,7 +226,7 @@ services:
       - host.docker.internal:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
     volumes:
-      - ./api/src:/app/api/src
+      - ./app/api/src:/app/app/api/src
       - deno:/deno
 
 volumes:

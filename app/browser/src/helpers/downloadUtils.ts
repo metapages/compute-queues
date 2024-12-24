@@ -3,7 +3,7 @@ import {
   dataRefToBuffer,
   dataRefToDownloadLink,
   InputsRefs,
-} from "@metapages/compute-queues-shared";
+} from "/@shared/client";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 

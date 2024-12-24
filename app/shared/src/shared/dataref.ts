@@ -2,11 +2,12 @@ import {
   DataRef,
   DataRefType,
   DataRefTypeDefault,
-  decodeBase64,
-  fetchRobust as fetch,
   InputsRefs,
-  sha256Buffer,
-} from "@metapages/compute-queues-shared";
+} from "./types.ts";
+
+import { fetchRobust as fetch, sha256Buffer } from "./util.ts";
+
+import { decodeBase64 } from "./base64.ts";
 
 import { DataRefSerializedBlob, MetaframeInputMap } from "@metapages/metapage";
 

@@ -3,7 +3,7 @@ import React, { ChangeEvent, ReactNode, useCallback } from "react";
 import { FormLink } from "/@/components/generic/FormLink";
 import { useOptionJobStartAutomatically } from "/@/hooks/useOptionJobStartAutomatically";
 import { useOptionResolveDataRefs } from "/@/hooks/useOptionResolveDataRefs";
-import { DockerJobDefinitionParamsInUrlHash } from "@metapages/compute-queues-shared";
+import { DockerJobDefinitionParamsInUrlHash } from "/@shared/client";
 import { useFormik } from "formik";
 import * as yup from "yup";
 

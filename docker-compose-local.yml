@@ -5,7 +5,7 @@ services:
         condition: service_healthy
     image: denoland/deno:alpine-2.0.3
     command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
-    working_dir: /app/test
+    working_dir: /app/app/test
     extra_hosts:
       - host.docker.internal:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
@@ -60,7 +60,7 @@ services:
       "src/cli.ts",
     ]
     command: run --mode=local --cpus=2 --gpus=0 local
-    working_dir: /app/worker
+    working_dir: /app/app/worker
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -72,7 +72,7 @@ services:
       - "8000:8000"
     build:
       context: .
-      dockerfile: worker/Dockerfile
+      dockerfile: app/worker/Dockerfile
       target: worker
     environment:
       - PORT=8000
@@ -89,14 +89,14 @@ services:
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
     volumes:
-      - ./shared:/app/shared
-      - ./worker:/app/worker
-      - ./api:/app/api
-      - ./browser/dist:/app/browser/dist
+      - ./deno.json:/app/deno.json
+      - ./app/shared:/app/app/shared
+      - ./app/worker:/app/app/worker
+      - ./app/browser/dist:/app/app/browser/dist
       - /tmp:/tmp
       - /var/run/docker.sock:/var/run/docker.sock
       - deno:/deno
-      - node_modules_worker:/app/worker/node_modules
+      - node_modules:/app/node_modules
     networks:
       - default
     extra_hosts:
@@ -118,25 +118,16 @@ services:
   create-browser-assets:
     build:
       context: .
-      dockerfile: browser/Dockerfile
+      dockerfile: app/browser/Dockerfile
     command: just watch
-    working_dir: /app/browser
+    working_dir: /app/app/browser
     environment:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - SERVER_ORIGIN=https://worker-metaframe.localhost:${APP_PORT:-443}
     volumes:
-      - ../.git:/.git
-      - ./browser/dist:/app/browser/dist
-      - ./browser/index.html:/app/browser/index.html
-      - ./browser/justfile:/app/browser/justfile
-      - ./browser/package-lock.json:/app/browser/package-lock.json
-      - ./browser/package.json:/app/browser/package.json
-      - ./browser/public:/app/browser/public
-      - ./browser/src:/app/browser/src
-      - ./browser/tsconfig.json:/app/browser/tsconfig.json
-      - ./browser/vite.config.ts:/app/browser/vite.config.ts
-      - ./shared:/app/shared
-      - node_modules:/app/browser/node_modules
+      - deno:/deno
+      - .:/app
+      - browser_node_modules:/app/app/browser/node_modules
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

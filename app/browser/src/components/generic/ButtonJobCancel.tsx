@@ -6,7 +6,7 @@ import {
   DockerJobFinishedReason,
   DockerJobState,
   StateChange,
-} from "@metapages/compute-queues-shared";
+} from "/@shared/client";
 import { useStore } from "/@/store";
 
 export const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = (

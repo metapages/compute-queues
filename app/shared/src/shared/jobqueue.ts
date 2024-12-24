@@ -723,12 +723,16 @@ export class BaseDockerJobQueue {
       try {
         // Finished jobs are cached in the db
         if (change.state === DockerJobState.Finished) {
+          console.log("cacheadd");
           await db.resultCacheAdd(jobId, jobRow);
           // remove from the persisted cache so that metrics will be accurate
+          console.log("cacheremove");
           await db.queueJobRemove(this.address, jobId);
         } else if (change.state === DockerJobState.Queued) {
+          console.log("queueadd");
           await db.queueJobAdd(this.address, jobRow!);
         } else {
+          console.log("queueupdate");
           await db.queueJobUpdate(this.address, jobRow!);
         }
       } catch (err) {

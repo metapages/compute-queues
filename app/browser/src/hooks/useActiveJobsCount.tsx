@@ -1,4 +1,4 @@
-import { DockerJobState } from "@metapages/compute-queues-shared";
+import { DockerJobState } from "/@shared/client";
 
 import { useStore } from "../store";
 

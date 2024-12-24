@@ -22,7 +22,7 @@ services:
       - minio.worker-metaframe.localhost:host-gateway
     restart: always
     volumes:
-      - .cache/minio:/data
+      - ./app/.cache/minio:/data
     labels:
       - "custom.label=worker-metaframe.localhost"
       - "traefik.enable=true"
@@ -74,8 +74,8 @@ services:
       # Disable the other ports to avoid conflicts
       # - "80:80"
     volumes:
-      - .cache/traefik/certs:/etc/certs:ro
-      - .traefik/config.yml:/etc/traefik/config.yml
+      - ./app/.cache/traefik/certs:/etc/certs:ro
+      - ./app/.traefik/config.yml:/etc/traefik/config.yml
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   redis:
@@ -96,5 +96,5 @@ volumes:
     driver: local
   node_modules:
     driver: local
-  node_modules_worker:
+  browser_node_modules:
     driver: local

@@ -6,7 +6,7 @@ import {
   DockerJobFinishedReason,
   DockerJobState,
   StateChangeValueFinished,
-} from "@metapages/compute-queues-shared";
+} from "/@shared/client";
 import { useStore } from "/@/store";
 
 import {

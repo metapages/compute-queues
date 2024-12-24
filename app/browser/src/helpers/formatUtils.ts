@@ -4,7 +4,7 @@ import {
   DockerJobState,
   InputsRefs,
   StateChangeValueFinished,
-} from "@metapages/compute-queues-shared";
+} from "/@shared/client";
 import stringify from "safe-stable-stringify";
 
 // eslint-disable-next-line

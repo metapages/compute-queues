@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { PanelContainer } from "/@/components/generic/PanelContainer";
 import { PanelHeader } from "/@/components/generic/PanelHeader";
 import { encodeOptions } from "/@/helpers";
-import { JobInputs } from "@metapages/compute-queues-shared";
+import { JobInputs } from "/@shared/client";
 import { useStore } from "/@/store";
 
 import { useHashParamJson } from "@metapages/hash-query/react-hooks";

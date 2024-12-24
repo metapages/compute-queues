@@ -6,7 +6,7 @@ import {
   DockerJobState,
   InputsRefs,
   StateChangeValueFinished,
-} from "@metapages/compute-queues-shared";
+} from "/@shared/client";
 import { useStore } from "/@/store";
 
 import { Box, Center, HStack, Icon, Text, VStack } from "@chakra-ui/react";

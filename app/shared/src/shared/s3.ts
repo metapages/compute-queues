@@ -2,10 +2,10 @@ import { DataRef, DataRefType } from "@metapages/compute-queues-shared";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  ListBucketsCommand,
   PutObjectCommand,
-} from "npm:@aws-sdk/client-s3@3.600.0";
-
-import { ListBucketsCommand, S3Client } from "npm:@aws-sdk/client-s3@3.582.0";
+  S3Client,
+} from "npm:@aws-sdk/client-s3@3.582.0";
 
 // import { S3Client } from 'https://deno.land/x/s3_lite_client@0.7.0/mod.ts';
 
@@ -57,7 +57,7 @@ export const putJsonToS3 = async (key: string, data: any): Promise<DataRef> => {
   });
   // Send the command to S3
   // @ts-ignore
-  const response = await client.send(command);
+  const response = await s3Client.send(command);
   const ref: DataRef = {
     // value: hash, // no http means we know it's an internal address, workers will know how to reach
     type: DataRefType.key,
@@ -99,7 +99,7 @@ export const deleteFromS3 = async <T>(Key: string): Promise<void> => {
     });
     try {
       // @ts-ignore
-      const response: any = await client.send(deleteObjectCommand);
+      const response: any = await s3Client.send(deleteObjectCommand);
       resolve();
     } catch (err) {
       console.log(`Ignored error deleting object ${Key} from S3: ${err}`);
@@ -115,7 +115,7 @@ const getObject = async (Key: string): Promise<string | undefined> => {
 
     try {
       // @ts-ignore
-      const response: any = await client.send(getObjectCommand);
+      const response: any = await s3Client.send(getObjectCommand);
 
       // Store all of data chunks returned from the response data stream
       // into an array then use Array#join() to use the returned contents as a String

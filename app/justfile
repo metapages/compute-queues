@@ -33,19 +33,19 @@ green := "\\e[32m"
     if [ $STATUS_CODE = "200" ]; then
         export NPM_CONFIG_REGISTRY=http://host.docker.internal:4873
     fi
-    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml rm --force 2>/dev/null || true
+    docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml rm --force 2>/dev/null || true
     docker rm dev-worker-1 2>/dev/null || true
-    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml up --remove-orphans {{ args }}
+    docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml up --remove-orphans {{ args }}
 
 # Shut down the local stack: 'docker compose down'
 @down mode="remote" +args="": (_validate_mode mode)
     #!/usr/bin/env bash
-    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml down {{ args }}
+    docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml down {{ args }}
 
 # Clean up the project
 @clean mode="remote" +args="": (_validate_mode mode)
     #!/usr/bin/env bash
-    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml down -v
+    docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml down -v
     just browser/clean
     rm -rf .cache
 
@@ -87,7 +87,7 @@ test mode="remote" +args="": (_validate_mode mode)
     set -e # exit when any command fails, preserving the status of the failed command
 
     cleanup() {
-        docker compose --project-name=test -f docker-compose.yml -f docker-compose-{{ mode }}.yml down 2>/dev/null || true
+        docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml down 2>/dev/null || true
     }
 
     trap cleanup EXIT # cleanup when the script exits for any reason, including failure
@@ -139,7 +139,7 @@ test mode="remote" +args="": (_validate_mode mode)
     export REDIS_URL="redis://localhost:6379" 
 
     docker rm test-worker-1 2>/dev/null || true
-    docker compose --project-name=test -f docker-compose.yml -f docker-compose-{{ mode }}.yml up --build --remove-orphans --detach
+    docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml up --build --remove-orphans --detach
     just worker/test
     just test/test
     just shared/test
@@ -147,7 +147,7 @@ test mode="remote" +args="": (_validate_mode mode)
 
 # Clean up the project
 @test-cleanup:
-    docker compose --project-name=test -f docker-compose.yml -f docker-compose-remote.yml down || true
+    docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-remote.yml down || true
 
 # Publish e.g. docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":

@@ -3,7 +3,10 @@ import { serveStatic } from "https://deno.land/x/hono@v4.1.0-rc.1/middleware.ts"
 import { DockerJobState, JobStates } from "@metapages/compute-queues-shared";
 import { createHandler } from "https://deno.land/x/metapages@v0.0.27/worker/routing/handlerDeno.ts";
 
-import { BaseDockerJobQueue, userJobQueues } from "@metapages/compute-queues-shared";
+import {
+  BaseDockerJobQueue,
+  userJobQueues,
+} from "@metapages/compute-queues-shared";
 
 export class LocalDockerJobQueue extends BaseDockerJobQueue {
   constructor(opts: { serverId: string; address: string }) {
@@ -86,9 +89,9 @@ queue_length ${unfinishedJobs.length}
   });
 });
 
-app.get("/*", serveStatic({ root: "./assets" }));
-app.get("/", serveStatic({ path: "./assets/index.html" }));
-app.get("*", serveStatic({ path: "./assets/index.html" }));
+app.get("/*", serveStatic({ root: "../browser/dist" }));
+app.get("/", serveStatic({ path: "../browser/dist/index.html" }));
+app.get("*", serveStatic({ path: "../browser/dist/index.html" }));
 
 const handleWebsocket = async (socket: WebSocket, request: Request) => {
   const url = new URL(request.url);

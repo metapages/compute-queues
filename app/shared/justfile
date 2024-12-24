@@ -20,3 +20,6 @@ normal := '\033[0m'
 
 @test:
     deno test --allow-all --unstable-kv src
+
+@build:
+    deno task build

@@ -7,7 +7,7 @@ import {
   DockerJobState,
   fetchJsonFromUrl,
   StateChangeValueFinished,
-} from "@metapages/compute-queues-shared";
+} from "/@shared/client";
 
 import { useMetaframeAndInput } from "@metapages/metapage-react";
 import { isIframe, MetaframeInputMap } from "@metapages/metapage";

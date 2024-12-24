@@ -3,7 +3,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
-} from "npm:@aws-sdk/client-s3@3.600.0";
+} from "npm:@aws-sdk/client-s3@3.717.0";
 
 import { bucketParams, s3Client as client } from "../routes/s3config.ts";
 

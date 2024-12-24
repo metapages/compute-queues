@@ -20,8 +20,9 @@
     "uuid": "npm:uuid@9.0.1",
     "bytes": "npm:bytes@3.1.2",
     "oblivious-set": "npm:oblivious-set@1.4.0",
-    "@korkje/wsi": "jsr:@korkje/wsi@^0.3.2"
+    "@korkje/wsi": "jsr:@korkje/wsi@^0.3.2",
+    "ts-custom-error": "npm:ts-custom-error@3.3.1"
   },
   "unstable": ["kv", "broadcast-channel", "sloppy-imports"],
-  "nodeModulesDir": "auto"
+  "exclude": ["./app/browser", "./app/shared/dist"]
 }

@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 
-import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "@metapages/compute-queues-shared";
+import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "/@shared/client";
 import { useStore } from "/@/store";
 
 import { Button, HStack, Icon, Text, Tooltip } from "@chakra-ui/react";

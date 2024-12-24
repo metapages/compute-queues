@@ -13,7 +13,7 @@ import {
   isDataRef,
   JobInputs,
   shaDockerJob,
-} from "@metapages/compute-queues-shared";
+} from "/@shared/client";
 
 import {
   useHashParam,
