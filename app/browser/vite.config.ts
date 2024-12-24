@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "/@": resolve(__dirname, "./src"),
+      "/@shared/client": resolve(__dirname, "../shared/dist/client.mjs"),
     },
     preserveSymlinks: true,
   },

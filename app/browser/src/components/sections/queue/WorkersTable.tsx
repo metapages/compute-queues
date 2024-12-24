@@ -3,7 +3,7 @@ import {
   DockerJobState,
   JobsStateMap,
   StateChangeValueRunning,
-} from "/@/shared";
+} from "/@shared/client";
 import { useStore } from "/@/store";
 
 import {

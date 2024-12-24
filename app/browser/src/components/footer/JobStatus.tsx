@@ -6,7 +6,7 @@ import {
   DockerJobFinishedReason,
   DockerJobState,
   StateChangeValueFinished,
-} from "/@/shared";
+} from "/@shared/client";
 import { useStore } from "/@/store";
 
 import {

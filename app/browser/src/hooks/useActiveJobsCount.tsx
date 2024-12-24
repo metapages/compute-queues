@@ -1,4 +1,4 @@
-import { DockerJobState } from "/@/shared";
+import { DockerJobState } from "/@shared/client";
 
 import { useStore } from "../store";
 

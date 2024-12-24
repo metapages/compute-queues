@@ -13,7 +13,7 @@ import {
   isDataRef,
   JobInputs,
   shaDockerJob,
-} from "/@/shared";
+} from "/@shared/client";
 
 import {
   useHashParam,

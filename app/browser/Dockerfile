@@ -1,4 +1,3 @@
-# deno not node because long-term deno will be used for all non-trivial scripting
 FROM node:20.13.1-alpine3.20
 
 RUN apk --no-cache --update add \
@@ -14,7 +13,8 @@ RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
 
 # Needs community repo
 RUN apk add --no-cache -X https://dl-cdn.alpinelinux.org/alpine/edge/community \
-    sd
+    sd \
+    deno
 
 ###############################################################################
 # justfile for running commands, you will mostly interact with just https://github.com/casey/just

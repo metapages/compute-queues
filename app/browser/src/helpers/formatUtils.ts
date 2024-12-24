@@ -4,7 +4,7 @@ import {
   DockerJobState,
   InputsRefs,
   StateChangeValueFinished,
-} from "/@/shared";
+} from "/@shared/client";
 import stringify from "safe-stable-stringify";
 
 // eslint-disable-next-line

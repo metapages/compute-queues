@@ -3,7 +3,7 @@ import {
   DockerJobState,
   JobsStateMap,
   StateChangeValueQueued,
-} from "/@/shared";
+} from "/@shared/client";
 import {
   Box,
   Table,

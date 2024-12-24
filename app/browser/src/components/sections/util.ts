@@ -7,7 +7,7 @@ import {
   DockerJobState,
   InputsRefs,
   StateChangeValueFinished,
-} from "/@/shared";
+} from "/@shared/client";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 

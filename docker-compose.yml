@@ -22,7 +22,7 @@ services:
       - minio.worker-metaframe.localhost:host-gateway
     restart: always
     volumes:
-      - .cache/minio:/data
+      - ./app/.cache/minio:/data
     labels:
       - "custom.label=worker-metaframe.localhost"
       - "traefik.enable=true"
@@ -50,7 +50,7 @@ services:
       - --providers.docker.exposedbydefault=false
       - --providers.file.filename=/etc/traefik/config.yml
       - --providers.file.watch=true
-      - --log.level=INFO
+      - --log.level=DEBUG
       - --log.format=common
       - --entrypoints.web.address=:80
       # Automatically redirecting HTTP to HTTPS
@@ -58,6 +58,7 @@ services:
       # - --entrypoints.http.http.redirections.entryPoint.scheme=https
       - --entrypoints.websecure.address=:${APP_PORT:-443}
       - --entrypoints.websecure.http.tls=true
+
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik=true"
@@ -73,8 +74,8 @@ services:
       # Disable the other ports to avoid conflicts
       # - "80:80"
     volumes:
-      - .cache/traefik/certs:/etc/certs:ro
-      - .traefik/config.yml:/etc/traefik/config.yml
+      - ./app/.cache/traefik/certs:/etc/certs:ro
+      - ./app/.traefik/config.yml:/etc/traefik/config.yml
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   redis:
@@ -95,5 +96,5 @@ volumes:
     driver: local
   node_modules:
     driver: local
-  node_modules_worker:
+  browser_node_modules:
     driver: local

@@ -1,7 +1,7 @@
 #################################################################
 # Base image
 #################################################################
-FROM denoland/deno:2.0.3 AS worker
+FROM denoland/deno:2.1.4 AS worker
 
 ENV DOCKER_VERSION=5:27.1.1-1~debian.12~bookworm
 
@@ -28,20 +28,35 @@ RUN apt-get update && apt-get -y install \
 VOLUME /var/lib/containers
 
 WORKDIR /app
-COPY ./worker/src ./worker/src
-COPY ./worker/deno.json ./worker/deno.json
-COPY ./worker/deno.lock ./worker/deno.lock
-COPY ./worker/mod.json ./worker/mod.json
-COPY ./shared ./shared
 
-WORKDIR /app/worker
+COPY ./deno.json ./deno.json
+COPY ./deno.lock ./deno.lock
+
+# Deno will otherwise complain about missing workspace files
+RUN mkdir -p ./app/api ./app/cli ./app/test
+RUN touch ./app/api/deno.json ./app/cli/deno.json ./app/test/deno.json
+
+# Copy worker files
+COPY ./app/worker/src ./app/worker/src
+COPY ./app/worker/deno.json ./app/worker/deno.json
+COPY ./app/worker/mod.json ./app/worker/mod.json
+
+# Copy shared files
+COPY ./app/shared/src ./app/shared/src
+COPY ./app/shared/deno.json ./app/shared/deno.json
+
+# Copy assets
+COPY ./app/browser/dist ./app/browser/dist
+
+# Copy entrypoint
+COPY ./app/worker/entrypoint.sh /entrypoint.sh
+
+RUN deno cache --reload .
+
+WORKDIR /app/app/worker
 
 ARG VERSION=cache
 ENV VERSION=$VERSION
-
-RUN deno cache --unstable src/cli.ts
-
-COPY ./worker/entrypoint.sh /entrypoint.sh
 
 LABEL container.mtfm.io=worker
 
@@ -57,6 +72,6 @@ RUN apt-get update && \
 	containerd.io && \
 	rm -rf /var/lib/apt/lists/*
 
-COPY ./worker/daemon.json /etc/docker/daemon.json
+COPY ./app/worker/daemon.json /etc/docker/daemon.json
 
 ENTRYPOINT ["/entrypoint.sh"]
