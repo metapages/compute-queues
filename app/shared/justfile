@@ -18,6 +18,14 @@ normal := '\033[0m'
     deno check src/mod.ts
     echo "✅ shared typescript compilation"
 
+# Lint
+@lint:
+    deno lint
+
+# Lint and fix issues
+@fix:
+    deno lint --fix
+
 @test:
     deno test --allow-all --unstable-kv src
 

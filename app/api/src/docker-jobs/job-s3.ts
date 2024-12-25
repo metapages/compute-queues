@@ -1,13 +1,16 @@
-import { DataRef, DataRefType } from "@metapages/compute-queues-shared";
+import { type DataRef, DataRefType } from "@metapages/compute-queues-shared";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
-} from "npm:@aws-sdk/client-s3@3.717.0";
+} from "aws-sdk/client-s3";
 
-import { bucketParams, s3Client as client } from "../routes/s3config.ts";
+import { bucketParams, s3Client as client } from "/@/routes/s3config.ts";
 
-export const putJsonToS3 = async (key: string, data: any): Promise<DataRef> => {
+export const putJsonToS3 = async (
+  key: string,
+  data: unknown,
+): Promise<DataRef> => {
   const command = new PutObjectCommand({
     ...bucketParams,
     Key: key,
@@ -15,8 +18,7 @@ export const putJsonToS3 = async (key: string, data: any): Promise<DataRef> => {
     ContentType: "application/json",
   });
   // Send the command to S3
-  // @ts-ignore
-  const response = await client.send(command);
+  /* const response = */ void await client.send(command);
   const ref: DataRef = {
     // value: hash, // no http means we know it's an internal address, workers will know how to reach
     type: DataRefType.key,
@@ -50,51 +52,56 @@ export const getJsonFromS3 = async <T>(key: string): Promise<T | undefined> => {
   }
 };
 
-export const deleteFromS3 = async <T>(Key: string): Promise<void> => {
-  return new Promise(async (resolve, reject) => {
+export const deleteFromS3 = (Key: string): Promise<void> => {
+  return new Promise((resolve, _reject) => {
     const deleteObjectCommand = new DeleteObjectCommand({
       ...bucketParams,
       Key,
     });
-    try {
-      // @ts-ignore
-      const response: any = await client.send(deleteObjectCommand);
-      resolve();
-    } catch (err) {
-      console.log(`Ignored error deleting object ${Key} from S3: ${err}`);
-      resolve();
-      // swallow errors
-    }
+
+    client.send(deleteObjectCommand)
+      .then(() => {
+        resolve();
+      })
+      .catch((err) => {
+        console.log(`Ignored error deleting object ${Key} from S3: ${err}`);
+        resolve();
+        // swallow errors
+      });
   });
 };
 
-const getObject = async (Key: string): Promise<string | undefined> => {
-  return new Promise(async (resolve, reject) => {
+const getObject = (Key: string): Promise<string | undefined> => {
+  return new Promise((resolve, _reject) => {
     const getObjectCommand = new GetObjectCommand({ ...bucketParams, Key });
 
-    try {
-      // @ts-ignore
-      const response: any = await client.send(getObjectCommand);
+    client.send(getObjectCommand)
+      .then((response) => {
+        // Store all of data chunks returned from the response data stream
+        // into an array then use Array#join() to use the returned contents as a String
+        const responseDataChunks: unknown[] = [];
 
-      // Store all of data chunks returned from the response data stream
-      // into an array then use Array#join() to use the returned contents as a String
-      let responseDataChunks: any[] = [];
+        // Handle an error while streaming the response body
+        response.Body?.once("error", (err: Error) => {
+          console.log(`Error streaming object ${Key} from S3: ${err}`);
+          resolve(undefined); // Still swallowing, adjust if needed
+        });
 
-      // Handle an error while streaming the response body
-      response.Body.once("error", (err: Error) => reject(err));
+        // Attach a 'data' listener to add the chunks of data to our array
+        response.Body?.on(
+          "data",
+          (chunk: unknown) => responseDataChunks.push(chunk),
+        );
 
-      // Attach a 'data' listener to add the chunks of data to our array
-      // Each chunk is a Buffer instance
-      response.Body.on("data", (chunk: any) => responseDataChunks.push(chunk));
-
-      // Once the stream has no more data, join the chunks into a string and return the string
-      response.Body.once("end", () => resolve(responseDataChunks.join("")));
-    } catch (err) {
-      // swallow errors
-      // Handle the error or throw
-      console.log(`Ignored error getting object ${Key} from S3: ${err}`);
-      // return reject(err);
-      resolve(undefined);
-    }
+        // Once the stream has no more data, join the chunks into a string and return the string
+        response.Body?.once("end", () => resolve(responseDataChunks.join("")));
+      })
+      .catch((err) => {
+        // swallow errors
+        // Handle the error or throw
+        console.log(`Ignored error getting object ${Key} from S3: ${err}`);
+        // return reject(err);
+        resolve(undefined);
+      });
   });
 };

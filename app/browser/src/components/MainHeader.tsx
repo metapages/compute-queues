@@ -5,36 +5,24 @@ import { getDynamicInputsCount, getOutputs } from "/@/helpers";
 import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "/@shared/client";
 import { useStore } from "/@/store";
 
-import {
-  Badge,
-  Box,
-  Flex,
-  HStack,
-  Icon,
-  Spacer,
-  Text,
-  Tooltip,
-  useMediaQuery,
-} from "@chakra-ui/react";
+import { Badge, Box, Flex, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { DownloadSimple, Gear, UploadSimple } from "@phosphor-icons/react";
 import { JobStatus } from "./footer/JobStatus";
 
 export const MainHeader: React.FC = () => {
   const [isLargerThan400] = useMediaQuery("(min-width: 400px)");
-  const [jobDefinitionBlob] = useHashParamJson<
-    DockerJobDefinitionParamsInUrlHash
-  >("job");
+  const [jobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [jobInputs] = useHashParamJson<JobInputs | undefined>("inputs");
 
   // only show the edit button if the command points to a script in the inputs
-  const setRightPanelContext = useStore((state) => state.setRightPanelContext);
-  const rightPanelContext = useStore((state) => state.rightPanelContext);
-  const setMainInputFile = useStore((state) => state.setMainInputFile);
+  const setRightPanelContext = useStore(state => state.setRightPanelContext);
+  const rightPanelContext = useStore(state => state.rightPanelContext);
+  const setMainInputFile = useStore(state => state.setMainInputFile);
 
-  const currentJobDefinition = useStore((state) => state.newJobDefinition);
+  const currentJobDefinition = useStore(state => state.newJobDefinition);
   const incomingInputsCount = getDynamicInputsCount(currentJobDefinition);
-  const job = useStore((state) => state.jobState);
+  const job = useStore(state => state.jobState);
   const outputs = getOutputs(job);
   const outputsCount = Object.keys(outputs).length;
 
@@ -52,11 +40,7 @@ export const MainHeader: React.FC = () => {
     const toggleValue = rightPanelContext === context ? null : context;
     return (
       <Box position="relative" display="inline-block">
-        <Tooltip
-          label={`${
-            context[0].toUpperCase() + context.slice(1, context.length)
-          }`}
-        >
+        <Tooltip label={`${context[0].toUpperCase() + context.slice(1, context.length)}`}>
           <Icon
             _hover={{ bg: "gray.300" }}
             bg={context === rightPanelContext ? "gray.300" : "none"}
@@ -67,23 +51,20 @@ export const MainHeader: React.FC = () => {
             onClick={() => setRightPanelContext(toggleValue)}
           />
         </Tooltip>
-        {badge
-          ? (
-            <Badge
-              position="absolute"
-              bottom="0"
-              right="0"
-              transform="translate(40%, 20%)"
-              colorScheme="green"
-              borderRadius="full"
-              boxSize="1rem"
-            >
-              <Text align={"center"} fontSize={"0.7rem"}>
-                {badge}
-              </Text>
-            </Badge>
-          )
-          : null}
+        {badge ? (
+          <Badge
+            position="absolute"
+            bottom="0"
+            right="0"
+            transform="translate(40%, 20%)"
+            colorScheme="green"
+            borderRadius="full"
+            boxSize="1rem">
+            <Text align={"center"} fontSize={"0.7rem"}>
+              {badge}
+            </Text>
+          </Badge>
+        ) : null}
       </Box>
     );
   };
@@ -91,11 +72,7 @@ export const MainHeader: React.FC = () => {
   const rightSectionWidth = isLargerThan400 ? "11rem" : "0rem";
   return (
     <Flex w={"100%"} h={"headerHeight"} bg={"gray.100"} borderBottom={"1px"}>
-      <HStack
-        justify={"space-between"}
-        px={2}
-        w={`calc(100% - ${rightSectionWidth})`}
-      >
+      <HStack justify={"space-between"} px={2} w={`calc(100% - ${rightSectionWidth})`}>
         <JobStatus />
         {/* <EditInput /> */}
         <Spacer />
@@ -104,24 +81,10 @@ export const MainHeader: React.FC = () => {
         </HStack>
       </HStack>
       {isLargerThan400 && (
-        <HStack
-          borderLeft={"1px"}
-          px={4}
-          bg={"gray.100"}
-          justifyContent={"space-around"}
-          w={rightSectionWidth}
-        >
+        <HStack borderLeft={"1px"} px={4} bg={"gray.100"} justifyContent={"space-around"} w={rightSectionWidth}>
           {icon(Gear, "settings")}
-          {icon(
-            DownloadSimple,
-            "inputs",
-            incomingInputsCount ? incomingInputsCount.toString() : undefined,
-          )}
-          {icon(
-            UploadSimple,
-            "outputs",
-            outputsCount ? outputsCount.toString() : undefined,
-          )}
+          {icon(DownloadSimple, "inputs", incomingInputsCount ? incomingInputsCount.toString() : undefined)}
+          {icon(UploadSimple, "outputs", outputsCount ? outputsCount.toString() : undefined)}
         </HStack>
       )}
     </Flex>

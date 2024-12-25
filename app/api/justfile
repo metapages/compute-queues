@@ -27,6 +27,14 @@ normal := '\033[0m'
     deno check src/server.ts
     echo "✅ api typescript compilation"
 
+# Lint
+@lint:
+    deno lint
+
+# Lint and fix issues
+@fix:
+    deno lint --fix
+
 # Perform a deploy to https://dash.deno.com/projects/compute-queue-api
 @build: check
     rm -rf dist

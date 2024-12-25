@@ -1,6 +1,6 @@
-import { Context } from "https://deno.land/x/hono@v4.1.0-rc.1/mod.ts";
+import type { Context } from "hono";
 
-import { userJobQueues } from "../docker-jobs/ApiDockerJobQueue.ts";
+import { userJobQueues } from "/@/docker-jobs/ApiDockerJobQueue.ts";
 
 export const statusHandler = async (c: Context) => {
   const queue: string | undefined = c.req.param("queue");
@@ -21,5 +21,5 @@ export const statusHandler = async (c: Context) => {
 
   const response = await dockerQueue.status();
 
-  return c.json(response as any);
+  return c.json(response as unknown);
 };

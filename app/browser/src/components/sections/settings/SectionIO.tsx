@@ -26,10 +26,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useHashParamJson } from "@metapages/hash-query/react-hooks";
-import {
-  isEmptyMetaframeDefinition,
-  MetaframeDefinitionV1,
-} from "@metapages/metapage";
+import { isEmptyMetaframeDefinition, MetaframeDefinitionV1 } from "@metapages/metapage";
 import { DownloadSimple, Plus, UploadSimple } from "@phosphor-icons/react";
 import { ButtonDeleteWithConfirm } from "../../generic/ButtonDeleteWithConfirm";
 
@@ -42,9 +39,7 @@ interface FormType extends yup.InferType<typeof validationSchema> {}
 export const SectionIO: React.FC = () => {
   const { isOpen, onClose, onToggle } = useDisclosure();
   const [isInput, setIsInput] = useState(true);
-  const [definition, setDefinition] = useHashParamJson<
-    MetaframeDefinitionV1 | undefined
-  >("definition");
+  const [definition, setDefinition] = useHashParamJson<MetaframeDefinitionV1 | undefined>("definition");
 
   const deleteInput = useCallback(
     (isInput: boolean, name: string) => {
@@ -109,18 +104,8 @@ export const SectionIO: React.FC = () => {
 
   return (
     <>
-      <VStack
-        w={"100%"}
-        p={6}
-        gap={5}
-        justifyContent="flex-start"
-        alignItems="stretch"
-      >
-        <HStack
-          alignItems="flex-start"
-          width="100%"
-          justifyContent="space-between"
-        >
+      <VStack w={"100%"} p={6} gap={5} justifyContent="flex-start" alignItems="stretch">
+        <HStack alignItems="flex-start" width="100%" justifyContent="space-between">
           <VStack alignItems={"flex-start"}>
             <Text fontWeight={600}>Define Inputs and Outputs</Text>
           </VStack>
@@ -132,24 +117,21 @@ export const SectionIO: React.FC = () => {
               leftIcon={<Icon as={DownloadSimple} boxSize={6} />}
               rightIcon={<Icon as={Plus} boxSize={6} />}
               onClick={toggleInputModal}
-              aria-label="add input"
-            >
+              aria-label="add input">
               Inputs
             </Button>
 
             <Table px={5} variant="simple" borderBottom="none" border="none">
               <Tbody borderBottom="none" border="none">
-                {(definition?.inputs ? Object.keys(definition.inputs) : []).map(
-                  (name, i) => (
-                    <IORow
-                      key={name}
-                      isInput={true}
-                      name={name}
-                      type={definition.inputs[name].type}
-                      onDelete={() => deleteInput(true, name)}
-                    />
-                  ),
-                )}
+                {(definition?.inputs ? Object.keys(definition.inputs) : []).map((name, i) => (
+                  <IORow
+                    key={name}
+                    isInput={true}
+                    name={name}
+                    type={definition.inputs[name].type}
+                    onDelete={() => deleteInput(true, name)}
+                  />
+                ))}
               </Tbody>
             </Table>
           </VStack>
@@ -160,23 +142,21 @@ export const SectionIO: React.FC = () => {
               leftIcon={<Icon as={UploadSimple} boxSize={6} />}
               rightIcon={<Icon as={Plus} boxSize={6} />}
               onClick={toggleOutputModal}
-              aria-label="add output"
-            >
+              aria-label="add output">
               Outputs
             </Button>
 
             <Table px={5} variant="simple">
               <Tbody>
-                {(definition?.outputs ? Object.keys(definition.outputs) : [])
-                  .map((name, i) => (
-                    <IORow
-                      key={name}
-                      isInput={false}
-                      name={name}
-                      type={definition.outputs[name].type}
-                      onDelete={() => deleteInput(false, name)}
-                    />
-                  ))}
+                {(definition?.outputs ? Object.keys(definition.outputs) : []).map((name, i) => (
+                  <IORow
+                    key={name}
+                    isInput={false}
+                    name={name}
+                    type={definition.outputs[name].type}
+                    onDelete={() => deleteInput(false, name)}
+                  />
+                ))}
               </Tbody>
             </Table>
           </VStack>
@@ -194,24 +174,12 @@ export const SectionIO: React.FC = () => {
               <VStack spacing={4}>
                 <FormControl>
                   <FormLabel htmlFor="name">Name</FormLabel>
-                  <Input
-                    id="name"
-                    name="name"
-                    type="text"
-                    onChange={formik.handleChange}
-                    value={formik.values.name}
-                  />
+                  <Input id="name" name="name" type="text" onChange={formik.handleChange} value={formik.values.name} />
                 </FormControl>
 
                 <FormControl>
                   <FormLabel htmlFor="type">Type (optional)</FormLabel>
-                  <Input
-                    id="type"
-                    name="type"
-                    type="text"
-                    onChange={formik.handleChange}
-                    value={formik.values.type}
-                  />
+                  <Input id="type" name="type" type="text" onChange={formik.handleChange} value={formik.values.type} />
                 </FormControl>
               </VStack>
             </ModalBody>
@@ -244,10 +212,7 @@ export const IORow: React.FC<{
       </Td>
       <Td border="none">
         <Flex align={"center"} justify={"flex-end"} gap={3}>
-          <ButtonDeleteWithConfirm
-            callback={() => onDelete(isInput, name)}
-            iconColor="gray.300"
-          />
+          <ButtonDeleteWithConfirm callback={() => onDelete(isInput, name)} iconColor="gray.300" />
         </Flex>
       </Td>
     </Tr>

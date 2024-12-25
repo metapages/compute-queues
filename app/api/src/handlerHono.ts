@@ -1,15 +1,11 @@
-import {
-  serveStatic,
-} from "https://deno.land/x/hono@v4.1.0-rc.1/middleware.ts";
-import {
-  cors,
-} from "https://deno.land/x/hono@v4.1.0-rc.1/middleware/cors/index.ts";
-import { Context, Hono } from "https://deno.land/x/hono@v4.1.0-rc.1/mod.ts";
+import { serveStatic } from "hono/middleware";
+import { cors } from "hono/middleware/cors";
+import { type Context, Hono } from "hono";
 
-import { downloadHandler } from "./routes/download.ts";
-import { statusHandler } from "./routes/status.ts";
-import { metricsHandler } from "./routes/metrics.ts";
-import { uploadHandler } from "./routes/upload.ts";
+import { downloadHandler } from "/@/routes/download.ts";
+import { statusHandler } from "/@/routes/status.ts";
+import { metricsHandler } from "/@/routes/metrics.ts";
+import { uploadHandler } from "/@/routes/upload.ts";
 
 const app = new Hono();
 

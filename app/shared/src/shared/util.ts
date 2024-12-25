@@ -88,7 +88,7 @@ export const fetchRobust: ReturnType<typeof fetchRetry> = fetchRetry(fetch, {
   ) => {
     return Math.pow(2, attempt) * 400; // 500, 1000, 2000, 4000, 5000
   },
-  // eslint-disable-next-line
+
   retryOn: (attempt: number, error: unknown, response: Response | null) => {
     // retry on any network error, or 4xx or 5xx status codes
     if (error !== null || (response && response.status >= 400)) {

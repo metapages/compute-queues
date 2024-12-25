@@ -217,3 +217,23 @@ alias api := _api
 
 @_api +args="":
     just api/{{ args }}
+
+# Run linting for all apps
+@lint:
+    echo "Running lint for all apps..."
+    # just browser/lint
+    just worker/lint
+    just api/lint
+    just cli/lint
+    just shared/lint
+    just test/lint
+
+# Run fix commands for all apps
+@fix:
+    echo "Running fix for all apps..."
+    # just browser/fix
+    just worker/fix
+    just api/fix
+    just cli/fix
+    just shared/fix
+    just test/fix

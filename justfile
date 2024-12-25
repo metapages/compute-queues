@@ -43,8 +43,11 @@ cyan := "\\e[36m"
 
 # Run Linting
 @lint:
-    echo "does work?"
-    just app/browser/lint
+    just app/lint
+
+# Run Fix Commands
+@fix:
+    just app/fix
 
 # Publish Versioned Artifacts
 

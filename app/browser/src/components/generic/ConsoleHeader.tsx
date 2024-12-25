@@ -9,12 +9,10 @@ interface ConsoleHeaderProps {
   showCombine: boolean;
 }
 
-export const ConsoleHeader: React.FC<ConsoleHeaderProps> = (
-  { title, showSplit, showCombine },
-) => {
-  const setRightPanelContext = useStore((state) => state.setRightPanelContext);
-  const setRunLogs = useStore((state) => state.setRunLogs);
-  const setBuildLogs = useStore((state) => state.setBuildLogs);
+export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({ title, showSplit, showCombine }) => {
+  const setRightPanelContext = useStore(state => state.setRightPanelContext);
+  const setRunLogs = useStore(state => state.setRunLogs);
+  const setBuildLogs = useStore(state => state.setBuildLogs);
 
   const onSplit = () => {
     setRightPanelContext("stderr");

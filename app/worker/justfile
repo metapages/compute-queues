@@ -46,6 +46,14 @@ dev +args="":
     deno check src/cli.ts
     echo "✅ worker typescript compilation"
 
+# Lint
+@lint:
+    deno lint
+
+# Lint and fix issues
+@fix:
+    deno lint --fix
+
 @test +args="":
     deno test --allow-net --allow-read --allow-env --allow-write --allow-run {{ args }}
     echo "✅ worker unit tests"

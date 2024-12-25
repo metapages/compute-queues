@@ -31,5 +31,13 @@ compile:
     deno check src/cli.ts
     echo "✅ cli typescript compilation"
 
+# Lint
+@lint:
+    deno lint
+
+# Lint and fix issues
+@fix:
+    deno lint --fix
+
 @test:
     echo "❗ no cli tests yet"

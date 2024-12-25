@@ -40,15 +40,13 @@ export default defineConfig(({ mode }) => ({
   server: {
     open: INSIDE_CONTAINER ? undefined : "/",
     host: INSIDE_CONTAINER ? "0.0.0.0" : HOST,
-    port: parseInt(
-      CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) ? PORT : "8000",
-    ),
-    https: CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) && CERT_FILE &&
-        fs.existsSync(CERT_FILE)
-      ? {
-        key: fs.readFileSync(CERT_KEY_FILE),
-        cert: fs.readFileSync(CERT_FILE),
-      }
-      : undefined,
+    port: parseInt(CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) ? PORT : "8000"),
+    https:
+      CERT_KEY_FILE && fs.existsSync(CERT_KEY_FILE) && CERT_FILE && fs.existsSync(CERT_FILE)
+        ? {
+            key: fs.readFileSync(CERT_KEY_FILE),
+            cert: fs.readFileSync(CERT_FILE),
+          }
+        : undefined,
   },
 }));

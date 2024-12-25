@@ -92,7 +92,7 @@ export type DockerJobDefinitionInputRefs =
 export interface DockerRunResult {
   StatusCode?: number;
   logs: ConsoleLogLine[];
-  // eslint-disable-next-line
+
   error?: unknown;
 }
 

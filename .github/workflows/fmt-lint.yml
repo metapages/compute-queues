@@ -1,4 +1,4 @@
-name: fmt check
+name: deno fmt and lint
 
 on:
   pull_request:
@@ -23,3 +23,6 @@ jobs:
 
       - name: Check formatting
         run: just fmt --check
+
+      - name: Lint
+        run: just lint

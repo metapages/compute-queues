@@ -2143,7 +2143,6 @@ var fetchRobust = (0, import_fetch_retry.default)(fetch, {
   retryDelay: (attempt, _error, _response) => {
     return Math.pow(2, attempt) * 400;
   },
-  // eslint-disable-next-line
   retryOn: (attempt, error, response) => {
     if (error !== null || response && response.status >= 400) {
       if (attempt > 7) {

@@ -18,6 +18,14 @@ API_URL := "https://worker-metaframe.localhost:" + APP_PORT
 @watch:
     deno test --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv .
 
+# Lint
+@lint:
+    deno lint
+
+# Lint and fix issues
+@fix:
+    deno lint --fix
+
 @test:
     deno test --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
     echo "✅ functional tests"

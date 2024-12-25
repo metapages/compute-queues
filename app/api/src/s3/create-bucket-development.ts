@@ -1,4 +1,4 @@
-import { S3Client } from "https://deno.land/x/s3_lite_client@0.7.0/mod.ts";
+import { S3Client } from "s3_lite_client";
 
 const region = Deno.env.get("AWS_REGION")!;
 const AWS_ACCESS_KEY_ID = Deno.env.get("AWS_ACCESS_KEY_ID")!;

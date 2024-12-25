@@ -1,8 +1,8 @@
 import {
   ApiDockerJobQueue,
   userJobQueues,
-} from "../docker-jobs/ApiDockerJobQueue.ts";
-import { SERVER_INSTANCE_ID } from "../util/id.ts";
+} from "/@/docker-jobs/ApiDockerJobQueue.ts";
+import { SERVER_INSTANCE_ID } from "/@/util/id.ts";
 
 export interface WebsocketUrlParameters {
   token: string;
@@ -11,7 +11,7 @@ export interface WebsocketUrlParameters {
 export async function wsHandlerClient(
   token: string,
   socket: WebSocket,
-  request: Request,
+  _request: Request,
 ) {
   // const server:FastifyInstanceWithDB = this as FastifyInstanceWithDB;
 
@@ -43,7 +43,7 @@ export async function wsHandlerClient(
 export async function wsHandlerWorker(
   token: string,
   socket: WebSocket,
-  request: Request,
+  _request: Request,
 ) {
   try {
     if (!token) {

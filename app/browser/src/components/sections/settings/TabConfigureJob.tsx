@@ -19,10 +19,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import {
-  useHashParamBoolean,
-  useHashParamJson,
-} from "@metapages/hash-query/react-hooks";
+import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
 
 const validationSchema = yup.object({
   command: yup.string().optional(),
@@ -46,17 +43,13 @@ const linkMap = {
   workdir: "https://docs.docker.com/reference/dockerfile/#workdir",
   entrypoint: "https://docs.docker.com/reference/dockerfile/#entrypoint",
   command: "https://docs.docker.com/reference/dockerfile/#cmd",
-  shmSize:
-    "https://docs.docker.com/engine/containers/run/#user-memory-constraints",
+  shmSize: "https://docs.docker.com/engine/containers/run/#user-memory-constraints",
 };
 
 export const TabConfigureJob: React.FC = () => {
-  const [jobDefinitionBlob, setJobDefinitionBlob] = useHashParamJson<
-    DockerJobDefinitionParamsInUrlHash
-  >("job");
+  const [jobDefinitionBlob, setJobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [debug, setDebug] = useHashParamBoolean("debug");
-  const [jobStartAutomatically, toggleJobStartAutomatically] =
-    useOptionJobStartAutomatically();
+  const [jobStartAutomatically, toggleJobStartAutomatically] = useOptionJobStartAutomatically();
   const [resolveDataRefs, toggleResolveDataRefs] = useOptionResolveDataRefs();
 
   const onSubmit = useCallback(
@@ -72,12 +65,7 @@ export const TabConfigureJob: React.FC = () => {
       setJobDefinitionBlob(newJobDefinitionBlob);
       setDebug(!!values.debug);
     },
-    [
-      jobDefinitionBlob,
-      setJobDefinitionBlob,
-      setDebug,
-      toggleJobStartAutomatically,
-    ],
+    [jobDefinitionBlob, setJobDefinitionBlob, setDebug, toggleJobStartAutomatically],
   );
 
   const formik = useFormik({
@@ -113,10 +101,8 @@ export const TabConfigureJob: React.FC = () => {
               Container Settings
             </Text>
 
-            {["command", "entrypoint", "workdir", "shmSize"].map((key) => {
-              const labelJsx: ReactNode = (
-                <FormLink href={linkMap[key]} label={labelToName[key]} />
-              );
+            {["command", "entrypoint", "workdir", "shmSize"].map(key => {
+              const labelJsx: ReactNode = <FormLink href={linkMap[key]} label={labelToName[key]} />;
               return (
                 <FormControl key={key}>
                   <FormLabel htmlFor={key}>{labelJsx}</FormLabel>
@@ -146,12 +132,7 @@ export const TabConfigureJob: React.FC = () => {
                 </Text>
               </FormLabel>
 
-              <Switch
-                id="gpu"
-                name="gpu"
-                onChange={handleSwitchChange}
-                isChecked={formik.values.gpu}
-              />
+              <Switch id="gpu" name="gpu" onChange={handleSwitchChange} isChecked={formik.values.gpu} />
             </FormControl>
             <Divider />
             <Text align="center" fontWeight="bold">
@@ -161,12 +142,7 @@ export const TabConfigureJob: React.FC = () => {
               <FormLabel htmlFor="debug">
                 <Text>Debug</Text>
               </FormLabel>
-              <Switch
-                id="debug"
-                name="debug"
-                onChange={handleSwitchChange}
-                isChecked={debug}
-              />
+              <Switch id="debug" name="debug" onChange={handleSwitchChange} isChecked={debug} />
             </FormControl>
 
             <Divider />
@@ -188,9 +164,7 @@ export const TabConfigureJob: React.FC = () => {
 
             <FormControl>
               <FormLabel htmlFor="jobStartAutomatically">
-                <Text>
-                  Resolve [data references] ▶️ [data] (send big data directly)
-                </Text>
+                <Text>Resolve [data references] ▶️ [data] (send big data directly)</Text>
               </FormLabel>
               <Switch
                 id="resolveDataRefs"
@@ -200,12 +174,7 @@ export const TabConfigureJob: React.FC = () => {
               />
             </FormControl>
           </VStack>
-          <Button
-            alignSelf="center"
-            type="submit"
-            colorScheme="green"
-            size="sm"
-          >
+          <Button alignSelf="center" type="submit" colorScheme="green" size="sm">
             Save
           </Button>
         </VStack>

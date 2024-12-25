@@ -1,4 +1,4 @@
-import { ListBucketsCommand, S3Client } from "npm:@aws-sdk/client-s3@3.582.0";
+import { ListBucketsCommand, S3Client } from "aws-sdk/client-s3";
 
 // import { S3Client } from 'https://deno.land/x/s3_lite_client@0.7.0/mod.ts';
 

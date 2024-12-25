@@ -19,17 +19,11 @@ export const capitalize = (str: string): string => {
   return str[0].toUpperCase() + str.slice(1, str.length);
 };
 
-export const getDynamicInputsCount = (
-  currentJobDefinition: DockerJobDefinitionMetadata | undefined,
-) => {
-  return currentJobDefinition?.definition?.inputs
-    ? Object.keys(currentJobDefinition.definition.inputs).length
-    : 0;
+export const getDynamicInputsCount = (currentJobDefinition: DockerJobDefinitionMetadata | undefined) => {
+  return currentJobDefinition?.definition?.inputs ? Object.keys(currentJobDefinition.definition.inputs).length : 0;
 };
 
-export const getDynamicInputs = (
-  currentJobDefinition: DockerJobDefinitionMetadata | undefined,
-): InputsRefs => {
+export const getDynamicInputs = (currentJobDefinition: DockerJobDefinitionMetadata | undefined): InputsRefs => {
   return currentJobDefinition?.definition?.inputs || {};
 };
 
