@@ -1,24 +1,24 @@
-import { ensureDir } from "https://deno.land/std@0.224.0/fs/ensure_dir.ts";
-import { dirname } from "https://deno.land/std@0.224.0/path/mod.ts";
-import { retryAsync } from "https://deno.land/x/retry@v2.0.0/mod.ts";
-import { crypto } from "jsr:@std/crypto@1.0.3";
-import { encodeHex } from "jsr:@std/encoding@1.0.3";
-import { LRUCache } from "npm:lru-cache@11.0.1";
+import { ensureDir } from "std/fs";
+import { dirname } from "std/path";
+import { retryAsync } from "retry";
+import { crypto } from "@std/crypto";
+import { encodeHex } from "@std/encoding";
+import { LRUCache } from "lru-cache";
 
-import { decodeBase64 } from "./base64.ts";
-import { ENV_VAR_DATA_ITEM_LENGTH_MAX } from "./dataref.ts";
+import { decodeBase64 } from "/@/shared/base64.ts";
+import { ENV_VAR_DATA_ITEM_LENGTH_MAX } from "/@/shared/dataref.ts";
 import {
-  DataRef,
+  type DataRef,
   DataRefType,
-  DockerJobDefinitionInputRefs,
+  type DockerJobDefinitionInputRefs,
   DockerJobState,
-  StateChange,
-  StateChangeValueFinished,
-  StateChangeValueQueued,
-  WebsocketMessageClientToServer,
+  type StateChange,
+  type StateChangeValueFinished,
+  type StateChangeValueQueued,
+  type WebsocketMessageClientToServer,
   WebsocketMessageTypeClientToServer,
-} from "./types.ts";
-import { fetchRobust as fetch, shaDockerJob } from "./util.ts";
+} from "/@/shared/types.ts";
+import { fetchRobust as fetch, shaDockerJob } from "/@/shared/util.ts";
 
 const IGNORE_CERTIFICATE_ERRORS: boolean =
   Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
@@ -34,7 +34,10 @@ const FileHashesUploaded = new LRUCache<string, boolean>({
  * @param workerB
  * @returns preferred worker id
  */
-export const resolvePreferredWorker = (workerA: string, workerB: string) => {
+export const resolvePreferredWorker = (
+  workerA: string,
+  workerB: string,
+): string => {
   return workerA.localeCompare(workerB) < 0 ? workerA : workerB;
 };
 
@@ -72,11 +75,11 @@ export const createNewContainerJobMessage = async (opts: {
   return { message, jobId, stageChange: payload };
 };
 
-export const bufferToBase64Ref = async (
+export const bufferToBase64Ref = (
   buffer: Uint8Array,
-): Promise<DataRef> => {
-  var decoder = new TextDecoder("utf8");
-  var value = btoa(decoder.decode(buffer));
+): DataRef => {
+  const decoder = new TextDecoder("utf8");
+  const value = btoa(decoder.decode(buffer));
   return {
     value,
     type: DataRefType.base64,
@@ -183,17 +186,20 @@ export const dataRefToFile = async (
   await ensureDir(dir);
   let errString: string;
   switch (ref.type) {
-    case DataRefType.base64:
+    case DataRefType.base64: {
       const bytes = decodeBase64(ref.value as string);
       await Deno.writeFile(filename, bytes, { mode: 0o644 });
       return;
-    case DataRefType.utf8:
+    }
+    case DataRefType.utf8: {
       await Deno.writeTextFile(filename, ref.value as string);
       return;
-    case DataRefType.json:
+    }
+    case DataRefType.json: {
       await Deno.writeTextFile(filename, JSON.stringify(ref.value));
       return;
-    case DataRefType.url:
+    }
+    case DataRefType.url: {
       const downloadFile = await Deno.open(filename, {
         create: true,
         write: true,
@@ -217,7 +223,8 @@ export const dataRefToFile = async (
       await responseUrl.body.pipeTo(downloadFile.writable);
 
       return;
-    case DataRefType.key:
+    }
+    case DataRefType.key: {
       // we know how to get this internal cloud referenced
       const cloudRefUrl = `${address}/download/${ref.value}`;
       // @ts-ignore: TS2353
@@ -242,7 +249,8 @@ export const dataRefToFile = async (
         write: true,
       });
       await responseHashUrl.body.pipeTo(downloadFileForHash.writable);
-      break;
+      return;
+    }
     default: // undefined assume DataRefType.Base64
       throw `Not yet implemented: DataRef.type === undefined or unrecognized value="${ref.type}"`;
   }

@@ -17,7 +17,7 @@ export enum DataRefType {
 const DataRefTypeKeys: string[] = Object.keys(DataRefType).filter((key) =>
   isNaN(Number(key))
 );
-export const DataRefTypesSet = new Set(DataRefTypeKeys);
+export const DataRefTypesSet: Set<string> = new Set(DataRefTypeKeys);
 export const DataRefTypeDefault = DataRefType.utf8;
 
 export type DataRef<T = string> = {
@@ -26,8 +26,7 @@ export type DataRef<T = string> = {
   hash?: string;
 };
 
-// eslint-disable-next-line
-export const isDataRef = (value: any): boolean => {
+export const isDataRef = (value: unknown): boolean => {
   return !!(
     value &&
     typeof value === "object" &&
@@ -94,7 +93,7 @@ export interface DockerRunResult {
   StatusCode?: number;
   logs: ConsoleLogLine[];
   // eslint-disable-next-line
-  error?: any;
+  error?: unknown;
 }
 
 export interface DockerRunResultWithOutputs extends DockerRunResult {
@@ -183,7 +182,7 @@ export interface DockerJobDefinitionRow {
 
 export const isDockerJobDefinitionRowFinished = (
   row: DockerJobDefinitionRow,
-) => {
+): boolean => {
   return row.state === DockerJobState.Finished;
 };
 

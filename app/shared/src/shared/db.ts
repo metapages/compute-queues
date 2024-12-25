@@ -1,6 +1,14 @@
-import { ms } from "https://deno.land/x/ms@v0.1.0/ms.ts";
-import { DataRef, DataRefType, DockerJobDefinitionRow } from "./types.ts";
-import { deleteFromS3, putJsonToS3, resolveDataRefFromS3 } from "./s3.ts";
+import { ms } from "ms";
+import {
+  type DataRef,
+  DataRefType,
+  type DockerJobDefinitionRow,
+} from "/@/shared/types.ts";
+import {
+  deleteFromS3,
+  putJsonToS3,
+  resolveDataRefFromS3,
+} from "/@/shared/s3.ts";
 
 const DENO_KV_URL = Deno.env.get("DENO_KV_URL");
 let localkv: Deno.Kv | undefined = undefined;
@@ -54,10 +62,10 @@ export class DB {
     if (!jobDataRef) {
       return null;
     }
-    if ((jobDataRef as any)?.type === DataRefType.key) {
+    if (jobDataRef?.type === DataRefType.key) {
       const job: DockerJobDefinitionRow | undefined =
         await resolveDataRefFromS3(
-          jobDataRef as DataRef<DockerJobDefinitionRow>,
+          jobDataRef,
         );
       return job || null;
     }
@@ -89,10 +97,13 @@ export class DB {
       const jobDataRef:
         | DataRef<DockerJobDefinitionRow>
         | DockerJobDefinitionRow = entry.value;
-      if ((jobDataRef as any)?.type === DataRefType.key) {
+      if (
+        (jobDataRef as DataRef<DockerJobDefinitionRow> | undefined)?.type ===
+          DataRefType.key
+      ) {
         const job: DockerJobDefinitionRow | undefined =
           await resolveDataRefFromS3(
-            jobDataRef as DataRef<DockerJobDefinitionRow>,
+            jobDataRef,
           );
         if (job) {
           results.push(job);
@@ -146,4 +157,4 @@ export class DB {
   }
 }
 
-export const db = await DB.initialize();
+export const db: DB = await DB.initialize();

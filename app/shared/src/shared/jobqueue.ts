@@ -11,41 +11,40 @@
  */
 
 import {
-  BroadcastJobStates,
-  BroadcastWorkers,
-  DockerJobDefinitionRow,
+  type BroadcastJobStates,
+  type BroadcastWorkers,
+  type DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
   isJobCacheAllowedToBeDeleted,
-  JobsStateMap,
-  JobStates,
-  JobStatusPayload,
-  PayloadClearJobCache,
-  PayloadQueryJob,
-  PayloadResubmitJob,
-  StateChange,
-  StateChangeValueFinished,
-  StateChangeValueQueued,
-  StateChangeValueReQueued,
-  StateChangeValueRunning,
-  WebsocketMessageClientToServer,
-  WebsocketMessageServerBroadcast,
-  WebsocketMessageTypeClientToServer,
-  WebsocketMessageTypeServerBroadcast,
-  WebsocketMessageTypeWorkerToServer,
-  WebsocketMessageWorkerToServer,
-  WorkerRegistration,
-  WorkerStatusResponse,
-} from "./types.ts";
-import { db } from "./db.ts";
-import { resolvePreferredWorker } from "./jobtools.ts";
-import { delay } from "https://deno.land/std@0.224.0/async/delay.ts";
+  type JobsStateMap,
+  type JobStates,
+  type JobStatusPayload,
+  type PayloadClearJobCache,
+  type PayloadQueryJob,
+  type PayloadResubmitJob,
+  type StateChange,
+  type StateChangeValueFinished,
+  type StateChangeValueQueued,
+  type StateChangeValueReQueued,
+  type StateChangeValueRunning,
+  type WebsocketMessageClientToServer,
+  type WebsocketMessageServerBroadcast,
+  type WebsocketMessageTypeClientToServer,
+  type WebsocketMessageTypeServerBroadcast,
+  type WebsocketMessageWorkerToServer,
+  type WorkerRegistration,
+  type WorkerStatusResponse,
+} from "/@/shared/types.ts";
+import { db } from "/@/shared/db.ts";
+import { resolvePreferredWorker } from "/@/shared/jobtools.ts";
+import { delay } from "std/async/delay";
 // import LRU from 'https://deno.land/x/lru_cache@6.0.0-deno.4/mod.ts';
-import { ms } from "https://deno.land/x/ms@v0.1.0/ms.ts";
-import { createNanoEvents, Emitter } from "npm:nanoevents@9.0.0";
-import { BroadcastChannelRedis } from "jsr:@metapages/deno-redis-broadcastchannel@^0.2.0";
+import { ms } from "ms";
+import { createNanoEvents, type Emitter } from "nanoevents";
+import { BroadcastChannelRedis } from "@metapages/deno-redis-broadcastchannel";
 
-import { resolveMostCorrectJob } from "./util.ts";
+import { resolveMostCorrectJob } from "/@/shared/util.ts";
 
 // 60 seconds
 const MAX_TIME_FINISHED_JOB_IN_QUEUE = ms("60 seconds") as number;

@@ -1,6 +1,6 @@
 import * as esbuild from "npm:esbuild";
 import { denoPlugins } from "jsr:@luca/esbuild-deno-loader";
-import { exists } from "https://deno.land/std@0.224.0/fs/mod.ts";
+import { exists } from "std/fs";
 
 async function bundle() {
   const distDir = "./dist";

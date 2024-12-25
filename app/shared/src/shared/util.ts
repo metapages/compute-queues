@@ -1,14 +1,14 @@
 import {
-  DockerJobDefinitionRow,
+  type DataRef,
+  type DockerJobDefinitionInputRefs,
+  type DockerJobDefinitionRow,
   DockerJobState,
-  StateChangeValueRunning,
-} from "./types.ts";
+  type StateChangeValueRunning,
+} from "/@/shared/types.ts";
 import fetchRetry from "fetch-retry";
 import { create } from "mutative";
 import stringify from "safe-stable-stringify";
 import equal from "fast-deep-equal/es6";
-
-import { DataRef, DockerJobDefinitionInputRefs } from "./types.ts";
 
 const resolvePreferredWorker = (workerA: string, workerB: string) => {
   return workerA.localeCompare(workerB) < 0 ? workerA : workerB;
@@ -63,7 +63,7 @@ const reduceUrlToHashVersion = (url: string): string => {
   return url;
 };
 
-export const shaObject = (obj: any): Promise<string> => {
+export const shaObject = (obj: unknown): Promise<string> => {
   const orderedStringFromObject = stringify(obj);
   const msgBuffer = new TextEncoder().encode(orderedStringFromObject);
   return sha256Buffer(msgBuffer);
@@ -78,14 +78,18 @@ export const sha256Buffer = async (buffer: Uint8Array): Promise<string> => {
   return hashHex;
 };
 
-export const fetchRobust = fetchRetry(fetch, {
+export const fetchRobust: ReturnType<typeof fetchRetry> = fetchRetry(fetch, {
   retries: 8,
   // eslint-disable-next-line
-  retryDelay: (attempt: number, _error: any, _response: any) => {
+  retryDelay: (
+    attempt: number,
+    _error: unknown,
+    _response: Response | null,
+  ) => {
     return Math.pow(2, attempt) * 400; // 500, 1000, 2000, 4000, 5000
   },
   // eslint-disable-next-line
-  retryOn: (attempt: number, error: any, response: Response | null) => {
+  retryOn: (attempt: number, error: unknown, response: Response | null) => {
     // retry on any network error, or 4xx or 5xx status codes
     if (error !== null || (response && response.status >= 400)) {
       if (attempt > 7) {

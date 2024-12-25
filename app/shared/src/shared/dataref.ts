@@ -1,15 +1,18 @@
 import {
-  DataRef,
+  type DataRef,
   DataRefType,
   DataRefTypeDefault,
-  InputsRefs,
-} from "./types.ts";
+  type InputsRefs,
+} from "/@/shared/types.ts";
 
-import { fetchRobust as fetch, sha256Buffer } from "./util.ts";
+import { fetchRobust as fetch, sha256Buffer } from "/@/shared/util.ts";
 
-import { decodeBase64 } from "./base64.ts";
+import { decodeBase64 } from "/@/shared/base64.ts";
 
-import { DataRefSerializedBlob, MetaframeInputMap } from "@metapages/metapage";
+import type {
+  DataRefSerializedBlob,
+  MetaframeInputMap,
+} from "@metapages/metapage";
 
 export const ENV_VAR_DATA_ITEM_LENGTH_MAX = 200;
 
