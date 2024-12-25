@@ -23,9 +23,23 @@ API_URL := "https://worker-metaframe.localhost:" + APP_PORT
     deno lint
 
 # Lint and fix issues
-@fix:
+@lint-fix:
     deno lint --fix
+
+# Format
+@fmt:
+    deno fmt
+
+# Format check
+@fmt-check:
+    deno fmt --check
+
+# Fix
+@fix: lint-fix fmt
 
 @test:
     deno test --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
     echo "✅ functional tests"
+
+# Run CI
+@ci: fmt-check lint

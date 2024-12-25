@@ -32,8 +32,22 @@ normal := '\033[0m'
     deno lint
 
 # Lint and fix issues
-@fix:
+@lint-fix:
     deno lint --fix
+
+# Format
+@fmt:
+    deno fmt
+
+# Format check
+@fmt-check:
+    deno fmt --check
+
+# Fix
+@fix: lint-fix fmt
+
+# Run CI
+@ci: fmt-check lint
 
 # Perform a deploy to https://dash.deno.com/projects/compute-queue-api
 @build: check

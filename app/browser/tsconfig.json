@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "allowImportingTsExtensions": true,
     "allowSyntheticDefaultImports": true,
@@ -14,12 +15,14 @@
     "typeRoots": ["node_modules/@types", "src/types"],
     "types": ["vite/client"],
     "skipLibCheck": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "paths": {
       "/@/*": ["./*"],
-      "/@shared/client": ["../../shared/dist/client.mjs"]
+      "/@shared/*": ["../../shared/dist/*"]
     }
   },
-  "include": ["./src/**/*", "../shared/dist/client.mjs"],
+  "include": ["./src/**/*", "../shared/dist/**/*"],
   "exclude": [
     "node_modules",
     // https://github.com/microsoft/TypeScript/issues/14538#issuecomment-654933955

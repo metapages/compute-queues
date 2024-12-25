@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
+    "baseUrl": "./src",
     "moduleResolution": "bundler",
     "declaration": true,
     "emitDeclarationOnly": true,
@@ -9,7 +10,10 @@
     "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "/@/*": ["./*"]
+    }
   },
   "include": ["src/client.ts"],
   "exclude": ["node_modules", "dist"]

@@ -1,4 +1,4 @@
-name: deno fmt and lint
+name: fmt and lint
 
 on:
   pull_request:
@@ -11,6 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
       - name: Setup Just CLI
         uses: extractions/setup-just@v1
         with:
@@ -21,8 +26,8 @@ jobs:
         with:
           deno-version: v2.1.4
 
-      - name: Check formatting
-        run: just fmt --check
+      - name: Build shared
+        run: just shared build
 
-      - name: Lint
-        run: just lint
+      - name: Check formatting and linting
+        run: just ci

@@ -1,6 +1,6 @@
 import Dexie from "dexie";
 
-import { DockerJobDefinitionRow } from "./shared";
+import { DockerJobDefinitionRow } from "/@shared/client";
 
 interface IJobsFinished {
   id: string;

@@ -1,7 +1,7 @@
 /**
  * Gets the server state and a method to send state changes over a websocket connection
  */
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import {
   BroadcastJobStates,
@@ -36,31 +36,38 @@ export const serverWebsocket = (): void => {
 
   const handleJobStatusPayload = useStore(state => state.handleJobStatusPayload);
 
+  const rwsRef = useRef<ReconnectingWebSocket | null>(null);
+  const pingTimeoutRef = useRef<NodeJS.Timeout | number | null>(null);
+  const pongTimeoutRef = useRef<NodeJS.Timeout | number | null>(null);
+  const timeLastPongRef = useRef<number>(Date.now());
+  const timeLastPingRef = useRef<number>(Date.now());
+
   useEffect(() => {
     if (!queue || queue === "") {
       return;
     }
     const url = `${queue === "local" ? websocketConnectionUrlLocalmode : websocketConnectionUrl}${queue}/client`;
     setIsServerConnected(false);
-    const rws = new ReconnectingWebSocket(url);
-    let timeLastPong = Date.now();
-    let timeLastPing = Date.now();
+    rwsRef.current = new ReconnectingWebSocket(url);
+    const rws = rwsRef.current;
 
     const onMessage = (message: MessageEvent) => {
       try {
         const messageString = message.data.toString();
         if (messageString === "PONG") {
-          timeLastPong = Date.now();
+          timeLastPongRef.current = Date.now();
 
           // wait a bit then send a ping
-          setTimeout(() => {
-            if (Date.now() - timeLastPing >= 5000) {
-              rws.send("PING");
-              timeLastPing = Date.now();
+          clearTimeout(pingTimeoutRef.current);
+          pingTimeoutRef.current = setTimeout(() => {
+            if (Date.now() - timeLastPingRef.current >= 5000) {
+              rws?.send("PING");
+              timeLastPingRef.current = Date.now();
             }
-            setTimeout(() => {
-              if (Date.now() - timeLastPong >= 10000 && rws.readyState === rws.OPEN) {
-                console.log(`Reconnecting because no PONG since ${Date.now() - timeLastPong}ms `);
+            clearTimeout(pongTimeoutRef.current);
+            pongTimeoutRef.current = setTimeout(() => {
+              if (Date.now() - timeLastPongRef.current >= 10000 && rws?.readyState === rws?.OPEN) {
+                console.log(`Reconnecting because no PONG since ${Date.now() - timeLastPongRef.current}ms `);
                 rws.reconnect();
               }
             }, 10000);
@@ -119,7 +126,7 @@ export const serverWebsocket = (): void => {
 
     const sender = (message: WebsocketMessageClientToServer) => {
       // console.log(`❔ sending from browser to server:`, message);
-      rws.send(JSON.stringify(message));
+      rws?.send(JSON.stringify(message));
     };
 
     // eslint-disable-next-line
@@ -130,6 +137,9 @@ export const serverWebsocket = (): void => {
     const onOpen = () => {
       setIsServerConnected(true);
       setSendMessage(sender);
+      // Send initial ping after connection
+      rws?.send("PING");
+      timeLastPingRef.current = Date.now();
     };
 
     const onClose = () => {
@@ -137,19 +147,21 @@ export const serverWebsocket = (): void => {
       setSendMessage(cacheInsteadOfSendMessages);
     };
 
-    rws.addEventListener("message", onMessage);
-    rws.addEventListener("error", onError);
-    rws.addEventListener("open", onOpen);
-    rws.addEventListener("close", onClose);
+    rws?.addEventListener("message", onMessage);
+    rws?.addEventListener("error", onError);
+    rws?.addEventListener("open", onOpen);
+    rws?.addEventListener("close", onClose);
 
     return () => {
-      rws.removeEventListener("message", onMessage);
-      rws.removeEventListener("error", onError);
-      rws.removeEventListener("open", onOpen);
-      rws.removeEventListener("close", onClose);
-      rws.close();
+      rws?.removeEventListener("message", onMessage);
+      rws?.removeEventListener("error", onError);
+      rws?.removeEventListener("open", onOpen);
+      rws?.removeEventListener("close", onClose);
+      rws?.close();
       setIsServerConnected(false);
       setSendMessage(cacheInsteadOfSendMessages);
+      clearTimeout(pingTimeoutRef.current);
+      clearTimeout(pongTimeoutRef.current);
     };
-  }, [queue, setSendMessage, setIsServerConnected, setRawMessage]);
+  }, [queue, setSendMessage, setIsServerConnected, setJobStates, setWorkers, setRawMessage, handleJobStatusPayload]);
 };

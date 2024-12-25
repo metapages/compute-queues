@@ -71,7 +71,15 @@ green := "\\e[32m"
 # Format all supported files
 @fmt +args="":
     deno fmt {{ args }}
-    find . -name justfile -exec just --fmt --unstable -f {} {{ args }} \;
+    find */justfile -exec just --fmt --unstable -f {} {{ args }} \;
+    just browser/fmt
+
+
+# Format all supported files
+@fmt-check +args="":
+    deno fmt --check {{ args }} 
+    find */justfile -exec just --fmt --check --unstable -f {} {{ args }} \;
+    just browser/fmt-check
 
 status queue="local1":
     curl https://{{ APP_FQDN }}:{{ APP_PORT }}/{{ queue }}/status | jq .
@@ -221,19 +229,32 @@ alias api := _api
 # Run linting for all apps
 @lint:
     echo "Running lint for all apps..."
-    # just browser/lint
+    just browser/lint
     just worker/lint
     just api/lint
     just cli/lint
     just shared/lint
     just test/lint
 
+# Run lint-fix commands for all apps
+@lint-fix:
+    echo "Running lint-fix for all apps..."
+    just browser/lint-fix
+    just worker/lint-fix
+    just api/lint-fix
+    just cli/lint-fix
+    just shared/lint-fix
+    just test/lint-fix
+
 # Run fix commands for all apps
 @fix:
     echo "Running fix for all apps..."
-    # just browser/fix
+    just browser/fix
     just worker/fix
     just api/fix
     just cli/fix
     just shared/fix
     just test/fix
+
+# Run CI
+@ci: fmt-check lint

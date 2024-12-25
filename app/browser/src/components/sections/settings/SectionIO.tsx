@@ -123,7 +123,7 @@ export const SectionIO: React.FC = () => {
 
             <Table px={5} variant="simple" borderBottom="none" border="none">
               <Tbody borderBottom="none" border="none">
-                {(definition?.inputs ? Object.keys(definition.inputs) : []).map((name, i) => (
+                {(definition?.inputs ? Object.keys(definition.inputs) : []).map((name, _i) => (
                   <IORow
                     key={name}
                     isInput={true}
@@ -148,7 +148,7 @@ export const SectionIO: React.FC = () => {
 
             <Table px={5} variant="simple">
               <Tbody>
-                {(definition?.outputs ? Object.keys(definition.outputs) : []).map((name, i) => (
+                {(definition?.outputs ? Object.keys(definition.outputs) : []).map((name, _i) => (
                   <IORow
                     key={name}
                     isInput={false}

@@ -48,7 +48,7 @@ services:
       redis:
         condition: service_healthy
     image: denoland/deno:alpine-2.0.3
-    command: touch /app/app/cli/deno.json /app/app/test/deno.json /app/app/worker/deno.json && deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
+    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
     working_dir: /app/app/api
     healthcheck:
       test: sh -c 'PORT=8081 deno run --allow-net --allow-env src/util/healthcheck.ts'
@@ -77,9 +77,9 @@ services:
       - node_modules:/app/node_modules
       - ./deno.json:/app/deno.json
       - ./app/shared:/app/app/shared
-      - empty:/app/app/cli
-      - empty:/app/app/test
-      - empty:/app/app/worker
+      - ./.empty:/app/app/cli
+      - ./.empty:/app/app/test
+      - ./.empty:/app/app/worker
       - ./app/browser/dist:/app/app/browser/dist
       - ./app/api:/app/app/api
     networks:
@@ -107,7 +107,7 @@ services:
       redis:
         condition: service_healthy
     image: denoland/deno:alpine-2.0.3
-    command: touch /app/app/cli/deno.json /app/app/test/deno.json /app/app/worker/deno.json && deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
+    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
     working_dir: /app/app/api
     healthcheck:
       test: sh -c 'PORT=8082 deno run --allow-net --allow-env src/util/healthcheck.ts'
@@ -134,9 +134,9 @@ services:
       - node_modules:/app/node_modules
       - ./deno.json:/app/deno.json
       - ./app/shared:/app/app/shared
-      - empty:/app/app/cli
-      - empty:/app/app/test
-      - empty:/app/app/worker
+      - ./.empty:/app/app/cli
+      - ./.empty:/app/app/test
+      - ./.empty:/app/app/worker
       - ./app/browser/dist:/app/app/browser/dist
       - ./app/api:/app/app/api
     networks:
@@ -247,7 +247,6 @@ volumes:
     driver: local
   node_modules_worker:
     driver: local
-  empty:
 
 networks:
   default:

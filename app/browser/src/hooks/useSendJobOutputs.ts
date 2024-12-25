@@ -13,7 +13,7 @@ import { useMetaframeAndInput } from "@metapages/metapage-react";
 import { isIframe, MetaframeInputMap } from "@metapages/metapage";
 
 import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
-import { DockerRunResultWithOutputs } from "../shared";
+import { DockerRunResultWithOutputs } from "/@shared/client";
 import { useStore } from "../store";
 import { useOptionJobStartAutomatically } from "./useOptionJobStartAutomatically";
 import { useOptionResolveDataRefs } from "./useOptionResolveDataRefs";
@@ -45,8 +45,8 @@ export const useSendJobOutputs = () => {
   // You usually don't want this on, that means big blobs
   // are going to move around your system
   const [resolveDataRefs] = useOptionResolveDataRefs();
-  const userClickedRun = useStore(state => state.userClickedRun);
-  const [jobStartsAutomatically] = useOptionJobStartAutomatically();
+  const _userClickedRun = useStore(state => state.userClickedRun);
+  const [_jobStartsAutomatically] = useOptionJobStartAutomatically();
   const dockerJobServer = useStore(state => state.jobState);
   // track if we have sent the outputs for this job hash
   // this will be reset if the state isn't finished

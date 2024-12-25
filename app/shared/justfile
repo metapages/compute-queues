@@ -23,11 +23,25 @@ normal := '\033[0m'
     deno lint
 
 # Lint and fix issues
-@fix:
+@lint-fix:
     deno lint --fix
+
+# Format
+@fmt:
+    deno fmt
+
+# Format check
+@fmt-check:
+    deno fmt --check
+
+# Fix
+@fix: lint-fix fmt
 
 @test:
     deno test --allow-all --unstable-kv src
 
 @build:
     deno task build
+
+# Run CI
+@ci: fmt-check lint

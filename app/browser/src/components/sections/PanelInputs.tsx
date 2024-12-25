@@ -5,7 +5,7 @@ import { PanelHeader } from "/@/components/generic/PanelHeader";
 import { AddInputButtonAndModal } from "/@/components/sections/inputs/AddInputButtonAndModal";
 import { InputRow } from "/@/components/sections/inputs/InputRow";
 import { downloadFile, getDynamicInputs } from "/@/helpers";
-import { InputsRefs, JobInputs } from "/@/shared/types";
+import { InputsRefs, JobInputs } from "/@shared/client";
 import { useStore } from "/@/store";
 
 import { Container, HStack, Icon, Spacer, Table, Tbody, Td, Text, Tr } from "@chakra-ui/react";

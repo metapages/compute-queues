@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 
-import { ConsoleLogLine, DockerJobState, StateChangeValueFinished } from "/@/shared/types";
+import { ConsoleLogLine, DockerJobState, StateChangeValueFinished } from "/@shared/client";
 import { useStore } from "/@/store";
 import { AnsiUp } from "ansi_up";
 import linkifyHtml from "linkify-html";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { VariableSizeList as List } from "react-window";
 
-import { Box, Code, VStack } from "@chakra-ui/react";
+import { Code, VStack } from "@chakra-ui/react";
 
-import { OUTPUT_TABLE_ROW_HEIGHT, OutputTable } from "./OutputTable";
+// import { OUTPUT_TABLE_ROW_HEIGHT, OutputTable } from "./OutputTable";
 
 export type LogsMode = "stdout+stderr" | "stdout" | "stderr" | "build";
 
@@ -24,7 +24,7 @@ export const DisplayLogs: React.FC<{
   const logsRef = useRef<string[]>([]);
   const [logs, setLogs] = useState<string[]>([]);
   const [jobId, setJobId] = useState<string | undefined>();
-  const [showOutputTable, setShowOutputTable] = useState(false);
+  const [showOutputTable, _setShowOutputTable] = useState(false);
   const [outputCount, setOutputCount] = useState(0);
   const myref = useRef(null);
   const job = useStore(state => state.jobState);
@@ -119,7 +119,7 @@ export const DisplayLogs: React.FC<{
     return <VStack alignItems={"flex-start"} h={"100%"} pl={3}></VStack>;
   }
 
-  const getItemSize = index => {
+  const getItemSize = _index => {
     // if (logs[index] === "OUTPUT_TABLE_PLACEHOLDER") return OUTPUT_TABLE_ROW_HEIGHT * (outputCount + 1) + LINE_HEIGHT;
     return LINE_HEIGHT;
   };

@@ -9,9 +9,10 @@
   "scripts": {
     "prebuild": "npm i && ./node_modules/typescript/bin/tsc --build --verbose",
     "build": "rm -rf dist/* && node_modules/parcel-bundler/bin/cli.js build public/index.html --no-autoinstall",
-    "lint": "eslint .",
-    "lint:fix": "eslint --fix .",
-    "format": "npx prettier . --write"
+    "lint": "eslint --cache .",
+    "lint:fix": "eslint --fix --cache .",
+    "format": "npx prettier . --cache --write",
+    "format:check": "npx prettier . --cache --check"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.1.1",

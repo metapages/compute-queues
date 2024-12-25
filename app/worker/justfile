@@ -51,8 +51,22 @@ dev +args="":
     deno lint
 
 # Lint and fix issues
-@fix:
+@lint-fix:
     deno lint --fix
+
+# Format
+@fmt:
+    deno fmt
+
+# Format check
+@fmt-check:
+    deno fmt --check
+
+# Fix
+@fix: lint-fix fmt
+
+# Run CI
+@ci: fmt-check lint
 
 @test +args="":
     deno test --allow-net --allow-read --allow-env --allow-write --allow-run {{ args }}

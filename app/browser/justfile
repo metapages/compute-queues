@@ -128,9 +128,24 @@ serve: _mkcert _install _build_shared
 @_ensure_npm_modules:
     if [ ! -f "{{ tsc }}" ]; then npm i; fi
 
-@lint:
-    npm run lint:fix    
+# Lint
+@lint: _ensure_npm_modules
+    npm run lint
+
+# Format
+@fmt: _ensure_npm_modules
     npm run format
+
+# Format check
+@fmt-check: _ensure_npm_modules
+    npm run format:check
+
+# Lint and fix issues
+@lint-fix: _ensure_npm_modules
+    npm run lint:fix
+
+# Fix
+@fix: lint-fix fmt
 
 # Add new helper recipe for building shared dependencies
 @_build_shared:

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 
 import { useJobSubmissionHook } from "/@/hooks/useJobSubmissionHook";
-import { DockerJobFinishedReason, DockerJobState, StateChangeValueFinished } from "/@/shared/types";
+import { DockerJobFinishedReason, DockerJobState, StateChangeValueFinished } from "/@shared/client";
 
 import { Button, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { useHashParam } from "@metapages/hash-query/react-hooks";
@@ -69,7 +69,7 @@ export const JobControlButton: React.FC = () => {
     />
   );
 
-  const noQueueButton = (
+  const _noQueueButton = (
     <HeaderButton
       tooltip="Add a queue (button below)"
       ariaLabel="No queue"

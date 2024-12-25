@@ -37,7 +37,7 @@
     "oblivious-set": "npm:oblivious-set@1.4.0",
     "reconnecting-websocket": "npm:reconnecting-websocket@4.4.0",
     "retry": "https://deno.land/x/retry@v2.0.0/mod.ts",
-    "s3_lite_client": "https://deno.land/x/s3_lite_client@0.7.0/mod.ts",
+    "s3-lite-client": "https://deno.land/x/s3_lite_client@0.7.0/mod.ts",
     "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3",
     "shell-quote": "npm:shell-quote@1.8.1",
     "std/assert": "https://deno.land/std@0.224.0/assert/mod.ts",

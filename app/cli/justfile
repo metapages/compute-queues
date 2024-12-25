@@ -36,8 +36,22 @@ compile:
     deno lint
 
 # Lint and fix issues
-@fix:
+@lint-fix:
     deno lint --fix
+
+# Format
+@fmt:
+    deno fmt
+
+# Format check
+@fmt-check:
+    deno fmt --check
+
+# Fix
+@fix: lint-fix fmt
 
 @test:
     echo "❗ no cli tests yet"
+
+# Run CI
+@ci: fmt-check lint

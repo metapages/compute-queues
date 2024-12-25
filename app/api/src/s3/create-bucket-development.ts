@@ -1,4 +1,4 @@
-import { S3Client } from "s3_lite_client";
+import { S3Client } from "s3-lite-client";
 
 const region = Deno.env.get("AWS_REGION")!;
 const AWS_ACCESS_KEY_ID = Deno.env.get("AWS_ACCESS_KEY_ID")!;

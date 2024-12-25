@@ -94,8 +94,8 @@ const getJobStateValues = (
   let exitCode = null;
   let showExitCodeRed = false;
   const jobId = job?.hash;
-  const resultFinished = job.value as StateChangeValueFinished;
-  const errorBlob: { statusCode: number; json: { message: string } } | undefined = resultFinished?.result?.error;
+  const resultFinished = job?.value as StateChangeValueFinished;
+  const errorBlob = resultFinished?.result?.error as { statusCode: number; json: { message: string } } | undefined;
 
   if (!job) {
     text = "No job started";

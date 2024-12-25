@@ -13,8 +13,6 @@ import {
   WebsocketMessageClientToServer,
   WebsocketMessageSenderClient,
   WebsocketMessageTypeClientToServer,
-} from "./shared";
-import {
   ConsoleLogLine,
   DockerJobDefinitionMetadata,
   DockerJobDefinitionRow,
@@ -24,7 +22,7 @@ import {
   PayloadQueryJob,
   StateChangeValueFinished,
   WebsocketMessageServerBroadcast,
-} from "./shared/types";
+} from "/@shared/client";
 
 let _cachedMostRecentSubmit: WebsocketMessageClientToServer | undefined;
 
