@@ -77,10 +77,13 @@ export const useDockerJobDefinition = () => {
     // are always type: DataRefType.utf8 because they come from the text editor
     definition.configFiles = !jobInputsFromUrl ? {} : Object.fromEntries(
       Object.keys(jobInputsFromUrl).map((key) => {
-        return [key, {
-          type: DataRefType.utf8,
-          value: jobInputsFromUrl[key] as string,
-        }];
+        return [
+          key,
+          {
+            type: DataRefType.utf8,
+            value: jobInputsFromUrl[key] as string,
+          },
+        ];
       }),
     );
 

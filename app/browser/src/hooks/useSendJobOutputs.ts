@@ -15,9 +15,7 @@ import { isIframe, MetaframeInputMap } from "@metapages/metapage";
 import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
 import { DockerRunResultWithOutputs } from "../shared";
 import { useStore } from "../store";
-import {
-  useOptionJobStartAutomatically,
-} from "./useOptionJobStartAutomatically";
+import { useOptionJobStartAutomatically } from "./useOptionJobStartAutomatically";
 import { useOptionResolveDataRefs } from "./useOptionResolveDataRefs";
 
 const datarefKeyToUrl = async (ref: DataRef): Promise<DataRef> => {

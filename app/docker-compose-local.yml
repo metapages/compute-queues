@@ -85,4 +85,3 @@ services:
       - node_modules:/app/browser/node_modules
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
