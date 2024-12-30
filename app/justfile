@@ -23,7 +23,7 @@ green := "\\e[32m"
 @dev mode="remote" +args="": (_validate_mode mode) _ensure-all open (_up mode args)
 
 # Start the docker compose local stack
-@_up mode="remote" +args="": (_validate_mode mode) _ensure-all _mkcert
+@_up mode="remote" +args="": (_validate_mode mode) _ensure-all _mkcert _build_shared
     #!/usr/bin/env bash
     # A local NPM registry saves time, bandwidth, and avoids rate limits
     # If a local npm registry cache is running, use that for all npm modules (faster and better when internet not great)
@@ -148,6 +148,7 @@ test mode="remote" +args="": (_validate_mode mode)
 
     docker rm test-worker-1 2>/dev/null || true
     docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml up --build --remove-orphans --detach
+    just shared/build
     just worker/test
     just test/test
     just shared/test
@@ -258,3 +259,7 @@ alias api := _api
 
 # Run CI
 @ci: fmt-check lint
+
+# Add new helper recipe for building shared dependencies
+@_build_shared:
+    just shared/build
