@@ -31,12 +31,6 @@ services:
       # Apply the CORS middleware to the router
       - "traefik.http.routers.minio.middlewares=cors-middleware@file"
 
-  denokv:
-    image: ghcr.io/denoland/denokv
-    command: --sqlite-path /data/denokv.sqlite serve --access-token localdenoaccesstoken
-    volumes:
-      - denokv:/data
-
   traefik:
     image: traefik:v2.11.13
     command:
@@ -87,11 +81,7 @@ networks:
     driver: bridge
 
 volumes:
-  db:
-    driver: local
   deno:
-    driver: local
-  denokv:
     driver: local
   node_modules:
     driver: local

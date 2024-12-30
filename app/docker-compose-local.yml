@@ -5,8 +5,6 @@ services:
         condition: service_started
       minio:
         condition: service_healthy
-      denokv:
-        condition: service_started
       redis:
         condition: service_healthy
     entrypoint: [
@@ -88,14 +86,3 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-volumes:
-  deno:
-    driver: local
-  node_modules:
-    driver: local
-  node_modules_worker:
-    driver: local
-
-networks:
-  default:
-    driver: bridge
