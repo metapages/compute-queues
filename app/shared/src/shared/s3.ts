@@ -26,13 +26,13 @@ export const bucketParams = {
 };
 
 const config = {
-  sslEnabled: true, //AWS_ACCESS_KEY_ID.includes("minio") ? false : true,
+  sslEnabled: true, //AWS_ACCESS_KEY_ID?.includes("minio") ? false : true,
   credentials: {
     accessKeyId: AWS_ACCESS_KEY_ID,
     secretAccessKey: AWS_SECRET_ACCESS_KEY,
   },
   region: AWS_REGION,
-  endpoint: AWS_ACCESS_KEY_ID.includes("minio") ? AWS_ENDPOINT : undefined,
+  endpoint: AWS_ACCESS_KEY_ID?.includes("minio") ? AWS_ENDPOINT : undefined,
   forcePathStyle: AWS_ENDPOINT ? true : undefined,
   signatureVersion: "v4",
 };

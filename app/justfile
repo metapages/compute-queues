@@ -20,7 +20,7 @@ green := "\\e[32m"
     @if [ "{{ mode }}" = "remote" ] || [ "{{ mode }}" = "local" ]; then :; else echo "Error: Mode must be 'remote' or 'local'" >&2; exit 1; fi
 
 # Develop: open the browser and start the dev stack
-@dev mode="remote" +args="": (_validate_mode mode) _ensure-all open (_up mode args)
+@dev mode="remote" +args="": (_validate_mode mode) _build_shared _ensure-all open (_up mode args)
 
 # Start the docker compose local stack
 @_up mode="remote" +args="": (_validate_mode mode) _ensure-all _mkcert _build_shared

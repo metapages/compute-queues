@@ -43,9 +43,21 @@ import { delay } from "std/async/delay";
 // import LRU from 'https://deno.land/x/lru_cache@6.0.0-deno.4/mod.ts';
 import { ms } from "ms";
 import { createNanoEvents, type Emitter } from "nanoevents";
-import { BroadcastChannelRedis } from "@metapages/deno-redis-broadcastchannel";
 
 import { resolveMostCorrectJob } from "/@/shared/util.ts";
+
+import type { BroadcastChannelRedis } from "@metapages/deno-redis-broadcastchannel";
+
+let CustomBroadcastChannel: typeof BroadcastChannel = BroadcastChannel;
+
+// If Redis is configured, then dynamically import:
+if (Deno.env.get("REDIS_URL") === "redis://redis:6379") {
+  console.log("👀 Using redis broadcast channel");
+  const { BroadcastChannelRedis } = await import(
+    "@metapages/deno-redis-broadcastchannel"
+  );
+  CustomBroadcastChannel = BroadcastChannelRedis;
+}
 
 // 60 seconds
 const MAX_TIME_FINISHED_JOB_IN_QUEUE = ms("60 seconds") as number;
@@ -162,13 +174,7 @@ export class BaseDockerJobQueue {
     this.clients = [];
     this.state = { jobs: {} };
 
-    // For local development, use a redis broadcast channel
-    if (Deno.env.get("REDIS_URL") === "redis://redis:6379") {
-      console.log("👀 Using redis broadcast channel");
-      this.channel = new BroadcastChannelRedis(address);
-    } else {
-      this.channel = new BroadcastChannel(address);
-    }
+    this.channel = new CustomBroadcastChannel(address);
 
     this.channelEmitter = createNanoEvents<BroadcastMessageEvents>();
 

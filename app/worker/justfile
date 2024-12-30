@@ -33,16 +33,6 @@ normal := '\033[0m'
     echo -e "                    run --cpus=1 --api-server-address=https://worker-metaframe.localhost local1"
     echo -e ""
 
-# Run the worker locally, pointing to the local API
-dev +args="": _build_shared
-    deno run --allow-all --unsafely-ignore-certificate-errors --unstable-kv src/cli.ts run {{ args }}
-
-# Add new helper recipe for building shared dependencies
-@_build_shared:
-    #!/usr/bin/env bash
-    set -eo pipefail
-    cd ../shared && just build
-
 # Run the worker locally, pointing to production API
 @prod queue="local1":
     deno run --allow-all --unstable-kv src/cli.ts run --cpus=1 --api-server-address=https://container.mtfm.io {{ queue }}
