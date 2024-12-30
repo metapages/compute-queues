@@ -89,8 +89,8 @@ run-local-workers: publish-versioned-artifacts
     docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:$VERSION run --cpus=2 ${DIONS_SECRET_QUEUE}
 
 # Checks and tests
-@test:
-    just app test
+@test mode="remote":
+    just app test {{ mode }}
 
 # Quick compilation checks
 @check:
