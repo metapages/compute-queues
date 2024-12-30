@@ -11,7 +11,7 @@
     "**/app/api/assets": true,
     "**/dist": true
   },
-  "deno.enable": true,
+  "deno.enable": false,
   "deno.lint": true,
   "deno.disablePaths": ["app/browser"],
   "editor.formatOnSave": true,

@@ -69,13 +69,15 @@ export const PanelEditor: React.FC = () => {
   return (
     <PanelContainer>
       <PanelHeader title={mainInputFile} preserveCase={true} onSave={onSave} />
-      <div style={{ height: "100%", width: "100%", position: "relative" }} id={"mf-editor"}>
-        <MetaframeStandaloneComponent
-          url={`https://editor.mtfm.io/#?hm=disabled&options=${options.current}`}
-          inputs={{ text: value }}
-          onOutputs={onOutputs}
-        />
-      </div>
+      <MetaframeStandaloneComponent
+        url={`https://editor.mtfm.io/#?hm=disabled&options=${options.current}`}
+        inputs={{ text: value }}
+        onOutputs={onOutputs}
+        style={{
+          minHeight: `calc(100vh - 3rem)`,
+          width: "100%",
+        }}
+      />
     </PanelContainer>
   );
 };
