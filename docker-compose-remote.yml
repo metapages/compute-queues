@@ -237,7 +237,15 @@ services:
       - host.docker.internal:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
     volumes:
+      - ./app/api/deno.json:/app/app/api/deno.json
       - ./app/api/src:/app/app/api/src
+      - ./deno.json:/app/deno.json
+      - ./app/shared:/app/app/shared
+      - ./.empty:/app/app/cli
+      - ./.empty:/app/app/test
+      - ./.empty:/app/app/worker
+      - ./.empty:/app/app/browser/dist
+      - ./.empty:/app/app/worker
       - deno:/deno
 
 volumes:
