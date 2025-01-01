@@ -50,12 +50,14 @@ export const MainHeader: React.FC = () => {
 
   const icon = (svg: React.ElementType, context: string, badge?: string) => {
     const toggleValue = rightPanelContext === context ? null : context;
+    // Determine rotation based on context
+    const transform = context === "inputs" ? "rotate(-90deg)" : context === "outputs" ? "rotate(90deg)" : undefined;
+
     return (
       <Box position="relative" display="inline-block">
         <Tooltip
-          label={`${
-            context[0].toUpperCase() + context.slice(1, context.length)
-          }`}
+          label={`${context[0].toUpperCase() + context.slice(1, context.length)
+            }`}
         >
           <Icon
             _hover={{ bg: "gray.300" }}
@@ -64,6 +66,8 @@ export const MainHeader: React.FC = () => {
             borderRadius={5}
             as={svg}
             boxSize="7"
+            transform={transform}
+            transition="transform 0.2s"
             onClick={() => setRightPanelContext(toggleValue)}
           />
         </Tooltip>
@@ -111,12 +115,12 @@ export const MainHeader: React.FC = () => {
           justifyContent={"space-around"}
           w={rightSectionWidth}
         >
-          {icon(Gear, "settings")}
           {icon(
             DownloadSimple,
             "inputs",
             incomingInputsCount ? incomingInputsCount.toString() : undefined,
           )}
+          {icon(Gear, "settings")}
           {icon(
             UploadSimple,
             "outputs",
