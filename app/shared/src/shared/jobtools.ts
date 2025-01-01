@@ -152,7 +152,9 @@ export const fileToDataref = async (
               new TextDecoder().decode(
                 stdout,
               )
-            } stderr=${new TextDecoder().decode(stderr)}`,
+            } stderr=${new TextDecoder().decode(stderr)} command='curl ${
+              args.join(" ")
+            }'`,
           );
         }
       },
