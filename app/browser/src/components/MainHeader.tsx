@@ -39,19 +39,11 @@ export const MainHeader: React.FC = () => {
   const icon = (svg: React.ElementType, context: string, badge?: string) => {
     const toggleValue = rightPanelContext === context ? null : context;
     // Determine rotation based on context
-    const transform = context === "inputs"
-      ? "rotate(-90deg)"
-      : context === "outputs"
-      ? "rotate(90deg)"
-      : undefined;
+    const transform = context === "inputs" ? "rotate(-90deg)" : context === "outputs" ? "rotate(90deg)" : undefined;
 
     return (
       <Box position="relative" display="inline-block">
-        <Tooltip
-          label={`${
-            context[0].toUpperCase() + context.slice(1, context.length)
-          }`}
-        >
+        <Tooltip label={`${context[0].toUpperCase() + context.slice(1, context.length)}`}>
           <Icon
             _hover={{ bg: "gray.300" }}
             bg={context === rightPanelContext ? "gray.300" : "none"}

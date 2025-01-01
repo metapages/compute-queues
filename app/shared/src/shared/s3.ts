@@ -11,7 +11,7 @@ import {
 
 const Bucket: string = Deno.env.get("AWS_S3_BUCKET") || "metaframe-asman-test";
 const AWS_REGION: string = Deno.env.get("AWS_REGION") || "us-west-2";
-const AWS_ENDPOINT: string | undefined = Deno.env.get("AWS_ENDPOINT");
+const AWS_ENDPOINT: string | undefined = "http://minio:9000"; //Deno.env.get("AWS_ENDPOINT");
 const AWS_ACCESS_KEY_ID: string = Deno.env.get("AWS_ACCESS_KEY_ID")!;
 const AWS_SECRET_ACCESS_KEY: string = Deno.env.get("AWS_SECRET_ACCESS_KEY")!;
 
@@ -26,7 +26,7 @@ export const bucketParams = {
 };
 
 const config = {
-  sslEnabled: true, //AWS_ACCESS_KEY_ID?.includes("minio") ? false : true,
+  sslEnabled: AWS_ACCESS_KEY_ID?.includes("minio") ? false : true,
   credentials: {
     accessKeyId: AWS_ACCESS_KEY_ID,
     secretAccessKey: AWS_SECRET_ACCESS_KEY,

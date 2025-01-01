@@ -98,11 +98,7 @@ export const TabConfigureJob: React.FC = () => {
         <VStack alignItems="stretch" width="100%" pb={"2rem"}>
           <VStack p={2} alignItems="stretch" width="100%" gap={"1.5rem"}>
             <Text align="center" fontWeight="bold">
-              <Link
-                href="https://www.docker.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <Link href="https://www.docker.com/" target="_blank" rel="noopener noreferrer">
                 Docker
               </Link>{" "}
               Container Settings

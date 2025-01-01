@@ -21,7 +21,7 @@ export const uploadHandler = async (c: Context) => {
   const command = new PutObjectCommand({ ...bucketParams, Key: key });
   try {
     let url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-    if (url.startsWith("http://")) {
+    if (url.startsWith("http://") && !url.includes("minio")) {
       url = url.replace("http://", "https://");
     }
     return c.redirect(url);

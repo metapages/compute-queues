@@ -4,9 +4,11 @@ services:
       traefik:
         condition: service_started
     image: minio/minio:RELEASE.2024-04-28T17-53-50Z
-    command: server --address :9000 /data
+    command: server --address 0.0.0.0:9000 /data
     expose:
       - "9000"
+    ports:
+      - "9000:9000"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s

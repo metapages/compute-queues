@@ -45,5 +45,5 @@ green := "\\e[32m"
 @ci: fmt-check lint
 
 @test-in-docker stack="test":
-    cd .. && \
-    APP_PORT={{ APP_PORT }} docker compose --project-name={{ stack }} -f ../docker-compose.yml -f ../docker-compose-remote.yml -f ../docker-compose-test.yml run --no-deps --rm test deno test --unsafely-ignore-certificate-errors --allow-all src
+    cd ../.. && \
+    APP_PORT={{ APP_PORT }} docker compose --project-name={{ stack }} -f docker-compose.yml -f docker-compose-remote.yml -f docker-compose-test.yml run --no-deps --rm test deno test --unsafely-ignore-certificate-errors --allow-all src
