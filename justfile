@@ -33,6 +33,14 @@ cyan := "\\e[36m"
 @dev mode="remote" +args="": (_validate_mode mode)
     just app/dev {{ mode }} {{ args }}
 
+# Runs All Functional Tests and checks code
+@test:
+    just app test
+
+# Bump the version, commit, CI will deploy and publish artifacts
+@deploy version="":
+    just app/deploy {{ version }}
+
 # Shut Down Development Environment
 @down mode="remote" +args="": (_validate_mode mode)
     just app/down {{ mode }} {{ args }}
@@ -80,10 +88,6 @@ run-local-workers: publish-versioned-artifacts
     VERSION=$(cat app/worker/mod.json | jq -r .version)
     docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:$VERSION run --cpus=2 public1
     docker run --restart unless-stopped -tid -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:$VERSION run --cpus=2 ${DIONS_SECRET_QUEUE}
-
-# Checks and tests
-@test:
-    just app test
 
 # Quick compilation checks
 @check:

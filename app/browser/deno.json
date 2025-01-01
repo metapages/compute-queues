@@ -1,0 +1,5 @@
+{
+  "fmt": {
+    "exclude": ["dist", "README.md", "*.json", "*.lock"]
+  }
+}

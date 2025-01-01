@@ -10,5 +10,8 @@
     "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3"
   },
   "nodeModulesDir": "none",
-  "unstable": ["sloppy-imports"]
+  "unstable": ["sloppy-imports"],
+  "fmt": {
+    "exclude": ["dist", "README.md", "*.json", "*.lock"]
+  }
 }
