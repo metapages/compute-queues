@@ -87,7 +87,7 @@ if (!existsSync("/var/run/docker.sock")) {
 
 export const JobCacheDirectory = "/job-cache";
 
-export const dockerJobExecute = async (
+export const dockerJobExecute = (
   args: DockerJobArgs,
 ): Promise<DockerJobExecution> => {
   // console.log('dockerJobExecute args', args);
@@ -195,12 +195,6 @@ export const dockerJobExecute = async (
     grabberErrStream.pipe(errStream!);
   }
 
-  /* const runningContainers: any[] = */ void await docker.listContainers({
-    Labels: {
-      "container.mtfm.io/id": args.id,
-    },
-  });
-
   const finish = async () => {
     try {
       createOptions.image = await ensureDockerImage({
@@ -253,7 +247,7 @@ export const dockerJobExecute = async (
       container = docker.getContainer(existingJobContainer.Id);
     }
 
-    console.log("🚀 createOptions", createOptions);
+    // console.log("🚀 createOptions", createOptions);
 
     if (!container) {
       container = await docker.createContainer(createOptions);

@@ -292,7 +292,7 @@ export class BaseDockerJobQueue {
             );
             this.broadcastJobStatesToWebsockets(jobIds);
           } else {
-            console.log(`🌘 ...from merge complete, no changes!`);
+            // console.log(`🌘 ...from merge complete, no changes!`);
           }
           break;
         }

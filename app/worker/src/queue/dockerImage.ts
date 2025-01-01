@@ -59,6 +59,7 @@ export const ensureDockerImage = async (args: {
   build?: DockerJobImageBuild;
   sender: WebsocketMessageSenderWorker;
 }): Promise<string> => {
+  // console.log("ensureDockerImage", args);
   console.log("ensureDockerImage", args);
   let { jobId, image, /* pullOptions, */ build, sender } = args;
 

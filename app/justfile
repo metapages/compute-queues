@@ -42,6 +42,32 @@ green := "\\e[32m"
     #!/usr/bin/env bash
     docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml down {{ args }}
 
+deploy version="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Get version argument or bump current version
+    VERSION={{ version }}
+    if [ "$VERSION" = "" ]; then
+        # Get current version from mod.json
+        CURRENT_VERSION=$(cat worker/mod.json | jq -r '.version')
+        # Split version into components
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+        # Increment patch version
+        PATCH=$((PATCH + 1))
+        # Construct new version
+        VERSION="$MAJOR.$MINOR.$PATCH"
+    fi
+
+    # Update version in mod.json
+    TMP=$(mktemp)
+    jq ".version = \"$VERSION\"" worker/mod.json > "$TMP" && mv "$TMP" worker/mod.json
+
+    echo "chore: bump version to $VERSION"
+    # Commit changes
+    git add worker/mod.json
+    git commit -m "chore: bump version to $VERSION"
+
 # Clean up the project
 @clean mode="remote" +args="": (_validate_mode mode)
     #!/usr/bin/env bash
@@ -77,14 +103,14 @@ green := "\\e[32m"
 
 # Format all supported files
 @fmt-check +args="":
-    deno fmt --check {{ args }} 
+    deno fmt --check {{ args }}
     find */justfile -exec just --fmt --check --unstable -f {} {{ args }} \;
     just browser/fmt-check
 
-status queue="local1":
+status-dev queue="local1":
     curl https://{{ APP_FQDN }}:{{ APP_PORT }}/{{ queue }}/status | jq .
 
-status-test queue="local1":
+status-test port queue="local1":
     APP_PORT=4470 curl https://{{ APP_FQDN }}:4470/{{ queue }}/status | jq .
 
 status-prod queue="public1":
@@ -95,7 +121,8 @@ test mode="remote" +args="": (_validate_mode mode)
     set -e # exit when any command fails, preserving the status of the failed command
 
     cleanup() {
-        docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml down 2>/dev/null || true
+        echo "Cleaning up test stack..."
+        docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml -f ../docker-compose-test.yml down 2>/dev/null || true
     }
 
     trap cleanup EXIT # cleanup when the script exits for any reason, including failure
@@ -106,6 +133,8 @@ test mode="remote" +args="": (_validate_mode mode)
     get_free_port() {
         while true; do
             local port=$(shuf -i 10000-65535 -n 1)
+            # Check if port is in use using netstat or ss
+            # Check if port is in use using netstat/ss on Linux or lsof on macOS
             if [ "$(uname)" == "Linux" ]; then
                 if ! ss -tuln | grep -q ":${port} "; then
                     echo "${port}"
@@ -144,13 +173,14 @@ test mode="remote" +args="": (_validate_mode mode)
     export AWS_ENDPOINT="https://minio.worker-metaframe.localhost"
     export AWS_REGION="us-west-2"
     export AWS_S3_BUCKET="metaframe-asman-test"
-    export REDIS_URL="redis://localhost:6379" 
+    export REDIS_URL="redis://localhost:6379"
 
     docker rm test-worker-1 2>/dev/null || true
-    docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml up --build --remove-orphans --detach
     just shared/build
+    docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml -f ../docker-compose-test.yml up --build --remove-orphans --detach
+    # functional tests
+    just test/test-in-docker
     just worker/test
-    just test/test
     just shared/test
     just cli/test
 
@@ -167,7 +197,7 @@ _mkcert: _ensure_mkcert
     #!/usr/bin/env bash
     rm -rf .cache/traefik/certs
     mkdir -p .cache/traefik/certs/ ;
-    mkcert -cert-file .cache/traefik/certs/local-cert.pem -key-file .cache/traefik/certs/local-key.pem {{ APP_FQDN }} minio.{{ APP_FQDN }} localhost ;
+    mkcert -cert-file .cache/traefik/certs/local-cert.pem -key-file .cache/traefik/certs/local-key.pem {{ APP_FQDN }} minio.{{ APP_FQDN }} worker-metaframe.localhost worker-metaframe-api2.dev minio.worker-metaframe.localhost localhost ;
     if grep -q "{{ APP_FQDN }}" /etc/hosts; then
         echo -e "✅ Hostname {{ APP_FQDN }} found in /etc/hosts"
     else

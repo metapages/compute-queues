@@ -178,7 +178,7 @@ async function getLatestVersionFromDockerHub(
 
   try {
     // Fetch the tag information from DockerHub
-    const response = await fetch(url);
+    const response = await fetch(url, { redirect: "follow" });
     if (!response.ok) {
       console.error(
         `Failed to fetch tags from DockerHub for image: ${imageName}`,

@@ -1,0 +1,38 @@
+services:
+  test:
+    depends_on:
+      api1:
+        condition: service_healthy
+    image: denoland/deno:alpine-2.1.4
+    command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+    working_dir: /app/app/test
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
+      - worker-metaframe.localhost:host-gateway
+      - worker-metaframe-api2.dev:host-gateway
+    environment:
+      # APP_PORT is only needed for the upload/curl/dns/docker fiasco
+      - APP_PORT=${APP_PORT:-443}
+      - IGNORE_CERTIFICATE_ERRORS=true
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+      - API_URL=http://api1:8081
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
+      - AWS_REGION=${AWS_REGION:-us-west-2}
+      - AWS_ENDPOINT=${AWS_ENDPOINT:-https://minio.worker-metaframe.localhost}:${APP_PORT:-443}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
+      - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
+      - DENO_KV_URL=http://denokv:4512
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - deno:/deno
+      - .:/app
+    labels:
+      - "custom.label=worker-metaframe.localhost"
+    networks:
+      - default
+    logging:
+      driver: ${LOGGING_TESTS:-json-file}

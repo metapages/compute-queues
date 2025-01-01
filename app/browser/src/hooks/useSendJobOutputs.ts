@@ -5,24 +5,21 @@ import {
   DataRef,
   DataRefType,
   DockerJobState,
-  fetchJsonFromUrl,
   StateChangeValueFinished,
 } from "/@shared/client";
 
-import { useMetaframeAndInput } from "@metapages/metapage-react";
 import { isIframe, MetaframeInputMap } from "@metapages/metapage";
+import { useMetaframeAndInput } from "@metapages/metapage-react";
 
 import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
 import { DockerRunResultWithOutputs } from "/@shared/client";
 import { useStore } from "../store";
-import { useOptionJobStartAutomatically } from "./useOptionJobStartAutomatically";
 import { useOptionResolveDataRefs } from "./useOptionResolveDataRefs";
 
 const datarefKeyToUrl = async (ref: DataRef): Promise<DataRef> => {
   if (ref.type === DataRefType.key) {
-    const { url } = await fetchJsonFromUrl<{ url: string }>(`${UPLOAD_DOWNLOAD_BASE_URL}/download/${ref.value}`);
     return {
-      value: url,
+      value: `${UPLOAD_DOWNLOAD_BASE_URL}/api/v1/download/${ref.value}`,
       type: DataRefType.url,
     };
   } else {
@@ -45,8 +42,6 @@ export const useSendJobOutputs = () => {
   // You usually don't want this on, that means big blobs
   // are going to move around your system
   const [resolveDataRefs] = useOptionResolveDataRefs();
-  const _userClickedRun = useStore(state => state.userClickedRun);
-  const [_jobStartsAutomatically] = useOptionJobStartAutomatically();
   const dockerJobServer = useStore(state => state.jobState);
   // track if we have sent the outputs for this job hash
   // this will be reset if the state isn't finished
@@ -111,11 +106,6 @@ export const useSendJobOutputs = () => {
         try {
           // previously we sent the job status code, logs etc, but just send the outputs
           // If you want to send the other stuff, you can on your own
-          // metaframeObj.setOutputs!({ ...keysToUrlsOutputs, ...theRest });
-          // console.log(
-          //   `💚 resolveDataRefs=true Sending outputs to metaframe`,
-          //   keysToUrlsOutputs
-          // );
           metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
         } catch (err) {
           console.error("Failed to send metaframe outputs", err);

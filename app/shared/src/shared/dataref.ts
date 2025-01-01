@@ -23,7 +23,10 @@ export const dataRefToDownloadLink = async (ref: DataRef): Promise<string> => {
   );
 };
 
-export const dataRefToBuffer = async (ref: DataRef): Promise<Uint8Array> => {
+export const dataRefToBuffer = async (
+  ref: DataRef,
+  address?: string,
+): Promise<Uint8Array> => {
   switch (ref.type) {
     case DataRefType.base64:
       return decodeBase64(ref.value as string);
@@ -39,7 +42,7 @@ export const dataRefToBuffer = async (ref: DataRef): Promise<Uint8Array> => {
       // hard code this for now
       const arrayBufferFromKey = await fetchBlobFromHash(
         ref.value,
-        "https://container.mtfm.io",
+        address || "https://container.mtfm.io",
       );
       return new Uint8Array(arrayBufferFromKey);
     }
@@ -102,17 +105,9 @@ export const copyLargeBlobsToCloud = async (
         const hash = await sha256Buffer(uint8ArrayIfBig);
         // but not if we already have, since these files are immutable
         if (!AlreadyUploaded[hash]) {
-          const urlGetUpload = `${address}/upload/${hash}`;
-          // console.log('urlGetUpload', urlGetUpload);
-          // @ts-ignore: TS2353
-          const resp = await fetch(urlGetUpload, { redirect: "follow" });
-          if (!resp.ok) {
-            throw new Error(
-              `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`,
-            );
-          }
-          const json: { url: string; ref: DataRef } = await resp.json();
-          const responseUpload = await fetch(json.url, {
+          const urlUpload = `${address}/api/v1/upload/${hash}`;
+          // Then upload directly to S3/MinIO using the presigned URL
+          const responseUpload = await fetch(urlUpload, {
             // @ts-ignore: TS2353
             method: "PUT",
             // @ts-ignore: TS2353
@@ -120,13 +115,20 @@ export const copyLargeBlobsToCloud = async (
             body: uint8ArrayIfBig,
             headers: { "Content-Type": "application/octet-stream" },
           });
-          await responseUpload.text();
-          result[name] = json.ref; // the server gave us this ref to use
+          if (!responseUpload.ok) {
+            throw new Error(`Failed to get upload URL: ${urlUpload}`);
+          }
+
+          const ref: DataRef = {
+            value: `${address}/api/v1/download/${hash}`,
+            type: DataRefType.url,
+          };
+          result[name] = ref; // the server gave us this ref to use
           AlreadyUploaded[hash] = true;
         } else {
           result[name] = {
-            value: hash,
-            type: DataRefType.key,
+            value: `${address}/api/v1/download/${hash}`,
+            type: DataRefType.url,
           };
         }
       } else {
@@ -211,6 +213,9 @@ const fetchBlobFromUrl = async (url: string): Promise<ArrayBuffer> => {
     redirect: "follow",
     headers: { "Content-Type": "application/octet-stream" },
   });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch URL: ${url}`);
+  }
   const arrayBuffer = await response.arrayBuffer();
   return arrayBuffer;
 };
@@ -237,17 +242,11 @@ export const urlToUint8Array = async (url: string): Promise<Uint8Array> => {
   return new Uint8Array(arrayBuffer);
 };
 
-const fetchBlobFromHash = async (
+const fetchBlobFromHash = (
   hash: string,
   address: string,
 ): Promise<ArrayBuffer> => {
-  const resp = await fetch(`${address}/download/${hash}`, {
-    // @ts-ignore: TS2353
-    redirect: "follow",
-  });
-  const json: { url: string; ref: DataRef } = await resp.json();
-  const arrayBuffer = await fetchBlobFromUrl(json.url);
-  return arrayBuffer;
+  return fetchBlobFromUrl(`${address}/api/v1/download/${hash}`);
 };
 
 const _encoder = new TextEncoder();
