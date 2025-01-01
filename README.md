@@ -57,11 +57,8 @@ flowchart LR
 - `deno`: https://docs.deno.com/runtime/manual/getting_started/installation
 - `mkcert`: https://github.com/FiloSottile/mkcert
   - ❗ 👉 Make sure you run `mkcert -install` ❗
-  - Add `127.0.0.1   app.metapage.localhost` to `/etc/hosts` by
-  - `sudo vi /etc/hosts`
-  - Then paste in:
-    - `127.0.0.1       app.metapage.localhost`
 
+Run the local stack:
 ```
 just dev
 ```
@@ -76,6 +73,13 @@ hono webserver).
 
 You can edit browser code, worker code, api code, and CLI and everything
 automatically updates.
+
+### Tests
+
+ - `just test`: runs the entire test suite, creating a new local stack
+   - runs on every push to non-main branches
+ - `just api/test/watch`: (requires a running local stack) runs functional tests, currently only permissions
+   - see `just api/test` for more test related commands
 
 ### Start each service separately
 
@@ -171,6 +175,4 @@ used directly, or a git repo can be given, and the docker image built directly.
 This repo contains all the infrastructure for the queues, workers, and examples
 of cloud providers managing the horizintal scaling worker fleets.
 
-## Misc testing
 
-[local](http://localhost:8080/)

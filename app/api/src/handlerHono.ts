@@ -6,10 +6,12 @@ import {
 } from "https://deno.land/x/hono@v4.1.0-rc.1/middleware/cors/index.ts";
 import { Context, Hono } from "https://deno.land/x/hono@v4.1.0-rc.1/mod.ts";
 
-import { downloadHandler } from "./routes/download.ts";
+import { downloadHandler } from "./routes/api/v1/download.ts";
 import { statusHandler } from "./routes/status.ts";
 import { metricsHandler } from "./routes/metrics.ts";
-import { uploadHandler } from "./routes/upload.ts";
+import { uploadHandler } from "./routes/api/v1/upload.ts";
+import { uploadHandler as uploadHandlerDeprecated } from "./routes/deprecated/upload.ts";
+import { downloadHandler as downloadHandlerDeprecated } from "./routes/deprecated/download.ts";
 
 const app = new Hono();
 
@@ -32,8 +34,15 @@ app.use("/*", cors() // cors({
 
 // Put your custom routes here
 app.get("/healthz", (c: Context) => c.text("OK"));
-app.get("/download/:key", downloadHandler);
-app.get("/upload/:key", uploadHandler);
+
+app.get("/api/v1/download/:key", downloadHandler);
+app.put("/api/v1/upload/:key", uploadHandler);
+
+// @deprecated
+app.get("/upload/:key", uploadHandlerDeprecated);
+// @deprecated
+app.get("/download/:key", downloadHandlerDeprecated);
+
 app.get("/:queue/status", statusHandler);
 app.get("/:queue/metrics", metricsHandler);
 

@@ -23,9 +23,12 @@ services:
     restart: always
     volumes:
       - .cache/minio:/data
+    networks:
+      - default
     labels:
       - "custom.label=worker-metaframe.localhost"
       - "traefik.enable=true"
+      # - "traefik.http.routers.minio.rule=Host(`minio.worker-metaframe.localhost`) || Host(`minio.worker-metaframe.localhost`)"
       - "traefik.http.routers.minio.rule=Host(`minio.worker-metaframe.localhost`)"
       - "traefik.http.routers.minio.entrypoints=websecure"
       # Apply the CORS middleware to the router
@@ -70,11 +73,15 @@ services:
       - .cache/traefik/certs:/etc/certs:ro
       - .traefik/config.yml:/etc/traefik/config.yml
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - default
 
   redis:
     image: redis:7.2.4
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+    networks:
+      - default
 
 networks:
   default:

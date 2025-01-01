@@ -13,11 +13,11 @@ Deno.test("test docker building", async () => {
         stream,
         (err: any, res: any) => err ? reject(err) : resolve(res),
         (progressEvent: Event) => {
-          console.log(progressEvent);
+          // console.log(progressEvent);
         },
       );
     });
-    console.log("Built image");
+    // console.log("Built image");
   } catch (error) {
     console.error("Error building image:", error);
     close();

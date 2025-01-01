@@ -73,11 +73,11 @@ green := "\\e[32m"
     deno fmt {{ args }}
     find . -name justfile -exec just --fmt --unstable -f {} {{ args }} \;
 
-status queue="local1":
-    curl https://{{ APP_FQDN }}:{{ APP_PORT }}/{{ queue }}/status | jq .
+status-dev:
+    curl https://{{ APP_FQDN }}:{{ APP_PORT }}/local1/status | jq .
 
-status-test queue="local1":
-    APP_PORT=4470 curl https://{{ APP_FQDN }}:4470/{{ queue }}/status | jq .
+status-test port:
+    curl https://{{ APP_FQDN }}:{{ port }}/local1/status | jq .
 
 status-prod queue="public1":
     curl https://container.mtfm.io/{{ queue }}/status | jq .
@@ -87,7 +87,8 @@ test: check
     set -e # exit when any command fails, preserving the status of the failed command
 
     cleanup() {
-        docker compose --project-name=test -f docker-compose.yml -f docker-compose-remote.yml down 2>/dev/null || true
+        echo "Cleaning up test stack..."
+        docker compose --project-name=test -f docker-compose.yml -f docker-compose-remote.yml -f docker-compose-test.yml down 2>/dev/null || true
     }
 
     trap cleanup EXIT # cleanup when the script exits for any reason, including failure
@@ -132,8 +133,9 @@ test: check
     # This is causing currently unknown issues, a dangling worker 
     docker rm test-worker-1 2>/dev/null || true
     docker compose --project-name=test -f docker-compose.yml -f docker-compose-remote.yml up --build --remove-orphans --detach
+    # functional tests
+    just test/test-in-docker
     just worker/test
-    just test/test
     just shared/test
     just cli/test
 
@@ -150,7 +152,7 @@ _mkcert: _ensure_mkcert
     #!/usr/bin/env bash
     rm -rf .cache/traefik/certs
     mkdir -p .cache/traefik/certs/ ;
-    mkcert -cert-file .cache/traefik/certs/local-cert.pem -key-file .cache/traefik/certs/local-key.pem {{ APP_FQDN }} minio.{{ APP_FQDN }} localhost ;
+    mkcert -cert-file .cache/traefik/certs/local-cert.pem -key-file .cache/traefik/certs/local-key.pem {{ APP_FQDN }} minio.{{ APP_FQDN }} worker-metaframe.localhost worker-metaframe-api2.dev minio.worker-metaframe.localhost localhost ;
     if grep -q "{{ APP_FQDN }}" /etc/hosts; then
         echo -e "✅ Hostname {{ APP_FQDN }} found in /etc/hosts"
     else
