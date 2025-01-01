@@ -45,7 +45,7 @@ green := "\\e[32m"
 deploy version="":
     #!/usr/bin/env bash
     set -euo pipefail
-    
+
     # Get version argument or bump current version
     VERSION={{ version }}
     if [ "$VERSION" = "" ]; then
