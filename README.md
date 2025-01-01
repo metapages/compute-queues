@@ -1,5 +1,15 @@
 # Compute queues and the worker to run them all
 
+## High level commands:
+
+ - develop: `just dev`
+ - bump or set a new version and publish artifacts: `just deploy`
+ - test the entire project: `just test`
+
+Finer commands are `just` in subdirectories.
+
+## Overview
+
 **Quick links:**
 
 - `production api`: https://container.mtfm.io/

@@ -53,3 +53,14 @@ jobs:
         run: just app/worker/publish-docker-images
         env:
           DOCKER_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get version from mod.json
+        id: get-version
+        run: |
+          VERSION=$(cat app/worker/mod.json | jq -r '.version')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push git tag
+        run: |
+          git tag ${{ steps.get-version.outputs.version }}
+          git push origin ${{ steps.get-version.outputs.version }}

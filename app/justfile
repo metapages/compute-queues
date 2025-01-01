@@ -42,6 +42,32 @@ green := "\\e[32m"
     #!/usr/bin/env bash
     docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml down {{ args }}
 
+deploy version="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    
+    # Get version argument or bump current version
+    VERSION={{ version }}
+    if [ "$VERSION" = "" ]; then
+        # Get current version from mod.json
+        CURRENT_VERSION=$(cat worker/mod.json | jq -r '.version')
+        # Split version into components
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+        # Increment patch version
+        PATCH=$((PATCH + 1))
+        # Construct new version
+        VERSION="$MAJOR.$MINOR.$PATCH"
+    fi
+
+    # Update version in mod.json
+    TMP=$(mktemp)
+    jq ".version = \"$VERSION\"" worker/mod.json > "$TMP" && mv "$TMP" worker/mod.json
+
+    echo "chore: bump version to $VERSION"
+    # Commit changes
+    git add worker/mod.json
+    git commit -m "chore: bump version to $VERSION"
+
 # Clean up the project
 @clean mode="remote" +args="": (_validate_mode mode)
     #!/usr/bin/env bash
