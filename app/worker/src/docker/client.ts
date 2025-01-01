@@ -15,7 +15,7 @@ export const createDockerClient = (port = 3000) => {
     // Listen on TCP port 3000
     tcpListener = Deno.listen({ port });
 
-    console.log(`Listening on TCP port ${port}`);
+    // console.log(`Listening on TCP port ${port}`);
 
     for await (const tcpConn of tcpListener) {
       handleConnection(tcpConn);
@@ -66,7 +66,7 @@ export const createDockerClient = (port = 3000) => {
   // const docker = new Docker({socketPath: "/var/run/docker.sock"});
   const docker = new Docker({ protocol: "http", host: "localhost", port });
   const close = () => {
-    console.log("tcpListener", tcpListener);
+    // console.log("tcpListener", tcpListener);
     closed = true;
     tcpListener?.close();
     unixConn?.close();

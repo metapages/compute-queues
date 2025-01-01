@@ -1,7 +1,7 @@
 #################################################################
 # Base image
 #################################################################
-FROM denoland/deno:2.0.3 AS worker
+FROM denoland/deno:2.1.4 AS worker
 
 ENV DOCKER_VERSION=5:27.1.1-1~debian.12~bookworm
 

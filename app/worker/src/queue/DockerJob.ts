@@ -195,12 +195,6 @@ export const dockerJobExecute = async (
     grabberErrStream.pipe(errStream!);
   }
 
-  const runningContainers: any[] = await docker.listContainers({
-    Labels: {
-      "container.mtfm.io/id": args.id,
-    },
-  });
-
   const finish = async () => {
     try {
       createOptions.image = await ensureDockerImage({
@@ -241,7 +235,7 @@ export const dockerJobExecute = async (
       container = docker.getContainer(existingJobContainer.Id);
     }
 
-    console.log("🚀 createOptions", createOptions);
+    // console.log("🚀 createOptions", createOptions);
 
     if (!container) {
       container = await docker.createContainer(createOptions);

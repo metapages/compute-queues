@@ -2,22 +2,26 @@ set shell := ["bash", "-c"]
 set dotenv-load := true
 set export := true
 
-normal := '\033[0m'
-green := "\\e[32m"
 APP_PORT := env_var_or_default("APP_PORT", "443")
 API_URL := "https://worker-metaframe.localhost:" + APP_PORT
+normal := '\033[0m'
+green := "\\e[32m"
 
 @_help:
     just --list --unsorted --list-heading $'Testing commands:\n'
 
 # Quick type check
 @check:
-    deno check functional_test.ts
+    deno check src
     echo "✅ tests compilation"
 
 @watch:
-    deno test --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv .
+    deno test --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src
 
 @test:
-    deno test --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+    deno test --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv src
     echo "✅ functional tests"
+
+@test-in-docker stack="test":
+    cd .. && \
+    APP_PORT={{ APP_PORT }} docker compose --project-name={{ stack }} -f docker-compose.yml -f docker-compose-remote.yml -f docker-compose-test.yml run --no-deps --rm test deno test --unsafely-ignore-certificate-errors --allow-all src

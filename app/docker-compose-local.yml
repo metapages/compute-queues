@@ -47,7 +47,6 @@ services:
       - default
     extra_hosts:
       - host.docker.internal:host-gateway
-      - local.storage.local.nhost.run:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
       - worker-metaframe.localhost:host-gateway
     labels:
@@ -85,4 +84,3 @@ services:
       - node_modules:/app/browser/node_modules
     extra_hosts:
       - "host.docker.internal:host-gateway"
-

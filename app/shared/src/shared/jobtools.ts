@@ -83,6 +83,27 @@ export const bufferToBase64Ref = async (
   };
 };
 
+// "-L" == follow redirects, very important
+let BaseCurlUploadArgs = ["-X", "PUT", "-L", "--upload-file"];
+// curl hard codes .localhost DNS resolution, so we need to add the resolve flags
+// I tried using something other than .localhost, but it didn't work for all kinds of reasons
+if (IGNORE_CERTIFICATE_ERRORS) {
+  // add the resolve flags from the /etc/hosts file
+  // APP_PORT is only needed for the upload/curl/dns/docker fiasco
+  const APP_PORT = Deno.env.get("APP_PORT") || "443";
+  const hostsFileContents = await await Deno.readTextFile("/etc/hosts");
+  const hostsFileLines = hostsFileContents.split("\n");
+  const resolveFlags = hostsFileLines
+    .filter((line: string) => line.includes("worker-metaframe.localhost"))
+    .map((line: string) => line.split(/\s+/).filter((s) => !!s))
+    .map((parts: string[]) => [
+      "--resolve",
+      `${parts[1]}:${APP_PORT}:${parts[0]}`,
+    ])
+    .flat();
+  BaseCurlUploadArgs = [...resolveFlags, ...BaseCurlUploadArgs];
+}
+
 /**
  * Uses streams to upload files to the bucket
  * @param file
@@ -105,40 +126,42 @@ export const fileToDataref = async (
       return existsRef;
     }
 
-    const urlGetUpload = `${address}/upload/${hash}`;
-    const resp = await fetch(urlGetUpload, { redirect: "follow" });
-    if (!resp.ok) {
-      throw new Error(
-        `Failed to get upload URL from ${urlGetUpload} status=${resp.status}`,
-      );
-    }
-
-    const json: { url: string; ref: DataRef } = await resp.json();
+    const uploadUrl = `${address}/api/v1/upload/${hash}`;
 
     // https://github.com/metapages/compute-queues/issues/46
     // Hack to stream upload files, since fetch doesn't seem
     // to support streaming uploads (even though it should)
     let count = 0;
     const args = IGNORE_CERTIFICATE_ERRORS
-      ? [json.url, "--insecure", "--upload-file", file]
-      : [json.url, "--upload-file", file];
-    await retryAsync(async () => {
-      const command = new Deno.Command("curl", {
-        args,
-      });
-      const { success, stdout, stderr, code } = await command.output();
-      if (!success) {
-        count++;
-        throw new Error(
-          `Failed attempt ${count} to upload ${file} to ${json.url} code=${code} stdout=${
-            new TextDecoder().decode(stdout)
-          } stderr=${new TextDecoder().decode(stderr)}`,
-        );
-      }
-    }, { delay: 1000, maxTry: 5 });
+      ? [uploadUrl, "--insecure", ...BaseCurlUploadArgs, file]
+      : [uploadUrl, ...BaseCurlUploadArgs, file];
+
+    await retryAsync(
+      async () => {
+        const command = new Deno.Command("curl", {
+          args,
+        });
+        const { success, stdout, stderr, code } = await command.output();
+        if (!success) {
+          count++;
+          throw new Error(
+            `Failed attempt ${count} to upload ${file} to ${uploadUrl} code=${code} stdout=${
+              new TextDecoder().decode(
+                stdout,
+              )
+            } stderr=${new TextDecoder().decode(stderr)}`,
+          );
+        }
+      },
+      { delay: 1000, maxTry: 5 },
+    );
     FileHashesUploaded.set(hash, true);
 
-    return json.ref; // the server gave us this ref to use
+    const dataRef: DataRef = {
+      value: `${address}/api/v1/download/${hash}`,
+      type: DataRefType.url,
+    };
+    return dataRef;
   } else {
     const fileBuffer: Uint8Array = await Deno.readFile(file);
     const ref: DataRef = await bufferToBase64Ref(fileBuffer);
@@ -217,19 +240,16 @@ export const dataRefToFile = async (
       return;
     case DataRefType.key:
       // we know how to get this internal cloud referenced
-      const cloudRefUrl = `${address}/download/${ref.value}`;
-      const responseHash = await fetch(cloudRefUrl, { redirect: "follow" });
-
-      const json: { url: string; ref: DataRef } = await responseHash.json();
-      const responseHashUrl = await fetch(json.url, { redirect: "follow" });
+      const cloudRefUrl = `${address}/api/v1/download/${ref.value}`;
+      const responseHashUrl = await fetch(cloudRefUrl, { redirect: "follow" });
       if (!responseHashUrl.ok) {
         throw new Error(
-          `Failed to download="${json.url}" status=${responseHashUrl.status} statusText=${responseHashUrl.statusText}`,
+          `Failed to download="${cloudRefUrl}" status=${responseHashUrl.status} statusText=${responseHashUrl.statusText}`,
         );
       }
       if (!responseHashUrl.body) {
         throw new Error(
-          `Failed to download="${json.url}" status=${responseHashUrl.status} no body in response`,
+          `Failed to download="${cloudRefUrl}" status=${responseHashUrl.status} no body in response`,
         );
       }
 
