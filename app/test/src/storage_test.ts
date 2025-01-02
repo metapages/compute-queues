@@ -16,7 +16,11 @@ import {
   fileToDataref,
 } from "../../shared/src/shared/jobtools.ts";
 
-const API_URL = Deno.env.get("API_URL") || "http://api1:8081";
+// const API_URL = Deno.env.get("API_URL") || "http://api1:8081";
+// const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
+
+const API_URL = "http://worker:8000";
+const QUEUE_ID = "local";
 
 /**
  * Helper to install `curl` if missing.
@@ -170,7 +174,7 @@ Deno.test("Run a job that uploads input files and validates the input", async ()
   // Open the socket
   console.log("Opening websocket to server...");
   const socket = new WebSocket(
-    `${API_URL.replace("http", "ws")}/local1/client`,
+    `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
   );
   await open(socket);
   console.log("Socket opened. Sending job creation message...");
@@ -220,7 +224,7 @@ Deno.test("Run a job that creates output files, downloads and checks the file", 
   // Open the socket
   console.log("Opening websocket to server...");
   const socket = new WebSocket(
-    `${API_URL.replace("http", "ws")}/local1/client`,
+    `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
   );
   await open(socket);
   console.log("Socket opened. Sending job creation message...");

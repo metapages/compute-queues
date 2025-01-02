@@ -46,4 +46,4 @@ green := "\\e[32m"
 
 @test-in-docker mode="remote" stack="test":
     cd ../.. && \
-    APP_PORT={{ APP_PORT }} docker compose --project-name={{ stack }} -f docker-compose.yml -f docker-compose-{{ mode }}.yml -f docker-compose-test.yml run --no-deps --rm test deno test --unsafely-ignore-certificate-errors --allow-all src
+    APP_PORT={{ APP_PORT }} docker compose --project-name={{ stack }} -f docker-compose.yml -f docker-compose-{{ mode }}.yml -f docker-compose-test-{{ mode }}.yml run --no-deps --rm test deno test --unsafely-ignore-certificate-errors --allow-all src

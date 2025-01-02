@@ -98,7 +98,7 @@ if (IGNORE_CERTIFICATE_ERRORS) {
   // add the resolve flags from the /etc/hosts file
   // APP_PORT is only needed for the upload/curl/dns/docker fiasco
   const APP_PORT = Deno.env.get("APP_PORT") || "443";
-  const hostsFileContents = await await Deno.readTextFile("/etc/hosts");
+  const hostsFileContents = Deno.readTextFileSync("/etc/hosts");
   const hostsFileLines = hostsFileContents.split("\n");
   const resolveFlags = hostsFileLines
     .filter((line: string) => line.includes("worker-metaframe.localhost"))
@@ -133,7 +133,9 @@ export const fileToDataref = async (
       return existsRef;
     }
 
-    const uploadUrl = `${address}/api/v1/upload/${hash}`;
+    const uploadUrl = `${
+      address || "http://worker:8000"
+    }/api/v1/upload/${hash}`;
 
     // https://github.com/metapages/compute-queues/issues/46
     // Hack to stream upload files, since fetch doesn't seem

@@ -5,11 +5,20 @@ import {
   type JobStates,
 } from "@metapages/compute-queues-shared";
 import { createHandler } from "metapages/worker/routing/handlerDeno";
+import { ensureDir } from "std/fs";
+import { join } from "std/path";
 
 import {
   BaseDockerJobQueue,
   userJobQueues,
 } from "@metapages/compute-queues-shared";
+
+const TMPDIR = "/tmp/worker-metapage-io";
+const cacheDir = join(TMPDIR, "cache");
+await ensureDir(TMPDIR);
+await ensureDir(cacheDir);
+await Deno.chmod(TMPDIR, 0o777);
+await Deno.chmod(cacheDir, 0o777);
 
 export class LocalDockerJobQueue extends BaseDockerJobQueue {
   constructor(opts: { serverId: string; address: string }) {
@@ -28,7 +37,7 @@ const downloadHandler = async (c: Context) => {
     return c.text("Missing key");
   }
 
-  const filePath = `/app/data/cache/${key}`;
+  const filePath = `${TMPDIR}/cache/${key}`;
 
   try {
     // Check if the file exists
@@ -66,7 +75,7 @@ const uploadHandler = async (c: Context) => {
     return c.text("Missing key");
   }
 
-  const filePath = `/app/data/cache`;
+  const filePath = `${TMPDIR}/cache`;
   const fullFilePath = `${filePath}/${key}`;
 
   try {

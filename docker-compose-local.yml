@@ -61,6 +61,7 @@ services:
     networks:
       - default
     extra_hosts:
+      - worker:host-gateway
       - host.docker.internal:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
       - worker-metaframe.localhost:host-gateway

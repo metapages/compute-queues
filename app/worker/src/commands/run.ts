@@ -253,9 +253,7 @@ export const runCommand = new Command()
     config.mode = mode;
     config.queue = config.mode === "local" ? "local" : queue;
 
-    config.server = config.mode === "local"
-      ? "http://localhost:8000"
-      : (apiServerAddress ?? "");
+    config.server = apiServerAddress ?? "";
 
     if (config.mode === "local") {
       console.log(
@@ -294,7 +292,8 @@ export const runCommand = new Command()
         localHandler,
       );
     } else {
-      config.server = config.server || "";
+      config.server = config.server ||
+        (config.mode === "local" ? "http://worker:8000" : "");
 
       console.log(
         "run %s mode %s with cpus=%s gpu=%s at server %s",
@@ -308,7 +307,9 @@ export const runCommand = new Command()
       await ensureSharedVolume();
 
       connectToServer({
-        server: config.server || "",
+        server: config.mode === "local"
+          ? "http://localhost:8000"
+          : config.server,
         queueId: config.queue,
         cpus: config.cpus,
         gpus: config.gpus,
