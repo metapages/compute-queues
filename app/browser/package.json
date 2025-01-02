@@ -19,7 +19,7 @@
     "@emotion/react": "^11.10.4",
     "@emotion/styled": "^11.10.4",
     "@fontsource-variable/jetbrains-mono": "^5.0.23",
-    "@metapages/hash-query": "^0.7.7",
+    "@metapages/hash-query": "^0.8.0",
     "@metapages/metaframe-chakra-theme": "^0.0.8",
     "@metapages/metapage": "^1.4.4",
     "@metapages/metapage-react": "^0.2.0",
