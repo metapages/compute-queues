@@ -25,7 +25,7 @@ import { cacheInsteadOfSendMessages, useStore } from "../store";
  * Sets states bits in the store
  */
 export const serverWebsocket = (): void => {
-  const [queue] = useHashParam("queue");
+  const [queueOrUrl] = useHashParam("queue");
 
   const setIsServerConnected = useStore((state) => state.setIsServerConnected);
 
@@ -42,14 +42,25 @@ export const serverWebsocket = (): void => {
   );
 
   useEffect(() => {
-    if (!queue || queue === "") {
+    if (!queueOrUrl || queueOrUrl === "") {
       return;
     }
+    let queue: string = queueOrUrl;
+    let origin: string | undefined;
+    if (queueOrUrl.startsWith("http")) {
+      const urlBlob = new URL(queueOrUrl);
+      queue = urlBlob.pathname.replace("/", "");
+      origin = urlBlob.origin + "/";
+    }
+
     const url = `${
-      queue === "local"
+      queue === "local" && !origin
         ? websocketConnectionUrlLocalmode
+        : origin
+        ? origin
         : websocketConnectionUrl
     }${queue}/client`;
+
     setIsServerConnected(false);
     const rws = new ReconnectingWebSocket(url);
     let timeLastPong = Date.now();
@@ -169,5 +180,5 @@ export const serverWebsocket = (): void => {
       setIsServerConnected(false);
       setSendMessage(cacheInsteadOfSendMessages);
     };
-  }, [queue, setSendMessage, setIsServerConnected, setRawMessage]);
+  }, [queueOrUrl, setSendMessage, setIsServerConnected, setRawMessage]);
 };
