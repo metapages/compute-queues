@@ -57,6 +57,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - deno:/deno
       - node_modules:/app/node_modules
+      - ./data:/app/data
     networks:
       - default
     extra_hosts:

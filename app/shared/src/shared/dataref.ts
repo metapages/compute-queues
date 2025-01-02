@@ -5,7 +5,11 @@ import {
   type InputsRefs,
 } from "/@/shared/types.ts";
 
-import { fetchRobust as fetch, sha256Buffer } from "/@/shared/util.ts";
+import {
+  fetchRobust as fetch,
+  sanitizeFilename,
+  sha256Buffer,
+} from "/@/shared/util.ts";
 
 import { decodeBase64 } from "/@/shared/base64.ts";
 
@@ -46,6 +50,13 @@ export const dataRefToBuffer = async (
       );
       return new Uint8Array(arrayBufferFromKey);
     }
+    case DataRefType.local: {
+      const filePath = `/app/data/cache/${
+        ref.hash ?? sanitizeFilename(ref.value)
+      }`;
+      const arrayBufferFromLocal = await Deno.readFile(filePath);
+      return new Uint8Array(arrayBufferFromLocal);
+    }
     default: // undefined assume DataRefType.Base64
       throw `Not yet implemented: DataRef.type "${ref.type}" unknown`;
   }
@@ -60,6 +71,7 @@ const AlreadyUploaded: { [hash: string]: boolean } = {};
 export const copyLargeBlobsToCloud = async (
   inputs: InputsRefs | undefined,
   address: string,
+  localMode: boolean = false,
 ): Promise<InputsRefs | undefined> => {
   if (!inputs || Object.keys(inputs).length === 0) {
     return;
@@ -95,7 +107,9 @@ export const copyLargeBlobsToCloud = async (
             uint8ArrayIfBig = utf8ToBuffer(inputs[name].value);
           }
           break;
-
+        case DataRefType.local:
+          // this is already local. no need to re-upload
+          break;
         default:
       }
 
@@ -119,10 +133,16 @@ export const copyLargeBlobsToCloud = async (
             throw new Error(`Failed to get upload URL: ${urlUpload}`);
           }
 
-          const ref: DataRef = {
-            value: `${address}/api/v1/download/${hash}`,
-            type: DataRefType.url,
-          };
+          const ref: DataRef = localMode
+            ? {
+              value: name,
+              type: DataRefType.local,
+              hash: hash,
+            }
+            : {
+              value: `${address}/api/v1/download/${hash}`,
+              type: DataRefType.url,
+            };
           result[name] = ref; // the server gave us this ref to use
           AlreadyUploaded[hash] = true;
         } else {
@@ -198,6 +218,27 @@ export const convertJobOutputDataRefsToExpectedFormat = async (
         case DataRefType.utf8:
           newOutputs[name] = outputs[name].value; //Unibabel.utf8ToBase64(outputs[name].value);
           break;
+        case DataRefType.local: {
+          const filePath = `/app/data/cache/${outputs[name].hash}`;
+          try {
+            const buffer = await Deno.readFile(filePath);
+            const internalBlobRefFromLocal: DataRefSerializedBlob = {
+              _c: Blob.name,
+              _s: true,
+              value: bufferToBase64(buffer),
+              size: buffer.byteLength,
+              fileType: undefined, // TODO: can we figure this out?
+            };
+            newOutputs[name] = internalBlobRefFromLocal;
+          } catch (e) {
+            console.error(`Error reading local file: ${filePath}`, e);
+            // Depending on your error handling strategy, you might want to:
+            // - throw the error to stop processing
+            // - return a default value or an error indicator
+            // - continue to the next output
+          }
+          break;
+        }
       }
     }),
   );

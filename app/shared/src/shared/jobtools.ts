@@ -18,7 +18,11 @@ import {
   type WebsocketMessageClientToServer,
   WebsocketMessageTypeClientToServer,
 } from "/@/shared/types.ts";
-import { fetchRobust as fetch, shaDockerJob } from "/@/shared/util.ts";
+import {
+  fetchRobust as fetch,
+  sanitizeFilename,
+  shaDockerJob,
+} from "/@/shared/util.ts";
 
 const IGNORE_CERTIFICATE_ERRORS: boolean =
   Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
@@ -273,7 +277,35 @@ export const dataRefToFile = async (
       await responseHashUrl.body.pipeTo(downloadFileForHash.writable);
       return;
     }
-    default: // undefined assume DataRefType.Base64
+    case DataRefType.local: {
+      const cachedFilePath = `/app/data/cache/${
+        ref.hash ?? sanitizeFilename(ref.value)
+      }`;
+
+      try {
+        if (!(await Deno.stat(cachedFilePath)).isFile) throw new Error();
+      } catch (_) {
+        throw new Error(
+          `Source file not found or not a file: ${cachedFilePath}`,
+        );
+      }
+
+      try {
+        await Deno.lstat(filename);
+        console.log(`Link already exists: ${filename}`);
+      } catch (error) {
+        if (error instanceof Deno.errors.NotFound) {
+          await Deno.link(cachedFilePath, filename);
+          console.log(
+            `Created hard link: ${filename} -> ${cachedFilePath}`,
+          );
+        } else {
+          throw error;
+        }
+      }
+      break;
+    }
+    default:
       throw `Not yet implemented: DataRef.type === undefined or unrecognized value="${ref.type}"`;
   }
 };

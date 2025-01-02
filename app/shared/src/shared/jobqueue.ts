@@ -380,9 +380,9 @@ export class BaseDockerJobQueue {
       this.checkForSourceConflicts();
     }, INTERVAL_CHECK_FOR_DUPLICATE_JOBS_SAME_SOURCE);
 
-    // this._intervalRemoveOldFinishedJobsFromQueue = setInterval(() => {
-    //   this.removeOldFinishedJobsFromQueue();
-    // }, INTERVAL_REMOVE_OLD_FINISHED_JOBS_FROM_QUEUE);
+    this._intervalRemoveOldFinishedJobsFromQueue = setInterval(() => {
+      this.removeOldFinishedJobsFromQueue();
+    }, INTERVAL_REMOVE_OLD_FINISHED_JOBS_FROM_QUEUE);
   }
 
   /**
@@ -749,9 +749,9 @@ export class BaseDockerJobQueue {
       // and remove old jobs from the queue. the results
       // have already been persisted in the db
       if (change.state === DockerJobState.Finished) {
-        // setTimeout(() => {
-        //   this.removeOldFinishedJobsFromQueue();
-        // }, MAX_TIME_FINISHED_JOB_IN_QUEUE);
+        setTimeout(() => {
+          this.removeOldFinishedJobsFromQueue();
+        }, MAX_TIME_FINISHED_JOB_IN_QUEUE);
       }
     };
 

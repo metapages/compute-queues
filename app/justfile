@@ -179,7 +179,7 @@ test mode="remote" +args="": (_validate_mode mode)
     just shared/build
     docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml -f ../docker-compose-test.yml up --build --remove-orphans --detach
     # functional tests
-    just test/test-in-docker
+    just test/test-in-docker {{ mode }}
     just worker/test
     just shared/test
     just cli/test
