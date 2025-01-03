@@ -105,10 +105,16 @@ const uploadHandler = async (c: Context) => {
     return c.text((err as Error).message, 500);
   }
 };
+
 app.use("*", async (c, next) => {
   const req = c.req;
-  c.header("Access-Control-Allow-Origin", "*");
-  c.header("Access-Control-Allow-Credentials", "true");
+  const origin = req.header("Origin");
+
+  if (origin) {
+    c.header("Access-Control-Allow-Origin", origin);
+    c.header("Access-Control-Allow-Credentials", "true");
+  }
+
   if (req.method === "OPTIONS") {
     const requestedHeaders = req.header("Access-Control-Request-Headers") ??
       "*";
@@ -117,6 +123,7 @@ app.use("*", async (c, next) => {
     c.header("Access-Control-Max-Age", "86400");
     return c.text("", 204);
   }
+
   await next();
 });
 
