@@ -131,6 +131,7 @@ export const dockerJobExecute = (
     Labels: {
       "container.mtfm.io/id": args.id,
     },
+    User: `${Deno.uid()}:${Deno.gid()}`,
   };
 
   createOptions.Env.push("JOB_INPUTS=/inputs");
