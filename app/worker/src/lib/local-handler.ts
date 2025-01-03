@@ -78,6 +78,10 @@ const uploadHandler = async (c: Context) => {
   const filePath = `${TMPDIR}/cache`;
   const fullFilePath = `${filePath}/${key}`;
 
+  console.log("XXXXXXXXXXXXXXXXXX");
+  console.log("uploading file", fullFilePath);
+  console.log("XXXXXXXXXXXXXXXXXX");
+
   try {
     // Create directory if it doesn't exist
     await Deno.mkdir(filePath, { recursive: true, mode: 0o777 });

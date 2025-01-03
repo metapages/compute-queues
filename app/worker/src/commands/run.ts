@@ -256,7 +256,7 @@ export const runCommand = new Command()
     config.server = apiServerAddress ?? "";
 
     if (config.mode === "local") {
-      config.server = config.server || "http://worker:8000";
+      config.server = config.server || "http://localhost:8000";
 
       console.log(
         "run %s mode %s with cpus=%s gpu=%s at server %s",
