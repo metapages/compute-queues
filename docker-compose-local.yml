@@ -1,14 +1,5 @@
 services:
   worker:
-    depends_on:
-      traefik:
-        condition: service_started
-      minio:
-        condition: service_healthy
-      denokv:
-        condition: service_started
-      redis:
-        condition: service_healthy
     entrypoint: [
       "deno",
       "run",
@@ -16,7 +7,6 @@ services:
       "--watch",
       "--allow-all",
       "--unstable-kv",
-      "--unstable-broadcast-channel",
       "src/cli.ts",
     ]
     command: run --mode=local --cpus=2 --gpus=0 local
@@ -40,8 +30,6 @@ services:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
-      - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
-      - DENO_KV_URL=http://denokv:4512
     volumes:
       - ./deno.json:/app/deno.json
       - ./app/shared:/app/app/shared
@@ -54,18 +42,7 @@ services:
     networks:
       - default
     extra_hosts:
-      - worker:host-gateway
       - host.docker.internal:host-gateway
-      - minio.worker-metaframe.localhost:host-gateway
-      - worker-metaframe.localhost:host-gateway
-    labels:
-      - "custom.label=worker-metaframe.localhost"
-      - "traefik.enable=true"
-      - "traefik.http.routers.worker.rule=Host(`worker-metaframe.localhost`)"
-      - "traefik.http.routers.worker.tls=true"
-      - "traefik.http.routers.worker.entrypoints=websecure"
-      - "traefik.http.services.worker.loadbalancer.server.port=8000"
-      - "traefik.http.services.worker.loadbalancer.server.scheme=http"
     logging:
       driver: ${LOGGING_WORKER:-json-file}
 
@@ -77,7 +54,7 @@ services:
     working_dir: /app/app/browser
     environment:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
-      - SERVER_ORIGIN=https://worker-metaframe.localhost:${APP_PORT:-443}
+      # - SERVER_ORIGIN=https://worker-metaframe.localhost:${APP_PORT:-443}
     volumes:
       - deno:/deno
       - .:/app
@@ -85,14 +62,3 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # deno.kv in the cloud is a shared db, in docker-compose we need to
-  # run it as a service to replicate the behavior
-  denokv:
-    image: ghcr.io/denoland/denokv
-    command: --sqlite-path /data/denokv.sqlite serve --access-token localdenoaccesstoken
-    volumes:
-      - denokv:/data
-
-volumes:
-  denokv:
-    driver: local
