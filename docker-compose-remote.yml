@@ -1,5 +1,4 @@
 services:
-
   api1:
     depends_on:
       traefik:
@@ -214,7 +213,6 @@ services:
       - deno:/deno
     networks:
       - default
-  
   minio:
     depends_on:
       traefik:
@@ -314,4 +312,3 @@ services:
 volumes:
   denokv:
     driver: local
-
