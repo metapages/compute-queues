@@ -328,7 +328,9 @@ export const dataRefToFile = async (
   }
 };
 
-const hashFileOnDisk = async (filePath: string): Promise<string> => {
+export const hashFileOnDisk: (filePath: string) => Promise<string> = async (
+  filePath: string,
+): Promise<string> => {
   const file = await Deno.open(filePath, { read: true });
   const readableStream = file.readable;
   const fileHashBuffer = await crypto.subtle.digest("SHA-256", readableStream);

@@ -1,14 +1,18 @@
 import { emptyDir, ensureDir, exists } from "std/fs";
-import { join } from "std/path";
+import { dirname, join } from "std/path";
 import klaw from "klaw";
 
 import { config } from "/@/config.ts";
 import {
+  type DataRef,
   dataRefToFile,
+  DataRefType,
   type DockerJobDefinitionInputRefs,
   type DockerJobDefinitionRow,
   fileToDataref,
+  hashFileOnDisk,
   type InputsRefs,
+  sanitizeFilename,
 } from "@metapages/compute-queues-shared";
 import type { Volume } from "/@/queue/DockerJob.ts";
 
@@ -94,6 +98,25 @@ export const convertIOToVolumeMounts = async (
   return result;
 };
 
+const getLocalDataRef = async (file: string, address: string) => {
+  const hash = await hashFileOnDisk(file);
+  const sanitizedHash = sanitizeFilename(hash);
+  const cachedFilePath = `${TMPDIR}/cache/${sanitizedHash}`;
+  await ensureDir(dirname(cachedFilePath));
+
+  const fileExists = await exists(cachedFilePath);
+  if (!fileExists) {
+    await Deno.copyFile(file, cachedFilePath);
+  }
+
+  const dataRef: DataRef = {
+    value: `${address}/api/v1/download/${sanitizedHash}`,
+    type: DataRefType.url,
+    hash,
+  };
+  return dataRef;
+};
+
 /**
  * Converts file outputs to datarefs (small JSON references to files in the cloud)
  * @param job
@@ -114,11 +137,10 @@ export const getOutputs = async (
   const files = await getFiles(outputsDir);
 
   for (const file of files) {
-    // This will send big blobs to the cloud
-    const ref = await fileToDataref(
-      file,
-      config.server,
-    );
+    // This will send big blobs to the cloud unless local mode
+    const ref = await (config.mode === "local"
+      ? getLocalDataRef(file, config.server)
+      : fileToDataref(file, config.server));
     outputs[file.replace(`${outputsDir}/`, "")] = ref;
   }
 
