@@ -20,7 +20,7 @@ green := "\\e[32m"
     @if [ "{{ mode }}" = "remote" ] || [ "{{ mode }}" = "local" ]; then :; else echo "Error: Mode must be 'remote' or 'local'" >&2; exit 1; fi
 
 # Develop: open the browser and start the dev stack [remote|local]
-@dev mode="remote" +args="": (_validate_mode mode) _build_shared _ensure-all open (_up mode args)
+@dev mode="remote" +args="": (_validate_mode mode) _build_shared _ensure-all (open mode) (_up mode args)
 
 # Start the docker compose local stack
 @_up mode="remote" +args="": (_validate_mode mode) _ensure-all _mkcert _build_shared
@@ -157,8 +157,13 @@ test mode="remote" +args="": check (_validate_mode mode)
     rm -rf .cache
 
 # Open the browser to the local frontend
-@open: _ensure-all
-    deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{ APP_FQDN }}:{{ APP_PORT }}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1' || true
+open mode="remote": _ensure-all
+    #!/usr/bin/env bash
+    if [ "{{ mode }}" = "local" ]; then
+        deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=http://localhost:8000#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local' || true
+    else
+        deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{ APP_FQDN }}:{{ APP_PORT }}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1' || true
+    fi
 
 # Quick compilation checks
 @check: _ensure-all
