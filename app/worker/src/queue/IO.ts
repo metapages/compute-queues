@@ -104,9 +104,11 @@ const getLocalDataRef = async (file: string, address: string) => {
   const cachedFilePath = `${TMPDIR}/cache/${sanitizedHash}`;
   await ensureDir(dirname(cachedFilePath));
 
-  const fileExists = await exists(cachedFilePath);
-  if (!fileExists) {
-    await Deno.copyFile(file, cachedFilePath);
+  if (await exists(cachedFilePath)) {
+    await Deno.remove(file);
+    await Deno.link(cachedFilePath, file);
+  } else {
+    await Deno.link(file, cachedFilePath);
   }
 
   const dataRef: DataRef = {
