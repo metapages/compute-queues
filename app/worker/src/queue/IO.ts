@@ -2,7 +2,7 @@ import { emptyDir, ensureDir, exists } from "std/fs";
 import { join } from "std/path";
 import klaw from "klaw";
 
-import { config } from "../config.ts";
+import { config } from "/@/config.ts";
 import {
   dataRefToFile,
   type DockerJobDefinitionInputRefs,
@@ -77,7 +77,7 @@ export const convertIOToVolumeMounts = async (
   if (definition?.configFiles) {
     for (const [name, ref] of Object.entries(definition.configFiles)) {
       const isAbsolutePath = name.startsWith("/");
-      let hostFilePath = isAbsolutePath
+      const hostFilePath = isAbsolutePath
         ? join(configFilesDir, name)
         : join(inputsDir, name);
       await dataRefToFile(ref, hostFilePath, address);
@@ -117,7 +117,7 @@ export const getOutputs = async (
     // This will send big blobs to the cloud
     const ref = await fileToDataref(
       file,
-      config.server || (config.mode === "local" ? "http://worker:8000" : ""),
+      config.server,
     );
     outputs[file.replace(`${outputsDir}/`, "")] = ref;
   }
@@ -142,10 +142,10 @@ const getFiles = async (path: string): Promise<string[]> => {
     const files: string[] = []; // files, full path
     klaw(path)
       // .pipe(excludeDirFilter)
-      .on("data", (item: any) => {
+      .on("data", (item: unknown) => {
         if (item && !item.stats.isDirectory()) files.push(item.path);
       })
-      .on("error", (err: any, item: any) => {
+      .on("error", (err: unknown, item: unknown) => {
         console.error(`error on item`, item);
         console.error(err);
         reject(err);

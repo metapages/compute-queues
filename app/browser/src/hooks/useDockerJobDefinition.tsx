@@ -57,9 +57,6 @@ export const useDockerJobDefinition = () => {
   // When all the things are updated, set the new job definition
   const setNewJobDefinition = useStore(state => state.setNewJobDefinition);
 
-  const [queue] = useHashParam("queue", "");
-  const isLocalMode = queue === "local";
-
   // if the URL inputs change, or the metaframe inputs change, maybe update the store.newJobDefinition
   useEffect(() => {
     let cancelled = false;
@@ -153,15 +150,11 @@ export const useDockerJobDefinition = () => {
       // at this point, these inputs *could* be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
 
-      definition.inputs = await copyLargeBlobsToCloud(definition.inputs, UPLOAD_DOWNLOAD_BASE_URL, isLocalMode);
+      definition.inputs = await copyLargeBlobsToCloud(definition.inputs, UPLOAD_DOWNLOAD_BASE_URL);
       if (cancelled) {
         return;
       }
-      definition.configFiles = await copyLargeBlobsToCloud(
-        definition.configFiles,
-        UPLOAD_DOWNLOAD_BASE_URL,
-        isLocalMode,
-      );
+      definition.configFiles = await copyLargeBlobsToCloud(definition.configFiles, UPLOAD_DOWNLOAD_BASE_URL);
       if (cancelled) {
         return;
       }

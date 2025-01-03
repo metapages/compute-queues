@@ -1,3 +1,4 @@
+import { Sha256 } from "https://deno.land/x/deno@v1.3.1/std/hash/sha256.ts";
 import {
   type DataRef,
   type DockerJobDefinitionInputRefs,
@@ -115,6 +116,27 @@ export const shaObject = (obj: unknown): Promise<string> => {
   const orderedStringFromObject = stringify(obj);
   const msgBuffer = new TextEncoder().encode(orderedStringFromObject);
   return sha256Buffer(msgBuffer);
+};
+
+export const sha256Stream = async (
+  stream: ReadableStream<Uint8Array>,
+): Promise<string> => {
+  const hash = new Sha256();
+  const reader = stream.getReader();
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      hash.update(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return hash.toString();
 };
 
 export const sha256Buffer = async (buffer: Uint8Array): Promise<string> => {

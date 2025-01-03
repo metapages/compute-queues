@@ -12,7 +12,6 @@ export enum DataRefType {
   // the internal system can get this data blob given the key address (stored in the value)
   // this is typically the sha256 hash of the data
   key = "key",
-  local = "local",
 }
 
 const DataRefTypeKeys: string[] = Object.keys(DataRefType).filter((key) =>

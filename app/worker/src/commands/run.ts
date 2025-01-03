@@ -256,6 +256,8 @@ export const runCommand = new Command()
     config.server = apiServerAddress ?? "";
 
     if (config.mode === "local") {
+      config.server = config.server || "http://worker:8000";
+
       console.log(
         "run %s mode %s with cpus=%s gpu=%s at server %s",
         config.queue,
@@ -292,9 +294,6 @@ export const runCommand = new Command()
         localHandler,
       );
     } else {
-      config.server = config.server ||
-        (config.mode === "local" ? "http://worker:8000" : "");
-
       console.log(
         "run %s mode %s with cpus=%s gpu=%s at server %s",
         config.queue,

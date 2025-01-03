@@ -154,7 +154,7 @@ test mode="remote" +args="": (_validate_mode mode)
 
     # Set API_URL and QUEUE_ID based on mode
     if [ "{{ mode }}" = "local" ]; then
-        export API_URL="http://worker:8000"
+        export API_URL="https://worker-metaframe.localhost:{{ APP_PORT }}"
         export QUEUE_ID="local"
     else
         export API_URL="http://api1:8081"

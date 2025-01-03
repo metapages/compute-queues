@@ -18,6 +18,7 @@ services:
       - IGNORE_CERTIFICATE_ERRORS=true
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - API_URL=http://worker:8000
+      - QUEUE_ID=local
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}

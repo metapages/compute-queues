@@ -1,4 +1,4 @@
-import { ensureDir } from "std/fs";
+import { ensureDir, exists } from "std/fs";
 import { dirname } from "std/path";
 import { retryAsync } from "retry";
 import { crypto } from "@std/crypto";
@@ -6,7 +6,10 @@ import { encodeHex } from "@std/encoding";
 import { LRUCache } from "lru-cache";
 
 import { decodeBase64 } from "/@/shared/base64.ts";
-import { ENV_VAR_DATA_ITEM_LENGTH_MAX } from "/@/shared/dataref.ts";
+import {
+  ENV_VAR_DATA_ITEM_LENGTH_MAX,
+  fetchBlobFromHash,
+} from "/@/shared/dataref.ts";
 import {
   type DataRef,
   DataRefType,
@@ -19,10 +22,13 @@ import {
   WebsocketMessageTypeClientToServer,
 } from "/@/shared/types.ts";
 import {
-  fetchRobust as fetch,
+  fetchRobust,
   sanitizeFilename,
+  sha256Stream,
   shaDockerJob,
 } from "/@/shared/util.ts";
+
+const TMPDIR = "/tmp/worker-metapage-io";
 
 const IGNORE_CERTIFICATE_ERRORS: boolean =
   Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
@@ -133,9 +139,7 @@ export const fileToDataref = async (
       return existsRef;
     }
 
-    const uploadUrl = `${
-      address || "http://worker:8000"
-    }/api/v1/upload/${hash}`;
+    const uploadUrl = `${address}/api/v1/upload/${hash}`;
 
     // https://github.com/metapages/compute-queues/issues/46
     // Hack to stream upload files, since fetch doesn't seem
@@ -215,6 +219,7 @@ export const dataRefToFile = async (
   const dir = dirname(filename);
   await ensureDir(dir);
   let errString: string;
+
   switch (ref.type) {
     case DataRefType.base64: {
       const bytes = decodeBase64(ref.value as string);
@@ -230,85 +235,96 @@ export const dataRefToFile = async (
       return;
     }
     case DataRefType.url: {
-      const downloadFile = await Deno.open(filename, {
-        create: true,
-        write: true,
-      });
+      if (ref.hash) {
+        const sanitizedHash = sanitizeFilename(ref.hash);
+        const cachedFilePath = `${TMPDIR}/cache/${sanitizedHash}`;
+        const cacheExists = await exists(cachedFilePath);
 
-      // @ts-ignore: TS2353
-      const responseUrl = await fetch(ref.value, { redirect: "follow" });
-      if (!responseUrl.ok) {
-        errString =
-          `Failed to download="${ref.value}" status=${responseUrl.status} statusText=${responseUrl.statusText}`;
-        console.error(errString);
-        throw new Error(errString);
-      }
-      if (!responseUrl.body) {
-        errString =
-          `Failed to download="${ref.value}" status=${responseUrl.status} no body in response`;
-        console.error(errString);
-        throw new Error(errString);
-      }
-
-      await responseUrl.body.pipeTo(downloadFile.writable);
-
-      return;
-    }
-    case DataRefType.key: {
-      // we know how to get this internal cloud referenced
-      const cloudRefUrl = `${address}/api/v1/download/${ref.value}`;
-      const responseHashUrl = await fetch(cloudRefUrl, {
-        // @ts-ignore: TS2353
-        redirect: "follow",
-      });
-      if (!responseHashUrl.ok) {
-        throw new Error(
-          `Failed to download="${cloudRefUrl}" status=${responseHashUrl.status} statusText=${responseHashUrl.statusText}`,
-        );
-      }
-      if (!responseHashUrl.body) {
-        throw new Error(
-          `Failed to download="${cloudRefUrl}" status=${responseHashUrl.status} no body in response`,
-        );
-      }
-
-      const downloadFileForHash = await Deno.open(filename, {
-        create: true,
-        write: true,
-      });
-      await responseHashUrl.body.pipeTo(downloadFileForHash.writable);
-      return;
-    }
-    case DataRefType.local: {
-      const cachedFilePath = `/app/data/cache/${
-        ref.hash ?? sanitizeFilename(ref.value)
-      }`;
-
-      try {
-        if (!(await Deno.stat(cachedFilePath)).isFile) throw new Error();
-      } catch (_) {
-        throw new Error(
-          `Source file not found or not a file: ${cachedFilePath}`,
-        );
-      }
-
-      try {
-        await Deno.lstat(filename);
-        console.log(`Link already exists: ${filename}`);
-      } catch (error) {
-        if (error instanceof Deno.errors.NotFound) {
-          await Deno.link(cachedFilePath, filename);
-          console.log(
-            `Created hard link: ${filename} -> ${cachedFilePath}`,
-          );
+        if (cacheExists) {
+          try {
+            await Deno.link(cachedFilePath, filename);
+            console.log(
+              `Hard link created from cache for hash ${ref.hash} to ${filename}.`,
+            );
+            return;
+          } catch (linkError) {
+            console.error(
+              `Failed to create hard link from cache for hash ${ref.hash}:`,
+              linkError,
+            );
+            throw linkError;
+          }
         } else {
-          throw error;
+          console.log(
+            `Cache miss for hash ${ref.hash}. Proceeding to download.`,
+          );
         }
       }
-      break;
+
+      try {
+        // Download the file to the desired filename
+        const arrayBufferFromUrl =
+          (await fetchRobust(ref.value as string)).body;
+        if (!arrayBufferFromUrl) {
+          throw new Error(`Failed to fetch data from URL ${ref.value}`);
+        }
+        await Deno.writeFile(filename, arrayBufferFromUrl, {
+          mode: 0o644,
+        });
+        console.log(`Downloaded and wrote data to ${filename}.`);
+
+        if (ref.hash) {
+          const computedHash = await sha256Stream(arrayBufferFromUrl);
+          const sanitizedHash = sanitizeFilename(computedHash);
+          const cachedFilePath = `${TMPDIR}/cache/${sanitizedHash}`;
+          const cacheExists = await exists(cachedFilePath);
+
+          if (cacheExists) {
+            // Delete the downloaded file and create a hard link from cache
+            await Deno.remove(filename);
+            await Deno.link(cachedFilePath, filename);
+            console.log(
+              `Deleted downloaded file. Created hard link from cache for hash ${computedHash} to ${filename}.`,
+            );
+          } else {
+            // Create a hard link from the downloaded file to cache
+            await ensureDir(`${TMPDIR}/cache`);
+            await Deno.link(filename, cachedFilePath);
+            console.log(
+              `Created hard link from ${filename} to cache at ${cachedFilePath}.`,
+            );
+          }
+        }
+
+        return;
+      } catch (downloadError) {
+        errString =
+          `Failed to download and cache data from URL ${ref.value}: ${downloadError}`;
+        console.error(errString);
+        throw new Error(errString);
+      }
+    }
+    case DataRefType.key: {
+      try {
+        const arrayBufferFromKey = await fetchBlobFromHash(
+          ref.value,
+          address || "https://container.mtfm.io",
+        );
+        await Deno.writeFile(filename, new Uint8Array(arrayBufferFromKey), {
+          mode: 0o777,
+        });
+        return;
+      } catch (keyError) {
+        errString =
+          `Failed to fetch blob from hash for key ${ref.value}: ${keyError}`;
+        console.error(errString);
+        throw new Error(errString);
+      }
     }
     default:
-      throw `Not yet implemented: DataRef.type === undefined or unrecognized value="${ref.type}"`;
+      throw new Error(
+        `Not yet implemented: DataRef.type "${ref.type}" unknown`,
+      );
   }
 };
 

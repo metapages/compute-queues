@@ -12,11 +12,9 @@ import {
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
 
-// const API_URL = Deno.env.get("API_URL") || "http://api1:8081";
-// const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
-
-const API_URL = Deno.env.get("API_URL") || "http://worker:8000";
-const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local";
+const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
+const API_URL = Deno.env.get("API_URL") ||
+  (QUEUE_ID === "local" ? "http://worker:8000" : "http://api1:8081");
 
 Deno.test(
   "pretend to be a client: submit job and get expected results",
