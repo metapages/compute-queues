@@ -70,16 +70,16 @@ export const useDockerJobDefinition = () => {
     definition.configFiles = !jobInputsFromUrl
       ? {}
       : Object.fromEntries(
-        Object.keys(jobInputsFromUrl).map(key => {
-          return [
-            key,
-            {
-              type: DataRefType.utf8,
-              value: jobInputsFromUrl[key] as string,
-            },
-          ];
-        }),
-      );
+          Object.keys(jobInputsFromUrl).map(key => {
+            return [
+              key,
+              {
+                type: DataRefType.utf8,
+                value: jobInputsFromUrl[key] as string,
+              },
+            ];
+          }),
+        );
 
     if (!definition.image && !definition.build) {
       return;

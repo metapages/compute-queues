@@ -52,7 +52,8 @@ export const convertIOToVolumeMounts = async (
   await Deno.chmod(outputsDir, 0o777);
 
   console.log(
-    `[${workerId.substring(0, 6)}] [${id.substring(0, 6)
+    `[${workerId.substring(0, 6)}] [${
+      id.substring(0, 6)
     }] creating\n\t ${inputsDir}\n\t ${outputsDir}\n\t ${configFilesDir}`,
   );
 
@@ -146,10 +147,11 @@ export const getOutputs = async (
   }
 
   console.log(
-    `[${workerId.substring(0, 6)}] [${job.hash.substring(0, 6)}] outputs:[${Object.keys(outputs).join(",").substring(
-      0,
-      100,
-    )
+    `[${workerId.substring(0, 6)}] [${job.hash.substring(0, 6)}] outputs:[${
+      Object.keys(outputs).join(",").substring(
+        0,
+        100,
+      )
     }]`,
   );
   return outputs;
@@ -164,9 +166,12 @@ const getFiles = async (path: string): Promise<string[]> => {
     const files: string[] = []; // files, full path
     klaw(path)
       // .pipe(excludeDirFilter)
-      .on("data", (item: { stats: { isDirectory: () => boolean }, path: string }) => {
-        if (item && !item.stats.isDirectory()) files.push(item.path);
-      })
+      .on(
+        "data",
+        (item: { stats: { isDirectory: () => boolean }; path: string }) => {
+          if (item && !item.stats.isDirectory()) files.push(item.path);
+        },
+      )
       .on("error", (err: unknown, item: unknown) => {
         console.error(`error on item`, item);
         console.error(err);

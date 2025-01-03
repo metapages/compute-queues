@@ -208,7 +208,7 @@ export const dockerJobExecute = (
         ? err.message
         : `Unknown error: ${String(err)}`;
       result.logs = err && typeof err === "object" && "logs" in err &&
-        Array.isArray(err.logs)
+          Array.isArray(err.logs)
         ? err.logs
         : [];
       if (err instanceof DockerBuildError) {

@@ -54,12 +54,9 @@ export const serverWebsocket = (): void => {
       origin = urlBlob.origin + "/";
     }
 
-    const url = `${queue === "local" && !origin
-      ? websocketConnectionUrlLocalmode
-      : origin
-        ? origin
-        : websocketConnectionUrl
-      }${queue}/client`;
+    const url = `${
+      queue === "local" && !origin ? websocketConnectionUrlLocalmode : origin ? origin : websocketConnectionUrl
+    }${queue}/client`;
 
     setIsServerConnected(false);
     rwsRef.current = new ReconnectingWebSocket(url);
@@ -177,5 +174,13 @@ export const serverWebsocket = (): void => {
       clearTimeout(pingTimeoutRef.current);
       clearTimeout(pongTimeoutRef.current);
     };
-  }, [queueOrUrl, setSendMessage, setIsServerConnected, setJobStates, setWorkers, setRawMessage, handleJobStatusPayload]);
+  }, [
+    queueOrUrl,
+    setSendMessage,
+    setIsServerConnected,
+    setJobStates,
+    setWorkers,
+    setRawMessage,
+    handleJobStatusPayload,
+  ]);
 };
