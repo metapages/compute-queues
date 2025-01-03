@@ -125,8 +125,6 @@ app.use("*", async (c, next) => {
     c.header("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS");
     c.header("Access-Control-Allow-Headers", requestedHeaders);
     c.header("Access-Control-Max-Age", "86400");
-    c.status(204);
-    // return null body to avoid double response
     return c.body(null, 204);
   }
 
