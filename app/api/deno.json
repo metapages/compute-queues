@@ -3,5 +3,8 @@
   "exports": {},
   "imports": {
     "/@/": "./src/"
+  },
+  "fmt": {
+    "exclude": ["dist", "README.md", "*.json", "*.lock"]
   }
 }

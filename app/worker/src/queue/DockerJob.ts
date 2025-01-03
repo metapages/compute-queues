@@ -89,7 +89,7 @@ export const JobCacheDirectory = "/job-cache";
 
 export const dockerJobExecute = (
   args: DockerJobArgs,
-): Promise<DockerJobExecution> => {
+): DockerJobExecution => {
   // console.log('dockerJobExecute args', args);
   const {
     sender,
@@ -208,7 +208,7 @@ export const dockerJobExecute = (
         ? err.message
         : `Unknown error: ${String(err)}`;
       result.logs = err && typeof err === "object" && "logs" in err &&
-          Array.isArray(err.logs)
+        Array.isArray(err.logs)
         ? err.logs
         : [];
       if (err instanceof DockerBuildError) {

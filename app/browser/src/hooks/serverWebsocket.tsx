@@ -22,7 +22,7 @@ import { cacheInsteadOfSendMessages, useStore } from "../store";
  * Sets states bits in the store
  */
 export const serverWebsocket = (): void => {
-  const [queue] = useHashParam("queue");
+  const [queueOrUrl] = useHashParam("queue");
 
   const setIsServerConnected = useStore(state => state.setIsServerConnected);
 
@@ -43,10 +43,24 @@ export const serverWebsocket = (): void => {
   const timeLastPingRef = useRef<number>(Date.now());
 
   useEffect(() => {
-    if (!queue || queue === "") {
+    if (!queueOrUrl || queueOrUrl === "") {
       return;
     }
-    const url = `${queue === "local" ? websocketConnectionUrlLocalmode : websocketConnectionUrl}${queue}/client`;
+    let queue: string = queueOrUrl;
+    let origin: string | undefined;
+    if (queueOrUrl.startsWith("http")) {
+      const urlBlob = new URL(queueOrUrl);
+      queue = urlBlob.pathname.replace("/", "");
+      origin = urlBlob.origin + "/";
+    }
+
+    const url = `${queue === "local" && !origin
+      ? websocketConnectionUrlLocalmode
+      : origin
+        ? origin
+        : websocketConnectionUrl
+      }${queue}/client`;
+
     setIsServerConnected(false);
     rwsRef.current = new ReconnectingWebSocket(url);
     const rws = rwsRef.current;
@@ -163,5 +177,5 @@ export const serverWebsocket = (): void => {
       clearTimeout(pingTimeoutRef.current);
       clearTimeout(pongTimeoutRef.current);
     };
-  }, [queue, setSendMessage, setIsServerConnected, setJobStates, setWorkers, setRawMessage, handleJobStatusPayload]);
+  }, [queueOrUrl, setSendMessage, setIsServerConnected, setJobStates, setWorkers, setRawMessage, handleJobStatusPayload]);
 };
