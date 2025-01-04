@@ -5,23 +5,21 @@ import {
   type JobStates,
 } from "@metapages/compute-queues-shared";
 import { createHandler } from "metapages/worker/routing/handlerDeno";
-import { ensureDir } from "std/fs";
-import { join } from "std/path";
 
 import {
   BaseDockerJobQueue,
   userJobQueues,
 } from "@metapages/compute-queues-shared";
 
-const TMPDIR = "/tmp/worker-metapage-io";
-const cacheDir = join(TMPDIR, "cache");
-await ensureDir(TMPDIR);
-await ensureDir(cacheDir);
-await Deno.chmod(TMPDIR, 0o777);
-await Deno.chmod(cacheDir, 0o777);
+import { getConfig } from "/@/config.ts";
+import { join } from "std/path";
 
 export class LocalDockerJobQueue extends BaseDockerJobQueue {
-  constructor(opts: { serverId: string; address: string }) {
+  constructor(opts: {
+    serverId: string;
+    address: string;
+    dataDirectory: string;
+  }) {
     super(opts);
   }
 }
@@ -37,7 +35,8 @@ const downloadHandler = async (c: Context) => {
     return c.text("Missing key");
   }
 
-  const filePath = `${TMPDIR}/cache/${key}`;
+  const config = getConfig();
+  const filePath = join(config.dataDirectory, "cache", key);
 
   try {
     // Check if the file exists
@@ -75,12 +74,9 @@ const uploadHandler = async (c: Context) => {
     return c.text("Missing key");
   }
 
-  const filePath = `${TMPDIR}/cache`;
-  const fullFilePath = `${filePath}/${key}`;
-
-  console.log("XXXXXXXXXXXXXXXXXX");
-  console.log("uploading file", fullFilePath);
-  console.log("XXXXXXXXXXXXXXXXXX");
+  const config = getConfig();
+  const filePath = join(config.dataDirectory, "cache");
+  const fullFilePath = join(filePath, key);
 
   try {
     // Create directory if it doesn't exist
@@ -98,6 +94,7 @@ const uploadHandler = async (c: Context) => {
       write: true,
       create: true,
       truncate: true,
+      mode: 0o777,
     });
 
     // Stream the request body directly to the file
@@ -210,6 +207,7 @@ const handleWebsocket = async (socket: WebSocket, request: Request) => {
     userJobQueues[queue] = new LocalDockerJobQueue({
       serverId: "local",
       address: queue,
+      dataDirectory: getConfig().dataDirectory,
     });
     await userJobQueues[queue].setup();
   }

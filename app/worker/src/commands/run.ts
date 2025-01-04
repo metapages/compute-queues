@@ -18,6 +18,8 @@ import {
   WebsocketMessageTypeWorkerToServer,
   type WebsocketMessageWorkerToServer,
 } from "@metapages/compute-queues-shared";
+import { ensureDir } from "std/fs";
+import { join } from "std/path";
 
 const VERSION: string = mod.version;
 
@@ -68,7 +70,7 @@ export function connectToServer(
   console.log("CLI:", args);
 
   const url = config.mode === "local"
-    ? `ws://localhost:8000/${queueId}/worker`
+    ? `ws://localhost:${config.port}/${queueId}/worker`
     : `${server.replace("http", "ws")}/${queueId}/worker`;
 
   // @ts-ignore: frustrating cannot get compiler "default" import setup working
@@ -236,42 +238,67 @@ export const runCommand = new Command()
   )
   .option("-g, --gpus [gpus:number]", "Available GPUs", { default: 0 })
   .option("-m, --mode [mode:string]", "Mode", { default: "remote" })
+  .option("-p, --port [port:number]", "Port number", { default: 8000 })
+  .option(
+    "-d, --data-directory [dataDirectory:string]",
+    "Data directory",
+    { default: "/tmp/worker-metapage-io" },
+  )
   .action(async (options, queue: string) => {
-    const { cpus, gpus, apiServerAddress, mode } = options as {
+    const {
+      cpus,
+      gpus,
+      apiServerAddress,
+      mode,
+      port,
+      dataDirectory,
+    } = options as {
       cpus: number;
       gpus: number;
       apiServerAddress: string;
       mode: string;
+      port: number;
+      dataDirectory: string;
     };
 
     if (!queue) {
-      throw "Must supply the queue id ";
+      throw new Error("Must supply the queue id");
     }
 
     config.cpus = typeof cpus === "number" ? cpus : 1;
     config.gpus = typeof gpus === "number" ? gpus : 0;
     config.mode = mode;
     config.queue = config.mode === "local" ? "local" : queue;
+    config.port = typeof port === "number" ? port : 8000;
+    config.dataDirectory = dataDirectory || "/tmp/worker-metapage-io";
 
     config.server = apiServerAddress ?? "";
 
     if (config.mode === "local") {
-      config.server = config.server || "http://localhost:8000";
+      config.server = config.server || `http://localhost:${config.port}`;
 
       console.log(
-        "run %s mode %s with cpus=%s gpu=%s at server %s",
+        "run %s mode %s with cpus=%s gpu=%s at server %s dataDirectory=%s port=%s",
         config.queue,
         config.mode,
         config.cpus,
         config.gpus,
         config.server,
+        config.dataDirectory,
+        config.port,
       );
 
       await ensureSharedVolume();
 
+      const cacheDir = join(config.dataDirectory, "cache");
+      await ensureDir(config.dataDirectory);
+      await ensureDir(cacheDir);
+      await Deno.chmod(config.dataDirectory, 0o777);
+      await Deno.chmod(cacheDir, 0o777);
+
       Deno.serve(
         {
-          port: 8000,
+          port: config.port,
           onError: (e: unknown) => {
             console.error(e);
             return new Response("Internal Server Error", { status: 500 });
@@ -288,6 +315,8 @@ export const runCommand = new Command()
               cpus: config.cpus,
               gpus: config.gpus ?? 0,
               workerId: config.id,
+              dataDirectory: config.dataDirectory,
+              port: config.port,
             });
           },
         },
@@ -307,18 +336,22 @@ export const runCommand = new Command()
 
       connectToServer({
         server: config.mode === "local"
-          ? "http://localhost:8000"
+          ? `http://localhost:${config.port}`
           : config.server,
         queueId: config.queue,
         cpus: config.cpus,
         gpus: config.gpus,
         workerId: config.id,
+        dataDirectory: config.dataDirectory,
+        port: config.port,
       });
 
       Deno.serve({
-        port: 8000,
+        port: config.port,
         onListen: () => {
-          console.log("Metrics accessible at: http://localhost:8000/metrics");
+          console.log(
+            `Metrics accessible at: http://localhost:${config.port}/metrics`,
+          );
         },
       }, metricsHandler);
     }

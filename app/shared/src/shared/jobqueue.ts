@@ -37,7 +37,7 @@ import {
   type WorkerRegistration,
   type WorkerStatusResponse,
 } from "/@/shared/types.ts";
-import { db } from "/@/shared/db.ts";
+import { DB } from "/@/shared/db.ts";
 import { resolvePreferredWorker } from "/@/shared/jobtools.ts";
 import { delay } from "std/async/delay";
 // import LRU from 'https://deno.land/x/lru_cache@6.0.0-deno.4/mod.ts';
@@ -151,8 +151,10 @@ export class BaseDockerJobQueue {
   protected readonly clients: WebSocket[];
   protected readonly address: string;
   protected readonly serverId: string;
+  protected readonly dataDirectory: string;
   protected readonly channel: BroadcastChannel;
   protected readonly channelEmitter: Emitter<BroadcastMessageEvents>;
+  protected db!: DB;
 
   // intervals
   protected _intervalWorkerBroadcast: number | undefined;
@@ -161,12 +163,15 @@ export class BaseDockerJobQueue {
   protected _intervalCheckForDuplicateJobsSameSource: number | undefined;
   protected _intervalRemoveOldFinishedJobsFromQueue: number | undefined;
 
-  constructor(opts: { serverId: string; address: string }) {
-    const { serverId, address } = opts;
+  constructor(
+    opts: { serverId: string; address: string; dataDirectory?: string },
+  ) {
+    const { serverId, address, dataDirectory } = opts;
     console.log(`➕ 🎾 UserDockerJobQueue ${address}`);
 
     this.address = address;
     this.serverId = serverId;
+    this.dataDirectory = dataDirectory || "/tmp/worker-metaframe";
     this.workers = {
       otherWorkers: new Map(),
       myWorkers: [],
@@ -210,7 +215,7 @@ export class BaseDockerJobQueue {
               );
 
               (async () => {
-                const mostCurrentLocalJobResult = await db.queueJobGet(
+                const mostCurrentLocalJobResult = await this.db.queueJobGet(
                   this.address,
                   jobId,
                 );
@@ -532,8 +537,8 @@ export class BaseDockerJobQueue {
   }
 
   protected async deleteJobFromDb(jobId: string) {
-    await db.queueJobRemove(this.address, jobId);
-    await db.resultCacheRemove(jobId);
+    await this.db.queueJobRemove(this.address, jobId);
+    await this.db.resultCacheRemove(jobId);
     console.log(
       `[${this.address.substring(0, 6)}] deleted from db: [${
         jobId.substring(0, 6)
@@ -612,13 +617,16 @@ export class BaseDockerJobQueue {
   }
 
   async setup() {
+    // Initialize the db with the data directory
+    this.db = await DB.initialize(this.dataDirectory);
+
     // For local development, use a redis broadcast channel
     if (Deno.env.get("REDIS_URL") === "redis://redis:6379") {
       await (this.channel as BroadcastChannelRedis).ready();
     }
 
     // TODO get only for this queue
-    const allPersistedJobInTheQueue = await db.queueGetAll(this.address);
+    const allPersistedJobInTheQueue = await this.db.queueGetAll(this.address);
     allPersistedJobInTheQueue.forEach((j) => (this.state.jobs[j.hash] = j));
     console.log(
       `On startup, got ${allPersistedJobInTheQueue.length} jobs from the db`,
@@ -687,12 +695,12 @@ export class BaseDockerJobQueue {
 
     if (!this.state.jobs[jobId]) {
       // did we miss a job? or is this a job that was never queued?
-      const possibleMissedJob = await db.queueJobGet(this.address, jobId);
+      const possibleMissedJob = await this.db.queueJobGet(this.address, jobId);
       if (possibleMissedJob) {
         this.state.jobs[jobId] = possibleMissedJob;
       } else {
         // is this job already finished, but in the longer-term cache?
-        const cachedJob: DockerJobDefinitionRow | undefined = await db
+        const cachedJob: DockerJobDefinitionRow | undefined = await this.db
           .resultCacheGet(jobId);
         if (cachedJob) {
           this.state.jobs[jobId] = cachedJob;
@@ -730,16 +738,16 @@ export class BaseDockerJobQueue {
         // Finished jobs are cached in the db
         if (change.state === DockerJobState.Finished) {
           console.log("cacheadd");
-          await db.resultCacheAdd(jobId, jobRow);
+          await this.db.resultCacheAdd(jobId, jobRow);
           // remove from the persisted cache so that metrics will be accurate
           console.log("cacheremove");
-          await db.queueJobRemove(this.address, jobId);
+          await this.db.queueJobRemove(this.address, jobId);
         } else if (change.state === DockerJobState.Queued) {
           console.log("queueadd");
-          await db.queueJobAdd(this.address, jobRow!);
+          await this.db.queueJobAdd(this.address, jobRow!);
         } else {
           console.log("queueupdate");
-          await db.queueJobUpdate(this.address, jobRow!);
+          await this.db.queueJobUpdate(this.address, jobRow!);
         }
       } catch (err) {
         console.log(`💥💥💥 ERROR saving or updating job: ${err}`, jobRow);
@@ -1053,7 +1061,7 @@ export class BaseDockerJobQueue {
           );
           delete this.state.jobs[jobId];
           sendBroadcast = true;
-          await db.queueJobRemove(this.address, jobId);
+          await this.db.queueJobRemove(this.address, jobId);
         }
       }
     }
@@ -1393,7 +1401,7 @@ export class BaseDockerJobQueue {
       if (this?.state.jobs[jobId]) {
         jobStates.state.jobs[jobId] = this.state.jobs[jobId];
       } else {
-        const job = await db.resultCacheGet(jobId);
+        const job = await this.db.resultCacheGet(jobId);
         if (job) {
           jobStates.state.jobs[jobId] = job;
         }

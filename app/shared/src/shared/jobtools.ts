@@ -27,8 +27,7 @@ import {
   sha256Stream,
   shaDockerJob,
 } from "/@/shared/util.ts";
-
-const TMPDIR = "/tmp/worker-metapage-io";
+import { join } from "std/path";
 
 const IGNORE_CERTIFICATE_ERRORS: boolean =
   Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
@@ -209,12 +208,14 @@ export const finishedJobOutputsToFiles = async (
  * @param ref
  * @param filename
  * @param address
+ * @param dataDirectory
  * @returns
  */
 export const dataRefToFile = async (
   ref: DataRef,
   filename: string,
   address: string,
+  dataDirectory: string = "/tmp/worker-metapage-io",
 ): Promise<void> => {
   const dir = dirname(filename);
   await ensureDir(dir);
@@ -237,7 +238,7 @@ export const dataRefToFile = async (
     case DataRefType.url: {
       if (ref.hash) {
         const sanitizedHash = sanitizeFilename(ref.hash);
-        const cachedFilePath = `${TMPDIR}/cache/${sanitizedHash}`;
+        const cachedFilePath = join(dataDirectory, "cache", sanitizedHash);
         const cacheExists = await exists(cachedFilePath);
 
         if (cacheExists) {
@@ -276,7 +277,7 @@ export const dataRefToFile = async (
         if (ref.hash) {
           const computedHash = await sha256Stream(arrayBufferFromUrl);
           const sanitizedHash = sanitizeFilename(computedHash);
-          const cachedFilePath = `${TMPDIR}/cache/${sanitizedHash}`;
+          const cachedFilePath = join(dataDirectory, "cache", sanitizedHash);
           const cacheExists = await exists(cachedFilePath);
 
           if (cacheExists) {
@@ -288,7 +289,7 @@ export const dataRefToFile = async (
             );
           } else {
             // Create a hard link from the downloaded file to cache
-            await ensureDir(`${TMPDIR}/cache`);
+            await ensureDir(join(dataDirectory, "cache"));
             await Deno.link(filename, cachedFilePath);
             console.log(
               `Created hard link from ${filename} to cache at ${cachedFilePath}.`,

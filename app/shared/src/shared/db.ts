@@ -8,108 +8,108 @@ import { ensureDir } from "std/fs";
 import { join } from "std/path";
 
 const AWS_ENDPOINT = Deno.env.get("AWS_ENDPOINT");
+const DENO_KV_URL = Deno.env.get("DENO_KV_URL");
 
 let deleteFromS3: (key: string) => Promise<void>;
 let putJsonToS3: (key: string, data: unknown) => Promise<DataRef>;
 let resolveDataRefFromS3: <T>(ref: DataRef<T>) => Promise<T | undefined>;
 
-// Set the temporary directory path
-const TMPDIR = "/tmp/worker-metapage-io";
-
-if (AWS_ENDPOINT) {
-  // Import S3 functions
-  ({ deleteFromS3, putJsonToS3, resolveDataRefFromS3 } = await import(
-    "/@/shared/s3.ts"
-  ));
-} else {
-  // Provide local filesystem functions using TMPDIR
-
-  // Ensure the TMPDIR exists
-  await ensureDir(TMPDIR);
-  await Deno.chmod(TMPDIR, 0o777);
-  await ensureDir(join(TMPDIR, "queue"));
-  await Deno.chmod(join(TMPDIR, "queue"), 0o777);
-  deleteFromS3 = async (key: string): Promise<void> => {
-    const filePath = join(TMPDIR, "queue", key);
-    try {
-      await Deno.remove(filePath);
-    } catch (error) {
-      if (error instanceof Deno.errors.NotFound) {
-        // File already deleted, ignore
-      } else {
-        console.error(`Error deleting file ${filePath}:`, error);
-      }
-    }
-  };
-
-  putJsonToS3 = async (key: string, data: unknown): Promise<DataRef> => {
-    const filePath = join(TMPDIR, "queue", key);
-    try {
-      const jsonData = JSON.stringify(data);
-      await Deno.writeTextFile(filePath, jsonData, { mode: 0o777 });
-      return {
-        type: DataRefType.key,
-        value: key,
-      };
-    } catch (error) {
-      console.error(`Error writing file ${filePath}:`, error);
-      throw error;
-    }
-  };
-
-  resolveDataRefFromS3 = async <T>(ref: DataRef<T>): Promise<T | undefined> => {
-    if (ref.type !== DataRefType.key || typeof ref.value !== "string") {
-      console.error("Invalid DataRef:", ref);
-      return undefined;
-    }
-    const filePath = join(TMPDIR, "queue", ref.value);
-    try {
-      const jsonData = await Deno.readTextFile(filePath);
-      return JSON.parse(jsonData) as T;
-    } catch (error) {
-      if (error instanceof Deno.errors.NotFound) {
-        console.error(`File not found: ${filePath}`);
-      } else {
-        console.error(`Error reading file ${filePath}:`, error);
-      }
-      return undefined;
-    }
-  };
-}
-
-const DENO_KV_URL = Deno.env.get("DENO_KV_URL");
-let localkv: Deno.Kv | undefined = undefined;
-
-const getKv = async (): Promise<Deno.Kv> => {
-  if (localkv === undefined) {
-    const thiskv = await Deno.openKv(DENO_KV_URL || undefined);
-    if (localkv) {
-      thiskv.close();
-      return localkv;
-    }
-    localkv = thiskv;
-    console.log(`🗝️  ✅ DenoKv Connected ${DENO_KV_URL || ""}`);
-  }
-  return localkv;
-};
-
 const expireIn1Week = ms("1 week") as number;
 
 export class DB {
   private kv: Deno.Kv;
+  private dataDirectory: string;
 
-  constructor(kv: Deno.Kv) {
+  private constructor(kv: Deno.Kv, dataDirectory: string) {
     this.kv = kv;
+    this.dataDirectory = dataDirectory;
   }
 
-  static async initialize(): Promise<DB> {
+  static async initialize(dataDirectory?: string): Promise<DB> {
     const kv = await getKv();
-    return new DB(kv);
+
+    // Use the provided dataDirectory or default to TMPDIR
+    const effectiveDataDirectory = dataDirectory || "/tmp/worker-metapage-io";
+
+    if (!AWS_ENDPOINT) {
+      // Ensure the directory exists and has correct permissions if not using S3
+      await ensureDir(effectiveDataDirectory);
+      await Deno.chmod(effectiveDataDirectory, 0o777);
+      await ensureDir(join(effectiveDataDirectory, "queue"));
+      await Deno.chmod(join(effectiveDataDirectory, "queue"), 0o777);
+    }
+
+    // Update S3 functions or local filesystem functions based on dataDirectory
+    await DB.setupStorageFunctions(effectiveDataDirectory);
+
+    return new DB(kv, effectiveDataDirectory);
   }
 
+  private static async setupStorageFunctions(
+    dataDirectory: string,
+  ): Promise<void> {
+    if (AWS_ENDPOINT) {
+      // Import S3 functions
+      ({ deleteFromS3, putJsonToS3, resolveDataRefFromS3 } = await import(
+        "/@/shared/s3.ts"
+      ));
+    } else {
+      deleteFromS3 = async (key: string): Promise<void> => {
+        const filePath = join(dataDirectory, "queue", key);
+        try {
+          await Deno.remove(filePath);
+        } catch (error) {
+          if (error instanceof Deno.errors.NotFound) {
+            // File already deleted, ignore
+          } else {
+            console.error(`Error deleting file ${filePath}:`, error);
+          }
+        }
+      };
+
+      putJsonToS3 = async (key: string, data: unknown): Promise<DataRef> => {
+        const filePath = join(dataDirectory, "queue", key);
+        try {
+          const jsonData = JSON.stringify(data);
+          await Deno.writeTextFile(filePath, jsonData, { mode: 0o777 });
+          return {
+            type: DataRefType.key,
+            value: key,
+          };
+        } catch (error) {
+          console.error(`Error writing file ${filePath}:`, error);
+          throw error;
+        }
+      };
+
+      resolveDataRefFromS3 = async <T>(
+        ref: DataRef<T>,
+      ): Promise<T | undefined> => {
+        if (ref.type !== DataRefType.key || typeof ref.value !== "string") {
+          console.error("Invalid DataRef:", ref);
+          return undefined;
+        }
+        const filePath = join(dataDirectory, "queue", ref.value);
+        try {
+          const jsonData = await Deno.readTextFile(filePath);
+          return JSON.parse(jsonData) as T;
+        } catch (error) {
+          if (error instanceof Deno.errors.NotFound) {
+            console.error(`File not found: ${filePath}`);
+          } else {
+            console.error(`Error reading file ${filePath}:`, error);
+          }
+          return undefined;
+        }
+      };
+    }
+  }
+
+  // ... rest of the DB class methods ...
+
+  // (The remaining methods of the DB class can remain unchanged)
   async queueJobAdd(queue: string, job: DockerJobDefinitionRow): Promise<void> {
     const id = job.hash;
-    // deno kv has a 64kb limit, so we store the job in s3, and store a reference to it in kv
     const dataRef = await putJsonToS3(id, job);
     await this.kv.atomic()
       .set(["queue", queue, id], dataRef, { expireIn: expireIn1Week })
@@ -223,5 +223,17 @@ export class DB {
     await Promise.all([this.kv.delete(["cache", id]), deleteFromS3(id)]);
   }
 }
+let localkv: Deno.Kv | undefined = undefined;
 
-export const db: DB = await DB.initialize();
+const getKv = async (): Promise<Deno.Kv> => {
+  if (localkv === undefined) {
+    const thiskv = await Deno.openKv(DENO_KV_URL || undefined);
+    if (localkv) {
+      thiskv.close();
+      return localkv;
+    }
+    localkv = thiskv;
+    console.log(`🗝️  ✅ DenoKv Connected ${DENO_KV_URL || ""}`);
+  }
+  return localkv;
+};

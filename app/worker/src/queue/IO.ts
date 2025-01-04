@@ -2,7 +2,7 @@ import { emptyDir, ensureDir, exists } from "std/fs";
 import { dirname, join } from "std/path";
 import klaw from "klaw";
 
-import { config } from "/@/config.ts";
+import { getConfig } from "/@/config.ts";
 import {
   type DataRef,
   dataRefToFile,
@@ -16,9 +16,6 @@ import {
 } from "@metapages/compute-queues-shared";
 import type { Volume } from "/@/queue/DockerJob.ts";
 
-// const TMPDIR = process.env.XDG_RUNTIME_DIR || process.env.TMPDIR || '/tmp';
-const TMPDIR = "/tmp/worker-metapage-io";
-
 /**
  * @param job Returns input and output docker volumes to mount into the container
  */
@@ -27,9 +24,10 @@ export const convertIOToVolumeMounts = async (
   address: string,
   workerId: string,
 ): Promise<Volume[]> => {
+  const config = getConfig();
   const { id, definition } = job;
-  const baseDir = join(TMPDIR, id);
-  const cacheDir = join(TMPDIR, "cache");
+  const baseDir = join(config.dataDirectory, id);
+  const cacheDir = join(config.dataDirectory, "cache");
   const configFilesDir = join(baseDir, "configFiles");
   const inputsDir = join(baseDir, "inputs");
   const outputsDir = join(baseDir, "outputs");
@@ -62,7 +60,12 @@ export const convertIOToVolumeMounts = async (
 
   if (inputs) {
     for (const [name, ref] of Object.entries(inputs)) {
-      await dataRefToFile(ref, join(inputsDir, name), address);
+      await dataRefToFile(
+        ref,
+        join(inputsDir, name),
+        address,
+        config.dataDirectory,
+      );
     }
   }
   const result: Volume[] = [
@@ -84,7 +87,7 @@ export const convertIOToVolumeMounts = async (
       const hostFilePath = isAbsolutePath
         ? join(configFilesDir, name)
         : join(inputsDir, name);
-      await dataRefToFile(ref, hostFilePath, address);
+      await dataRefToFile(ref, hostFilePath, address, config.dataDirectory);
       // /inputs are already mounted in
       if (isAbsolutePath) {
         result.push({
@@ -101,7 +104,8 @@ export const convertIOToVolumeMounts = async (
 const getLocalDataRef = async (file: string, address: string) => {
   const hash = await hashFileOnDisk(file);
   const sanitizedHash = sanitizeFilename(hash);
-  const cachedFilePath = `${TMPDIR}/cache/${sanitizedHash}`;
+  const config = getConfig();
+  const cachedFilePath = join(config.dataDirectory, "cache", sanitizedHash);
   await ensureDir(dirname(cachedFilePath));
 
   if (await exists(cachedFilePath)) {
@@ -130,7 +134,8 @@ export const getOutputs = async (
   workerId: string,
 ): Promise<InputsRefs> => {
   // TODO: duplicate code
-  const baseDir = join(TMPDIR, job.hash);
+  const config = getConfig();
+  const baseDir = join(config.dataDirectory, sanitizeFilename(job.hash));
   const outputsDir = join(baseDir, "outputs");
 
   // copy the inputs (if any)
