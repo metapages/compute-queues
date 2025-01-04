@@ -79,7 +79,7 @@ deploy version="":
     just browser/fmt-check
 
 # Runs All Functional Tests and checks code
-test mode="remote" +args="": check (_validate_mode mode)
+test mode="remote" +args="": _build_shared check (_validate_mode mode)
     #!/usr/bin/env bash
     set -e # exit when any command fails, preserving the status of the failed command
 
