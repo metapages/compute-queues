@@ -1,16 +1,7 @@
 {
+  "name": "@metapages/compute-queues-test",
+  "exports": {},
   "imports": {
-    "/@/shared": "../shared/src/mod.ts",
-    "@korkje/wsi": "jsr:@korkje/wsi@^0.3.2",
-    "@metapages/deno-redis-broadcastchannel": "jsr:@metapages/deno-redis-broadcastchannel@^0.2.0",
-    "@metapages/hash-query": "npm:@metapages/hash-query@0.4.8",
-    "@metapages/metapage": "npm:@metapages/metapage@1.0.21",
-    "fast-deep-equal/es6": "npm:fast-deep-equal/es6/index.js",
-    "object-hash": "npm:object-hash@3.0.0",
-    "mutative": "npm:mutative@1.0.11",
-    "fetch-retry": "npm:fetch-retry@5.0.6",
-    "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3",
-    "uuid": "npm:uuid@9.0.1"
-  },
-  "unstable": ["sloppy-imports"]
+    "/@/": "./src/"
+  }
 }

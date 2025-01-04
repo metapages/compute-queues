@@ -1,6 +1,6 @@
-import { Context } from "https://deno.land/x/hono@v4.1.0-rc.1/mod.ts";
+import type { Context } from "hono";
 
-import { db } from "../db/kv/mod.ts";
+import { db } from "/@/db/kv/mod.ts";
 
 export const metricsHandler = async (c: Context) => {
   const queue: string | undefined = c.req.param("queue");

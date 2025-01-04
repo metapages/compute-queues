@@ -31,14 +31,12 @@ export const LocalModeToggle: React.FC = () => {
       {/* onFocus https://github.com/chakra-ui/chakra-ui/issues/5304#issuecomment-1102836734 */}
       <Button
         minWidth={200}
-        onFocus={(e) =>
-          e.preventDefault()}
+        onFocus={e => e.preventDefault()}
         pr={10}
         variant="ghost"
         leftIcon={<Icon as={HouseLine} boxSize={6} />}
         onClick={onToggle}
-        aria-label="local mode"
-      >
+        aria-label="local mode">
         {isLocalMode ? "Local Mode" : "Remote Mode"}
       </Button>
     </Tooltip>

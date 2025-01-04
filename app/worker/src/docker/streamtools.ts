@@ -1,22 +1,17 @@
-import {
-  Duplex,
-  Readable,
-  Transform,
-  Writable,
-} from "https://deno.land/std@0.177.0/node/stream.ts";
+import { type Duplex, Readable, Transform, Writable } from "std/node/stream";
 
 export function createStringConsumer(f: (a: string) => void): Writable {
   const writable = new Writable({ decodeStrings: false, objectMode: false });
   writable._write = function (
-    chunk: any,
-    encoding: string,
+    chunk,
+    _encoding: string,
     done: (e: Error | null) => void,
   ) {
     if (chunk != null) {
       try {
         f(chunk.toString("utf8"));
-      } catch (err: any) {
-        done(err);
+      } catch (err) {
+        done(err as Error | null);
         return;
       }
     }
@@ -27,12 +22,16 @@ export function createStringConsumer(f: (a: string) => void): Writable {
 
 export function createTransformStream<T>(f: (a: T) => T): Duplex {
   const transform = new Transform({ decodeStrings: false, objectMode: false });
-  transform._transform = function (chunk: T, encoding: string, callback: any) {
+  transform._transform = function (
+    chunk: T,
+    _encoding: string,
+    callback: (err: Error | null, chunk: T | null) => void,
+  ) {
     if (chunk != null) {
       try {
         chunk = f(chunk);
       } catch (err) {
-        callback(err, null);
+        callback(err as Error | null, null);
         return;
       }
     }
@@ -45,8 +44,8 @@ export function createTransformPrepend(s: string): Duplex {
   const transform = new Transform({ decodeStrings: false, objectMode: false });
   transform._transform = function (
     chunk: string,
-    encoding: string,
-    callback: any,
+    _encoding: string,
+    callback: (err: Error | null, chunk: string | null) => void,
   ) {
     if (chunk != null) {
       chunk = s + chunk;
@@ -63,7 +62,7 @@ export function stringToStream(s: string): Readable {
   return stream;
 }
 
-export function bufferToStream(b: any): Readable {
+export function bufferToStream(b: unknown): Readable {
   const stream: Readable = new Readable();
   stream.push(b);
   stream.push(null);

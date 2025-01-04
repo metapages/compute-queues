@@ -4,13 +4,13 @@ import {
   deleteFromS3,
   putJsonToS3,
   resolveDataRefFromS3,
-} from "../../docker-jobs/job-s3.ts";
+} from "/@/docker-jobs/job-s3.ts";
 import {
-  DataRef,
+  type DataRef,
   DataRefType,
-  DockerJobDefinitionRow,
-} from "../../shared/mod.ts";
-import { getKv } from "./getKv.ts";
+  type DockerJobDefinitionRow,
+} from "@metapages/compute-queues-shared";
+import { getKv } from "/@/db/kv/getKv.ts";
 
 const kv = await getKv();
 
@@ -24,7 +24,7 @@ export class DB {
     const id = job.hash;
     // deno kv has a 64kb limit, so we store the job in s3, and store a reference to it in kv
     const dataRef = await putJsonToS3(id, job);
-    const res = await kv.atomic()
+    /* const res = */ void await kv.atomic()
       .set(["queue", queue, id], dataRef, { expireIn: expireIn1Week })
       .commit();
   }
@@ -43,7 +43,7 @@ export class DB {
     if (!jobDataRef) {
       return null;
     }
-    if ((jobDataRef as any)?.type === DataRefType.key) {
+    if (jobDataRef?.type === DataRefType.key) {
       const job: DockerJobDefinitionRow | undefined =
         await resolveDataRefFromS3(
           jobDataRef as DataRef<DockerJobDefinitionRow>,
@@ -81,7 +81,7 @@ export class DB {
       const jobDataRef:
         | DataRef<DockerJobDefinitionRow>
         | DockerJobDefinitionRow = entry.value;
-      if ((jobDataRef as any)?.type === DataRefType.key) {
+      if (jobDataRef?.type === DataRefType.key) {
         const job: DockerJobDefinitionRow | undefined =
           await resolveDataRefFromS3(
             jobDataRef as DataRef<DockerJobDefinitionRow>,

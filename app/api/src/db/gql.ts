@@ -7,9 +7,9 @@ const fetchGraphQL = async (
   headers: Record<string, string>,
   operationsDoc: string,
   operationName: string,
-  variables: Record<string, any>,
+  variables: Record<string, unknown>,
 ) => {
-  return fetch(url, {
+  const result = await fetch(url, {
     method: "POST",
     redirect: "follow",
     headers,
@@ -18,13 +18,12 @@ const fetchGraphQL = async (
       variables,
       operationName,
     }),
-  }).then(async (result) => {
-    const textJson = await result.text();
-    if (!textJson.startsWith("{")) {
-      console.error(`fetchGraphQL error ${textJson}`);
-    }
-    return JSON.parse(textJson);
   });
+  const textJson = await result.text();
+  if (!textJson.startsWith("{")) {
+    console.error(`fetchGraphQL error ${textJson}`);
+  }
+  return await JSON.parse(textJson);
 };
 
 const operationGetPublicMetapage = `

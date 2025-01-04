@@ -1,0 +1,5 @@
+.cache
+.env.local
+node_modules
+deploy
+dist

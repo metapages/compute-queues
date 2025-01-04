@@ -1,9 +1,7 @@
-import {
-  createHandler,
-} from "https://deno.land/x/metapages@v0.0.27/worker/routing/handlerDeno.ts";
+import { createHandler } from "metapages/worker/routing/handlerDeno";
 
-import { handlerHttp } from "../handlerHono.ts";
-import { handleWebsocketConnection } from "../handlerWs.ts";
+import { handlerHttp } from "/@/handlerHono.ts";
+import { handleWebsocketConnection } from "/@/handlerWs.ts";
 
 const APP_FQDN = Deno.env.get("APP_FQDN") || "https://connect.superslides.io";
 
@@ -14,7 +12,7 @@ const config = {
     console.error(e);
     return Response.error();
   },
-  onListen: ({ hostname, port }) => {
+  onListen: ({ hostname, port }: { hostname: string; port: number }) => {
     console.log(
       `🚀🌙 Listening on APP_FQDN=${APP_FQDN} hostname=${hostname} port=${port}`,
     );

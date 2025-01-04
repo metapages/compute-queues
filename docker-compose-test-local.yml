@@ -1,0 +1,25 @@
+services:
+  test:
+    depends_on:
+      worker:
+        condition: service_healthy
+    image: denoland/deno:alpine-2.1.4
+    command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+    working_dir: /app/app/test
+    extra_hosts:
+      - worker:host-gateway
+      - host.docker.internal:host-gateway
+    environment:
+      - IGNORE_CERTIFICATE_ERRORS=true
+      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+      - API_URL=http://worker:8000
+      - QUEUE_ID=local
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+    volumes:
+      - deno:/deno
+      - .:/app
+    networks:
+      - default
+    logging:
+      driver: ${LOGGING_TESTS:-json-file}

@@ -1,17 +1,13 @@
-import {
-  serveStatic,
-} from "https://deno.land/x/hono@v4.1.0-rc.1/middleware.ts";
-import {
-  cors,
-} from "https://deno.land/x/hono@v4.1.0-rc.1/middleware/cors/index.ts";
-import { Context, Hono } from "https://deno.land/x/hono@v4.1.0-rc.1/mod.ts";
+import { serveStatic } from "hono/middleware";
+import { cors } from "hono/middleware/cors";
+import { type Context, Hono } from "hono";
 
-import { downloadHandler } from "./routes/api/v1/download.ts";
-import { statusHandler } from "./routes/status.ts";
-import { metricsHandler } from "./routes/metrics.ts";
-import { uploadHandler } from "./routes/api/v1/upload.ts";
-import { uploadHandler as uploadHandlerDeprecated } from "./routes/deprecated/upload.ts";
-import { downloadHandler as downloadHandlerDeprecated } from "./routes/deprecated/download.ts";
+import { downloadHandler } from "/@/routes/api/v1/download.ts";
+import { statusHandler } from "/@/routes/status.ts";
+import { metricsHandler } from "/@/routes/metrics.ts";
+import { uploadHandler } from "/@/routes/api/v1/upload.ts";
+import { uploadHandler as uploadHandlerDeprecated } from "/@/routes/deprecated/upload.ts";
+import { downloadHandler as downloadHandlerDeprecated } from "/@/routes/deprecated/download.ts";
 
 const app = new Hono();
 
@@ -47,9 +43,9 @@ app.get("/:queue/status", statusHandler);
 app.get("/:queue/metrics", metricsHandler);
 
 // Serve static assets, and the index.html as the fallback
-app.get("/*", serveStatic({ root: "./assets" }));
-app.get("/", serveStatic({ path: "./assets/index.html" }));
-app.get("*", serveStatic({ path: "./assets/index.html" }));
+app.get("/*", serveStatic({ root: "../browser/dist" }));
+app.get("/", serveStatic({ path: "../browser/dist/index.html" }));
+app.get("*", serveStatic({ path: "../browser/dist/index.html" }));
 
 export const handlerHttp = app.fetch as (
   request: Request,

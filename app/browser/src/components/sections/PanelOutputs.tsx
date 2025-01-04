@@ -4,23 +4,13 @@ import { PanelContainer } from "/@/components/generic/PanelContainer";
 import { PanelHeader } from "/@/components/generic/PanelHeader";
 import { useStore } from "/@/store";
 
-import {
-  Container,
-  HStack,
-  Icon,
-  Spacer,
-  Table,
-  Tbody,
-  Td,
-  Text,
-  Tr,
-} from "@chakra-ui/react";
+import { Container, HStack, Icon, Spacer, Table, Tbody, Td, Text, Tr } from "@chakra-ui/react";
 import { ArrowDown } from "@phosphor-icons/react";
 
 import { downloadFile, getOutputs, zipAndDownloadDatarefs } from "/@/helpers";
 
 export const PanelOutputs: React.FC = () => {
-  const job = useStore((state) => state.jobState);
+  const job = useStore(state => state.jobState);
   const outputs = getOutputs(job);
   const downloadAll = useCallback(async () => {
     await zipAndDownloadDatarefs(outputs, "all-outputs");
@@ -40,7 +30,7 @@ export const PanelOutputs: React.FC = () => {
         <Container>
           <Table px={5} variant="simple">
             <Tbody>
-              {Object.keys(outputs).map((name) => {
+              {Object.keys(outputs).map(name => {
                 return (
                   <Tr key={name} justifyContent={"space-between"}>
                     <Td>
@@ -49,9 +39,7 @@ export const PanelOutputs: React.FC = () => {
                         <Icon
                           onClick={() => downloadFile(name, outputs[name])}
                           boxSize={"1.4rem"}
-                          as={ArrowDown}
-                        >
-                        </Icon>
+                          as={ArrowDown}></Icon>
                       </HStack>
                     </Td>
                   </Tr>

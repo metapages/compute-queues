@@ -19,13 +19,35 @@ normal := '\033[0m'
     just --list --unsorted --list-heading $'Api commands:\n'
 
 # Run the server locally
-@dev +args="":
+dev +args="": _build_shared
     deno run --watch --allow-all --unstable-kv --unstable-broadcast-channel src/server.ts {{ args }}
 
 # Quick compile checks
 @check:
     deno check src/server.ts
     echo "✅ api typescript compilation"
+
+# Lint
+@lint:
+    deno lint
+
+# Lint and fix issues
+@lint-fix:
+    deno lint --fix
+
+# Format
+@fmt:
+    deno fmt
+
+# Format check
+@fmt-check:
+    deno fmt --check
+
+# Fix
+@fix: lint-fix fmt
+
+# Run CI
+@ci: fmt-check lint
 
 # Perform a deploy to https://dash.deno.com/projects/compute-queue-api
 @build: check
@@ -59,3 +81,9 @@ clean:
 
 @_ensure_deployctl:
     if ! command -v deployctl &> /dev/null; then echo '‼️ deployctl is being installed ‼️'; deno install -Arf jsr:@deno/deployctl; fi
+
+# Add new helper recipe for building shared dependencies
+_build_shared:
+    #!/usr/bin/env bash
+    set -eo pipefail
+    cd ../shared && just build

@@ -1,0 +1,65 @@
+services:
+  worker:
+    entrypoint: [
+      "deno",
+      "run",
+      "--unsafely-ignore-certificate-errors",
+      "--watch",
+      "--allow-all",
+      "--unstable-kv",
+      "src/cli.ts",
+    ]
+    command: run --mode=local --cpus=2 --gpus=0 local
+    working_dir: /app/app/worker
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"
+    build:
+      context: .
+      dockerfile: app/worker/Dockerfile
+      target: worker
+    environment:
+      - PORT=8000
+      - IGNORE_CERTIFICATE_ERRORS=true
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+    volumes:
+      - ./deno.json:/app/deno.json
+      - ./app/shared:/app/app/shared
+      - ./app/worker:/app/app/worker
+      - ./app/browser/dist:/app/app/browser/dist
+      - /tmp:/tmp
+      - /var/run/docker.sock:/var/run/docker.sock
+      - deno:/deno
+      - node_modules:/app/node_modules
+    networks:
+      - default
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    logging:
+      driver: ${LOGGING_WORKER:-json-file}
+
+  serve-browser-assets:
+    build:
+      context: .
+      dockerfile: app/browser/Dockerfile
+    command: just dev local
+    working_dir: /app/app/browser
+    environment:
+      - APP_PORT_BROWSER=443
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
+    volumes:
+      - deno:/deno
+      - .:/app
+      - browser_node_modules:/app/app/browser/node_modules
+    ports:
+      - "${APP_PORT:-443}:443"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

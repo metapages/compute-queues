@@ -13,13 +13,9 @@ import {
   isDataRef,
   JobInputs,
   shaDockerJob,
-} from "/@/shared";
+} from "/@shared/client";
 
-import {
-  useHashParam,
-  useHashParamBoolean,
-  useHashParamJson,
-} from "@metapages/hash-query/react-hooks";
+import { useHashParam, useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { useMetaframeAndInput } from "@metapages/metapage-react";
 import { DataRefSerialized, Metaframe } from "@metapages/metapage";
 
@@ -35,9 +31,7 @@ export const useDockerJobDefinition = () => {
   const [debug] = useHashParamBoolean("debug");
 
   // we listen to the job parameters embedded in the URL changing
-  const [definitionParamsInUrl] = useHashParamJson<
-    DockerJobDefinitionParamsInUrlHash | undefined
-  >("job");
+  const [definitionParamsInUrl] = useHashParamJson<DockerJobDefinitionParamsInUrlHash | undefined>("job");
 
   // input text files are stored in the URL hash
   const [jobInputsFromUrl] = useHashParamJson<JobInputs | undefined>("inputs");
@@ -45,9 +39,7 @@ export const useDockerJobDefinition = () => {
   // get a source string from the URL hash
   const [metapage] = useHashParam("metapage");
   const [metaframe] = useHashParam("metaframe");
-  const sourceKey = metapage && metaframe
-    ? `${metapage}/${metaframe}`
-    : undefined;
+  const sourceKey = metapage && metaframe ? `${metapage}/${metaframe}` : undefined;
 
   // this changes when the metaframe inputs change
   const metaframeBlob = useMetaframeAndInput();
@@ -63,7 +55,7 @@ export const useDockerJobDefinition = () => {
   }, [metaframeBlob?.metaframe]);
 
   // When all the things are updated, set the new job definition
-  const setNewJobDefinition = useStore((state) => state.setNewJobDefinition);
+  const setNewJobDefinition = useStore(state => state.setNewJobDefinition);
 
   // if the URL inputs change, or the metaframe inputs change, maybe update the store.newJobDefinition
   useEffect(() => {
@@ -75,14 +67,19 @@ export const useDockerJobDefinition = () => {
 
     // These are inputs set in the metaframe and stored in the url hash params. They
     // are always type: DataRefType.utf8 because they come from the text editor
-    definition.configFiles = !jobInputsFromUrl ? {} : Object.fromEntries(
-      Object.keys(jobInputsFromUrl).map((key) => {
-        return [key, {
-          type: DataRefType.utf8,
-          value: jobInputsFromUrl[key] as string,
-        }];
-      }),
-    );
+    definition.configFiles = !jobInputsFromUrl
+      ? {}
+      : Object.fromEntries(
+          Object.keys(jobInputsFromUrl).map(key => {
+            return [
+              key,
+              {
+                type: DataRefType.utf8,
+                value: jobInputsFromUrl[key] as string,
+              },
+            ];
+          }),
+        );
 
     if (!definition.image && !definition.build) {
       return;
@@ -107,7 +104,7 @@ export const useDockerJobDefinition = () => {
       if (cancelled) {
         return;
       }
-      Object.keys(inputs).forEach((name) => {
+      Object.keys(inputs).forEach(name => {
         const fixedName = name.startsWith("/") ? name.slice(1) : name;
         const value = inputs[name];
         // null (and undefined) cannot be serialized, so skip them
@@ -152,18 +149,13 @@ export const useDockerJobDefinition = () => {
 
       // at this point, these inputs *could* be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
-
-      definition.inputs = await copyLargeBlobsToCloud(
-        definition.inputs,
-        UPLOAD_DOWNLOAD_BASE_URL,
-      );
+      console.log("definition.inputs", definition.inputs);
+      console.log("copyLargeBlobsToCloud UPLOAD_DOWNLOAD_BASE_URL", UPLOAD_DOWNLOAD_BASE_URL);
+      definition.inputs = await copyLargeBlobsToCloud(definition.inputs, UPLOAD_DOWNLOAD_BASE_URL);
       if (cancelled) {
         return;
       }
-      definition.configFiles = await copyLargeBlobsToCloud(
-        definition.configFiles,
-        UPLOAD_DOWNLOAD_BASE_URL,
-      );
+      definition.configFiles = await copyLargeBlobsToCloud(definition.configFiles, UPLOAD_DOWNLOAD_BASE_URL);
       if (cancelled) {
         return;
       }
@@ -186,11 +178,5 @@ export const useDockerJobDefinition = () => {
     return () => {
       cancelled = true;
     };
-  }, [
-    metaframeBlob.inputs,
-    definitionParamsInUrl,
-    jobInputsFromUrl,
-    sourceKey,
-    debug,
-  ]);
+  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, sourceKey, debug]);
 };

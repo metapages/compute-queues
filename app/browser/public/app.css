@@ -1,0 +1,4 @@
+.chakra-modal__content-container:has(#chakra-modal-edit-modal-right) {
+  justify-content: flex-end !important;
+  opacity: 0.8;
+}

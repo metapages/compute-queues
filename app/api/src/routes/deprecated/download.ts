@@ -1,9 +1,9 @@
-import { DataRefType } from "/@/shared";
-import { Context } from "https://deno.land/x/hono@v4.1.0-rc.1/mod.ts";
-import { GetObjectCommand } from "npm:@aws-sdk/client-s3";
-import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner";
+import { DataRefType } from "@metapages/compute-queues-shared";
+import type { Context } from "hono";
+import { GetObjectCommand } from "aws-sdk/client-s3";
+import { getSignedUrl } from "aws-sdk/s3-request-presigner";
 
-import { bucketParams, s3Client } from "../s3config.ts";
+import { bucketParams, s3Client } from "/@/routes/s3config.ts";
 
 export const downloadHandler = async (c: Context) => {
   const key: string | undefined = c.req.param("key");

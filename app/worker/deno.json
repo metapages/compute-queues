@@ -1,16 +1,9 @@
 {
+  "name": "@metapages/compute-queues-worker",
+  "exports": {},
   "imports": {
-    "bytes": "npm:bytes@3.1.2",
-    "@metapages/metapage": "npm:@metapages/metapage@1.0.21",
-    "/@/shared": "./src/shared/mod.ts",
-    "fetch-retry": "npm:fetch-retry@5.0.6",
-    "ms": "https://deno.land/x/ms@v0.1.0/ms.ts",
-    "object-hash": "npm:object-hash@3.0.0",
-    "mutative": "npm:mutative@1.0.11",
-    "safe-stable-stringify": "npm:safe-stable-stringify@2.4.3"
+    "/@/": "./src/"
   },
-  "nodeModulesDir": "none",
-  "unstable": ["sloppy-imports"],
   "fmt": {
     "exclude": ["dist", "README.md", "*.json", "*.lock"]
   }

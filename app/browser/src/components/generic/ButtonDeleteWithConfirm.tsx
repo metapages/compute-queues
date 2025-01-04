@@ -39,12 +39,7 @@ export const ButtonDeleteWithConfirm: React.FC<{
 
   return (
     <>
-      <Icon
-        color={iconColor}
-        as={TrashSimple}
-        aria-label="delete"
-        onClick={onOpen}
-      />
+      <Icon color={iconColor} as={TrashSimple} aria-label="delete" onClick={onOpen} />
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>

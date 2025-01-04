@@ -1,24 +1,26 @@
-import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assertEquals } from "std/assert";
 
 import { closed, open } from "@korkje/wsi";
 
 import {
-  BroadcastJobStates,
+  type BroadcastJobStates,
+  createNewContainerJobMessage,
   DockerJobFinishedReason,
   DockerJobState,
-  StateChangeValueFinished,
-  WebsocketMessageServerBroadcast,
+  type StateChangeValueFinished,
+  type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
-} from "../../shared/src/mod.ts";
-import { createNewContainerJobMessage } from "../../shared/src/shared/jobtools.ts";
+} from "@metapages/compute-queues-shared";
 
-const API_URL = Deno.env.get("API_URL") || "http://api1:8081";
+const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
+const API_URL = Deno.env.get("API_URL") ||
+  (QUEUE_ID === "local" ? "http://worker:8000" : "http://api1:8081");
 
 Deno.test(
   "pretend to be a client: submit job and get expected results",
   async () => {
     const socket = new WebSocket(
-      `${API_URL.replace("http", "ws")}/local1/client`,
+      `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
 
     // https://github.com/metapages/compute-queues/issues/124
@@ -33,14 +35,15 @@ Deno.test(
       image: "alpine:3.18.5",
       command: "ls -a",
     };
-    const { message, jobId, stageChange } = await createNewContainerJobMessage({
-      definition,
-    });
+    const { message, jobId /* , stageChange */ } =
+      await createNewContainerJobMessage({
+        definition,
+      });
 
-    let {
+    const {
       promise: jobCompleteDeferred,
       resolve,
-      reject,
+      /* reject, */
     } = Promise.withResolvers<string>();
 
     let jobSuccessfullySubmitted = false;
@@ -51,7 +54,7 @@ Deno.test(
       );
       switch (possibleMessage.type) {
         case WebsocketMessageTypeServerBroadcast.JobStates:
-        case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
+        case WebsocketMessageTypeServerBroadcast.JobStateUpdates: {
           const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
           if (!someJobsPayload) {
             break;
@@ -69,6 +72,7 @@ Deno.test(
             resolve(lines);
           }
           break;
+        }
         default:
           //ignored
       }
@@ -102,10 +106,10 @@ Deno.test(
 
 Deno.test("submit multiple jobs and get expected results", async () => {
   const socket = new WebSocket(
-    `${API_URL.replace("http", "ws")}/local1/client`,
+    `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
   );
   const count = 3;
-  const definitions = Array.from(Array(count).keys()).map((i) => ({
+  const definitions = Array.from(Array(count).keys()).map((_i) => ({
     image: "alpine:3.18.5",
     command: `echo ${Math.random()}`,
   }));
@@ -132,7 +136,7 @@ Deno.test("submit multiple jobs and get expected results", async () => {
     );
     switch (possibleMessage.type) {
       case WebsocketMessageTypeServerBroadcast.JobStates:
-      case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
+      case WebsocketMessageTypeServerBroadcast.JobStateUpdates: {
         const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
         if (!someJobsPayload) {
           break;
@@ -158,6 +162,45 @@ Deno.test("submit multiple jobs and get expected results", async () => {
           }
         });
         break;
+      }
+      default:
+        //ignored
+    }
+  };
+  socket.onmessage = (message: MessageEvent) => {
+    const messageString = message.data.toString();
+    const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(
+      messageString,
+    );
+    switch (possibleMessage.type) {
+      case WebsocketMessageTypeServerBroadcast.JobStates:
+      case WebsocketMessageTypeServerBroadcast.JobStateUpdates: {
+        const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
+        if (!someJobsPayload) {
+          break;
+        }
+        jobIds.forEach((jobId) => {
+          const jobState = someJobsPayload.state.jobs[jobId];
+          if (!jobState) {
+            return;
+          }
+          if (jobState.state === DockerJobState.Finished) {
+            const finishedState = jobState.value as StateChangeValueFinished;
+            const lines: string = finishedState.result?.logs?.map((l) =>
+              l[0]
+            )[0]!;
+            const i = messages.findIndex((m) => m.jobId === jobId);
+            if (i >= 0 && lines && !jobIdsFinished.has(jobId)) {
+              promises[i]?.resolve(lines.trim());
+              console.log(
+                `🐸 [test] 📡 job ${jobId} finished ${jobIdsFinished.size} / ${count}`,
+              );
+              jobIdsFinished.add(jobId);
+            }
+          }
+        });
+        break;
+      }
       default:
         //ignored
     }
@@ -184,7 +227,7 @@ Deno.test(
   "submit multiple jobs from the same client source: older jobs are killed",
   async () => {
     const socket = new WebSocket(
-      `${API_URL.replace("http", "ws")}/local1/client`,
+      `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
     const count = 3;
     const definitions = Array.from(Array(count).keys()).map((i) => ({
@@ -220,7 +263,7 @@ Deno.test(
       );
       switch (possibleMessage.type) {
         case WebsocketMessageTypeServerBroadcast.JobStates:
-        case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
+        case WebsocketMessageTypeServerBroadcast.JobStateUpdates: {
           const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
           if (!someJobsPayload) {
             break;
@@ -242,6 +285,7 @@ Deno.test(
             }
           });
           break;
+        }
         default:
           //ignored
       }

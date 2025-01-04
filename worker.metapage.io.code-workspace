@@ -1,20 +1,20 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": {
-		"deno.enable": true,
-		"files.exclude": {
-			"**/.cache": true,
-			"**/.deno": true,
-			"**/.traefik": true,
-			"**/api/browser": true,
-			"**/app/api/assets": true,
-			"**/dist": true,
-			"**/node_modules": true
-		},
-		"editor.defaultFormatter": "denoland.vscode-deno"
-	}
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "deno.enable": true,
+    "files.exclude": {
+      "**/.cache": true,
+      "**/.deno": true,
+      "**/.traefik": true,
+      "**/api/browser": true,
+      "**/app/api/assets": true,
+      "**/dist": true,
+      "**/node_modules": true
+    },
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  }
 }

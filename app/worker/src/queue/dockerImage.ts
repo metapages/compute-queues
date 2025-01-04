@@ -1,16 +1,17 @@
-import { ensureDir, exists } from "https://deno.land/std@0.224.0/fs/mod.ts";
-import { dirname, join } from "https://deno.land/std@0.224.0/path/mod.ts";
-import { tgz } from "https://deno.land/x/compress@v0.4.5/mod.ts";
-import { decompress } from "https://deno.land/x/zip@v1.2.5/mod.ts";
+import { ensureDir, exists } from "std/fs";
+import { dirname, join } from "std/path";
+import { tgz } from "compress";
+import { decompress } from "zip";
 
-import { ConsoleLogLine, JobStatusPayload } from "../../../shared/src/mod.ts";
 import {
-  DockerJobImageBuild,
+  type ConsoleLogLine,
+  type DockerJobImageBuild,
+  type JobStatusPayload,
   shaObject,
-  WebsocketMessageSenderWorker,
+  type WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
-} from "../shared/mod.ts";
-import { docker } from "./dockerClient.ts";
+} from "@metapages/compute-queues-shared";
+import { docker } from "/@/queue/dockerClient.ts";
 
 // assume that no images are deleted while we are running
 const CACHED_DOCKER_IMAGES: { [key: string]: boolean } = {};
@@ -21,7 +22,7 @@ const ROOT_BUILD_DIR_DOWNLOADS = `${ROOT_BUILD_DIR}/downloads`;
 export const clearCache = async (args: { build?: DockerJobImageBuild }) => {
   const buildSha = await getBuildSha(args);
   const image = getDockerImageName(buildSha);
-  docker.getImage(image).remove({}, (err: any, result: any) => {
+  docker.getImage(image).remove({}, (err: unknown, result: unknown) => {
     console.log("docker.image.remove result", result);
     console.log("docker.image.remove err", err);
   });
@@ -29,7 +30,7 @@ export const clearCache = async (args: { build?: DockerJobImageBuild }) => {
 
 export const getBuildSha = async (args: {
   image?: string;
-  pullOptions?: any;
+  pullOptions?: { [key: string]: unknown };
   build?: DockerJobImageBuild;
 }): Promise<string> => {
   const buildSha = await shaObject(args.build);
@@ -54,12 +55,13 @@ export class DockerBuildError extends Error {
 export const ensureDockerImage = async (args: {
   jobId: string;
   image?: string;
-  pullOptions?: any;
+  pullOptions?: { [key: string]: unknown };
   build?: DockerJobImageBuild;
   sender: WebsocketMessageSenderWorker;
 }): Promise<string> => {
   // console.log("ensureDockerImage", args);
-  let { jobId, image, pullOptions, build, sender } = args;
+  console.log("ensureDockerImage", args);
+  let { jobId, image, /* pullOptions, */ build, sender } = args;
 
   if (!image && !build) {
     throw new DockerBuildError("Missing image or build configuration");
@@ -81,7 +83,7 @@ export const ensureDockerImage = async (args: {
       return image;
     }
 
-    const { dockerfile, context, filename, target, buildArgs } = build;
+    const { dockerfile, context, filename, target /*, buildArgs */ } = build;
 
     if (!dockerfile && !context) {
       throw new DockerBuildError(
@@ -228,7 +230,7 @@ export const ensureDockerImage = async (args: {
           CACHED_DOCKER_IMAGES[image!] = true;
           // TODO put this parameter in the cli configuration
           if (info.Size < 536870912) { // 0.5gb
-            dockerimage.push({ tag: "1d" }, (err: any, stream: any) => {
+            dockerimage.push({ tag: "1d" }, (err: unknown, stream: unknown) => {
               try {
                 if (err) {
                   console.log(`💥 DOCKER PUSH: ${err}`);
@@ -238,7 +240,7 @@ export const ensureDockerImage = async (args: {
 
                 docker.modem.followProgress(
                   stream,
-                  (err: any, output: any) => {
+                  (err: unknown, _output: unknown) => {
                     if (err) {
                       console.log(`💥 DOCKER PUSH: ${err}`);
                       return;
@@ -267,7 +269,7 @@ export const ensureDockerImage = async (args: {
               `DOCKER NOT pushing since image is too large: ${info.Size}`,
             );
           }
-        } catch (err) {
+        } catch (_err) {
           //ignored
         }
       }
@@ -285,7 +287,7 @@ export const ensureDockerImage = async (args: {
         const imageInfo = docker.getImage(image);
         try {
           await imageInfo.inspect();
-        } catch (err) {
+        } catch (_err) {
           delete CACHED_DOCKER_IMAGES[image!];
           console.log(
             `❗ out-of-band check: image ${image} does not exist, so removing it my record`,
@@ -298,7 +300,7 @@ export const ensureDockerImage = async (args: {
     console.log("ensureDockerImage PULLING bc image and no build");
     const stream = await docker.pull(image);
     await new Promise<void>((resolve, reject) => {
-      function onFinished(err: any, output: any) {
+      function onFinished(err: unknown, _output: unknown) {
         if (err) {
           console.error("Error during pull:", err);
           reject(err);
@@ -309,7 +311,7 @@ export const ensureDockerImage = async (args: {
         resolve();
       }
 
-      function onProgress(event: any) {
+      function onProgress(event: unknown) {
         sender({
           type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
           payload: {
@@ -359,7 +361,7 @@ const checkForDockerImage = async (args: {
 
   try {
     await new Promise<void>((resolve, reject) => {
-      docker.pull(image, function (err: any, stream: any) {
+      docker.pull(image, function (err: unknown, stream: unknown) {
         if (err) {
           reject(err);
           return;
@@ -369,7 +371,7 @@ const checkForDockerImage = async (args: {
           docker.modem.followProgress(stream, onFinished, onProgress);
         }
 
-        function onFinished(err: any, output: any) {
+        function onFinished(err: unknown, output: unknown) {
           //output is an array with output json parsed objects
           //...
           if (err) {
@@ -379,7 +381,7 @@ const checkForDockerImage = async (args: {
             resolve();
           }
         }
-        function onProgress(event: any) {
+        function onProgress(event: unknown) {
           sender({
             type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
             payload: {
@@ -402,7 +404,7 @@ const checkForDockerImage = async (args: {
 const hasImage = async (imageUrl: string): Promise<boolean> => {
   // console.log("hasImage, imageUrl", imageUrl)
   const images = await docker.listImages();
-  return images.some((e: any) => {
+  return images.some((e: { RepoTags: string[] | null }) => {
     return (
       e.RepoTags != null &&
       e.RepoTags.some((tag: string) => {
@@ -450,7 +452,7 @@ const parseDockerUrl = (s: string): DockerUrlBlob => {
   let namespace: string | undefined;
   let registry: string | undefined;
   if (registryAndNamespace) {
-    var tokens = registryAndNamespace.split("/");
+    const tokens = registryAndNamespace.split("/");
     if (tokens.length > 1) {
       namespace = tokens.pop();
       registry = tokens.length > 0 ? tokens.join("/") : undefined;
@@ -468,7 +470,7 @@ const parseDockerUrl = (s: string): DockerUrlBlob => {
     }
   }
 
-  var url: DockerUrlBlob = {
+  const url: DockerUrlBlob = {
     repository: namespace == null ? repository : `${namespace}/${repository}`,
   };
   if (tag != null) {
@@ -480,7 +482,7 @@ const parseDockerUrl = (s: string): DockerUrlBlob => {
   return url;
 };
 
-const getDownloadLinkFromContext = async (context: string): Promise<string> => {
+const getDownloadLinkFromContext = (context: string): string => {
   // https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
   if (context.endsWith(".tar.gz") || context.endsWith(".zip")) {
     return context;
@@ -533,7 +535,6 @@ const getFilePathForDownload = (url: string): string => {
     return `${ROOT_BUILD_DIR_DOWNLOADS}/${url.replace("http://", "")}`;
   }
   throw "Unsupported download link";
-  return "";
 };
 
 const downloadContextIntoDirectory = async (args: {
@@ -735,9 +736,11 @@ const downloadContextIntoDirectory = async (args: {
         logs: [["✅ copied context, ready to build", Date.now()]],
       } as JobStatusPayload,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     throw new DockerBuildError(
-      `Failure to build the docker image context: ${err?.message}`,
+      `Failure to build the docker image context: ${
+        err instanceof Error ? err.message : `Unknown error: ${String(err)}`
+      }`,
     );
   } finally {
     try {

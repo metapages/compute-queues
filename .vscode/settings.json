@@ -11,8 +11,9 @@
     "**/app/api/assets": true,
     "**/dist": true
   },
-  "deno.enable": false,
+  "deno.enable": true,
   "deno.lint": true,
+  "deno.disablePaths": ["app/browser"],
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "denoland.vscode-deno",
   "files.watcherExclude": {

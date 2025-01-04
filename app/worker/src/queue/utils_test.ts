@@ -1,9 +1,9 @@
-import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assertEquals } from "std/assert";
 
 import {
   convertStringToDockerCommand,
   generateDockerImageTag,
-} from "./utils.ts";
+} from "/@/queue/utils.ts";
 
 Deno.test("git url to docker image without url fragments", () => {
   const url =

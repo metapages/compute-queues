@@ -1,0 +1,11 @@
+networks:
+  default:
+    driver: bridge
+
+volumes:
+  deno:
+    driver: local
+  node_modules:
+    driver: local
+  browser_node_modules:
+    driver: local

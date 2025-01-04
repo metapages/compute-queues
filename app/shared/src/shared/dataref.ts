@@ -1,14 +1,18 @@
 import {
-  DataRef,
+  type DataRef,
   DataRefType,
   DataRefTypeDefault,
-  decodeBase64,
-  fetchRobust as fetch,
-  InputsRefs,
-  sha256Buffer,
-} from "/@/shared";
+  type InputsRefs,
+} from "/@/shared/types.ts";
 
-import { DataRefSerializedBlob, MetaframeInputMap } from "@metapages/metapage";
+import { fetchRobust as fetch, sha256Buffer } from "/@/shared/util.ts";
+
+import { decodeBase64 } from "/@/shared/base64.ts";
+
+import type {
+  DataRefSerializedBlob,
+  MetaframeInputMap,
+} from "@metapages/metapage";
 
 export const ENV_VAR_DATA_ITEM_LENGTH_MAX = 200;
 
@@ -31,19 +35,40 @@ export const dataRefToBuffer = async (
     case DataRefType.json:
       return new TextEncoder().encode(JSON.stringify(ref.value));
     case DataRefType.url: {
-      const arrayBufferFromUrl = await urlToUint8Array(ref.value as string);
-      return arrayBufferFromUrl;
+      try {
+        const arrayBufferFromUrl = await urlToUint8Array(ref.value as string);
+        if (!ref.hash) {
+          const computedHash = await sha256Buffer(arrayBufferFromUrl);
+          ref.hash = computedHash;
+        }
+        return new Uint8Array(arrayBufferFromUrl);
+      } catch (downloadError) {
+        console.error(
+          `Failed to download data from URL ${ref.value}:`,
+          downloadError,
+        );
+        throw downloadError;
+      }
     }
     case DataRefType.key: {
-      // hard code this for now
-      const arrayBufferFromKey = await fetchBlobFromHash(
-        ref.value,
-        address || "https://container.mtfm.io",
-      );
-      return new Uint8Array(arrayBufferFromKey);
+      try {
+        const arrayBufferFromKey = await fetchBlobFromHash(
+          ref.value,
+          address || "https://container.mtfm.io",
+        );
+        return new Uint8Array(arrayBufferFromKey);
+      } catch (keyError) {
+        console.error(
+          `Failed to fetch blob from hash for key ${ref.value}:`,
+          keyError,
+        );
+        throw keyError;
+      }
     }
-    default: // undefined assume DataRefType.Base64
-      throw `Not yet implemented: DataRef.type "${ref.type}" unknown`;
+    default:
+      throw new Error(
+        `Not yet implemented: DataRef.type "${ref.type}" unknown`,
+      );
   }
 };
 
@@ -91,7 +116,6 @@ export const copyLargeBlobsToCloud = async (
             uint8ArrayIfBig = utf8ToBuffer(inputs[name].value);
           }
           break;
-
         default:
       }
 
@@ -104,7 +128,9 @@ export const copyLargeBlobsToCloud = async (
           const urlUpload = `${address}/api/v1/upload/${hash}`;
           // Then upload directly to S3/MinIO using the presigned URL
           const responseUpload = await fetch(urlUpload, {
+            // @ts-ignore: TS2353
             method: "PUT",
+            // @ts-ignore: TS2353
             redirect: "follow",
             body: uint8ArrayIfBig,
             headers: { "Content-Type": "application/octet-stream" },
@@ -116,6 +142,7 @@ export const copyLargeBlobsToCloud = async (
           const ref: DataRef = {
             value: `${address}/api/v1/download/${hash}`,
             type: DataRefType.url,
+            hash: hash,
           };
           result[name] = ref; // the server gave us this ref to use
           AlreadyUploaded[hash] = true;
@@ -123,6 +150,7 @@ export const copyLargeBlobsToCloud = async (
           result[name] = {
             value: `${address}/api/v1/download/${hash}`,
             type: DataRefType.url,
+            hash: hash,
           };
         }
       } else {
@@ -200,8 +228,10 @@ export const convertJobOutputDataRefsToExpectedFormat = async (
 };
 
 const fetchBlobFromUrl = async (url: string): Promise<ArrayBuffer> => {
-  let response = await fetch(url, {
+  const response = await fetch(url, {
+    // @ts-ignore: TS2353
     method: "GET",
+    // @ts-ignore: TS2353
     redirect: "follow",
     headers: { "Content-Type": "application/octet-stream" },
   });
@@ -214,7 +244,9 @@ const fetchBlobFromUrl = async (url: string): Promise<ArrayBuffer> => {
 
 export const fetchJsonFromUrl = async <T>(url: string): Promise<T> => {
   const response = await fetch(url, {
+    // @ts-ignore: TS2353
     method: "GET",
+    // @ts-ignore: TS2353
     redirect: "follow",
     headers: { "Content-Type": "application/json" },
   });
@@ -223,6 +255,7 @@ export const fetchJsonFromUrl = async <T>(url: string): Promise<T> => {
 };
 
 export const urlToUint8Array = async (url: string): Promise<Uint8Array> => {
+  // @ts-ignore: TS2353
   const response = await fetch(url, { redirect: "follow" });
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
@@ -231,10 +264,10 @@ export const urlToUint8Array = async (url: string): Promise<Uint8Array> => {
   return new Uint8Array(arrayBuffer);
 };
 
-const fetchBlobFromHash = async (
+export const fetchBlobFromHash: (
   hash: string,
   address: string,
-): Promise<ArrayBuffer> => {
+) => Promise<ArrayBuffer> = (hash, address) => {
   return fetchBlobFromUrl(`${address}/api/v1/download/${hash}`);
 };
 

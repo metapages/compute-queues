@@ -4,7 +4,7 @@ const corsHeaders = {
   "Access-Control-Max-Age": "86400",
 };
 
-export const handleOptions = async (request: Request): Promise<Response> => {
+export const handleOptions = (request: Request): Response => {
   if (
     request.headers.get("Origin") !== null &&
     request.headers.get("Access-Control-Request-Method") !== null &&

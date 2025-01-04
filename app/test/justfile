@@ -18,10 +18,35 @@ green := "\\e[32m"
 @watch:
     deno test --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src
 
+watch-local:
+    QUEUE_ID=local API_URL=http://localhost:8000 deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+
+# Lint
+@lint:
+    deno lint
+
+# Lint and fix issues
+@lint-fix:
+    deno lint --fix
+
+# Format
+@fmt:
+    deno fmt
+
+# Format check
+@fmt-check:
+    deno fmt --check
+
+# Fix
+@fix: lint-fix fmt
+
 @test:
     deno test --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv src
     echo "✅ functional tests"
 
-@test-in-docker stack="test":
-    cd .. && \
-    APP_PORT={{ APP_PORT }} docker compose --project-name={{ stack }} -f docker-compose.yml -f docker-compose-remote.yml -f docker-compose-test.yml run --no-deps --rm test deno test --unsafely-ignore-certificate-errors --allow-all src
+# Run CI
+@ci: fmt-check lint
+
+@test-in-docker mode="remote" stack="test":
+    cd ../.. && \
+    APP_PORT={{ APP_PORT }} docker compose --project-name={{ stack }} -f docker-compose.yml -f docker-compose-{{ mode }}.yml -f docker-compose-test-{{ mode }}.yml run --no-deps --rm test deno test --unsafely-ignore-certificate-errors --allow-all src

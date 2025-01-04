@@ -38,6 +38,7 @@ export default [
       "@typescript-eslint/no-empty-object-type": "off",
       "@typescript-eslint/prefer-ts-expect-error": "off",
       "@typescript-eslint/ban-ts-comment": "off",
+      "react/react-in-jsx-scope": "off",
     },
   },
 ];
