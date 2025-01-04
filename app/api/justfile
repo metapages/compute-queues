@@ -83,7 +83,7 @@ clean:
     if ! command -v deployctl &> /dev/null; then echo '‼️ deployctl is being installed ‼️'; deno install -Arf jsr:@deno/deployctl; fi
 
 # Add new helper recipe for building shared dependencies
-@_build_shared:
+_build_shared:
     #!/usr/bin/env bash
     set -eo pipefail
     cd ../shared && just build

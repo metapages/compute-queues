@@ -27,7 +27,6 @@ services:
     environment:
       - PORT=8000
       - IGNORE_CERTIFICATE_ERRORS=true
-      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
     volumes:
@@ -46,18 +45,21 @@ services:
     logging:
       driver: ${LOGGING_WORKER:-json-file}
 
-  create-browser-assets:
+  serve-browser-assets:
     build:
       context: .
       dockerfile: app/browser/Dockerfile
-    command: just watch
+    command: just dev local
     working_dir: /app/app/browser
     environment:
-      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
-      # - SERVER_ORIGIN=https://worker-metaframe.localhost:${APP_PORT:-443}
+      - APP_PORT_BROWSER=443
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
     volumes:
       - deno:/deno
       - .:/app
       - browser_node_modules:/app/app/browser/node_modules
+    ports:
+      - "${APP_PORT:-443}:443"
     extra_hosts:
       - "host.docker.internal:host-gateway"

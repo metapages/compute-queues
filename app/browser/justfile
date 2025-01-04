@@ -115,8 +115,11 @@ serve: _mkcert _install _build_shared
     {{ tsc }} {{ args }}
 
 # DEV: generate TLS certs for HTTPS over localhost https://blog.filippo.io/mkcert-valid-https-certificates-for-localhost/
-@_mkcert:
-    just ../_mkcert
+_mkcert:
+    #!/usr/bin/env bash
+    if [ ! -f /.dockerenv ]; then
+        just ../_mkcert
+    fi
 
 @_install:
     npm i
@@ -148,7 +151,7 @@ serve: _mkcert _install _build_shared
 @fix: lint-fix fmt
 
 # Add new helper recipe for building shared dependencies
-@_build_shared:
+_build_shared:
     #!/usr/bin/env bash
     set -eo pipefail
     cd ../shared && just build

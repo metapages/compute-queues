@@ -9,25 +9,16 @@ services:
     extra_hosts:
       - worker:host-gateway
       - host.docker.internal:host-gateway
-      - minio.worker-metaframe.localhost:host-gateway
-      - worker-metaframe.localhost:host-gateway
-      - worker-metaframe-api2.dev:host-gateway
     environment:
-      # APP_PORT is only needed for the upload/curl/dns/docker fiasco
-      - APP_PORT=${APP_PORT:-443}
       - IGNORE_CERTIFICATE_ERRORS=true
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - API_URL=http://worker:8000
       - QUEUE_ID=local
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
-      - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
-      - DENO_KV_URL=http://denokv:4512
     volumes:
       - deno:/deno
       - .:/app
-    labels:
-      - "custom.label=worker-metaframe.localhost"
     networks:
       - default
     logging:

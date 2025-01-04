@@ -18,6 +18,9 @@ green := "\\e[32m"
 @watch:
     deno test --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src
 
+watch-local:
+    QUEUE_ID=local API_URL=http://localhost:8000 deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+
 # Lint
 @lint:
     deno lint

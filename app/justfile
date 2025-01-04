@@ -23,7 +23,7 @@ green := "\\e[32m"
 @dev mode="remote" +args="": (_validate_mode mode) _build_shared _ensure-all (open mode) (_up mode args)
 
 # Start the docker compose local stack
-@_up mode="remote" +args="": (_validate_mode mode) _ensure-all _mkcert _build_shared
+_up mode="remote" +args="": (_validate_mode mode) _ensure-all _mkcert _build_shared
     #!/usr/bin/env bash
     # A local NPM registry saves time, bandwidth, and avoids rate limits
     # If a local npm registry cache is running, use that for all npm modules (faster and better when internet not great)
@@ -38,7 +38,7 @@ green := "\\e[32m"
     docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml up --remove-orphans {{ args }}
 
 # Shut down the local stack: 'docker compose down'
-@down mode="remote" +args="": (_validate_mode mode)
+down mode="remote" +args="": (_validate_mode mode)
     #!/usr/bin/env bash
     docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml down {{ args }}
 
@@ -150,7 +150,7 @@ test mode="remote" +args="": _build_shared check (_validate_mode mode)
     just cli/test
 
 # Clean up the project
-@clean mode="remote" +args="": (_validate_mode mode)
+clean mode="remote" +args="": (_validate_mode mode)
     #!/usr/bin/env bash
     docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml down -v
     just browser/clean
@@ -160,7 +160,7 @@ test mode="remote" +args="": _build_shared check (_validate_mode mode)
 open mode="remote": _ensure-all
     #!/usr/bin/env bash
     if [ "{{ mode }}" = "local" ]; then
-        deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=http://localhost:8000#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local' || true
+        deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{ APP_FQDN }}:{{ APP_PORT }}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local' || true
     else
         deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{ APP_FQDN }}:{{ APP_PORT }}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1' || true
     fi

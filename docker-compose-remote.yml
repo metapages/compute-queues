@@ -171,8 +171,11 @@ services:
     command: just watch
     working_dir: /app/app/browser
     environment:
-      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+      # Disabling this, was getting errors.
+      # - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - SERVER_ORIGIN=https://worker-metaframe.localhost:${APP_PORT:-443}
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
     volumes:
       - deno:/deno
       - .:/app
@@ -213,6 +216,7 @@ services:
       - deno:/deno
     networks:
       - default
+  
   minio:
     depends_on:
       traefik:

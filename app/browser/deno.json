@@ -1,5 +1,6 @@
 {
   "fmt": {
     "exclude": ["dist", "README.md", "*.json", "*.lock"]
-  }
+  },
+  "nodeModulesDir": "auto"
 }
