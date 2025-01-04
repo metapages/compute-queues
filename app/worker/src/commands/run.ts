@@ -63,14 +63,15 @@ export function connectToServer(
     cpus: number;
     gpus: number;
     workerId: string;
+    port: number;
   },
 ) {
-  const { server, queueId, cpus, gpus, workerId } = args;
+  const { server, queueId, cpus, gpus, workerId, port } = args;
 
   console.log("CLI:", args);
 
   const url = config.mode === "local"
-    ? `ws://localhost:${config.port}/${queueId}/worker`
+    ? `ws://localhost:${port}/${queueId}/worker`
     : `${server.replace("http", "ws")}/${queueId}/worker`;
 
   // @ts-ignore: frustrating cannot get compiler "default" import setup working
@@ -315,7 +316,6 @@ export const runCommand = new Command()
               cpus: config.cpus,
               gpus: config.gpus ?? 0,
               workerId: config.id,
-              dataDirectory: config.dataDirectory,
               port: config.port,
             });
           },
@@ -342,7 +342,6 @@ export const runCommand = new Command()
         cpus: config.cpus,
         gpus: config.gpus,
         workerId: config.id,
-        dataDirectory: config.dataDirectory,
         port: config.port,
       });
 
