@@ -19,7 +19,47 @@ import {
   fileToDataref,
 } from "../../shared/src/shared/jobtools.ts";
 
-const API_URL = Deno.env.get("API_URL") || "http://api1:8081";
+const API_URL: string = Deno.env.get("API_URL") || "http://api1:8081";
+
+// Install curl in case it's not available
+// Check if curl is installed first
+// Because curl is needed for uploading files (for now)
+// This could be put somewhere else but this is currently the
+// only test that needs curl (because of the upload/curl/dns/docker fiasco)
+const checkCurl = new Deno.Command("which", {
+  args: ["curl"],
+});
+const checkResult = await checkCurl.output();
+
+if (!checkResult.success) {
+  const command = new Deno.Command("apk", {
+    args: ["add", "curl"],
+  });
+  const { success, stderr } = await command.output();
+  if (!success) {
+    throw new Error(
+      `Failed to install curl: ${new TextDecoder().decode(stderr)}`,
+    );
+  }
+}
+
+Deno.test("Test upload and download", async () => {
+  const word = `hello${Math.floor(Math.random() * 10000)}`;
+  const content = `${Array(50).fill(word).join("")}`;
+  const rootName = `hello${Math.floor(Math.random() * 10000)}.txt`;
+  const fileName = `/tmp/${rootName}`;
+
+  await Deno.writeTextFile(fileName, content);
+
+  const dataref = await fileToDataref(fileName, API_URL);
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+
+  // Let's test the upload then:
+  const downloadUrl = dataref.value;
+  const downloadResponse = await fetch(downloadUrl);
+  const downloadResponseBody = await downloadResponse.text();
+  assertEquals(downloadResponseBody, content);
+});
 
 Deno.test(
   "Run a job that uploads input files and validates the input",
@@ -34,28 +74,6 @@ Deno.test(
     const fileName = `/tmp/${rootName}`;
 
     await Deno.writeTextFile(fileName, content);
-
-    // Install curl in case it's not available
-    // Check if curl is installed first
-    // Because curl is needed for uploading files (for now)
-    // This could be put somewhere else but this is currently the
-    // only test that needs curl (because of the upload/curl/dns/docker fiasco)
-    const checkCurl = new Deno.Command("which", {
-      args: ["curl"],
-    });
-    const checkResult = await checkCurl.output();
-
-    if (!checkResult.success) {
-      const command = new Deno.Command("apk", {
-        args: ["add", "curl"],
-      });
-      const { success, stdout, stderr } = await command.output();
-      if (!success) {
-        throw new Error(
-          `Failed to install curl: ${new TextDecoder().decode(stderr)}`,
-        );
-      }
-    }
 
     const dataref = await fileToDataref(fileName, API_URL);
 
@@ -83,15 +101,17 @@ Deno.test(
       );
       switch (possibleMessage.type) {
         case WebsocketMessageTypeServerBroadcast.JobStates:
-        case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
+        case WebsocketMessageTypeServerBroadcast.JobStateUpdates: {
           const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
           if (!someJobsPayload) {
             break;
           }
+
           const jobState = someJobsPayload.state.jobs[jobId];
           if (!jobState) {
             break;
           }
+
           if (jobState.state === DockerJobState.Finished) {
             const finishedState = jobState.value as StateChangeValueFinished;
             const outputs = finishedState.result?.outputs;
@@ -105,6 +125,7 @@ Deno.test(
             resolve();
           }
           break;
+        }
         default:
           //ignored
       }
