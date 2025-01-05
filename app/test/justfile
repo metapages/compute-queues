@@ -15,13 +15,13 @@ green := "\\e[32m"
     deno check src
     echo "✅ tests compilation"
 
-@watch:
-    deno test --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src
+@watch +args="":
+    deno test --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/{{ args }}
 
-@test:
-    deno test --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv src
+@test +args="":
+    deno test --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv src/{{ args }}
     echo "✅ functional tests"
 
-@test-in-docker stack="test":
+@test-in-docker stack="test" +args="":
     cd .. && \
-    APP_PORT={{ APP_PORT }} docker compose --project-name={{ stack }} -f docker-compose.yml -f docker-compose-remote.yml -f docker-compose-test.yml run --no-deps --rm test deno test --unsafely-ignore-certificate-errors --allow-all src
+    APP_PORT={{ APP_PORT }} docker compose --project-name={{ stack }} -f docker-compose.yml -f docker-compose-remote.yml -f docker-compose-test.yml run --no-deps --rm test deno test --unsafely-ignore-certificate-errors --allow-all src/{{ args }}

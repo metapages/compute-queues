@@ -28,7 +28,6 @@ services:
     labels:
       - "custom.label=worker-metaframe.localhost"
       - "traefik.enable=true"
-      # - "traefik.http.routers.minio.rule=Host(`minio.worker-metaframe.localhost`) || Host(`minio.worker-metaframe.localhost`)"
       - "traefik.http.routers.minio.rule=Host(`minio.worker-metaframe.localhost`)"
       - "traefik.http.routers.minio.entrypoints=websecure"
       # Apply the CORS middleware to the router

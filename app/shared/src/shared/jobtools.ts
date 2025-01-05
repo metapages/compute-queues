@@ -84,17 +84,18 @@ export const bufferToBase64Ref = async (
 };
 
 // "-L" == follow redirects, very important
-let BaseCurlUploadArgs = ["-X", "PUT", "-L", "--upload-file"];
+let BaseCurlUploadArgs = ["--fail-with-body", "-L", "--upload-file"];
+
 // curl hard codes .localhost DNS resolution, so we need to add the resolve flags
 // I tried using something other than .localhost, but it didn't work for all kinds of reasons
 if (IGNORE_CERTIFICATE_ERRORS) {
   // add the resolve flags from the /etc/hosts file
   // APP_PORT is only needed for the upload/curl/dns/docker fiasco
   const APP_PORT = Deno.env.get("APP_PORT") || "443";
-  const hostsFileContents = await await Deno.readTextFile("/etc/hosts");
+  const hostsFileContents = await Deno.readTextFile("/etc/hosts");
   const hostsFileLines = hostsFileContents.split("\n");
   const resolveFlags = hostsFileLines
-    .filter((line: string) => line.includes("worker-metaframe.localhost"))
+    .filter((line: string) => line.includes("worker-metaframe"))
     .map((line: string) => line.split(/\s+/).filter((s) => !!s))
     .map((parts: string[]) => [
       "--resolve",
@@ -145,13 +146,15 @@ export const fileToDataref = async (
         if (!success) {
           count++;
           throw new Error(
-            `Failed attempt ${count} to upload ${file} to ${uploadUrl} code=${code} stdout=${
+            `Failed attempt ${count} with command='curl ${
+              args.join(
+                " ",
+              )
+            }' to upload ${file} to ${uploadUrl} code=${code} stdout=${
               new TextDecoder().decode(
                 stdout,
               )
-            } stderr=${new TextDecoder().decode(stderr)} command='curl ${
-              args.join(" ")
-            }'`,
+            } stderr=${new TextDecoder().decode(stderr)}`,
           );
         }
       },
