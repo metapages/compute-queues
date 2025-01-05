@@ -1,4 +1,5 @@
 import { assert, assertEquals } from "std/assert";
+
 import { closed, open } from "@korkje/wsi";
 
 import {
@@ -10,7 +11,6 @@ import {
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from "../../shared/src/mod.ts";
-
 import {
   createNewContainerJobMessage,
   fileToDataref,
@@ -46,6 +46,9 @@ async function ensureCurlInstalled() {
     console.log("'curl' is already installed.");
   }
 }
+
+// We'll ensure curl is installed first, because we need it for fileToDataref
+await ensureCurlInstalled();
 
 /**
  * Helper that awaits the job finishing and performs assertions on the output.
@@ -128,120 +131,145 @@ function waitForJobToFinish(
   };
 }
 
-Deno.test("Run a job that uploads input files and validates the input", async () => {
-  console.log(
-    "Starting test: 'Run a job that uploads input files and validates the input'",
-  );
-
-  // We'll ensure curl is installed first, because we need it for fileToDataref
-  await ensureCurlInstalled();
-
-  // Generate random filenames and content
-  const randomId1 = Math.floor(Math.random() * 10000);
-  const word = `hello${randomId1}`;
+Deno.test("Test upload and download", async () => {
+  const word = `hello${Math.floor(Math.random() * 10000)}`;
   const content = `${Array(50).fill(word).join("")}`;
-
-  const randomId2 = Math.floor(Math.random() * 10000);
-  const rootName = `hello${randomId2}.txt`;
+  const rootName = `hello${Math.floor(Math.random() * 10000)}.txt`;
   const fileName = `/tmp/${rootName}`;
 
-  console.log(`Creating local file: ${fileName}`);
   await Deno.writeTextFile(fileName, content);
 
-  // Upload file and get dataref
-  console.log(`Uploading file '${fileName}' to dataref...`);
   const dataref = await fileToDataref(fileName, API_URL);
-  console.log("Upload complete. Dataref:", dataref);
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 
-  const definition: DockerJobDefinitionInputRefs = {
-    image: "alpine:3.18.5",
-    command: `sh -c 'cp /inputs/${rootName} /outputs/${rootName}'`,
-    inputs: {
-      [rootName]: dataref,
-    },
-  };
-
-  const { message, jobId } = await createNewContainerJobMessage({ definition });
-  console.log("Created new container job message:");
-
-  // Create a deferred so we can await the job finishing
-  const { promise: jobCompleteDeferred, resolve } = Promise.withResolvers<
-    void
-  >();
-
-  // Open the socket
-  console.log("Opening websocket to server...");
-  const socket = new WebSocket(
-    `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
-  );
-  await open(socket);
-  console.log("Socket opened. Sending job creation message...");
-
-  // Wait for job to finish
-  waitForJobToFinish(socket, jobId, rootName, content, resolve);
-
-  // Send the job creation message
-  socket.send(JSON.stringify(message));
-  console.log("Job creation message sent. Waiting for job to finish...");
-
-  // Wait for the job
-  await jobCompleteDeferred;
-
-  console.log("Job completed. Closing socket...");
-  socket.close();
-  await closed(socket);
-
-  console.log(
-    "Test 'Run a job that uploads input files and validates the input' completed.\n",
-  );
+  // Let's test the upload then:
+  const downloadUrl = dataref.value;
+  const downloadResponse = await fetch(downloadUrl);
+  const downloadResponseBody = await downloadResponse.text();
+  assertEquals(downloadResponseBody, content);
 });
 
-Deno.test("Run a job that creates output files, downloads and checks the file", async () => {
-  console.log(
-    "Starting test: 'Run a job that creates output files, downloads and checks the file'",
-  );
+Deno.test(
+  "Run a job that uploads input files and validates the input",
+  async () => {
+    console.log(
+      "Starting test: 'Run a job that uploads input files and validates the input'",
+    );
 
-  // Generate random content
-  const randomId = Math.floor(Math.random() * 10000);
-  const word = `hello${randomId}`;
-  const content = `${Array(50).fill(word).join("")}`;
+    // Generate random filenames and content
+    const randomId1 = Math.floor(Math.random() * 10000);
+    const word = `hello${randomId1}`;
+    const content = `${Array(50).fill(word).join("")}`;
 
-  const definition = {
-    image: "alpine:3.18.5",
-    command: `sh -c 'echo ${content} > /outputs/hello.txt'`,
-  };
+    const randomId2 = Math.floor(Math.random() * 10000);
+    const rootName = `hello${randomId2}.txt`;
+    const fileName = `/tmp/${rootName}`;
 
-  const { message, jobId } = await createNewContainerJobMessage({ definition });
-  console.log("Created new container job message:");
+    console.log(`Creating local file: ${fileName}`);
+    await Deno.writeTextFile(fileName, content);
 
-  // Create a deferred so we can await the job finishing
-  const { promise: jobCompleteDeferred, resolve } = Promise.withResolvers<
-    void
-  >();
+    // Upload file and get dataref
+    console.log(`Uploading file '${fileName}' to dataref...`);
+    const dataref = await fileToDataref(fileName, API_URL);
+    console.log("Upload complete. Dataref:", dataref);
 
-  // Open the socket
-  console.log("Opening websocket to server...");
-  const socket = new WebSocket(
-    `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
-  );
-  await open(socket);
-  console.log("Socket opened. Sending job creation message...");
+    const definition: DockerJobDefinitionInputRefs = {
+      image: "alpine:3.18.5",
+      command: `sh -c 'cp /inputs/${rootName} /outputs/${rootName}'`,
+      inputs: {
+        [rootName]: dataref,
+      },
+    };
 
-  // Wait for job to finish
-  waitForJobToFinish(socket, jobId, "hello.txt", content, resolve);
+    const { message, jobId } = await createNewContainerJobMessage({
+      definition,
+    });
+    console.log("Created new container job message:");
 
-  // Send the job creation message
-  socket.send(JSON.stringify(message));
-  console.log("Job creation message sent. Waiting for job to finish...");
+    // Create a deferred so we can await the job finishing
+    const { promise: jobCompleteDeferred, resolve } = Promise.withResolvers<
+      void
+    >();
 
-  // Wait for the job
-  await jobCompleteDeferred;
+    // Open the socket
+    console.log("Opening websocket to server...");
+    const socket = new WebSocket(
+      `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
+    );
+    await open(socket);
+    console.log("Socket opened. Sending job creation message...");
 
-  console.log("Job completed. Closing socket...");
-  socket.close();
-  await closed(socket);
+    // Wait for job to finish
+    waitForJobToFinish(socket, jobId, rootName, content, resolve);
 
-  console.log(
-    "Test 'Run a job that creates output files, downloads and checks the file' completed.\n",
-  );
-});
+    // Send the job creation message
+    socket.send(JSON.stringify(message));
+    console.log("Job creation message sent. Waiting for job to finish...");
+
+    // Wait for the job
+    await jobCompleteDeferred;
+
+    console.log("Job completed. Closing socket...");
+    socket.close();
+    await closed(socket);
+
+    console.log(
+      "Test 'Run a job that uploads input files and validates the input' completed.\n",
+    );
+  },
+);
+
+Deno.test(
+  "Run a job that creates output files, downloads and checks the file",
+  async () => {
+    console.log(
+      "Starting test: 'Run a job that creates output files, downloads and checks the file'",
+    );
+
+    // Generate random content
+    const randomId = Math.floor(Math.random() * 10000);
+    const word = `hello${randomId}`;
+    const content = `${Array(50).fill(word).join("")}`;
+
+    const definition = {
+      image: "alpine:3.18.5",
+      command: `sh -c 'echo ${content} > /outputs/hello.txt'`,
+    };
+
+    const { message, jobId } = await createNewContainerJobMessage({
+      definition,
+    });
+    console.log("Created new container job message:");
+
+    // Create a deferred so we can await the job finishing
+    const { promise: jobCompleteDeferred, resolve } = Promise.withResolvers<
+      void
+    >();
+
+    // Open the socket
+    console.log("Opening websocket to server...");
+    const socket = new WebSocket(
+      `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
+    );
+    await open(socket);
+    console.log("Socket opened. Sending job creation message...");
+
+    // Wait for job to finish
+    waitForJobToFinish(socket, jobId, "hello.txt", content, resolve);
+
+    // Send the job creation message
+    socket.send(JSON.stringify(message));
+    console.log("Job creation message sent. Waiting for job to finish...");
+
+    // Wait for the job
+    await jobCompleteDeferred;
+
+    console.log("Job completed. Closing socket...");
+    socket.close();
+    await closed(socket);
+
+    console.log(
+      "Test 'Run a job that creates output files, downloads and checks the file' completed.\n",
+    );
+  },
+);

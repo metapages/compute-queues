@@ -10,6 +10,8 @@
  * removed. The results are cached tho
  */
 
+import { DB } from "/@/shared/db.ts";
+import { resolvePreferredWorker } from "/@/shared/jobtools.ts";
 import {
   type BroadcastJobStates,
   type BroadcastWorkers,
@@ -37,14 +39,11 @@ import {
   type WorkerRegistration,
   type WorkerStatusResponse,
 } from "/@/shared/types.ts";
-import { DB } from "/@/shared/db.ts";
-import { resolvePreferredWorker } from "/@/shared/jobtools.ts";
-import { delay } from "std/async/delay";
+import { resolveMostCorrectJob } from "/@/shared/util.ts";
 // import LRU from 'https://deno.land/x/lru_cache@6.0.0-deno.4/mod.ts';
 import { ms } from "ms";
 import { createNanoEvents, type Emitter } from "nanoevents";
-
-import { resolveMostCorrectJob } from "/@/shared/util.ts";
+import { delay } from "std/async/delay";
 
 import type { BroadcastChannelRedis } from "@metapages/deno-redis-broadcastchannel";
 
@@ -163,9 +162,11 @@ export class BaseDockerJobQueue {
   protected _intervalCheckForDuplicateJobsSameSource: number | undefined;
   protected _intervalRemoveOldFinishedJobsFromQueue: number | undefined;
 
-  constructor(
-    opts: { serverId: string; address: string; dataDirectory?: string },
-  ) {
+  constructor(opts: {
+    serverId: string;
+    address: string;
+    dataDirectory?: string;
+  }) {
     const { serverId, address, dataDirectory } = opts;
     console.log(`➕ 🎾 UserDockerJobQueue ${address}`);
 
@@ -541,7 +542,10 @@ export class BaseDockerJobQueue {
     await this.db.resultCacheRemove(jobId);
     console.log(
       `[${this.address.substring(0, 6)}] deleted from db: [${
-        jobId.substring(0, 6)
+        jobId.substring(
+          0,
+          6,
+        )
       }]`,
     );
   }
@@ -868,15 +872,15 @@ export class BaseDockerJobQueue {
                 // If this is a new submission
                 // TODO: what is happening here? It could be a lost job
                 //
-                (this.state.jobs[jobId].history[0]
-                  .value as StateChangeValueQueued).definition =
-                    valueQueued.definition;
+                (
+                  this.state.jobs[jobId].history[0]
+                    .value as StateChangeValueQueued
+                ).definition = valueQueued.definition;
                 await broadcastCurrentStateBecauseIDoubtStateIsSynced();
                 break;
               case DockerJobState.Finished: {
                 const previousFinishedState: StateChangeValueFinished = this
-                  .state.jobs[jobId]
-                  .value as StateChangeValueFinished;
+                  .state.jobs[jobId].value as StateChangeValueFinished;
                 switch (previousFinishedState.reason) {
                   case DockerJobFinishedReason.Cancelled:
                     console.log(
@@ -1120,6 +1124,16 @@ export class BaseDockerJobQueue {
         if (messageString === "PING") {
           // console.log(`PING FROM ${worker?.id}`)
           connection.socket.send("PONG");
+          // To help with missing workers, send the current state of the unclaimed jobs
+          // to the worker when it pings
+          this.sendJobStatesToWebsocket(
+            connection.socket,
+            Object.keys(this.state.jobs).filter(
+              (jobId) =>
+                this.state.jobs[jobId].state !== DockerJobState.Finished,
+            ),
+          );
+
           return;
         }
 
@@ -1315,9 +1329,9 @@ export class BaseDockerJobQueue {
               // Send a message to our local workers to clear their respective caches
               const jobId = (possibleMessage.payload as PayloadResubmitJob)
                 .jobId;
-              const updatedDefinition =
-                (possibleMessage.payload as PayloadResubmitJob)
-                  .definition;
+              const updatedDefinition = (
+                possibleMessage.payload as PayloadResubmitJob
+              ).definition;
               const job = this.state.jobs[jobId];
               const isCleared = await this.broadcastAndDeleteCachedJob(jobId);
               if (isCleared) {
@@ -1350,8 +1364,7 @@ export class BaseDockerJobQueue {
           case WebsocketMessageTypeClientToServer.QueryJob: {
             (() => {
               // Send a message to our local workers to clear their respective caches
-              const jobId = (possibleMessage.payload as PayloadQueryJob)
-                .jobId;
+              const jobId = (possibleMessage.payload as PayloadQueryJob).jobId;
               if (!jobId) {
                 return;
               }
@@ -1374,9 +1387,7 @@ export class BaseDockerJobQueue {
     await this.sendJobStatesToWebsocket(connection.socket);
   }
 
-  createWebsocketBroadcastMessageJobStates(
-    jobIds?: string[],
-  ): Promise<string> {
+  createWebsocketBroadcastMessageJobStates(jobIds?: string[]): Promise<string> {
     const sendingJobIds = jobIds || Object.keys(this.state.jobs);
     return this.createWebsocketBroadcastMessageJobStatesInternal(
       sendingJobIds,
@@ -1408,7 +1419,7 @@ export class BaseDockerJobQueue {
       }
     }
 
-    if ((Object.keys(jobStates.state.jobs).length === 0)) {
+    if (Object.keys(jobStates.state.jobs).length === 0) {
       return "";
     }
 
@@ -1728,17 +1739,19 @@ export class BaseDockerJobQueue {
         // Otherwise, we keep the newest job.
         // latest last
         const sortedJobIds = jobIds.toSorted((a, b) => {
-          const aJobTime =
-            (this.state.jobs[a]?.history[0].value as StateChangeValueQueued)
-              .time;
-          const bJobTime =
-            (this.state.jobs[b]?.history[0].value as StateChangeValueQueued)
-              .time;
+          const aJobTime = (
+            this.state.jobs[a]?.history[0].value as StateChangeValueQueued
+          ).time;
+          const bJobTime = (
+            this.state.jobs[b]?.history[0].value as StateChangeValueQueued
+          ).time;
           return aJobTime - bJobTime;
         });
         const newestJobId = sortedJobIds.pop()!;
-        const newestJobTime = (this.state.jobs[newestJobId]?.history[0]
-          .value as StateChangeValueQueued).time;
+        const newestJobTime = (
+          this.state.jobs[newestJobId]?.history[0]
+            .value as StateChangeValueQueued
+        ).time;
         for (const jobId of sortedJobIds) {
           const job = this.state.jobs[jobId];
           const jobTime = (job.history[0].value as StateChangeValueQueued).time;

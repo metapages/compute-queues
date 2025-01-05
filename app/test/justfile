@@ -15,11 +15,13 @@ green := "\\e[32m"
     deno check src
     echo "✅ tests compilation"
 
-@watch:
-    deno test --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src
-
-watch-local:
-    QUEUE_ID=local API_URL=http://localhost:8000 deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+watch mode="remote" +args="":
+    #!/usr/bin/env bash
+    if [ "{{ mode }}" = "remote" ]; then
+        QUEUE_ID=remote API_URL={{ API_URL }} deno test --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/{{ args }}
+    else
+        QUEUE_ID=local API_URL=http://localhost:8000 deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv src/{{ args }}
+    fi    
 
 # Lint
 @lint:
@@ -40,13 +42,13 @@ watch-local:
 # Fix
 @fix: lint-fix fmt
 
-@test:
-    deno test --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv src
+@test +args="":
+    deno test --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv src/{{ args }}
     echo "✅ functional tests"
-
-# Run CI
-@ci: fmt-check lint
 
 @test-in-docker mode="remote" stack="test":
     cd ../.. && \
     APP_PORT={{ APP_PORT }} docker compose --project-name={{ stack }} -f docker-compose.yml -f docker-compose-{{ mode }}.yml -f docker-compose-test-{{ mode }}.yml run --no-deps --rm test deno test --unsafely-ignore-certificate-errors --allow-all src
+
+# Run CI
+@ci: fmt-check lint

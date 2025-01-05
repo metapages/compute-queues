@@ -1,8 +1,10 @@
-import type { Context } from "hono";
+import { bucketParams, s3Client } from "/@/routes/s3config.ts";
 import { PutObjectCommand } from "aws-sdk/client-s3";
 import { getSignedUrl } from "aws-sdk/s3-request-presigner";
+import type { Context } from "hono";
+import { ms } from "ms";
 
-import { bucketParams, s3Client } from "/@/routes/s3config.ts";
+const OneWeekInSeconds = (ms("1 week") as number) / 1000;
 
 export const uploadHandler = async (c: Context) => {
   const key: string | undefined = c.req.param("key");
@@ -18,9 +20,12 @@ export const uploadHandler = async (c: Context) => {
   //  ContentLength: 4
   // ContentMD5?: string;
   // ContentType?: string;
+
   const command = new PutObjectCommand({ ...bucketParams, Key: key });
   try {
-    let url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    let url = await getSignedUrl(s3Client, command, {
+      expiresIn: OneWeekInSeconds,
+    });
     if (url.startsWith("http://") && !url.includes("minio")) {
       url = url.replace("http://", "https://");
     }
