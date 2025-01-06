@@ -216,7 +216,6 @@ services:
       - deno:/deno
     networks:
       - default
-  
   minio:
     depends_on:
       traefik:
