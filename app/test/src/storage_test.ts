@@ -88,10 +88,10 @@ function waitForJobToFinish(
           if (jobState.state === DockerJobState.Finished) {
             const finishedState = jobState.value as StateChangeValueFinished;
 
-            console.log(
-              "=== Detailed job state ===",
-              JSON.stringify(jobState, null, 2),
-            );
+            // console.log(
+            //   "=== Detailed job state ===",
+            //   JSON.stringify(jobState, null, 2),
+            // );
 
             console.log("Finished reason: ", finishedState.reason);
             console.log("Finished error: ", finishedState.result?.error);
@@ -109,12 +109,16 @@ function waitForJobToFinish(
             );
 
             // Download file content
+            dataref.value = dataref.value.replace(
+              "http://localhost:",
+              "http://worker:",
+            );
             const buffer = await dataRefToBuffer(dataref, API_URL);
             const contentFromJob = new TextDecoder().decode(buffer);
 
             // Trim because shell commands may include a trailing newline
             assertEquals(referenceContent, contentFromJob.trim());
-            console.log("Assertions passed. Resolving test...");
+            // console.log("Assertions passed. Resolving test...");
 
             onComplete();
           }
@@ -143,7 +147,10 @@ Deno.test("Test upload and download", async () => {
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
   // Let's test the upload then:
-  const downloadUrl = dataref.value;
+  const downloadUrl = dataref.value.replace(
+    "http://localhost:",
+    "http://worker:",
+  );
   const downloadResponse = await fetch(downloadUrl);
   const downloadResponseBody = await downloadResponse.text();
   assertEquals(downloadResponseBody, content);

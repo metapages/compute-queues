@@ -20,7 +20,7 @@ watch mode="remote" +args="":
     if [ "{{ mode }}" = "remote" ]; then
         QUEUE_ID=remote API_URL={{ API_URL }} deno test --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/{{ args }}
     else
-        QUEUE_ID=local API_URL=http://localhost:8000 deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv src/{{ args }}
+        QUEUE_ID=local API_URL=http://worker:8000 deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv src/{{ args }}
     fi    
 
 # Lint
