@@ -24,7 +24,7 @@ const API_URL = Deno.env.get("API_URL") ||
  * Helper to install `curl` if missing.
  */
 async function ensureCurlInstalled() {
-  console.log("Checking if 'curl' is installed...");
+  // console.log("Checking if 'curl' is installed...");
   const checkCurl = new Deno.Command("which", {
     args: ["curl"],
   });

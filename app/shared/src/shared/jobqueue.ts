@@ -104,13 +104,13 @@ type BroadcastChannelMessageType =
 type BroadcastChannelMessage = {
   type: BroadcastChannelMessageType;
   value:
-    | string[] // [jobId1, state1, jobId2, state2, ...]
-    | JobStates
-    | BroadcastChannelWorkersRegistration
-    | BroadcastChannelStatusRequest
-    | BroadcastChannelStatusResponse
-    | BroadcastChannelDeleteCachedJob
-    | JobStatusPayload;
+  | string[] // [jobId1, state1, jobId2, state2, ...]
+  | JobStates
+  | BroadcastChannelWorkersRegistration
+  | BroadcastChannelStatusRequest
+  | BroadcastChannelStatusResponse
+  | BroadcastChannelDeleteCachedJob
+  | JobStatusPayload;
 };
 
 // in memory active queue of jobs. they're persisted to the db
@@ -207,11 +207,10 @@ export class BaseDockerJobQueue {
               this.state.jobs[jobId].state !== state
             ) {
               console.log(
-                `[${
-                  this.address.substring(
-                    0,
-                    6,
-                  )
+                `[${this.address.substring(
+                  0,
+                  6,
+                )
                 }] 📡 found job [${jobId.substring(0, 6)}] state mismatch`,
               );
 
@@ -230,11 +229,10 @@ export class BaseDockerJobQueue {
                 if (resolvedJob && resolvedJob !== this.state.jobs[jobId]) {
                   this.state.jobs[jobId] = resolvedJob;
                   console.log(
-                    `[${
-                      this.address.substring(
-                        0,
-                        6,
-                      )
+                    `[${this.address.substring(
+                      0,
+                      6,
+                    )
                     }] 📡 recieved job-states-minimal job different, broadcasting...`,
                     jobId,
                   );
@@ -463,11 +461,10 @@ export class BaseDockerJobQueue {
   async broadcastAndDeleteCachedJob(jobId: string): Promise<boolean> {
     if (!this.state.jobs[jobId]) {
       console.log(
-        `[${
-          this.address.substring(
-            0,
-            6,
-          )
+        `[${this.address.substring(
+          0,
+          6,
+        )
         }]🗑️ NOT broadcastAndDeleteCachedJob no job [${jobId.substring(0, 6)}]`,
       );
       return false;
@@ -477,13 +474,11 @@ export class BaseDockerJobQueue {
       this.state.jobs[jobId].history[this.state.jobs[jobId].history.length - 1];
     if (!isJobCacheAllowedToBeDeleted(currentState)) {
       console.log(
-        `[${
-          this.address.substring(
-            0,
-            6,
-          )
-        }]🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${
-          this.state.jobs[jobId].state
+        `[${this.address.substring(
+          0,
+          6,
+        )
+        }]🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${this.state.jobs[jobId].state
         } [${jobId.substring(0, 6)}]`,
       );
       return false;
@@ -528,11 +523,10 @@ export class BaseDockerJobQueue {
   deleteCachedJob(jobId: string) {
     delete this.state.jobs[jobId];
     console.log(
-      `[${this.address.substring(0, 6)}] deletedCachedJob [${
-        jobId.substring(
-          0,
-          6,
-        )
+      `[${this.address.substring(0, 6)}] deletedCachedJob [${jobId.substring(
+        0,
+        6,
+      )
       }]`,
     );
   }
@@ -541,11 +535,10 @@ export class BaseDockerJobQueue {
     await this.db.queueJobRemove(this.address, jobId);
     await this.db.resultCacheRemove(jobId);
     console.log(
-      `[${this.address.substring(0, 6)}] deleted from db: [${
-        jobId.substring(
-          0,
-          6,
-        )
+      `[${this.address.substring(0, 6)}] deleted from db: [${jobId.substring(
+        0,
+        6,
+      )
       }]`,
     );
   }
@@ -587,7 +580,7 @@ export class BaseDockerJobQueue {
         (message: WebsocketMessageWorkerToServer) => {
           if (
             message.type ===
-              WebsocketMessageTypeWorkerToServer.WorkerStatusResponse
+            WebsocketMessageTypeWorkerToServer.WorkerStatusResponse
           ) {
             const status = message.payload as WorkerStatusResponse;
             console.log(
@@ -691,8 +684,7 @@ export class BaseDockerJobQueue {
 
     if (change && change.state) {
       console.log(
-        `${jobId.substring(0, 6)} stateChange ${
-          this.state.jobs[jobId] ? this.state!.jobs![jobId]!.state : ""
+        `${jobId.substring(0, 6)} stateChange ${this.state.jobs[jobId] ? this.state!.jobs![jobId]!.state : ""
         } => ${change.state} (existing job: ${!!this.state.jobs[jobId]})`,
       );
     }
@@ -797,11 +789,10 @@ export class BaseDockerJobQueue {
           switch (this.state.jobs[jobId].state) {
             case DockerJobState.Queued:
               console.log(
-                `${
-                  jobId.substring(
-                    0,
-                    6,
-                  )
+                `${jobId.substring(
+                  0,
+                  6,
+                )
                 } Queued -> ReQueued (this means the worker went missing)`,
               );
               await updateState();
@@ -814,11 +805,10 @@ export class BaseDockerJobQueue {
                 .value as StateChangeValueQueued;
               if (incomingStateReQueued.time < currentStateReQueued.time) {
                 console.log(
-                  `${
-                    jobId.substring(
-                      0,
-                      6,
-                    )
+                  `${jobId.substring(
+                    0,
+                    6,
+                  )
                   } REPLACING! because incoming time is earlier ReQueued -> ReQueued`,
                 );
                 // update via replacement
@@ -828,11 +818,10 @@ export class BaseDockerJobQueue {
             }
             case DockerJobState.Running: {
               console.log(
-                `${
-                  jobId.substring(
-                    0,
-                    6,
-                  )
+                `${jobId.substring(
+                  0,
+                  6,
+                )
                 } Running -> ReQueued? ❗❗ I hope this is because the worker went missing ❗`,
               );
               await updateState(true);
@@ -840,11 +829,10 @@ export class BaseDockerJobQueue {
             }
             case DockerJobState.Finished: {
               console.log(
-                `${
-                  jobId.substring(
-                    0,
-                    6,
-                  )
+                `${jobId.substring(
+                  0,
+                  6,
+                )
                 } Finished -> ReQueued? What ❓❓❓. Rebroadcasting state`,
               );
               await broadcastCurrentStateBecauseIDoubtStateIsSynced();
@@ -865,17 +853,18 @@ export class BaseDockerJobQueue {
               case DockerJobState.Queued:
               case DockerJobState.Running:
                 console.log(
-                  `${jobId.substring(0, 6)} Queued -> ${
-                    this.state.jobs[jobId].state
+                  `${jobId.substring(0, 6)} Queued -> ${this.state.jobs[jobId].state
                   } ignoring queue request, job already queued or running`,
                 );
                 // If this is a new submission
                 // TODO: what is happening here? It could be a lost job
                 //
+
                 (
                   this.state.jobs[jobId].history[0]
                     .value as StateChangeValueQueued
                 ).definition = valueQueued.definition;
+
                 await broadcastCurrentStateBecauseIDoubtStateIsSynced();
                 break;
               case DockerJobState.Finished: {
@@ -890,11 +879,10 @@ export class BaseDockerJobQueue {
                     break;
                   case DockerJobFinishedReason.WorkerLost:
                     console.log(
-                      `!!!! BAD LOGIC ${
-                        jobId.substring(
-                          0,
-                          6,
-                        )
+                      `!!!! BAD LOGIC ${jobId.substring(
+                        0,
+                        6,
+                      )
                       } restarting from worker lost`,
                     );
                     await updateState();
@@ -903,13 +891,11 @@ export class BaseDockerJobQueue {
                   case DockerJobFinishedReason.Error:
                   case DockerJobFinishedReason.TimedOut:
                     console.log(
-                      `[${
-                        jobId.substring(
-                          0,
-                          6,
-                        )
-                      }] ignoring Queued request current state=[${
-                        this.state.jobs[jobId].state
+                      `[${jobId.substring(
+                        0,
+                        6,
+                      )
+                      }] ignoring Queued request current state=[${this.state.jobs[jobId].state
                       }] reason=[${previousFinishedState.reason}], job finished and not restartable`,
                     );
                     await broadcastCurrentStateBecauseIDoubtStateIsSynced();
@@ -922,11 +908,10 @@ export class BaseDockerJobQueue {
           } else {
             // TODO: check for finished jobs in the db
             console.log(
-              `[${
-                jobId.substring(
-                  0,
-                  6,
-                )
+              `[${jobId.substring(
+                0,
+                6,
+              )
               }] adding new job row to local state as Queued`,
             );
 
@@ -945,8 +930,7 @@ export class BaseDockerJobQueue {
         // incoming state
         case DockerJobState.Running:
           console.log(
-            `${jobId.substring(0, 6)} Job Running, previous job ${
-              this.state.jobs[jobId].state
+            `${jobId.substring(0, 6)} Job Running, previous job ${this.state.jobs[jobId].state
             }`,
           );
 
@@ -955,8 +939,7 @@ export class BaseDockerJobQueue {
             case DockerJobState.Finished:
               // it can NEVER go from Finished to Running
               console.log(
-                `${
-                  jobId.substring(0, 6)
+                `${jobId.substring(0, 6)
                 } ignoring request state change ${change.state} !=> ${DockerJobState.Finished}`,
               );
               break;
@@ -988,16 +971,14 @@ export class BaseDockerJobQueue {
                 const preferCurrentWorker =
                   preferredWorker === valueRunningCurrent.worker;
                 console.log(
-                  `${
-                    jobId.substring(
-                      0,
-                      6,
-                    )
-                  } Running -> Running, but different worker, assigning to ${
-                    preferredWorker.substring(
-                      0,
-                      6,
-                    )
+                  `${jobId.substring(
+                    0,
+                    6,
+                  )
+                  } Running -> Running, but different worker, assigning to ${preferredWorker.substring(
+                    0,
+                    6,
+                  )
                   }`,
                 );
                 if (preferCurrentWorker) {
@@ -1008,16 +989,14 @@ export class BaseDockerJobQueue {
                 }
               } else {
                 console.log(
-                  `${
-                    jobId.substring(
-                      0,
-                      6,
-                    )
-                  } 🇨🇭🇨🇭🇨🇭 Running -> Running, same worker, so doing nothing: [${
-                    valueRunningCurrent.worker.substring(
-                      0,
-                      6,
-                    )
+                  `${jobId.substring(
+                    0,
+                    6,
+                  )
+                  } 🇨🇭🇨🇭🇨🇭 Running -> Running, same worker, so doing nothing: [${valueRunningCurrent.worker.substring(
+                    0,
+                    6,
+                  )
                   }]`,
                 );
                 await broadcastCurrentStateBecauseIDoubtStateIsSynced();
@@ -1056,11 +1035,10 @@ export class BaseDockerJobQueue {
           now - stateChange.time > MAX_TIME_FINISHED_JOB_IN_QUEUE
         ) {
           console.log(
-            `[${
-              this.address.substring(
-                0,
-                15,
-              )
+            `[${this.address.substring(
+              0,
+              15,
+            )
             }] 🪓 removing finished job from queue id=${jobId.substring(0, 6)}`,
           );
           delete this.state.jobs[jobId];
@@ -1077,11 +1055,10 @@ export class BaseDockerJobQueue {
 
   async connectWorker(connection: { socket: WebSocket }, queue: string) {
     console.log(
-      `[${
-        this.address.substring(
-          0,
-          15,
-        )
+      `[${this.address.substring(
+        0,
+        15,
+      )
       }] ➕ w 🔌 Connected a worker to queue [${queue.substring(0, 6)}]`,
     );
 
@@ -1090,15 +1067,13 @@ export class BaseDockerJobQueue {
 
     connection.socket.addEventListener("close", () => {
       console.log(
-        `[${this.address.substring(0, 15)}] [${
-          queue.substring(
-            0,
-            6,
-          )
-        }] ➖ w 🔌 ⏹️ Removing ${
-          workerRegistration
-            ? workerRegistration.id.substring(0, 6)
-            : "unknown worker"
+        `[${this.address.substring(0, 15)}] [${queue.substring(
+          0,
+          6,
+        )
+        }] ➖ w 🔌 ⏹️ Removing ${workerRegistration
+          ? workerRegistration.id.substring(0, 6)
+          : "unknown worker"
         }`,
       );
       // https://github.com/ai/nanoevents?tab=readme-ov-file#remove-all-listeners
@@ -1193,30 +1168,26 @@ export class BaseDockerJobQueue {
                 emitter,
               });
               console.log(
-                `[${
-                  this.address.substring(
-                    0,
-                    15,
-                  )
-                }] 🔌 🔗 Worker registered (so broadcasting) ${
-                  newWorkerRegistration.id.substring(
-                    0,
-                    6,
-                  )
+                `[${this.address.substring(
+                  0,
+                  15,
+                )
+                }] 🔌 🔗 Worker registered (so broadcasting) ${newWorkerRegistration.id.substring(
+                  0,
+                  6,
+                )
                 }`,
               );
             } else {
               console.log(
-                `[${
-                  this.address.substring(
-                    0,
-                    15,
-                  )
-                }] ✨ 🔗 Worker RE-registering (so broadcasting) ${
-                  newWorkerRegistration.id.substring(
-                    0,
-                    6,
-                  )
+                `[${this.address.substring(
+                  0,
+                  15,
+                )
+                }] ✨ 🔗 Worker RE-registering (so broadcasting) ${newWorkerRegistration.id.substring(
+                  0,
+                  6,
+                )
                 }`,
               );
               this.workers.myWorkers[indexOfCurrent].registration =
@@ -1240,7 +1211,7 @@ export class BaseDockerJobQueue {
             break;
           }
           default:
-            //ignored
+          //ignored
         }
       } catch (err) {
         console.log(err);
@@ -1259,11 +1230,10 @@ export class BaseDockerJobQueue {
       const index = this.clients.indexOf(connection.socket);
       if (index > -1) {
         console.log(
-          `[${
-            this.address.substring(
-              0,
-              15,
-            )
+          `[${this.address.substring(
+            0,
+            15,
+          )
           }] ➖ c ⏹️ close event: Removing client`,
         );
         this.clients.splice(index, 1);
@@ -1537,19 +1507,17 @@ export class BaseDockerJobQueue {
     for (const [workerId, worker] of Object.entries(this.workers.myWorkers)) {
       if (
         now - worker.registration.time >
-          INTERVAL_UNTIL_WORKERS_ASSUMED_LOST
+        INTERVAL_UNTIL_WORKERS_ASSUMED_LOST
       ) {
         console.log(
-          `[${
-            this.address.substring(
-              0,
-              15,
-            )
-          }] 🪓 removing worker ${
-            workerId.substring(
-              0,
-              6,
-            )
+          `[${this.address.substring(
+            0,
+            15,
+          )
+          }] 🪓 removing worker ${workerId.substring(
+            0,
+            6,
+          )
           } because it's missing`,
         );
 
@@ -1630,16 +1598,14 @@ export class BaseDockerJobQueue {
         const valueRunning = job.value as StateChangeValueRunning;
         if (!workerIds.has(valueRunning.worker)) {
           console.log(
-            `[${
-              this.address.substring(
-                0,
-                15,
-              )
-            }] 🪓 requeueing job ${
-              jobId.substring(
-                0,
-                6,
-              )
+            `[${this.address.substring(
+              0,
+              15,
+            )
+            }] 🪓 requeueing job ${jobId.substring(
+              0,
+              6,
+            )
             } because worker ${valueRunning.worker.substring(0, 6)} is missing`,
           );
 
@@ -1720,9 +1686,14 @@ export class BaseDockerJobQueue {
       if (job.state === DockerJobState.Finished) {
         continue;
       }
-      const source = (job.history[0].value as StateChangeValueQueued).source;
-      if (source) {
-        sourceJobs.set(source, [...(sourceJobs.get(source) || []), jobId]);
+      const namespace = (job.history[0].value as StateChangeValueQueued)
+        .namespace;
+      if (namespace) {
+        sourceJobs.set(namespace, [
+          ...(sourceJobs.get(namespace) || []),
+          jobId,
+        ]);
+
       }
     }
     const now = Date.now();

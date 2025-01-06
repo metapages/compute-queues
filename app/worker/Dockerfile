@@ -8,6 +8,7 @@ ENV DOCKER_VERSION=5:27.1.1-1~debian.12~bookworm
 # # https://gist.github.com/squarebracket/e719069522436873bc6f13efb359cac9
 # RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
 
+
 RUN apt-get update && apt-get -y install \
 	curl \
 	ca-certificates \

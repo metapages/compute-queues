@@ -239,7 +239,7 @@ Deno.test(
       }"`,
     }));
 
-    const source = `test-${Math.random()}`;
+    const namespace = `test-${Math.random()}`;
     const jobIdsSubmissionOrder: string[] = [];
     const jobIdsFinishReason = new Map<string, string>();
 
@@ -247,7 +247,7 @@ Deno.test(
       definitions.map(async (definition) => {
         const message = await createNewContainerJobMessage({
           definition,
-          source,
+          namespace,
         });
         jobIdsSubmissionOrder.push(message.jobId);
         return message;

@@ -4,7 +4,7 @@ services:
       worker:
         condition: service_healthy
     image: denoland/deno:alpine-2.1.4
-    command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+    command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-cron --unstable-kv .
     working_dir: /app/app/test
     extra_hosts:
       - worker:host-gateway

@@ -4,7 +4,7 @@ services:
       api1:
         condition: service_healthy
     image: denoland/deno:alpine-2.1.4
-    command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+    command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-cron --unstable-kv .
     working_dir: /app/app/test
     extra_hosts:
       - api1:host-gateway
@@ -16,6 +16,7 @@ services:
     environment:
       # APP_PORT is only needed for the upload/curl/dns/docker fiasco
       - APP_PORT=${APP_PORT:-443}
+      - TEST_PORT=7733
       - IGNORE_CERTIFICATE_ERRORS=true
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - API_URL=http://api1:8081

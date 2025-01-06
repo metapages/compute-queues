@@ -7,6 +7,7 @@ services:
       "--watch",
       "--allow-all",
       "--unstable-kv",
+      "--unstable-cron",
       "src/cli.ts",
     ]
     command: run --mode=local --cpus=2 --gpus=0 local

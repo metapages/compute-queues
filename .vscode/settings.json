@@ -1,10 +1,9 @@
 {
   "files.exclude": {
+    "**/.cache": true,
     "**/.deno": true,
     "**/app/api/assets": true,
-    "**/deno.lock": true,
     "**/dist": true,
-    "**/.cache": true,
     "**/node_modules": true
   },
   "search.exclude": {
@@ -19,5 +18,8 @@
   "files.watcherExclude": {
     "**/dist": true
   },
-  "typescript.enablePromptUseWorkspaceTsdk": true
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "[dotenv]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
+  }
 }

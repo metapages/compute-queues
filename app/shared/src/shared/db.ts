@@ -1,13 +1,19 @@
+
 import { ms } from "ms";
+import { getKv } from "/@/shared/kv.ts";
 import {
   type DataRef,
   DataRefType,
   type DockerJobDefinitionRow,
+  StateChangeValueQueued,
 } from "/@/shared/types.ts";
+import { addJobProcessSubmissionWebhook } from "/@/shared/webhooks.ts";
+
 import { ensureDir } from "std/fs";
 import { join } from "std/path";
 
 const AWS_ENDPOINT = Deno.env.get("AWS_ENDPOINT");
+
 const DENO_KV_URL = Deno.env.get("DENO_KV_URL");
 
 let deleteFromS3: (key: string) => Promise<void>;
@@ -109,11 +115,75 @@ export class DB {
 
   // (The remaining methods of the DB class can remain unchanged)
   async queueJobAdd(queue: string, job: DockerJobDefinitionRow): Promise<void> {
-    const id = job.hash;
-    const dataRef = await putJsonToS3(id, job);
-    await this.kv.atomic()
-      .set(["queue", queue, id], dataRef, { expireIn: expireIn1Week })
-      .commit();
+    try {
+      console.log(`queueJobAdd ${queue} [${job.hash.substring(0, 6)}]`);
+      const id = job.hash;
+      console.log(
+        `queueJobAdd ${queue} [${job.hash.substring(0, 6)}] pushing to s3`,
+      );
+      // remove the userspace config from the job before storing it in s3
+      const config = (job.history[0].value as StateChangeValueQueued)?.config;
+      if (config) {
+        delete (job.history[0].value as StateChangeValueQueued)?.config;
+      }
+
+      const dataRef = await putJsonToS3(id, job);
+      console.log(
+        `queueJobAdd ${queue} [${job.hash.substring(
+          0,
+          6,
+        )
+        }] pushing to s3 DONE, adding to job/queue kv`,
+      );
+      await this.kv
+        .atomic()
+        .set(["job", id], dataRef, { expireIn: expireIn1Week })
+        .set(["queue", queue, id], dataRef, {
+          expireIn: expireIn1Week,
+        })
+        .commit();
+
+      console.log(
+        `queueJobAdd ${queue} [${job.hash.substring(
+          0,
+          6,
+        )
+        }] adding to job/queue kv DONE, checking config...`,
+      );
+
+
+      console.log(
+        `queueJobAdd ${queue} [${id.substring(0, 6)}] config`,
+        config,
+      );
+      const namespace =
+        (job.history[0].value as StateChangeValueQueued)?.namespace || "_";
+
+      if (config) {
+        console.log(
+          `queueJobAdd ${queue} [${job.hash.substring(
+            0,
+            6,
+          )
+          }] adding config and webhook`,
+        );
+        // partition jobs that might be shared by the same namespace
+        await this.kv.set(["job-user-config", id, namespace], config, {
+          expireIn: expireIn1Week,
+        });
+        await addJobProcessSubmissionWebhook(queue, job);
+      }
+    } catch (err) {
+      console.error(
+        `💥💥💥 ERROR adding job to queue ${queue} [${job.hash.substring(
+          0,
+          6,
+        )
+        }]`,
+        err,
+      );
+      throw err;
+    }
   }
 
   async queueJobGet(
@@ -131,9 +201,7 @@ export class DB {
     }
     if (jobDataRef?.type === DataRefType.key) {
       const job: DockerJobDefinitionRow | undefined =
-        await resolveDataRefFromS3(
-          jobDataRef,
-        );
+        await resolveDataRefFromS3(jobDataRef);
       return job || null;
     }
     return null;
@@ -166,12 +234,10 @@ export class DB {
         | DockerJobDefinitionRow = entry.value;
       if (
         (jobDataRef as DataRef<DockerJobDefinitionRow> | undefined)?.type ===
-          DataRefType.key
+        DataRefType.key
       ) {
         const job: DockerJobDefinitionRow | undefined =
-          await resolveDataRefFromS3(
-            jobDataRef,
-          );
+          await resolveDataRefFromS3(jobDataRef);
         if (job) {
           results.push(job);
         }
@@ -204,10 +270,7 @@ export class DB {
   ): Promise<DockerJobDefinitionRow | undefined> {
     const cachedValueRefBlob = await this.kv.get<
       DataRef<DockerJobDefinitionRow>
-    >([
-      "cache",
-      id,
-    ]);
+    >(["cache", id]);
     const cachedValueRef: DataRef<DockerJobDefinitionRow> | null =
       cachedValueRefBlob?.value;
     if (!cachedValueRef || !cachedValueRef?.value) {
@@ -223,6 +286,7 @@ export class DB {
     await Promise.all([this.kv.delete(["cache", id]), deleteFromS3(id)]);
   }
 }
+
 let localkv: Deno.Kv | undefined = undefined;
 
 const getKv = async (): Promise<Deno.Kv> => {
@@ -237,3 +301,4 @@ const getKv = async (): Promise<Deno.Kv> => {
   }
   return localkv;
 };
+

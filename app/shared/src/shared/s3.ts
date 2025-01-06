@@ -59,7 +59,9 @@ export const putJsonToS3 = async (
     ContentType: "application/json",
   });
   // Send the command to S3
-  /* const response = */ void await s3Client.send(command);
+  console.log(`sending to s3`, key);
+  const response = await s3Client.send(command);
+  console.log(`sending to s3 response`, response);
   const ref: DataRef = {
     // value: hash, // no http means we know it's an internal address, workers will know how to reach
     type: DataRefType.key,
@@ -99,11 +101,13 @@ export const deleteFromS3 = (Key: string): Promise<void> => {
       ...bucketParams,
       Key,
     });
-    s3Client.send(deleteObjectCommand)
+
+    s3Client
+      .send(deleteObjectCommand)
       .then(() => {
         resolve();
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.log(`Ignored error deleting object ${Key} from S3: ${err}`);
         resolve();
         // swallow errors
@@ -134,7 +138,7 @@ const getObject = (Key: string): Promise<string | undefined> => {
         // Once the stream has no more data, join the chunks into a string and return the string
         response.Body?.once("end", () => resolve(responseDataChunks.join("")));
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         // swallow errors
         // Handle the error or throw
         console.log(`Ignored error getting object ${Key} from S3: ${err}`);

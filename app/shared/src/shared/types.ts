@@ -83,7 +83,10 @@ export type DockerJobDefinitionInputsBase64V1 = {
 // completely clog up the data pipes. Stay small out there, definitions,
 // you're the living entities flowing
 export type DockerJobDefinitionInputRefs =
-  & Omit<DockerJobDefinitionInputsBase64V1, "inputs" | "configFiles">
+  & Omit<
+    DockerJobDefinitionInputsBase64V1,
+    "inputs" | "configFiles"
+  >
   & {
     inputs?: InputsRefs;
     configFiles?: InputsRefs;
@@ -138,6 +141,28 @@ export interface StateChange {
   job: string;
   value: DockerJobStateValue;
 }
+
+export type DockerJobUserConfig = {
+  callbacks?: {
+    queued?: {
+      url: string;
+      payload?: unknown;
+    };
+    finished?: {
+      url: string;
+      payload?: unknown;
+    };
+  };
+  // if the job is not finished within this time, it is killed
+  ttl?: number;
+  outputs?: {
+    nhost?: {
+      PAT: string;
+      path: string;
+    };
+  };
+};
+
 /**
  * This state change contains the job definition.
  * This means history is recoverable.
@@ -147,13 +172,14 @@ export interface StateChangeValueQueued {
   time: number;
   debug?: boolean;
   // the client that submitted the job
-  // if there are multiple jobs from the same source,
+  // if there are multiple jobs from the same namespace,
   // only the most recent one is kept, all others are killed
   // TODO: handle the edge case where two different sources
   // submit the exact same job definition. In that case, just
   // don't kill the job unless you add a record of claimed jobs
   // A ttl simple record would do here.
-  source?: string;
+  namespace?: string;
+  config?: DockerJobUserConfig;
 }
 
 export interface StateChangeValueReQueued {

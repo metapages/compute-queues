@@ -1,28 +1,28 @@
+import {
+  BroadcastWorkers,
+  ConsoleLogLine,
+  DockerJobDefinitionMetadata,
+  DockerJobDefinitionRow,
+  DockerJobFinishedReason,
+  DockerJobState,
+  getFinishedJobState,
+  JobsStateMap,
+  JobStatusPayload,
+  PayloadQueryJob,
+  StateChange,
+  StateChangeValueFinished,
+  StateChangeValueQueued,
+  WebsocketMessageClientToServer,
+  WebsocketMessageSenderClient,
+  WebsocketMessageServerBroadcast,
+  WebsocketMessageTypeClientToServer,
+} from "/@shared/client";
 import pDebounce from "p-debounce";
 import { create } from "zustand";
 
 import { getHashParamValueJsonFromWindow, setHashParamValueJsonInWindow } from "@metapages/hash-query";
 
 import { deleteFinishedJob, getFinishedJob } from "./cache";
-import {
-  BroadcastWorkers,
-  DockerJobState,
-  JobsStateMap,
-  StateChange,
-  StateChangeValueQueued,
-  WebsocketMessageClientToServer,
-  WebsocketMessageSenderClient,
-  WebsocketMessageTypeClientToServer,
-  ConsoleLogLine,
-  DockerJobDefinitionMetadata,
-  DockerJobDefinitionRow,
-  DockerJobFinishedReason,
-  getFinishedJobState,
-  JobStatusPayload,
-  PayloadQueryJob,
-  StateChangeValueFinished,
-  WebsocketMessageServerBroadcast,
-} from "/@shared/client";
 
 let _cachedMostRecentSubmit: WebsocketMessageClientToServer | undefined;
 
@@ -167,7 +167,7 @@ export const useStore = create<MainStore>((set, get) => ({
     const value: StateChangeValueQueued = {
       definition: definitionBlob.definition,
       time: Date.now(),
-      source: definitionBlob.source,
+      namespace: definitionBlob.source,
     };
     if (definitionBlob.debug) {
       value.debug = true;
