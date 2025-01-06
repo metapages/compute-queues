@@ -1,10 +1,7 @@
 import pDebounce from "p-debounce";
 import { create } from "zustand";
 
-import {
-  getHashParamValueJsonFromWindow,
-  setHashParamValueJsonInWindow,
-} from "@metapages/hash-query";
+import { getHashParamValueJsonFromWindow, setHashParamValueJsonInWindow } from "@metapages/hash-query";
 
 import { deleteFinishedJob, getFinishedJob } from "./cache";
 import {
@@ -16,8 +13,6 @@ import {
   WebsocketMessageClientToServer,
   WebsocketMessageSenderClient,
   WebsocketMessageTypeClientToServer,
-} from "./shared";
-import {
   ConsoleLogLine,
   DockerJobDefinitionMetadata,
   DockerJobDefinitionRow,
@@ -27,13 +22,11 @@ import {
   PayloadQueryJob,
   StateChangeValueFinished,
   WebsocketMessageServerBroadcast,
-} from "./shared/types";
+} from "/@shared/client";
 
 let _cachedMostRecentSubmit: WebsocketMessageClientToServer | undefined;
 
-export const cacheInsteadOfSendMessages = (
-  message: WebsocketMessageClientToServer,
-) => {
+export const cacheInsteadOfSendMessages = (message: WebsocketMessageClientToServer) => {
   if (
     message.type === WebsocketMessageTypeClientToServer.StateChange &&
     (message.payload as StateChange).state === DockerJobState.Queued
@@ -156,9 +149,7 @@ export const useStore = create<MainStore>((set, get) => ({
     }
 
     // new job definition!: update the jobId, and reset the logs
-    const finishedState = get().jobStates[job.hash]
-      ? getFinishedJobState(get().jobStates[job.hash])
-      : undefined;
+    const finishedState = get().jobStates[job.hash] ? getFinishedJobState(get().jobStates[job.hash]) : undefined;
     set(() => ({
       newJobDefinition: job,
       jobState: get().jobStates[job.hash],
@@ -226,10 +217,7 @@ export const useStore = create<MainStore>((set, get) => ({
     }
 
     set(() => ({ jobState }));
-    if (
-      jobState?.state === DockerJobState.Queued ||
-      jobState?.state === DockerJobState.ReQueued
-    ) {
+    if (jobState?.state === DockerJobState.Queued || jobState?.state === DockerJobState.ReQueued) {
       set(() => ({
         buildLogs: null,
         runLogs: null,
@@ -438,14 +426,13 @@ export const useStore = create<MainStore>((set, get) => ({
       return;
     }
     const currentJobId = get().newJobDefinition?.hash;
-    const unsubscribe = useStore.subscribe((state) => {
+    const unsubscribe = useStore.subscribe(state => {
       if (state.newJobDefinition?.hash !== currentJobId) {
         unsubscribe();
         get().submitJob();
       }
     });
-    const inputs: Record<string, string> =
-      getHashParamValueJsonFromWindow("inputs") || {};
+    const inputs: Record<string, string> = getHashParamValueJsonFromWindow("inputs") || {};
     inputs[get().mainInputFile] = get().mainInputFileContent;
     setHashParamValueJsonInWindow("inputs", inputs);
     get().setMainInputFileContent(null);

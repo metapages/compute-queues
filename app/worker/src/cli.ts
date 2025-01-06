@@ -1,7 +1,7 @@
-import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
+import { Command } from "cliffy/command";
 
-import { runCommand } from "./commands/run.ts";
-import { testCommand } from "./commands/test.ts";
+import { runCommand } from "/@/commands/run.ts";
+import { testCommand } from "/@/commands/test.ts";
 
 // running in docker doesn't automatically kill on ctrl-c
 // https://github.com/nodejs/node/issues/4182

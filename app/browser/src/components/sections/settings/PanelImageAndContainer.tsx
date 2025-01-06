@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
-  Tabs,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
+import { Tab, TabList, TabPanel, TabPanels, Tabs, Text, VStack } from "@chakra-ui/react";
 
 import { TabConfigureImage } from "/@/components/sections/settings/TabConfigureImage";
 import { TabConfigureJob } from "/@/components/sections/settings/TabConfigureJob";
@@ -16,9 +8,7 @@ import { TabConfigureDefinition } from "./TabConfigureDefinition";
 export const PanelImageAndContainer: React.FC = () => {
   // local caching of user patterns
   const [tabIndex, setTabIndex] = useState<number>(
-    localStorage.getItem("settings-tab")
-      ? parseInt(localStorage.getItem("settings-tab")!)
-      : 0,
+    localStorage.getItem("settings-tab") ? parseInt(localStorage.getItem("settings-tab")!) : 0,
   );
   useEffect(() => {
     localStorage.setItem("settings-tab", tabIndex.toString());

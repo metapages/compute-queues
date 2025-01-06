@@ -10,10 +10,8 @@ interface PanelHeaderProps {
   preserveCase?: boolean;
 }
 
-export const PanelHeader: React.FC<PanelHeaderProps> = (
-  { title, onSave, preserveCase },
-) => {
-  const setRightPanelContext = useStore((state) => state.setRightPanelContext);
+export const PanelHeader: React.FC<PanelHeaderProps> = ({ title, onSave, preserveCase }) => {
+  const setRightPanelContext = useStore(state => state.setRightPanelContext);
   const titleText = preserveCase ? title : title.toUpperCase();
   return (
     <PanelHeaderContainer>
@@ -25,12 +23,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = (
               Save
             </Text>
           )}
-          <Icon
-            boxSize={"1rem"}
-            as={X}
-            onClick={() => setRightPanelContext(null)}
-          >
-          </Icon>
+          <Icon boxSize={"1rem"} as={X} onClick={() => setRightPanelContext(null)}></Icon>
         </HStack>
       </HStack>
     </PanelHeaderContainer>

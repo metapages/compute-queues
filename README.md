@@ -2,9 +2,9 @@
 
 ## High level commands:
 
- - develop: `just dev`
- - bump or set a new version and publish artifacts: `just deploy`
- - test the entire project: `just test`
+- develop: `just dev`
+- bump or set a new version and publish artifacts: `just deploy`
+- test the entire project: `just test`
 
 Finer commands are `just` in subdirectories.
 
@@ -69,6 +69,7 @@ flowchart LR
   - ❗ 👉 Make sure you run `mkcert -install` ❗
 
 Run the local stack:
+
 ```
 just dev
 ```
@@ -86,10 +87,11 @@ automatically updates.
 
 ### Tests
 
- - `just test`: runs the entire test suite, creating a new local stack
-   - runs on every push to non-main branches
- - `just api/test/watch`: (requires a running local stack) runs functional tests, currently only permissions
-   - see `just api/test` for more test related commands
+- `just test`: runs the entire test suite, creating a new local stack
+  - runs on every push to non-main branches
+- `just api/test/watch`: (requires a running local stack) runs functional tests,
+  currently only permissions
+  - see `just api/test` for more test related commands
 
 ### Start each service separately
 
@@ -184,5 +186,3 @@ used directly, or a git repo can be given, and the docker image built directly.
 
 This repo contains all the infrastructure for the queues, workers, and examples
 of cloud providers managing the horizintal scaling worker fleets.
-
-

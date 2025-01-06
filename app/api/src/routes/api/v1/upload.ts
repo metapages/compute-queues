@@ -1,9 +1,8 @@
-import { Context } from "https://deno.land/x/hono@v4.1.0-rc.1/mod.ts";
+import { bucketParams, s3Client } from "/@/routes/s3config.ts";
+import { PutObjectCommand } from "aws-sdk/client-s3";
+import { getSignedUrl } from "aws-sdk/s3-request-presigner";
+import type { Context } from "hono";
 import { ms } from "ms";
-import { PutObjectCommand } from "npm:@aws-sdk/client-s3";
-import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner";
-
-import { bucketParams, s3Client } from "../../s3config.ts";
 
 const OneWeekInSeconds = (ms("1 week") as number) / 1000;
 
@@ -27,7 +26,7 @@ export const uploadHandler = async (c: Context) => {
     let url = await getSignedUrl(s3Client, command, {
       expiresIn: OneWeekInSeconds,
     });
-    if (url.startsWith("http://")) {
+    if (url.startsWith("http://") && !url.includes("minio")) {
       url = url.replace("http://", "https://");
     }
     return c.redirect(url);

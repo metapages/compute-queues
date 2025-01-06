@@ -1,21 +1,20 @@
 import {
-  BroadcastJobStates,
+  type BroadcastJobStates,
   createNewContainerJobMessage,
-  DockerJobDefinitionInputRefs,
-  DockerJobDefinitionRow,
+  type DockerJobDefinitionInputRefs,
+  type DockerJobDefinitionRow,
   DockerJobState,
   fileToDataref,
   finishedJobOutputsToFiles,
-  StateChangeValueFinished,
-  WebsocketMessageServerBroadcast,
+  type StateChangeValueFinished,
+  type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
-} from "/@/shared";
-import { exists } from "https://deno.land/std@0.224.0/fs/mod.ts";
-import { basename } from "https://deno.land/std@0.224.0/path/mod.ts";
-import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
-import { closed, open } from "jsr:@korkje/wsi@^0.3.2";
-import { readAll } from "jsr:@std/io/read-all";
-import { writeAllSync } from "jsr:@std/io/write-all";
+} from "@metapages/compute-queues-shared";
+import { exists } from "std/fs";
+import { basename } from "std/path";
+import { Command } from "cliffy/command";
+import { closed, open } from "@korkje/wsi";
+import { readAll, writeAllSync } from "std/io";
 
 export const jobAdd = new Command()
   .arguments("<queue:string> [stdin:string]")
@@ -41,7 +40,7 @@ export const jobAdd = new Command()
   .option("--debug", "Debug flag for slower running but more logging")
   // .option("-g, --gpu [gpu:boolean]", "Enable GPU access", { default: false })
   .action(
-    async (
+    (
       options: {
         image?: string | undefined | boolean;
         command?: string | undefined | boolean;
@@ -106,13 +105,13 @@ export const jobAdd = new Command()
           }
         }
 
-        const { message, jobId, stageChange } =
+        const { message, jobId /*, stageChange */ } =
           await createNewContainerJobMessage({
             definition,
             debug: !!debug,
           });
 
-        let {
+        const {
           promise: jobQueuedOrCompleteDeferred,
           resolve,
           reject,
@@ -144,7 +143,7 @@ export const jobAdd = new Command()
           );
           switch (possibleMessage.type) {
             case WebsocketMessageTypeServerBroadcast.JobStates:
-            case WebsocketMessageTypeServerBroadcast.JobStateUpdates:
+            case WebsocketMessageTypeServerBroadcast.JobStateUpdates: {
               const someJobsPayload = possibleMessage
                 .payload as BroadcastJobStates;
               if (!someJobsPayload) {
@@ -178,6 +177,7 @@ export const jobAdd = new Command()
                 })();
               }
               break;
+            }
             default:
               //ignored
           }

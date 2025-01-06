@@ -1,4 +1,4 @@
-import { parse, ParseEntry } from "npm:shell-quote@1.8.1";
+import { parse, type ParseEntry } from "shell-quote";
 
 const sanitizeForDockerTag = (input: string): string => {
   return input.replace(/[^a-zA-Z0-9_.-]/g, "-").toLowerCase();

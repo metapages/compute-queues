@@ -1,4 +1,4 @@
-import { docker } from "../queue/dockerClient.ts";
+import { docker } from "/@/queue/dockerClient.ts";
 
 export const DockerJobSharedVolumeName = "worker-job-cache";
 
@@ -7,7 +7,7 @@ export const ensureSharedVolume = async () => {
   try {
     await vol.inspect();
     console.log(`👍 shared volume exists: ${DockerJobSharedVolumeName}`);
-  } catch (err) {
+  } catch (_err) {
     await docker.createVolume({
       Name: DockerJobSharedVolumeName,
       Labels: {

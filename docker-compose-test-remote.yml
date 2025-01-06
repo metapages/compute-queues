@@ -5,8 +5,9 @@ services:
         condition: service_healthy
     image: denoland/deno:alpine-2.1.4
     command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
-    working_dir: /app/test
+    working_dir: /app/app/test
     extra_hosts:
+      - api1:host-gateway
       - host.docker.internal:host-gateway
       - worker-metaframe-api1.dev:host-gateway
       - worker-metaframe-api2.dev:host-gateway

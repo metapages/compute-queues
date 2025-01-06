@@ -34,8 +34,8 @@ cyan := "\\e[36m"
     just app/dev {{ mode }} {{ args }}
 
 # Runs All Functional Tests and checks code
-@test:
-    just app test
+@test mode="remote":
+    just app test {{ mode }}
 
 # Bump the version, commit, CI will deploy and publish artifacts
 @deploy version="":
@@ -51,8 +51,15 @@ cyan := "\\e[36m"
 
 # Run Linting
 @lint:
-    echo "does work?"
-    just app/browser/lint
+    just app/lint
+
+# Run Lint-Fix Commands
+@lint-fix:
+    just app/lint-fix
+
+# Run Fix Commands
+@fix:
+    just app/fix
 
 # Publish Versioned Artifacts
 
@@ -95,7 +102,18 @@ run-local-workers: publish-versioned-artifacts
 
 # Format all supported files
 @fmt +args="":
-    just app fmt {{ args }} 
+    deno fmt {{ args }} 
+    find app/*/justfile -exec just --fmt --unstable -f {} {{ args }} \;
+    just app/browser/fmt
+
+# Format all supported files
+@fmt-check +args="":
+    deno fmt --check {{ args }} 
+    find app/*/justfile -exec just --fmt --check --unstable -f {} {{ args }} \;
+    just app/browser/fmt-check
+
+# Run CI
+@ci: fmt-check lint
 
 # app subdirectory commands
 
@@ -124,3 +142,10 @@ alias api := _api
 
 @_api +args="":
     just app/api/{{ args }}
+
+# app subdirectory commands
+
+alias shared := _shared
+
+@_shared +args="":
+    just app/shared/{{ args }}

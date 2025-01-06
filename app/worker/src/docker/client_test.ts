@@ -1,4 +1,4 @@
-import { createDockerClient } from "./client.ts";
+import { createDockerClient } from "/@/docker/client.ts";
 
 Deno.test("test docker building", async () => {
   const { docker, close } = createDockerClient(3078);
@@ -11,8 +11,8 @@ Deno.test("test docker building", async () => {
     await new Promise((resolve, reject) => {
       docker.modem.followProgress(
         stream,
-        (err: any, res: any) => err ? reject(err) : resolve(res),
-        (progressEvent: Event) => {
+        (err: unknown, res: unknown) => err ? reject(err) : resolve(res),
+        (_progressEvent: Event) => {
           // console.log(progressEvent);
         },
       );

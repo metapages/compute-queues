@@ -1,5 +1,4 @@
 services:
-
   api1:
     depends_on:
       traefik:
@@ -12,7 +11,7 @@ services:
         condition: service_healthy
     image: denoland/deno:alpine-2.1.4
     command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
-    working_dir: /app/api
+    working_dir: /app/app/api
     healthcheck:
       test: sh -c 'PORT=8081 deno run --allow-net --allow-env src/util/healthcheck.ts'
       interval: 5s
@@ -30,16 +29,21 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
       - AWS_REGION=${AWS_REGION:-us-west-2}
-      - AWS_ENDPOINT=${AWS_ENDPOINT:-https://minio.worker-metaframe.localhost}:${APP_PORT:-443}
+      - AWS_ENDPOINT=http://minio:9000
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
       - REDIS_URL=redis://redis:6379
     volumes:
       - deno:/deno
-      - ./shared:/app/shared
-      - ./browser/dist:/app/browser/dist
-      - ./api:/app/api
+      - node_modules:/app/node_modules
+      - ./deno.json:/app/deno.json
+      - ./app/shared:/app/app/shared
+      - ./.empty:/app/app/cli
+      - ./.empty:/app/app/test
+      - ./.empty:/app/app/worker
+      - ./app/browser/dist:/app/app/browser/dist
+      - ./app/api:/app/app/api
     networks:
       - default
     extra_hosts:
@@ -61,7 +65,7 @@ services:
         condition: service_healthy
     image: denoland/deno:alpine-2.1.4
     command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
-    working_dir: /app/api
+    working_dir: /app/app/api
     healthcheck:
       test: sh -c 'PORT=8082 deno run --allow-net --allow-env src/util/healthcheck.ts'
       interval: 5s
@@ -77,16 +81,21 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
       - AWS_REGION=${AWS_REGION:-us-west-2}
-      - AWS_ENDPOINT=${AWS_ENDPOINT:-https://minio.worker-metaframe.localhost}:${APP_PORT:-443}
+      - AWS_ENDPOINT=http://minio:9000
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
       - REDIS_URL=redis://redis:6379
     volumes:
       - deno:/deno
-      - ./shared:/app/shared
-      - ./browser/dist:/app/browser/dist
-      - ./api:/app/api
+      - node_modules:/app/node_modules
+      - ./deno.json:/app/deno.json
+      - ./app/shared:/app/app/shared
+      - ./.empty:/app/app/cli
+      - ./.empty:/app/app/test
+      - ./.empty:/app/app/worker
+      - ./app/browser/dist:/app/app/browser/dist
+      - ./app/api:/app/app/api
     networks:
       - default
     extra_hosts:
@@ -112,14 +121,16 @@ services:
       "--unsafely-ignore-certificate-errors",
       "--watch",
       "--allow-all",
+      "--unstable-kv",
+      "--unstable-broadcast-channel",
       "src/cli.ts",
     ]
     # Notice that the worker connects to api2 while the browser connects to api1
     # This helps check api worker communication
-    command: run --cpus=2 --gpus=0 --api-server-address=https://worker-metaframe-api2.dev:${APP_PORT:-443} local1
+    command: run --cpus=2 --gpus=0 --api-server-address=http://api1:8081 local1
     build:
       context: .
-      dockerfile: worker/Dockerfile
+      dockerfile: app/worker/Dockerfile
       target: worker
     environment:
       # APP_PORT is only needed for the upload/curl/dns/docker fiasco
@@ -128,14 +139,22 @@ services:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
+      - REDIS_URL=redis://redis:6379
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
+      - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
+      - DENO_KV_URL=http://denokv:4512
     volumes:
-      - ./shared:/app/shared
-      - ./worker:/app/worker
+      - ./deno.json:/app/deno.json
+      - ./app/shared:/app/app/shared
+      - ./app/worker:/app/app/worker
+      - ./app/browser/dist:/app/app/browser/dist
+      - ./app/api:/app/app/api
       - /tmp:/tmp
       - /var/run/docker.sock:/var/run/docker.sock
       - deno:/deno
-      - node_modules_worker:/app/worker/node_modules
+      - node_modules:/app/node_modules
     extra_hosts:
+      - api1:host-gateway
       - host.docker.internal:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
       - worker-metaframe.localhost:host-gateway
@@ -148,25 +167,19 @@ services:
   create-browser-assets:
     build:
       context: .
-      dockerfile: browser/Dockerfile
+      dockerfile: app/browser/Dockerfile
     command: just watch
-    working_dir: /app/browser
+    working_dir: /app/app/browser
     environment:
-      - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
+      # Disabling this, was getting errors.
+      # - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - SERVER_ORIGIN=https://worker-metaframe.localhost:${APP_PORT:-443}
+      - DENO_DIR=/deno
+      - DENO_INSTALL_ROOT=/deno
     volumes:
-      - ../.git:/.git
-      - ./browser/dist:/app/browser/dist
-      - ./browser/index.html:/app/browser/index.html
-      - ./browser/justfile:/app/browser/justfile
-      - ./browser/package-lock.json:/app/browser/package-lock.json
-      - ./browser/package.json:/app/browser/package.json
-      - ./browser/public:/app/browser/public
-      - ./browser/src:/app/browser/src
-      - ./browser/tsconfig.json:/app/browser/tsconfig.json
-      - ./browser/vite.config.ts:/app/browser/vite.config.ts
-      - ./shared:/app/shared
-      - node_modules:/app/browser/node_modules
+      - deno:/deno
+      - .:/app
+      - browser_node_modules:/app/app/browser/node_modules
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -177,12 +190,12 @@ services:
         condition: service_healthy
     image: denoland/deno:alpine-2.1.4
     command: deno run --watch --allow-all ./src/s3/create-bucket-development.ts
-    working_dir: /app/api
+    working_dir: /app/app/api
     environment:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - AWS_ACCESS_KEY_ID=minioaccesskey123123
       - AWS_SECRET_ACCESS_KEY=minioaccesskey123123
-      - AWS_ENDPOINT=https://minio.worker-metaframe.localhost:${APP_PORT:-443}
+      - AWS_ENDPOINT=http://minio:9000
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
@@ -191,8 +204,103 @@ services:
       - host.docker.internal:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
     volumes:
-      - ./api/src:/app/api/src
+      - ./app/api/deno.json:/app/app/api/deno.json
+      - ./app/api/src:/app/app/api/src
+      - ./deno.json:/app/deno.json
+      - ./app/shared:/app/app/shared
+      - ./.empty:/app/app/cli
+      - ./.empty:/app/app/test
+      - ./.empty:/app/app/worker
+      - ./.empty:/app/app/browser/dist
+      - ./.empty:/app/app/worker
       - deno:/deno
+    networks:
+      - default
+  minio:
+    depends_on:
+      traefik:
+        condition: service_started
+    image: minio/minio:RELEASE.2024-04-28T17-53-50Z
+    command: server --address 0.0.0.0:9000 /data
+    expose:
+      - "9000"
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      MINIO_SERVER_URL: https://minio.worker-metaframe.localhost:${APP_PORT:-443}
+      MINIO_REGION: ${AWS_REGION:-us-west-2}
+      MINIO_ROOT_PASSWORD: minioaccesskey123123
+      MINIO_ROOT_USER: minioaccesskey123123
+    extra_hosts:
+      - host.docker.internal:host-gateway
+      - minio.worker-metaframe.localhost:host-gateway
+    restart: always
+    volumes:
+      - ./app/.cache/minio:/data
+    networks:
+      - default
+    labels:
+      - "custom.label=worker-metaframe.localhost"
+      - "traefik.enable=true"
+      # - "traefik.http.routers.minio.rule=Host(`minio.worker-metaframe.localhost`) || Host(`minio.worker-metaframe.localhost`)"
+      - "traefik.http.routers.minio.rule=Host(`minio.worker-metaframe.localhost`)"
+      - "traefik.http.routers.minio.entrypoints=websecure"
+      # Apply the CORS middleware to the router
+      - "traefik.http.routers.minio.middlewares=cors-middleware@file"
+
+  traefik:
+    image: traefik:v2.11.13
+    command:
+      - --global.sendanonymoususage=false
+      - --api.insecure=true
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.endpoint=unix:///var/run/docker.sock
+      - --providers.docker.watch=true
+      - --providers.docker.constraints=Label(`custom.label`,`worker-metaframe.localhost`)
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.filename=/etc/traefik/config.yml
+      - --providers.file.watch=true
+      - --log.level=INFO
+      - --log.format=common
+      - --entrypoints.web.address=:80
+      # Automatically redirecting HTTP to HTTPS
+      # - --entrypoints.http.http.redirections.entryPoint.to=https
+      # - --entrypoints.http.http.redirections.entryPoint.scheme=https
+      - --entrypoints.websecure.address=:${APP_PORT:-443}
+      - --entrypoints.websecure.http.tls=true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik=true"
+    # Define the CORS middleware in the config.yml
+    # I tried so hard to define it here but it would not work
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      # The Traefik Web UI port (enabled by api:insecure: true in traefik.yml)
+      # - "${TRAEFIK_WEB_UI_PORT:-8080}:8080"
+      # HTTPS / SSL port
+      - "${APP_PORT:-443}:${APP_PORT:-443}"
+      # Disable the other ports to avoid conflicts
+      # - "80:80"
+    volumes:
+      - ./app/.cache/traefik/certs:/etc/certs:ro
+      - ./app/.traefik/config.yml:/etc/traefik/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - default
+
+  redis:
+    image: redis:7.2.4
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
     networks:
       - default
 

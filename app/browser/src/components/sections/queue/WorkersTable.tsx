@@ -1,25 +1,12 @@
 import React from "react";
-import {
-  DockerJobState,
-  JobsStateMap,
-  StateChangeValueRunning,
-} from "/@/shared";
+import { DockerJobState, JobsStateMap, StateChangeValueRunning } from "/@shared/client";
 import { useStore } from "/@/store";
 
-import {
-  Box,
-  Table,
-  TableCaption,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tr,
-} from "@chakra-ui/react";
+import { Box, Table, TableCaption, Tbody, Td, Th, Thead, Tr } from "@chakra-ui/react";
 
 export const WorkersTable: React.FC = () => {
-  const workers = useStore((state) => state.workers);
-  const jobs = useStore((state) => state.jobStates);
+  const workers = useStore(state => state.workers);
+  const jobs = useStore(state => state.jobStates);
 
   return (
     <Box p={2}>
@@ -35,13 +22,7 @@ export const WorkersTable: React.FC = () => {
         </Thead>
         <Tbody>
           {workers?.workers?.map((worker, i) => (
-            <WorkerRow
-              key={worker.id + i}
-              gpus={worker.gpus}
-              cpus={worker.cpus}
-              workerId={worker.id}
-              jobs={jobs}
-            />
+            <WorkerRow key={worker.id + i} gpus={worker.gpus} cpus={worker.cpus} workerId={worker.id} jobs={jobs} />
           ))}
         </Tbody>
       </Table>
@@ -56,21 +37,20 @@ const WorkerRow: React.FC<{
   jobs: JobsStateMap;
 }> = ({ workerId, cpus, gpus, jobs }) => {
   // How many jobs is this worker running
-  const jobCount = !jobs ? 0 : Object.keys(jobs)
-    .filter((jobId) => jobs[jobId].state === DockerJobState.Running)
-    .reduce<number>((count: number, jobHash: string) => {
-      const running = jobs[jobHash].history.filter((state) =>
-        state.state === DockerJobState.Running
-      );
-      if (running.length > 0) {
-        const workerRunning = running[running.length - 1]
-          .value as StateChangeValueRunning;
-        if (workerRunning.worker === workerId) {
-          return count + 1;
-        }
-      }
-      return count;
-    }, 0);
+  const jobCount = !jobs
+    ? 0
+    : Object.keys(jobs)
+        .filter(jobId => jobs[jobId].state === DockerJobState.Running)
+        .reduce<number>((count: number, jobHash: string) => {
+          const running = jobs[jobHash].history.filter(state => state.state === DockerJobState.Running);
+          if (running.length > 0) {
+            const workerRunning = running[running.length - 1].value as StateChangeValueRunning;
+            if (workerRunning.worker === workerId) {
+              return count + 1;
+            }
+          }
+          return count;
+        }, 0);
 
   return (
     <Tr>

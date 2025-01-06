@@ -18,5 +18,30 @@ normal := '\033[0m'
     deno check src/mod.ts
     echo "✅ shared typescript compilation"
 
+# Lint
+@lint:
+    deno lint
+
+# Lint and fix issues
+@lint-fix:
+    deno lint --fix
+
+# Format
+@fmt:
+    deno fmt
+
+# Format check
+@fmt-check:
+    deno fmt --check
+
+# Fix
+@fix: lint-fix fmt
+
 @test:
-    deno test --allow-all src
+    deno test --allow-all --unstable-kv src
+
+@build:
+    deno task build
+
+# Run CI
+@ci: fmt-check lint

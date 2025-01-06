@@ -20,65 +20,11 @@ green := "\\e[32m"
     @if [ "{{ mode }}" = "remote" ] || [ "{{ mode }}" = "local" ]; then :; else echo "Error: Mode must be 'remote' or 'local'" >&2; exit 1; fi
 
 # Develop: open the browser and start the dev stack [remote|local]
-@dev mode="remote" +args="": (_validate_mode mode) _ensure-all open (_up mode args)
+@dev mode="remote" +args="": (_validate_mode mode) _build_shared _ensure-all (open mode) (_up mode args)
 
-# Runs All Functional Tests and checks code
-test: check
-    #!/usr/bin/env bash
-    set -e # exit when any command fails, preserving the status of the failed command
-
-    cleanup() {
-        echo "Cleaning up test stack..."
-        docker compose --project-name=test -f docker-compose.yml -f docker-compose-remote.yml -f docker-compose-test.yml down 2>/dev/null || true
-    }
-
-    trap cleanup EXIT # cleanup when the script exits for any reason, including failure
-
-    cleanup
-
-    # Generate a random port between 10000-65535 and ensure it's not in use
-    get_free_port() {
-        while true; do
-            local port=$(shuf -i 10000-65535 -n 1)
-            # Check if port is in use using netstat or ss
-            # Check if port is in use using netstat/ss on Linux or lsof on macOS
-            if [ "$(uname)" == "Linux" ]; then
-                if ! ss -tuln | grep -q ":${port} "; then
-                    echo "${port}"
-                    break
-                fi
-            else
-                if ! lsof -i ":${port}" > /dev/null 2>&1; then
-                    echo "${port}"
-                    break
-                fi
-            fi
-        done
-    }
-
-    export APP_PORT=$(get_free_port)
-    echo -e "Using port ${APP_PORT}"
-    # Get host IP address for Linux
-    if [ "$(uname)" == "Linux" ]; then
-        HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
-    else
-        HOST_IP="host.docker.internal"
-    fi
-
-    # A local NPM registry saves time, bandwidth, and avoids rate limits
-    # This fails on specific npm modules, so we'll just not use it for now
-    # STATUS_CODE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:4873 || true)
-    # if [ $STATUS_CODE = "200" ]; then
-    #     export NPM_CONFIG_REGISTRY=http://${HOST_IP}:4873
-    # fi
-    # This is causing currently unknown issues, a dangling worker 
-    docker rm test-worker-1 2>/dev/null || true
-    docker compose --project-name=test -f docker-compose.yml -f docker-compose-remote.yml up --build --remove-orphans --detach
-    # functional tests
-    just test/test-in-docker
-    just worker/test
-    just shared/test
-    just cli/test
+# Shut down the local stack: 'docker compose down'
+down mode="remote" +args="": (_validate_mode mode)
+    docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml down {{ args }}
 
 # Bump the version, commit, CI will deploy and publish artifacts
 deploy version="":
@@ -108,6 +54,87 @@ deploy version="":
     git commit -m "chore: bump version to $VERSION"
     git push
 
+# Format all supported files
+@fmt-check +args="":
+    cd worker && deno fmt --check {{ args }}
+    cd api && deno fmt --check {{ args }}
+    cd test && deno fmt --check {{ args }}
+    cd cli && deno fmt --check {{ args }}
+    cd shared && deno fmt --check {{ args }}
+    find */justfile -exec just --fmt --check --unstable -f {} {{ args }} \;
+    just browser/fmt-check
+
+# Runs All Functional Tests and checks code
+test mode="remote" +args="": _build_shared check (_validate_mode mode)
+    #!/usr/bin/env bash
+    set -e # exit when any command fails, preserving the status of the failed command
+
+    cleanup() {
+        echo "Cleaning up test stack..."
+        docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml -f ../docker-compose-test-{{ mode }}.yml down 2>/dev/null || true
+    }
+
+    trap cleanup EXIT # cleanup when the script exits for any reason, including failure
+
+    cleanup
+
+    # Generate a random port between 10000-65535 and ensure it's not in use
+    get_free_port() {
+        while true; do
+            local port=$(shuf -i 10000-65535 -n 1)
+            # Check if port is in use using netstat or ss
+            # Check if port is in use using netstat/ss on Linux or lsof on macOS
+            if [ "$(uname)" == "Linux" ]; then
+                if ! ss -tuln | grep -q ":${port} "; then
+                    echo "${port}"
+                    break
+                fi
+            else
+                if ! lsof -i ":${port}" > /dev/null 2>&1; then
+                    echo "${port}"
+                    break
+                fi
+            fi
+        done
+    }
+
+    export APP_PORT=$(get_free_port)
+    echo -e "Using port ${APP_PORT}"
+
+    # Set API_URL and QUEUE_ID based on mode
+    if [ "{{ mode }}" = "local" ]; then
+        export API_URL="https://worker-metaframe.localhost:{{ APP_PORT }}"
+        export QUEUE_ID="local"
+    else
+        export API_URL="http://api1:8081"
+        export QUEUE_ID="local1"
+    fi
+
+    # Get host IP address for Linux
+    if [ "$(uname)" == "Linux" ]; then
+        HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
+    else
+        HOST_IP="host.docker.internal"
+    fi
+
+    export AWS_SECRET_ACCESS_KEY="minioaccesskey123123"
+    export AWS_ACCESS_KEY_ID="minioaccesskey123123"
+    export AWS_ENDPOINT="http://minio:9000"
+    export AWS_REGION="us-west-2"
+    export AWS_S3_BUCKET="localbucket"
+    export REDIS_URL="redis://localhost:6379"
+
+    docker rm test-worker-1 2>/dev/null || true
+    just shared/build
+    # tests don't need the browser but dir needs to exist
+    mkdir -p browser/dist
+    docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml -f ../docker-compose-test-{{ mode }}.yml up --build --remove-orphans --detach
+    # functional tests
+    just test/test-in-docker {{ mode }}
+    just worker/test
+    just shared/test
+    just cli/test
+
 # Start the docker compose local stack
 @_up mode="remote" +args="": (_validate_mode mode) _ensure-all _mkcert
     #!/usr/bin/env bash
@@ -123,21 +150,21 @@ deploy version="":
     docker rm dev-worker-1 2>/dev/null || true
     docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml up --remove-orphans {{ args }}
 
-# Shut down the local stack: 'docker compose down'
-@down mode="remote" +args="": (_validate_mode mode)
-    #!/usr/bin/env bash
-    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml down {{ args }}
-
 # Clean up the project
-@clean mode="remote" +args="": (_validate_mode mode)
+clean mode="remote" +args="": (_validate_mode mode)
     #!/usr/bin/env bash
-    docker compose --project-name=dev -f docker-compose.yml -f docker-compose-{{ mode }}.yml down -v
+    docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml down -v
     just browser/clean
     rm -rf .cache
 
 # Open the browser to the local frontend
-@open: _ensure-all
-    deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{ APP_FQDN }}:{{ APP_PORT }}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1' || true
+open mode="remote": _ensure-all
+    #!/usr/bin/env bash
+    if [ "{{ mode }}" = "local" ]; then
+        deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{ APP_FQDN }}:{{ APP_PORT }}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local' || true
+    else
+        deno run --allow-all https://deno.land/x/metapages@v0.0.27/exec/open_url.ts 'https://metapages.github.io/load-page-when-available/?url=https://{{ APP_FQDN }}:{{ APP_PORT }}#?job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmxzJTIwLWxhJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE4LjUlMjIlN0Q=&queue=local1' || true
+    fi
 
 # Quick compilation checks
 @check: _ensure-all
@@ -156,8 +183,7 @@ deploy version="":
 
 # Format all supported files
 @fmt +args="":
-    # deno fmt {{ args }}
-    cd browser && deno fmt {{ args }}
+    just browser/fmt
     cd worker && deno fmt {{ args }}
     cd api && deno fmt {{ args }}
     cd test && deno fmt {{ args }}
@@ -179,7 +205,7 @@ status-prod queue="public1":
 
 # Clean up the test stack, if it didn't exit cleanly
 @test-cleanup:
-    docker compose --project-name=test -f docker-compose.yml -f docker-compose-remote.yml down || true
+    docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-remote.yml down || true
 
 # Publish worker docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":
@@ -249,3 +275,40 @@ alias api := _api
 
 @_api +args="":
     just api/{{ args }}
+
+# Run linting for all apps
+@lint:
+    echo "Running lint for all apps..."
+    just browser/lint
+    just worker/lint
+    just api/lint
+    just cli/lint
+    just shared/lint
+    just test/lint
+
+# Run lint-fix commands for all apps
+@lint-fix:
+    echo "Running lint-fix for all apps..."
+    just browser/lint-fix
+    just worker/lint-fix
+    just api/lint-fix
+    just cli/lint-fix
+    just shared/lint-fix
+    just test/lint-fix
+
+# Run fix commands for all apps
+@fix:
+    echo "Running fix for all apps..."
+    just browser/fix
+    just worker/fix
+    just api/fix
+    just cli/fix
+    just shared/fix
+    just test/fix
+
+# Run CI
+@ci: fmt-check lint
+
+# Add new helper recipe for building shared dependencies
+@_build_shared:
+    just shared/build

@@ -17,11 +17,11 @@ normal := '\033[0m'
 
 # Run the cli
 mtpg +args="":
-    deno run --unsafely-ignore-certificate-errors --location https://worker-metaframe.localhost --allow-all src/cli.ts {{ args }}
+    deno run --unsafely-ignore-certificate-errors --location https://worker-metaframe.localhost --allow-all --unstable-kv src/cli.ts {{ args }}
 
 # Run the cli
 mtpg-prod +args="":
-    deno run --location https://container.mtfm.io --allow-all src/cli.ts {{ args }}
+    deno run --location https://container.mtfm.io --allow-all --unstable-kv src/cli.ts {{ args }}
 
 compile:
     deno compile --location https://worker-metaframe.localhost --allow-net --allow-read --allow-write --output dist/mtpg src/cli.ts
@@ -31,5 +31,27 @@ compile:
     deno check src/cli.ts
     echo "✅ cli typescript compilation"
 
+# Lint
+@lint:
+    deno lint
+
+# Lint and fix issues
+@lint-fix:
+    deno lint --fix
+
+# Format
+@fmt:
+    deno fmt
+
+# Format check
+@fmt-check:
+    deno fmt --check
+
+# Fix
+@fix: lint-fix fmt
+
 @test:
     echo "❗ no cli tests yet"
+
+# Run CI
+@ci: fmt-check lint

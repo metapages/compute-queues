@@ -1,8 +1,9 @@
-import { Context } from "https://deno.land/x/hono@v4.1.0-rc.1/mod.ts";
-import { GetObjectCommand } from "npm:@aws-sdk/client-s3";
-import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner";
+import { bucketParams, s3Client } from "/@/routes/s3config.ts";
+import { GetObjectCommand } from "aws-sdk/client-s3";
+import { getSignedUrl } from "aws-sdk/s3-request-presigner";
+import type { Context } from "hono";
 import { ms } from "ms";
-import { bucketParams, s3Client } from "../../s3config.ts";
+
 const OneWeekInSeconds = (ms("1 week") as number) / 1000;
 
 export const downloadHandler = async (c: Context) => {
@@ -19,12 +20,17 @@ export const downloadHandler = async (c: Context) => {
   //  ContentLength: 4
   // ContentMD5?: string;
   // ContentType?: string;
-  const command = new GetObjectCommand({ ...bucketParams, Key: key });
-  let url = await getSignedUrl(s3Client, command, {
-    expiresIn: OneWeekInSeconds,
-  });
-  if (url.startsWith("http://")) {
-    url = url.replace("http://", "https://");
+  try {
+    const command = new GetObjectCommand({ ...bucketParams, Key: key });
+    let url = await getSignedUrl(s3Client, command, {
+      expiresIn: OneWeekInSeconds,
+    });
+    if (url.startsWith("http://") && !url.includes("minio")) {
+      url = url.replace("http://", "https://");
+    }
+    return c.redirect(url);
+  } catch (err) {
+    console.error("Error downloading file:", err);
+    return c.text((err as Error).message, 500);
   }
-  return c.redirect(url);
 };

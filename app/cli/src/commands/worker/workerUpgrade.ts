@@ -1,5 +1,5 @@
-import { Command } from "https://deno.land/x/cliffy@v1.0.0-rc.4/command/mod.ts";
-import { compareVersions } from "https://deno.land/x/compare_versions/mod.ts";
+import { Command } from "cliffy/command";
+import { compareVersions } from "compare-versions";
 
 export const workerUpgrade = new Command()
   .description("Update all workers to a new version")
@@ -97,7 +97,16 @@ async function getContainerDetails(containerId: string) {
 }
 
 // Function to start a new container with updated image version
-async function startNewContainer(details: any, newImageVersion: string) {
+async function startNewContainer(
+  details: {
+    Name: string;
+    Image: string;
+    RestartPolicy: string;
+    Volumes: { Source: string; Destination: string }[];
+    Cmd: string[];
+  },
+  newImageVersion: string,
+) {
   const newImage = details.Image.split(":")[0] + ":" + newImageVersion;
   const args = [
     "run",
@@ -109,7 +118,7 @@ async function startNewContainer(details: any, newImageVersion: string) {
     // "--label",
     // "app=my-app", // Keep label or customize as needed
     ...details.Volumes.flatMap((
-      v: any,
+      v: { Source: string; Destination: string },
     ) => ["-v", `${v.Source}:${v.Destination}`]), // Map volumes
     newImage,
     ...details.Cmd, // Start with the same command
@@ -179,7 +188,7 @@ async function getLatestVersionFromDockerHub(
 
     // Parse the response to extract tag names
     const data = await response.json();
-    let tags = data.results.map((tag: any) => tag.name);
+    let tags = data.results.map((tag: { name: string }) => tag.name);
 
     if (tags.length === 0) {
       console.warn(`No tags found for image: ${imageName}`);
@@ -191,8 +200,14 @@ async function getLatestVersionFromDockerHub(
     // Use your semver comparison function to get the latest version
     const latestVersion = getLatestSemverVersion(tags);
     return latestVersion;
-  } catch (error: any) {
-    console.error(`Error fetching tags from DockerHub: ${error.message}`);
+  } catch (error) {
+    console.error(
+      `Error fetching tags from DockerHub: ${
+        error instanceof Error
+          ? error.message
+          : `Unknown error: ${String(error)}`
+      }`,
+    );
     return null;
   }
 }
