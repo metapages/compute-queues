@@ -1,11 +1,9 @@
-
 import { crypto } from "@std/crypto";
 import { encodeHex } from "@std/encoding";
 import { LRUCache } from "lru-cache";
 import { retryAsync } from "retry";
 import { ensureDir, exists } from "std/fs";
 import { dirname } from "std/path";
-
 
 import { decodeBase64 } from "/@/shared/base64.ts";
 import {
@@ -32,9 +30,6 @@ import {
 } from "/@/shared/util.ts";
 
 import { join } from "std/path";
-
-
-
 
 const IGNORE_CERTIFICATE_ERRORS: boolean =
   Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
@@ -166,10 +161,12 @@ export const fileToDataref = async (
         if (!success) {
           count++;
           throw new Error(
-            `Failed attempt ${count} to upload ${file} to ${uploadUrl} code=${code} stdout=${new TextDecoder().decode(
-              stdout,
-            )
-            } stderr=${new TextDecoder().decode(stderr)} command='curl ${args.join(" ")
+            `Failed attempt ${count} to upload ${file} to ${uploadUrl} code=${code} stdout=${
+              new TextDecoder().decode(
+                stdout,
+              )
+            } stderr=${new TextDecoder().decode(stderr)} command='curl ${
+              args.join(" ")
             }'`,
           );
         }

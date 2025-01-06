@@ -1,4 +1,3 @@
-
 import { ms } from "ms";
 import { getKv } from "/@/shared/kv.ts";
 import {
@@ -129,10 +128,11 @@ export class DB {
 
       const dataRef = await putJsonToS3(id, job);
       console.log(
-        `queueJobAdd ${queue} [${job.hash.substring(
-          0,
-          6,
-        )
+        `queueJobAdd ${queue} [${
+          job.hash.substring(
+            0,
+            6,
+          )
         }] pushing to s3 DONE, adding to job/queue kv`,
       );
       await this.kv
@@ -144,13 +144,13 @@ export class DB {
         .commit();
 
       console.log(
-        `queueJobAdd ${queue} [${job.hash.substring(
-          0,
-          6,
-        )
+        `queueJobAdd ${queue} [${
+          job.hash.substring(
+            0,
+            6,
+          )
         }] adding to job/queue kv DONE, checking config...`,
       );
-
 
       console.log(
         `queueJobAdd ${queue} [${id.substring(0, 6)}] config`,
@@ -161,10 +161,11 @@ export class DB {
 
       if (config) {
         console.log(
-          `queueJobAdd ${queue} [${job.hash.substring(
-            0,
-            6,
-          )
+          `queueJobAdd ${queue} [${
+            job.hash.substring(
+              0,
+              6,
+            )
           }] adding config and webhook`,
         );
         // partition jobs that might be shared by the same namespace
@@ -175,10 +176,11 @@ export class DB {
       }
     } catch (err) {
       console.error(
-        `💥💥💥 ERROR adding job to queue ${queue} [${job.hash.substring(
-          0,
-          6,
-        )
+        `💥💥💥 ERROR adding job to queue ${queue} [${
+          job.hash.substring(
+            0,
+            6,
+          )
         }]`,
         err,
       );
@@ -234,7 +236,7 @@ export class DB {
         | DockerJobDefinitionRow = entry.value;
       if (
         (jobDataRef as DataRef<DockerJobDefinitionRow> | undefined)?.type ===
-        DataRefType.key
+          DataRefType.key
       ) {
         const job: DockerJobDefinitionRow | undefined =
           await resolveDataRefFromS3(jobDataRef);
@@ -286,4 +288,3 @@ export class DB {
     await Promise.all([this.kv.delete(["cache", id]), deleteFromS3(id)]);
   }
 }
-
