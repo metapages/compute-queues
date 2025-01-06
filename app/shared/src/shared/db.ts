@@ -287,18 +287,3 @@ export class DB {
   }
 }
 
-let localkv: Deno.Kv | undefined = undefined;
-
-const getKv = async (): Promise<Deno.Kv> => {
-  if (localkv === undefined) {
-    const thiskv = await Deno.openKv(DENO_KV_URL || undefined);
-    if (localkv) {
-      thiskv.close();
-      return localkv;
-    }
-    localkv = thiskv;
-    console.log(`🗝️  ✅ DenoKv Connected ${DENO_KV_URL || ""}`);
-  }
-  return localkv;
-};
-

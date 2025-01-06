@@ -1,13 +1,12 @@
-<<<<<<< HEAD
-=======
-import { ensureDir, exists } from "std/fs";
-import { dirname } from "std/path";
-import { retryAsync } from "retry";
+
 import { crypto } from "@std/crypto";
 import { encodeHex } from "@std/encoding";
 import { LRUCache } from "lru-cache";
+import { retryAsync } from "retry";
+import { ensureDir, exists } from "std/fs";
+import { dirname } from "std/path";
 
->>>>>>> 130/submission-webhook-FAT
+
 import { decodeBase64 } from "/@/shared/base64.ts";
 import {
   ENV_VAR_DATA_ITEM_LENGTH_MAX,
@@ -18,10 +17,7 @@ import {
   DataRefType,
   type DockerJobDefinitionInputRefs,
   DockerJobState,
-<<<<<<< HEAD
-=======
   DockerJobUserConfig,
->>>>>>> 130/submission-webhook-FAT
   type StateChange,
   type StateChangeValueFinished,
   type StateChangeValueQueued,
@@ -34,17 +30,11 @@ import {
   sha256Stream,
   shaDockerJob,
 } from "/@/shared/util.ts";
-<<<<<<< HEAD
-import { LRUCache } from "lru-cache";
-import { retryAsync } from "retry";
-import { ensureDir, exists } from "std/fs";
-import { dirname, join } from "std/path";
 
-import { crypto } from "@std/crypto";
-import { encodeHex } from "@std/encoding";
-=======
 import { join } from "std/path";
->>>>>>> 130/submission-webhook-FAT
+
+
+
 
 const IGNORE_CERTIFICATE_ERRORS: boolean =
   Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
@@ -103,13 +93,9 @@ export const createNewContainerJobMessage = async (opts: {
   return { message, jobId, stageChange: payload };
 };
 
-<<<<<<< HEAD
-export const bufferToBase64Ref = (buffer: Uint8Array): DataRef => {
-=======
 export const bufferToBase64Ref = (
   buffer: Uint8Array,
 ): DataRef => {
->>>>>>> 130/submission-webhook-FAT
   const decoder = new TextDecoder("utf8");
   const value = btoa(decoder.decode(buffer));
   return {
@@ -127,10 +113,6 @@ if (IGNORE_CERTIFICATE_ERRORS) {
   // APP_PORT is only needed for the upload/curl/dns/docker fiasco
   const APP_PORT = Deno.env.get("APP_PORT") || "443";
   const hostsFileContents = Deno.readTextFileSync("/etc/hosts");
-<<<<<<< HEAD
-
-=======
->>>>>>> 130/submission-webhook-FAT
   const hostsFileLines = hostsFileContents.split("\n");
   const resolveFlags = hostsFileLines
     .filter((line: string) => line.includes("worker-metaframe.localhost"))
@@ -184,12 +166,10 @@ export const fileToDataref = async (
         if (!success) {
           count++;
           throw new Error(
-            `Failed attempt ${count} to upload ${file} to ${uploadUrl} code=${code} stdout=${
-              new TextDecoder().decode(
-                stdout,
-              )
-            } stderr=${new TextDecoder().decode(stderr)} command='curl ${
-              args.join(" ")
+            `Failed attempt ${count} to upload ${file} to ${uploadUrl} code=${code} stdout=${new TextDecoder().decode(
+              stdout,
+            )
+            } stderr=${new TextDecoder().decode(stderr)} command='curl ${args.join(" ")
             }'`,
           );
         }
@@ -291,13 +271,9 @@ export const dataRefToFile = async (
 
       try {
         // Download the file to the desired filename
-<<<<<<< HEAD
-        const arrayBufferFromUrl = (await fetchRobust(ref.value as string))
-          .body;
-=======
         const arrayBufferFromUrl =
           (await fetchRobust(ref.value as string)).body;
->>>>>>> 130/submission-webhook-FAT
+
         if (!arrayBufferFromUrl) {
           throw new Error(`Failed to fetch data from URL ${ref.value}`);
         }
