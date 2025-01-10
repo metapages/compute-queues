@@ -10,14 +10,15 @@ import {
   DockerJobDefinitionInputRefs,
   DockerJobDefinitionMetadata,
   DockerJobDefinitionParamsInUrlHash,
+  DockerJobControlConfig,
   isDataRef,
   JobInputs,
   shaDockerJob,
 } from "/@shared/client";
 
-import { useHashParam, useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
-import { useMetaframeAndInput } from "@metapages/metapage-react";
+import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { DataRefSerialized, Metaframe } from "@metapages/metapage";
+import { useMetaframeAndInput } from "@metapages/metapage-react";
 
 import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
 import { useStore } from "../store";
@@ -36,10 +37,10 @@ export const useDockerJobDefinition = () => {
   // input text files are stored in the URL hash
   const [jobInputsFromUrl] = useHashParamJson<JobInputs | undefined>("inputs");
 
-  // get a source string from the URL hash
-  const [metapage] = useHashParam("metapage");
-  const [metaframe] = useHashParam("metaframe");
-  const sourceKey = metapage && metaframe ? `${metapage}/${metaframe}` : undefined;
+  // Parent pages to this frame can inject a userspace config
+  // to uniquely identify the user and limit the job to a single userspace
+  // and provide webhooks
+  const [namespaceConfig] = useHashParamJson<DockerJobControlConfig | undefined>("control");
 
   // this changes when the metaframe inputs change
   const metaframeBlob = useMetaframeAndInput();
@@ -169,7 +170,7 @@ export const useDockerJobDefinition = () => {
         hash: jobHashCurrent,
         definition,
         debug,
-        source: sourceKey,
+        control: namespaceConfig,
       };
 
       setNewJobDefinition(newJobDefinition);
@@ -178,5 +179,5 @@ export const useDockerJobDefinition = () => {
     return () => {
       cancelled = true;
     };
-  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, sourceKey, debug]);
+  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, namespaceConfig, debug]);
 };

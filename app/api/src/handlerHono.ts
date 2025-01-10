@@ -8,6 +8,7 @@ import { metricsHandler } from "/@/routes/metrics.ts";
 import { uploadHandler } from "/@/routes/api/v1/upload.ts";
 import { uploadHandler as uploadHandlerDeprecated } from "/@/routes/deprecated/upload.ts";
 import { downloadHandler as downloadHandlerDeprecated } from "/@/routes/deprecated/download.ts";
+import { copyJobToQueueHandler } from "/@/routes/api/v1/copy-job-to-queue.ts";
 
 const app = new Hono();
 
@@ -33,6 +34,7 @@ app.get("/healthz", (c: Context) => c.text("OK"));
 
 app.get("/api/v1/download/:key", downloadHandler);
 app.put("/api/v1/upload/:key", uploadHandler);
+app.post("/api/v1/copy-job-to-queue", copyJobToQueueHandler);
 
 // @deprecated
 app.get("/upload/:key", uploadHandlerDeprecated);

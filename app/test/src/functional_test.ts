@@ -1,7 +1,6 @@
-import { assertEquals } from "std/assert";
+import { assert, assertEquals } from "std/assert";
 
 import { closed, open } from "@korkje/wsi";
-
 import {
   type BroadcastJobStates,
   createNewContainerJobMessage,
@@ -230,31 +229,55 @@ Deno.test(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
     const count = 3;
-    const definitions = Array.from(Array(count).keys()).map((i) => ({
+    const definitions = Array.from(Array(count).keys()).map((i: number) => ({
       image: "alpine:3.18.5",
       // The earlier jobs can run for ages since they will actually be killed,
       // while the last job will replace them so can finished quickly.
       command: `sh -c "echo ${Math.random()}; sleep ${
-        i + 1 < count ? "10" : "1"
+        i + 1 < count ? "20" : "5"
       }"`,
     }));
 
-    const source = `test-${Math.random()}`;
+    const namespace = `test-${Math.random()}`;
     const jobIdsSubmissionOrder: string[] = [];
-    const jobIdsFinishReason = new Map<string, string>();
+    const jobIdsToBeKilled: Set<string> = new Set();
+    let jobIdToSupercedeAllPrior: string = "";
+    // const jobIdsFinishReason = new Map<string, string>();
 
     const messages = await Promise.all(
-      definitions.map(async (definition) => {
+      definitions.map(async (definition, i) => {
         const message = await createNewContainerJobMessage({
           definition,
-          source,
+          namespace,
         });
         jobIdsSubmissionOrder.push(message.jobId);
+        if (i + 1 < count) {
+          jobIdsToBeKilled.add(message.jobId);
+        } else {
+          jobIdToSupercedeAllPrior = message.jobId;
+        }
         return message;
       }),
     );
 
+    assertEquals(jobIdsToBeKilled.size, count - 1);
+    assert(!!jobIdToSupercedeAllPrior);
+
     const promiseEnd = Promise.withResolvers<string>();
+
+    const getJobStateString = (jobsBroadcast: BroadcastJobStates): string => {
+      const jobStates = [...jobIdsToBeKilled].map((jobId) => {
+        const jobState = jobsBroadcast.state.jobs[jobId];
+        return `[${jobId.substring(0, 4)}: ${jobState?.state} ${
+          jobState?.state === DockerJobState.Finished
+            ? (jobState.value as StateChangeValueFinished).reason
+            : ""
+        }]`;
+      }).join("\n");
+      return `supreme: [${jobIdToSupercedeAllPrior.substring(0, 4)}: ${
+        jobsBroadcast.state.jobs[jobIdToSupercedeAllPrior]?.state
+      }], to die: ${jobStates}`;
+    };
 
     socket.onmessage = (message: MessageEvent) => {
       const messageString = message.data.toString();
@@ -268,22 +291,62 @@ Deno.test(
           if (!someJobsPayload) {
             break;
           }
-          jobIdsSubmissionOrder.forEach((jobId) => {
-            if (jobIdsFinishReason.has(jobId)) {
-              return;
-            }
+
+          // const jobStates = [...jobIdsToBeKilled].map((jobId) => {
+          //   const jobState = someJobsPayload.state.jobs[jobId];
+          //   return `[${jobId.substring(0, 4)}: ${jobState?.state} ${
+          //     jobState?.state === DockerJobState.Finished
+          //       ? (jobState.value as StateChangeValueFinished).reason
+          //       : ""
+          //   }]`;
+          // }).join("\n");
+          // console.log(
+          //   `supreme: [${jobIdToSupercedeAllPrior.substring(0, 4)}: ${
+          //     someJobsPayload.state.jobs[jobIdToSupercedeAllPrior]?.state
+          //   }], to die: ${jobStates}`,
+          // );
+
+          // All jobs except the last one should be killed/Finished
+          // TBH we don't care about the state of the last job, as long as
+          // it's queued/running
+          const jobsToBeKilledAreActually = new Set<string>();
+          const jobsToBeKilledFinishedForOtherReasons = new Set<string>();
+          jobIdsToBeKilled.forEach((jobId) => {
             const jobState = someJobsPayload.state.jobs[jobId];
-            if (!jobState) {
-              return;
-            }
-            if (jobState.state === DockerJobState.Finished) {
+            if (jobState?.state === DockerJobState.Finished) {
               const finishedState = jobState.value as StateChangeValueFinished;
-              jobIdsFinishReason.set(jobId, finishedState.reason);
-              if (jobIdsFinishReason.size === count) {
-                promiseEnd.resolve("done");
+              if (
+                finishedState.reason ===
+                  DockerJobFinishedReason.JobReplacedByClient
+              ) {
+                jobsToBeKilledAreActually.add(jobId);
+              } else {
+                jobsToBeKilledFinishedForOtherReasons.add(jobId);
               }
             }
           });
+
+          const finalJobIsQueuedOrRunning =
+            someJobsPayload.state.jobs[jobIdToSupercedeAllPrior]?.state ===
+              DockerJobState.Queued ||
+            someJobsPayload.state.jobs[jobIdToSupercedeAllPrior]?.state ===
+              DockerJobState.Running;
+          if (
+            jobsToBeKilledAreActually.size === jobIdsToBeKilled.size &&
+            finalJobIsQueuedOrRunning
+          ) {
+            promiseEnd.resolve("done");
+          }
+
+          if (jobsToBeKilledFinishedForOtherReasons.size > 0) {
+            promiseEnd.reject(
+              new Error(
+                "jobsToBeKilledFinishedForOtherReasons.size > 0: " +
+                  getJobStateString(someJobsPayload),
+              ),
+            );
+          }
+
           break;
         }
         default:
@@ -299,20 +362,6 @@ Deno.test(
     }
 
     await promiseEnd.promise;
-
-    jobIdsSubmissionOrder.forEach((jobId, i) => {
-      if (i === jobIdsSubmissionOrder.length - 1) {
-        assertEquals(
-          jobIdsFinishReason.get(jobId),
-          DockerJobFinishedReason.Success,
-        );
-      } else {
-        assertEquals(
-          jobIdsFinishReason.get(jobId),
-          DockerJobFinishedReason.JobReplacedByClient,
-        );
-      }
-    });
 
     assertEquals(true, true);
 

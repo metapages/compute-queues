@@ -32,5 +32,6 @@ deno run \
     --allow-write \
     --allow-env \
     --allow-run \
+    --unstable-cron \
     src/cli.ts \
     $CMD

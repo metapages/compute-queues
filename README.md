@@ -89,7 +89,7 @@ automatically updates.
 
 - `just test`: runs the entire test suite, creating a new local stack
   - runs on every push to non-main branches
-- `just api/test/watch`: (requires a running local stack) runs functional tests,
+- `just app/test/watch`: (requires a running local stack) runs functional tests,
   currently only permissions
   - see `just api/test` for more test related commands
 

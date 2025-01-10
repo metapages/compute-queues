@@ -10,7 +10,7 @@ services:
       redis:
         condition: service_healthy
     image: denoland/deno:alpine-2.1.4
-    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
+    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv --unstable-cron src/server.ts
     working_dir: /app/app/api
     healthcheck:
       test: sh -c 'PORT=8081 deno run --allow-net --allow-env src/util/healthcheck.ts'
@@ -19,8 +19,6 @@ services:
       retries: 10
     expose:
       - "8081"
-    ports:
-      - "8081:8081"
     environment:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - PORT=8081
@@ -29,7 +27,7 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
       - AWS_REGION=${AWS_REGION:-us-west-2}
-      - AWS_ENDPOINT=http://minio:9000
+      - AWS_ENDPOINT=${AWS_ENDPOINT-http://minio:9000}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
@@ -64,7 +62,7 @@ services:
       api1:
         condition: service_healthy
     image: denoland/deno:alpine-2.1.4
-    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv src/server.ts
+    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv --unstable-cron src/server.ts
     working_dir: /app/app/api
     healthcheck:
       test: sh -c 'PORT=8082 deno run --allow-net --allow-env src/util/healthcheck.ts'
@@ -81,7 +79,7 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
       - AWS_REGION=${AWS_REGION:-us-west-2}
-      - AWS_ENDPOINT=http://minio:9000
+      - AWS_ENDPOINT=${AWS_ENDPOINT-http://minio:9000}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
@@ -123,6 +121,7 @@ services:
       "--allow-all",
       "--unstable-kv",
       "--unstable-broadcast-channel",
+      "--unstable-cron",
       "src/cli.ts",
     ]
     # Notice that the worker connects to api2 while the browser connects to api1
@@ -154,7 +153,6 @@ services:
       - deno:/deno
       - node_modules:/app/node_modules
     extra_hosts:
-      - api1:host-gateway
       - host.docker.internal:host-gateway
       - minio.worker-metaframe.localhost:host-gateway
       - worker-metaframe.localhost:host-gateway
@@ -224,8 +222,6 @@ services:
     command: server --address 0.0.0.0:9000 /data
     expose:
       - "9000"
-    ports:
-      - "9000:9000"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
@@ -247,7 +243,6 @@ services:
     labels:
       - "custom.label=worker-metaframe.localhost"
       - "traefik.enable=true"
-      # - "traefik.http.routers.minio.rule=Host(`minio.worker-metaframe.localhost`) || Host(`minio.worker-metaframe.localhost`)"
       - "traefik.http.routers.minio.rule=Host(`minio.worker-metaframe.localhost`)"
       - "traefik.http.routers.minio.entrypoints=websecure"
       # Apply the CORS middleware to the router

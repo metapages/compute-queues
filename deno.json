@@ -13,6 +13,7 @@
     "@metapages/metapage": "npm:@metapages/metapage@1.0.21",
     "@std/crypto": "jsr:@std/crypto@1.0.3",
     "@std/encoding": "jsr:@std/encoding@1.0.3",
+    "@std/http": "jsr:@std/http@^1.0.12",
     "aws-sdk/client-s3": "npm:@aws-sdk/client-s3@3.582.0",
     "aws-sdk/s3-request-presigner": "npm:@aws-sdk/s3-request-presigner",
     "bytes": "npm:bytes@3.1.2",
@@ -52,5 +53,6 @@
     "zip": "https://deno.land/x/zip@v1.2.5/mod.ts"
   },
   "unstable": ["kv", "broadcast-channel", "sloppy-imports"],
-  "exclude": ["./app/browser", "./app/shared/dist"]
+  "exclude": ["./app/browser", "./app/shared/dist"],
+  "nodeModulesDir": "auto"
 }

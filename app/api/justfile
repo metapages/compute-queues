@@ -20,7 +20,7 @@ normal := '\033[0m'
 
 # Run the server locally
 dev +args="": _build_shared
-    deno run --watch --allow-all --unstable-kv --unstable-broadcast-channel src/server.ts {{ args }}
+    deno run --watch --allow-all --unstable-kv --unstable-broadcast-channel --unstable-cron src/server.ts {{ args }}
 
 # Quick compile checks
 @check:
@@ -68,7 +68,7 @@ _serve:
     PORT=3073 \
     DENO_DIR=.deno \
     DENO_INSTALL_ROOT=.deno \
-        deno run --allow-sys --allow-net --allow-read --allow-env --unstable-kv src/server.ts
+        deno run --allow-sys --allow-net --allow-read --allow-env --unstable-kv --unstable-cron src/server.ts
 
 # Perform a fresh build and deploy to deno-deploy
 deploy: _ensure_deployctl clean build

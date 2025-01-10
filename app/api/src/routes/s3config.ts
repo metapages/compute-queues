@@ -8,10 +8,10 @@ const AWS_ENDPOINT: string | undefined = "http://minio:9000"; //Deno.env.get("AW
 const AWS_ACCESS_KEY_ID: string = Deno.env.get("AWS_ACCESS_KEY_ID")!;
 const AWS_SECRET_ACCESS_KEY: string = Deno.env.get("AWS_SECRET_ACCESS_KEY")!;
 
-console.log("Bucket", Bucket);
-console.log("AWS_REGION", AWS_REGION);
-console.log("AWS_ENDPOINT", AWS_ENDPOINT);
-console.log("AWS_ACCESS_KEY_ID", AWS_ACCESS_KEY_ID);
+// console.log("Bucket", Bucket);
+// console.log("AWS_REGION", AWS_REGION);
+// console.log("AWS_ENDPOINT", AWS_ENDPOINT);
+// console.log("AWS_ACCESS_KEY_ID", AWS_ACCESS_KEY_ID);
 
 export const bucketParams = {
   Bucket,
@@ -31,7 +31,6 @@ const config = {
   fdjksalfj: "fdjksalfj",
 };
 
-console.log("config:");
 console.dir(config, { depth: null });
 
 export const s3Client = new S3Client(config);

@@ -2,7 +2,7 @@
 # https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
 # This workflow is triggered on pushes to non-main (or master) branches
 # Builds and tests the app (just test)
-name: Build and test (self-hosted)
+name: Test (self-hosted)
 
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
 on:
@@ -14,8 +14,21 @@ on:
       - "!master"
 
 jobs:
-  test_on_push:
-    name: Build and test
+  test_remote_mode:
+    name: remote mode
+    runs-on: [self-hosted, macOS]
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: "0"
+
+      - name: test
+        run: just test remote
+        timeout-minutes: 20
+
+  test_local_mode:
+    name: local mode
     runs-on: [self-hosted]
     steps:
       - name: Check out the repo
@@ -24,5 +37,5 @@ jobs:
           fetch-depth: "0"
 
       - name: test
-        run: just test
+        run: just test local
         timeout-minutes: 20
