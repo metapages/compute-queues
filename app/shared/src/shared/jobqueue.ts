@@ -678,7 +678,7 @@ export class BaseDockerJobQueue {
   }
 
   // Mark methods that could be overridden as protected
-  protected async stateChange(change: StateChange): Promise<void> {
+  public async stateChange(change: StateChange): Promise<void> {
     // console.log('🌘stateChange', JSON.stringify(change, null, '  ').substring(0, 300));
     // console.log('this.state.jobs', JSON.stringify(this.state.jobs, null, '  '));
 
@@ -741,16 +741,16 @@ export class BaseDockerJobQueue {
       try {
         // Finished jobs are cached in the db
         if (change.state === DockerJobState.Finished) {
-          console.log("cacheadd");
+          // console.log("cacheadd");
           await this.db.resultCacheAdd(jobId, jobRow);
           // remove from the persisted cache so that metrics will be accurate
-          console.log("cacheremove");
+          // console.log("cacheremove");
           await this.db.queueJobRemove(this.address, jobId);
         } else if (change.state === DockerJobState.Queued) {
-          console.log("queueadd");
+          // console.log("queueadd");
           await this.db.queueJobAdd(this.address, jobRow!);
         } else {
-          console.log("queueupdate");
+          // console.log("queueupdate");
           await this.db.queueJobUpdate(this.address, jobRow!);
         }
       } catch (err) {
@@ -872,10 +872,12 @@ export class BaseDockerJobQueue {
                 // If this is a new submission
                 // TODO: what is happening here? It could be a lost job
                 //
+
                 (
                   this.state.jobs[jobId].history[0]
                     .value as StateChangeValueQueued
                 ).definition = valueQueued.definition;
+
                 await broadcastCurrentStateBecauseIDoubtStateIsSynced();
                 break;
               case DockerJobState.Finished: {
@@ -1276,7 +1278,7 @@ export class BaseDockerJobQueue {
         // console.log('⏯️ browser message', message);
         const messageString = message.toString();
         if (messageString === "PING") {
-          console.log(`PING FROM browser`);
+          // console.log(`PING FROM browser`);
           connection.socket.send("PONG");
           return;
         }
@@ -1711,7 +1713,7 @@ export class BaseDockerJobQueue {
 
   checkForSourceConflicts() {
     // check all the jobs
-    const sourceJobs = new Map<string, string[]>(); // source -> [jobId, ...]
+    const namespacedJobs = new Map<string, string[]>(); // source -> [jobId, ...]
     for (
       const [jobId, job] of Object.entries<DockerJobDefinitionRow>(
         this.state.jobs,
@@ -1720,15 +1722,19 @@ export class BaseDockerJobQueue {
       if (job.state === DockerJobState.Finished) {
         continue;
       }
-      const source = (job.history[0].value as StateChangeValueQueued).source;
-      if (source) {
-        sourceJobs.set(source, [...(sourceJobs.get(source) || []), jobId]);
+      const namespace = (job.history[0].value as StateChangeValueQueued)
+        .namespace;
+      if (namespace) {
+        namespacedJobs.set(namespace, [
+          ...(namespacedJobs.get(namespace) || []),
+          jobId,
+        ]);
       }
     }
     const now = Date.now();
-    for (const [source, jobIds] of sourceJobs.entries()) {
+    for (const [namespace, jobIds] of namespacedJobs.entries()) {
       if (jobIds.length > 1) {
-        console.log(`🚨 source conflict for ${source}: ${jobIds}`);
+        console.log(`🚨 source conflict for ${namespace}: ${jobIds}`);
         // what do I do? keep the newest job, and kill the others.
         // we should hesitate to kill long running jobs, but we also
         // don't want to end up with a lot of them, so we have to strike
@@ -1738,6 +1744,8 @@ export class BaseDockerJobQueue {
         // then we kill the older jobs.
         // Otherwise, we keep the newest job.
         // latest last
+        // Plot twist: jobs can be started by multiple userspaces and be in different queues
+        // so finishing a job in one queue doesn't mean it's finished in all queues
         const sortedJobIds = jobIds.toSorted((a, b) => {
           const aJobTime = (
             this.state.jobs[a]?.history[0].value as StateChangeValueQueued
@@ -1759,6 +1767,8 @@ export class BaseDockerJobQueue {
           const jobAge = now - jobTime;
           if (jobAge < 60000 || timeDifference > 60000) {
             // kill it
+            // TODO: plot twist: but not if it's in other queues, but this queue
+            // should definitely remove it from its own queue
             this.stateChange({
               state: DockerJobState.Finished,
               job: jobId,

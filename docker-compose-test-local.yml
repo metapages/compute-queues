@@ -3,11 +3,14 @@ services:
     depends_on:
       worker:
         condition: service_healthy
-    image: denoland/deno:alpine-2.1.4
-    command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-broadcast-channel --unstable-kv .
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM denoland/deno:alpine-2.1.4
+        RUN apk add --no-cache curl bash
+    command: deno test --watch --unsafely-ignore-certificate-errors --allow-all --unstable-cron --unstable-kv .
     working_dir: /app/app/test
     extra_hosts:
-      - worker:host-gateway
       - host.docker.internal:host-gateway
     environment:
       - IGNORE_CERTIFICATE_ERRORS=true

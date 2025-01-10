@@ -8,6 +8,23 @@ export interface WebsocketUrlParameters {
   token: string;
 }
 
+export const getApiDockerJobQueue = async (
+  queue: string,
+): Promise<ApiDockerJobQueue> => {
+  if (!userJobQueues[queue]) {
+    // TODO: hydrate queue from some kind of persistence
+    // actually the queue should handle that itself
+    const jobQueue = new ApiDockerJobQueue({
+      serverId: SERVER_INSTANCE_ID,
+      address: queue,
+    });
+    await jobQueue.setup();
+    userJobQueues[queue] = jobQueue;
+    return jobQueue;
+  }
+  return userJobQueues[queue];
+};
+
 export async function wsHandlerClient(
   token: string,
   socket: WebSocket,
@@ -25,16 +42,8 @@ export async function wsHandlerClient(
       socket.close();
       return;
     }
-    if (!userJobQueues[token]) {
-      // TODO: hydrate queue from some kind of persistence
-      // actually the queue should handle that itself
-      userJobQueues[token] = new ApiDockerJobQueue({
-        serverId: SERVER_INSTANCE_ID,
-        address: token,
-      });
-      await userJobQueues[token].setup();
-    }
-    userJobQueues[token].connectClient({ socket });
+    const jobQueue = await getApiDockerJobQueue(token);
+    jobQueue.connectClient({ socket });
   } catch (err) {
     console.error(err);
   }

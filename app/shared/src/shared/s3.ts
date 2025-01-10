@@ -6,8 +6,11 @@ import {
   PutObjectCommand,
   S3Client,
 } from "aws-sdk/client-s3";
+import { ms } from "ms";
+import { getSignedUrl } from "aws-sdk/s3-request-presigner";
 
 // import { S3Client } from 'https://deno.land/x/s3_lite_client@0.7.0/mod.ts';
+const OneDayInSeconds = (ms("1 day") as number) / 1000;
 
 const Bucket: string = Deno.env.get("AWS_S3_BUCKET") || "metaframe-asman-test";
 const AWS_REGION: string = Deno.env.get("AWS_REGION") || "us-west-2";
@@ -55,13 +58,28 @@ export const putJsonToS3 = async (
   const command = new PutObjectCommand({
     ...bucketParams,
     Key: key,
-    Body: JSON.stringify(data),
     ContentType: "application/json",
   });
-  // Send the command to S3
-  /* const response = */ void await s3Client.send(command);
+
+  const urlUpload = await getSignedUrl(s3Client, command, {
+    expiresIn: OneDayInSeconds,
+  });
+
+  // Then upload directly to S3/MinIO using the presigned URL
+  const responseUpload = await fetch(urlUpload, {
+    // @ts-ignore: TS2353
+    method: "PUT",
+    // @ts-ignore: TS2353
+    redirect: "follow",
+    body: JSON.stringify(data),
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!responseUpload.ok) {
+    throw new Error(`Failed to upload URL: ${urlUpload}`);
+  }
+  await responseUpload.text();
+
   const ref: DataRef = {
-    // value: hash, // no http means we know it's an internal address, workers will know how to reach
     type: DataRefType.key,
     value: key,
   };
@@ -99,11 +117,13 @@ export const deleteFromS3 = (Key: string): Promise<void> => {
       ...bucketParams,
       Key,
     });
-    s3Client.send(deleteObjectCommand)
+
+    s3Client
+      .send(deleteObjectCommand)
       .then(() => {
         resolve();
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.log(`Ignored error deleting object ${Key} from S3: ${err}`);
         resolve();
         // swallow errors
@@ -111,35 +131,22 @@ export const deleteFromS3 = (Key: string): Promise<void> => {
   });
 };
 
-const getObject = (Key: string): Promise<string | undefined> => {
-  return new Promise((resolve, reject) => {
-    const getObjectCommand = new GetObjectCommand({ ...bucketParams, Key });
+const getObject = async (Key: string): Promise<string | undefined> => {
+  const command = new GetObjectCommand({ ...bucketParams, Key });
 
-    s3Client.send(getObjectCommand)
-      .then((response) => {
-        // Store all of data chunks returned from the response data stream
-        // into an array then use Array#join() to use the returned contents as a String
-        const responseDataChunks: unknown[] = [];
-
-        // Handle an error while streaming the response body
-        response.Body?.once("error", (err: Error) => reject(err));
-
-        // Attach a 'data' listener to add the chunks of data to our array
-        // Each chunk is a Buffer instance
-        response.Body?.on(
-          "data",
-          (chunk: unknown) => responseDataChunks.push(chunk),
-        );
-
-        // Once the stream has no more data, join the chunks into a string and return the string
-        response.Body?.once("end", () => resolve(responseDataChunks.join("")));
-      })
-      .catch((err) => {
-        // swallow errors
-        // Handle the error or throw
-        console.log(`Ignored error getting object ${Key} from S3: ${err}`);
-        // return reject(err);
-        resolve(undefined);
-      });
+  const url = await getSignedUrl(s3Client, command, {
+    expiresIn: OneDayInSeconds,
   });
+
+  const response = await fetch(url, {
+    // @ts-ignore: TS2353
+    method: "GET",
+    // @ts-ignore: TS2353
+    redirect: "follow",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to upload URL: ${url}`);
+  }
+  const text = await response.text();
+  return text;
 };

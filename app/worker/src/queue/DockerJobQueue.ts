@@ -508,7 +508,7 @@ export class DockerJobQueue {
         async (result: computeQueuesShared.DockerRunResult) => {
           console.log(
             `[${jobBlob.hash.substring(0, 6)}] result ${
-              JSON.stringify(result, null, "  ").substring(0, 200)
+              JSON.stringify(result).substring(0, 100)
             }`,
           );
           result.logs = result.logs || [];
@@ -557,11 +557,11 @@ export class DockerJobQueue {
           } else {
             // get outputs
             try {
-              console.log(
-                `[${this.workerIdShort}] [${
-                  jobBlob.hash.substring(0, 6)
-                }] uploading outputs`,
-              );
+              // console.log(
+              //   `[${this.workerIdShort}] [${
+              //     jobBlob.hash.substring(0, 6)
+              //   }] uploading outputs`,
+              // );
               const outputs = await getOutputs(jobBlob, this.workerId);
               valueFinished = {
                 reason: computeQueuesShared.DockerJobFinishedReason.Success,
