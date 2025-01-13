@@ -1091,6 +1091,9 @@ export class BaseDockerJobQueue {
     const emitter = createNanoEvents<NanoEventWorkerMessageEvents>();
 
     connection.socket.addEventListener("close", () => {
+      if (!this.address) {
+        return;
+      }
       console.log(
         `[${this.address.substring(0, 15)}] [${
           queue.substring(
