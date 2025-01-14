@@ -61,6 +61,7 @@ export const createNewContainerJobMessage = async (opts: {
   message: WebsocketMessageClientToServer;
   jobId: string;
   stageChange: StateChange;
+  queuedJob?: StateChangeValueQueued;
 }> => {
   let { definition, debug, jobId, namespace, control } = opts;
   const value: StateChangeValueQueued = {
@@ -84,7 +85,7 @@ export const createNewContainerJobMessage = async (opts: {
     payload,
     type: WebsocketMessageTypeClientToServer.StateChange,
   };
-  return { message, jobId, stageChange: payload };
+  return { message, jobId, stageChange: payload, queuedJob: value };
 };
 
 export const bufferToBase64Ref = (
