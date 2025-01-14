@@ -1,8 +1,9 @@
 import { bucketParams, s3Client } from "/@/routes/s3config.ts";
 import { GetObjectCommand } from "aws-sdk/client-s3";
-import { getSignedUrl } from "aws-sdk/s3-request-presigner";
 import type { Context } from "hono";
 import { ms } from "ms";
+
+import { getSignedUrlWithRetry } from "./upload.ts";
 
 const OneWeekInSeconds = (ms("1 week") as number) / 1000;
 
@@ -22,9 +23,9 @@ export const downloadHandler = async (c: Context) => {
   // ContentType?: string;
   try {
     const command = new GetObjectCommand({ ...bucketParams, Key: key });
-    let url = await getSignedUrl(s3Client, command, {
+    let url = await getSignedUrlWithRetry(s3Client, command, {
       expiresIn: OneWeekInSeconds,
-    });
+    }, 10);
     if (url.startsWith("http://") && !url.includes("minio")) {
       url = url.replace("http://", "https://");
     }
