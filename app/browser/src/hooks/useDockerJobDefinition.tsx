@@ -150,8 +150,6 @@ export const useDockerJobDefinition = () => {
 
       // at this point, these inputs *could* be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
-      console.log("definition.inputs", definition.inputs);
-      console.log("copyLargeBlobsToCloud UPLOAD_DOWNLOAD_BASE_URL", UPLOAD_DOWNLOAD_BASE_URL);
       definition.inputs = await copyLargeBlobsToCloud(definition.inputs, UPLOAD_DOWNLOAD_BASE_URL);
       if (cancelled) {
         return;
