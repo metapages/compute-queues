@@ -23,9 +23,9 @@ export const uploadHandler = async (c: Context) => {
 
   const command = new PutObjectCommand({ ...bucketParams, Key: key });
   try {
-    let url = await getSignedUrl(s3Client, command, {
+    let url = await getSignedUrlWithRetry(s3Client, command, {
       expiresIn: OneWeekInSeconds,
-    });
+    }, 10);
     if (url.startsWith("http://") && !url.includes("minio")) {
       url = url.replace("http://", "https://");
     }
@@ -36,3 +36,32 @@ export const uploadHandler = async (c: Context) => {
     return c.text("Failed to get signed URL");
   }
 };
+
+export async function getSignedUrlWithRetry(
+  client: typeof s3Client,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- AWS SDK v3 command type is incompatible with getSignedUrl parameter type
+  cmd: PutObjectCommand,
+  options: Parameters<typeof getSignedUrl>[2],
+  maxRetries = 3,
+): Promise<string> {
+  let delay = 1000;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await getSignedUrl(client, cmd, options);
+    } catch (error) {
+      // Only retry on 429 errors
+      if (!error?.toString().includes("429") || attempt === maxRetries - 1) {
+        throw error;
+      }
+
+      // Wait with exponential backoff + jitter
+      await new Promise((resolve) =>
+        setTimeout(resolve, delay + Math.random() * 1000)
+      );
+      delay *= 2;
+    }
+  }
+
+  throw new Error("Max retries exceeded for getSignedUrl");
+}
