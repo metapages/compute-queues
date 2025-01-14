@@ -14,14 +14,9 @@ const OneDayInSeconds = (ms("1 day") as number) / 1000;
 
 const Bucket: string = Deno.env.get("AWS_S3_BUCKET") || "metaframe-asman-test";
 const AWS_REGION: string = Deno.env.get("AWS_REGION") || "us-west-2";
-const AWS_ENDPOINT: string | undefined = "http://minio:9000"; //Deno.env.get("AWS_ENDPOINT");
+const AWS_ENDPOINT: string | undefined = Deno.env.get("AWS_ENDPOINT");
 const AWS_ACCESS_KEY_ID: string = Deno.env.get("AWS_ACCESS_KEY_ID")!;
 const AWS_SECRET_ACCESS_KEY: string = Deno.env.get("AWS_SECRET_ACCESS_KEY")!;
-
-console.log("Bucket", Bucket);
-console.log("AWS_REGION", AWS_REGION);
-console.log("AWS_ENDPOINT", AWS_ENDPOINT);
-console.log("AWS_ACCESS_KEY_ID", AWS_ACCESS_KEY_ID);
 
 export const bucketParams = {
   Bucket,
@@ -35,7 +30,9 @@ const config = {
     secretAccessKey: AWS_SECRET_ACCESS_KEY,
   },
   region: AWS_REGION,
-  endpoint: AWS_ACCESS_KEY_ID?.includes("minio") ? AWS_ENDPOINT : undefined,
+  endpoint: AWS_ACCESS_KEY_ID?.includes("minio")
+    ? "http://minio:9000"
+    : undefined,
   forcePathStyle: AWS_ENDPOINT ? true : undefined,
   signatureVersion: "v4",
 };

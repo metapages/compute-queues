@@ -45,9 +45,9 @@ app.get("/:queue/status", statusHandler);
 app.get("/:queue/metrics", metricsHandler);
 
 // Serve static assets, and the index.html as the fallback
-app.get("/*", serveStatic({ root: "../browser/dist" }));
-app.get("/", serveStatic({ path: "../browser/dist/index.html" }));
-app.get("*", serveStatic({ path: "../browser/dist/index.html" }));
+app.get("/*", serveStatic({ root: "app/browser/dist" }));
+app.get("/", serveStatic({ path: "app/browser/dist/index.html" }));
+app.get("*", serveStatic({ path: "app/browser/dist/index.html" }));
 
 export const handlerHttp = app.fetch as (
   request: Request,

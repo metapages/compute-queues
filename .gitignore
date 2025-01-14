@@ -1,4 +1,5 @@
 /.env
+**/.deno
 **/.DS_Store
 **/.eslintcache
 **/dist

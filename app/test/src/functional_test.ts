@@ -242,7 +242,7 @@ Deno.test(
     const jobIdsSubmissionOrder: string[] = [];
     const jobIdsToBeKilled: Set<string> = new Set();
     let jobIdToSupercedeAllPrior: string = "";
-    // const jobIdsFinishReason = new Map<string, string>();
+    const jobIdsFinishReason = new Map<string, string>();
 
     const messages = await Promise.all(
       definitions.map(async (definition, i) => {
@@ -314,6 +314,10 @@ Deno.test(
           jobIdsToBeKilled.forEach((jobId) => {
             const jobState = someJobsPayload.state.jobs[jobId];
             if (jobState?.state === DockerJobState.Finished) {
+              jobIdsFinishReason.set(
+                jobId,
+                (jobState.value as StateChangeValueFinished).reason,
+              );
               const finishedState = jobState.value as StateChangeValueFinished;
               if (
                 finishedState.reason ===
@@ -335,6 +339,18 @@ Deno.test(
             jobsToBeKilledAreActually.size === jobIdsToBeKilled.size &&
             finalJobIsQueuedOrRunning
           ) {
+            promiseEnd.resolve("done");
+          }
+
+          if (jobIdsFinishReason.size === count) {
+            promiseEnd.reject(
+              new Error(
+                "Jobs finished not the correct reasons: " +
+                  [...jobIdsFinishReason.entries()].map(([key, value]) =>
+                    `${key.substring(0, 6)}=${value}`
+                  ).join(", "),
+              ),
+            );
             promiseEnd.resolve("done");
           }
 

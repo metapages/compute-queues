@@ -52,7 +52,33 @@
     "uuid": "npm:uuid@9.0.1",
     "zip": "https://deno.land/x/zip@v1.2.5/mod.ts"
   },
-  "unstable": ["kv", "broadcast-channel", "sloppy-imports"],
-  "exclude": ["./app/browser", "./app/shared/dist"],
-  "nodeModulesDir": "auto"
+  "unstable": [
+    "kv",
+    "broadcast-channel",
+    "sloppy-imports"
+  ],
+  "exclude": [
+    "./app/browser",
+    "./app/shared/dist"
+  ],
+  "nodeModulesDir": "auto",
+  "deploy": {
+    "project": "0ec3b251-6723-4067-9587-39c2c3c2703a",
+    "exclude": [
+      "**/node_modules"
+    ],
+    "include": [
+      "app/api/assets",
+      "app/api/src",
+      "app/api/deno.json",
+      "app/cli/deno.json",
+      "app/worker/deno.json",
+      "app/test/deno.json",
+      "app/shared/deno.json",
+      "app/shared/src",
+      "deno.json",
+      "deno.lock"
+    ],
+    "entrypoint": "app/api/src/server.ts"
+  }
 }
