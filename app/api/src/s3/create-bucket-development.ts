@@ -20,7 +20,7 @@ const config = {
   secretKey: AWS_SECRET_ACCESS_KEY,
   pathStyle: true,
 };
-console.log(`config`, config);
+
 const client = new S3Client(config);
 
 const existsResults = await client.bucketExists("localbucket");

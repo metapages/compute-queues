@@ -1,10 +1,8 @@
 import { ListBucketsCommand, S3Client } from "aws-sdk/client-s3";
 
-// import { S3Client } from 'https://deno.land/x/s3_lite_client@0.7.0/mod.ts';
-
 const Bucket: string = Deno.env.get("AWS_S3_BUCKET") || "metaframe-asman-test";
 const AWS_REGION: string = Deno.env.get("AWS_REGION") || "us-west-2";
-const AWS_ENDPOINT: string | undefined = "http://minio:9000"; //Deno.env.get("AWS_ENDPOINT");
+const AWS_ENDPOINT: string | undefined = Deno.env.get("AWS_ENDPOINT");
 const AWS_ACCESS_KEY_ID: string = Deno.env.get("AWS_ACCESS_KEY_ID")!;
 const AWS_SECRET_ACCESS_KEY: string = Deno.env.get("AWS_SECRET_ACCESS_KEY")!;
 
@@ -19,19 +17,18 @@ export const bucketParams = {
 };
 
 const config = {
-  sslEnabled: AWS_ACCESS_KEY_ID.includes("minio") ? false : true,
+  sslEnabled: AWS_ACCESS_KEY_ID?.includes("minio") ? false : true,
   credentials: {
     accessKeyId: AWS_ACCESS_KEY_ID,
     secretAccessKey: AWS_SECRET_ACCESS_KEY,
   },
   region: AWS_REGION,
-  endpoint: AWS_ACCESS_KEY_ID?.includes("minio") ? AWS_ENDPOINT : undefined,
+  endpoint: AWS_ACCESS_KEY_ID?.includes("minio")
+    ? "http://minio:9000"
+    : undefined,
   forcePathStyle: AWS_ENDPOINT ? true : undefined,
   signatureVersion: "v4",
-  fdjksalfj: "fdjksalfj",
 };
-
-console.dir(config, { depth: null });
 
 export const s3Client = new S3Client(config);
 try {

@@ -10,10 +10,10 @@ services:
       redis:
         condition: service_healthy
     image: denoland/deno:alpine-2.1.4
-    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv --unstable-cron src/server.ts
-    working_dir: /app/app/api
+    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv --unstable-cron app/api/src/server.ts
+    working_dir: /app
     healthcheck:
-      test: sh -c 'PORT=8081 deno run --allow-net --allow-env src/util/healthcheck.ts'
+      test: sh -c 'PORT=8081 deno run --allow-net --allow-env app/api/src/util/healthcheck.ts'
       interval: 5s
       timeout: 5s
       retries: 10
@@ -62,10 +62,10 @@ services:
       api1:
         condition: service_healthy
     image: denoland/deno:alpine-2.1.4
-    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv --unstable-cron src/server.ts
-    working_dir: /app/app/api
+    command: deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-broadcast-channel --unstable-kv --unstable-cron app/api/src/server.ts
+    working_dir: /app
     healthcheck:
-      test: sh -c 'PORT=8082 deno run --allow-net --allow-env src/util/healthcheck.ts'
+      test: sh -c 'PORT=8082 deno run --allow-net --allow-env app/api/src/util/healthcheck.ts'
       interval: 5s
       timeout: 5s
       retries: 10

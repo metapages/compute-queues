@@ -10,7 +10,7 @@ import { ms } from "ms";
 import { ensureDir } from "std/fs";
 import { join } from "std/path";
 
-const AWS_ENDPOINT = Deno.env.get("AWS_ENDPOINT");
+const AWS_SECRET_ACCESS_KEY = Deno.env.get("AWS_SECRET_ACCESS_KEY");
 
 let deleteFromS3: (key: string) => Promise<void>;
 let putJsonToS3: (key: string, data: unknown) => Promise<DataRef>;
@@ -33,7 +33,7 @@ export class DB {
     // Use the provided dataDirectory or default to TMPDIR
     const effectiveDataDirectory = dataDirectory || "/tmp/worker-metapage-io";
 
-    if (!AWS_ENDPOINT) {
+    if (!AWS_SECRET_ACCESS_KEY) {
       // Ensure the directory exists and has correct permissions if not using S3
       await ensureDir(effectiveDataDirectory);
       await Deno.chmod(effectiveDataDirectory, 0o777);
@@ -50,7 +50,7 @@ export class DB {
   private static async setupStorageFunctions(
     dataDirectory: string,
   ): Promise<void> {
-    if (AWS_ENDPOINT) {
+    if (AWS_SECRET_ACCESS_KEY) {
       // Import S3 functions
       ({ deleteFromS3, putJsonToS3, resolveDataRefFromS3 } = await import(
         "/@/shared/s3.ts"
