@@ -2,6 +2,8 @@
 
 set -eo pipefail
 
+export API_SERVER_ADDRESS="https://container.mtfm.io"
+
 if [ "$METAPAGE_WORKER_RUN_STANDALONE" = "true" ]; then
     # Run docker daemon for environments that don't provide access to one
     dockerd -p /var/run/docker.pid &

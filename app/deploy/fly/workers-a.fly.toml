@@ -4,7 +4,8 @@ app = 'metapage-workers-a'
 primary_region = 'ord'
 
 [build]
-  image = 'metapage/metaframe-docker-worker:latest-standalone'
+#  image = 'metapage/metaframe-docker-worker:latest-standalone'
+  image = 'michaelendsley/worker-standalone:0.3.14'
 
 [[vm]]
   memory = '4gb'

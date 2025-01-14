@@ -2,18 +2,18 @@ app = 'fly-metrics-proxy'
 primary_region = 'ord'
 
 [build]
-  image = 'docker.io/michaelendsley/fly-metrics-proxy:latest'
+  image = 'michaelendsley/fly-metrics-proxy:0.0.1'
 
 [env]
   METRICS_TARGETS = """
 [
   {
-    "endpoint": "https://example.com/1/metrics",
-    "queue_name": "metrics_1"
+    "endpoint": "https://container.mtfm.io/81e93644-4af2-11ef-a58f-676a7833797e/metrics",
+    "app_name": "miend-metapage-workers-a"
   },
   {
-    "endpoint": "https://example.com/2/metrics",
-    "queue_name": "metrics_2"
+    "endpoint": "https://container.mtfm.io/652ab68e-5f7b-11ef-b136-6f3c51289ae7/metrics",
+    "app_name": "miend-metapage-workers-b"
   }
 ]
 """

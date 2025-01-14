@@ -9,8 +9,6 @@ import { DockerJobQueue, type DockerJobQueueArgs } from "/@/queue/index.ts";
 import mod from "../../mod.json" with { type: "json" };
 import {
   type BroadcastJobStates,
-  DockerJobState,
-  type JobStates,
   type PayloadClearJobCache,
   type WebsocketMessageSenderWorker,
   type WebsocketMessageServerBroadcast,

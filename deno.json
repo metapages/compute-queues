@@ -59,7 +59,8 @@
   ],
   "exclude": [
     "./app/browser",
-    "./app/shared/dist"
+    "./app/shared/dist",
+    "./app/deploy"
   ],
   "nodeModulesDir": "auto",
   "deploy": {
