@@ -35,10 +35,12 @@ export const submitJobToQueueHandler = async (c: Context) => {
       value: jobToQueue,
     };
 
+    // This needs to assume that a job submitted with a stateChange
+    // like this will have an expectation of persistance
     await jobQueue.stateChange(stateChange);
 
     c.status(200);
-    return c.json({ success: true });
+    return c.json({ success: true, jobId });
   } catch (err) {
     console.error("Error submitting job:", err);
     return c.text((err as Error).message, 500);

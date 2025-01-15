@@ -1,4 +1,4 @@
-import { assertEquals } from "std/assert";
+import { assert, assertEquals } from "std/assert";
 
 import { createWebhookServer } from "./webhooks_test.ts";
 
@@ -79,6 +79,7 @@ Deno.test(
     assertEquals(response.status, 200);
     const body = await response.json();
     assertEquals(body.success, true);
+    assert(body.jobId);
 
     await webhookCalled;
     await webhookCalled;
