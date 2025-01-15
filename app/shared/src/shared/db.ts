@@ -118,10 +118,13 @@ export class DB {
       //   `queueJobAdd ${queue} [${job.hash.substring(0, 6)}] pushing to s3`,
       // );
       // ❗❗❗❗ remove the userspace config from the job before storing it in s3
-      const control = (job.history[0].value as StateChangeValueQueued)?.control;
+      let control = (job.history[0].value as StateChangeValueQueued)?.control;
       if (control) {
         delete (job.history[0].value as StateChangeValueQueued)?.control;
       }
+      control = control || {};
+      control.queueHistory = control.queueHistory || [];
+      control.queueHistory.push(queue);
       const namespace =
         (job.history[0].value as StateChangeValueQueued)?.namespace || "_";
 
@@ -139,6 +142,10 @@ export class DB {
         .set(["job", id], dataRef, { expireIn: expireIn1Week })
         // TODO: do not need the dataref stored twice, just need the id
         .set(["queue", queue, id], dataRef, {
+          expireIn: expireIn1Week,
+        })
+        // Jobs on the same queue and the same namespace conflict, only one can run
+        .set(["queue-namespace-job", queue, namespace, id], true, {
           expireIn: expireIn1Week,
         })
         // .set(["job-namespace", queue, id], dataRef, {
@@ -268,6 +275,18 @@ export class DB {
           results.push(job);
         }
       }
+    }
+    return results;
+  }
+
+  async queueGetJobIds(queue: string): Promise<string[]> {
+    const entries = this.kv.list<DataRef<DockerJobDefinitionRow>>({
+      prefix: ["queue", queue],
+    });
+    const results: string[] = [];
+    for await (const entry of entries) {
+      console.log(entry.key);
+      results.push(entry.key[entry.key.length - 1] as string);
     }
     return results;
   }

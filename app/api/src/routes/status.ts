@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { userJobQueues } from "/@/docker-jobs/ApiDockerJobQueue.ts";
+import { getApiDockerJobQueue } from "/@/routes/websocket.ts";
 
 export const statusHandler = async (c: Context) => {
   const queue: string | undefined = c.req.param("queue");
@@ -10,16 +10,16 @@ export const statusHandler = async (c: Context) => {
     return c.text("Missing queue");
   }
 
-  const dockerQueue = userJobQueues[queue];
+  const jobQueue = await getApiDockerJobQueue(queue);
 
-  if (!dockerQueue) {
+  if (!jobQueue) {
     c.status(400);
     return c.json({
       queue: null,
     });
   }
 
-  const response = await dockerQueue.status();
+  const response = await jobQueue.status();
 
   return c.json(response as unknown);
 };

@@ -10,6 +10,7 @@ import { uploadHandler as uploadHandlerDeprecated } from "/@/routes/deprecated/u
 import { downloadHandler as downloadHandlerDeprecated } from "/@/routes/deprecated/download.ts";
 import { copyJobToQueueHandler } from "/@/routes/api/v1/copy.ts";
 import { submitJobToQueueHandler } from "/@/routes/api/v1/submit.ts";
+import { getJobIdsHandler } from "/@/routes/api/v1/jobIds.ts";
 
 const app = new Hono();
 
@@ -37,6 +38,7 @@ app.get("/api/v1/download/:key", downloadHandler);
 app.put("/api/v1/upload/:key", uploadHandler);
 app.post("/api/v1/copy", copyJobToQueueHandler);
 app.post("/:queue/job", submitJobToQueueHandler);
+app.get("/:queue/jobs", getJobIdsHandler);
 
 // @deprecated
 app.get("/upload/:key", uploadHandlerDeprecated);
