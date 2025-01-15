@@ -4,7 +4,7 @@ app = "metapage-autoscaler"
 image = "flyio/fly-autoscaler:0.3.1"
 
 [env]
-FAS_ORG="personal"
+FAS_ORG="metapage"
 FAS_APP_NAME = "metapage-workers-*"
 FAS_STARTED_MACHINE_COUNT = "ceil(queue_length / 1)"
 FAS_PROMETHEUS_ADDRESS = "https://api.fly.io/prometheus/metapage"
