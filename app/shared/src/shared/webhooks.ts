@@ -15,7 +15,11 @@ export const callJobWebhook = async (
   jobId: string,
   config: DockerJobControlConfig,
 ) => {
-  // console.log(`🔥🔥 callJobWebhook [${jobId.substring(0, 6)}] `, queue, namespace);
+  console.log(
+    `🔥🔥 callJobWebhook [${jobId.substring(0, 6)}] `,
+    queue,
+    namespace,
+  );
   const webhookUrl = config.callbacks?.queued?.url;
   if (!webhookUrl) {
     // console.log(`🔥💦 callJobWebhook [${jobId.substring(0, 6)}] !webhookUrl`);
@@ -23,19 +27,31 @@ export const callJobWebhook = async (
   }
   const payload = config.callbacks?.queued?.payload || {};
 
+  // console.log(
+  //   `🔥🔥 callJobWebhook [${jobId.substring(0, 6)}] webhookUrl=`,
+  //   webhookUrl,
+  // );
   try {
     const response = await fetch(webhookUrl, {
+      redirect: "follow",
       method: "POST",
       body: JSON.stringify({ jobId, queue, namespace, config: payload }),
       headers: {
         "Content-Type": "application/json",
       },
     });
+
     if (!response.ok) {
-      // console.log(`Webhook ${webhookUrl}failed with status ${response.status}`);
+      console.log(
+        `Webhook ${webhookUrl} failed with status ${response.status}`,
+      );
+      // if (!webhookUrl.includes(".ngrok.app/")) {
+      // }
       return;
+      // } else {
+      //   const body = await response.text();
+      //   console.log(`Webhook ${webhookUrl} succeeded`, body);
     }
-    // console.log(`Webhook ${webhookUrl} succeeded`);
     //record as done
     await deleteJobProcessSubmissionWebhook(queue, namespace, jobId);
   } catch (err) {
@@ -84,18 +100,19 @@ export const addJobProcessSubmissionWebhook = async (opts: {
     return;
   }
 
-  console.log(
-    `🔥 addJobProcessSubmissionWebhook [${
-      jobId.substring(0, 6)
-    }] submission-hook`,
-    queue,
-    namespace,
-    jobId,
-  );
+  // console.log(
+  //   `🔥 addJobProcessSubmissionWebhook [${
+  //     jobId.substring(0, 6)
+  //   }] submission-hook`,
+  //   queue,
+  //   namespace,
+  //   jobId,
+  // );
   await kv.set(["submission-hook", queue, namespace, jobId], control, {
     expireIn: expireIn1Week,
   });
-  callJobWebhook(queue, namespace, jobId, control);
+  // awaiting here means the main enqueue function will wait for the webhook to be called
+  await callJobWebhook(queue, namespace, jobId, control);
 };
 
 const deleteJobProcessSubmissionWebhook = async (
