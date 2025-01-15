@@ -70,7 +70,7 @@ Deno.test(
         assertEquals(body.namespace, namespace);
         assertEquals(body.queue, QUEUE_ID);
 
-        const response = await fetch(`${API_URL}/api/v1/copy-job-to-queue`, {
+        const response = await fetch(`${API_URL}/api/v1/copy`, {
           method: "POST",
           body: JSON.stringify({
             jobId,
