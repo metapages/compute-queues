@@ -85,16 +85,16 @@ publish-docker-images version="":
     if [ "$VERSION" = "" ]; then
         export VERSION=$(cat mod.json | jq -r '.version')
     fi
-    cd ../
+    cd ../../
     docker buildx build --push \
-        --file worker/Dockerfile \
+        --file app/worker/Dockerfile \
         --target worker \
         --build-arg VERSION=${VERSION:-cache} \
         --platform linux/amd64,linux/arm64 \
         --tag metapage/metaframe-docker-worker:$VERSION .
     echo "✅ metapage/metaframe-docker-worker:$VERSION"
     docker buildx build --push \
-        --file worker/Dockerfile \
+        --file app/worker/Dockerfile \
         --target worker \
         --build-arg DOCKER_TAG=${DOCKER_TAG:-cache} \
         --platform linux/amd64,linux/arm64 \
