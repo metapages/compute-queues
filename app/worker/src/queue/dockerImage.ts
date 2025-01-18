@@ -490,7 +490,7 @@ const getDownloadLinkFromContext = (context: string): string => {
     // Create a personal access token at https://github.com/settings/tokens/new?scopes=repo
     // const octokit = new Octokit({ auth: `personal-access-token123` });
     const matches = new RegExp(
-      /https:\/\/github.com\/([-\w]{6,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([\/-\w\.]{1,100}))?/,
+      /https:\/\/github.com\/([-\w]{6,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([-\/\w\.\}\{\$]{1,100}))?/,
     ).exec(context);
     console.log("matches", matches);
     if (!matches) {
@@ -500,6 +500,12 @@ const getDownloadLinkFromContext = (context: string): string => {
     const owner = matches[1];
     const repo = matches[2];
     const ref = matches[5] || "main";
+
+    if (ref?.startsWith("${")) {
+      throw new Error(
+        `Invalid GitHub URL because injected ref missing: ${ref} in ${context}. Help: https://docs.metapage.io/docs/error-missing-git-sha`,
+      );
+    }
 
     return `https://api.github.com/repos/${owner}/${repo}/tarball/${ref}`;
 
@@ -557,7 +563,7 @@ const downloadContextIntoDirectory = async (args: {
   // TODO: for now, just download the context as is
   // First check if the context has been already downloaded
   // ch
-  const downloadUrl = await getDownloadLinkFromContext(context);
+  const downloadUrl = getDownloadLinkFromContext(context);
   const filePathForDownload = getFilePathForDownload(downloadUrl);
 
   console.log(`downloadContextIntoDirectory downloadUrl=${downloadUrl}`);
