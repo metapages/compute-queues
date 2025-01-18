@@ -16,7 +16,7 @@ import {
   shaDockerJob,
 } from "/@shared/client";
 
-import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
+import { useHashParam, useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { DataRefSerialized, Metaframe } from "@metapages/metapage";
 import { useMetaframeAndInput } from "@metapages/metapage-react";
 
@@ -55,6 +55,10 @@ export const useDockerJobDefinition = () => {
     }
   }, [metaframeBlob?.metaframe]);
 
+  // these can be injected by the parent page
+  const [gitsha] = useHashParam("git-sha");
+  const [gitref] = useHashParam("git-ref");
+
   // When all the things are updated, set the new job definition
   const setNewJobDefinition = useStore(state => state.setNewJobDefinition);
 
@@ -65,6 +69,16 @@ export const useDockerJobDefinition = () => {
     const definition: DockerJobDefinitionInputRefs = {
       ...definitionParamsInUrl,
     };
+
+    // maybe inject the gitsha and gitref into the definition
+    const ref = gitref || gitsha;
+    if (
+      ref &&
+      definition.build?.context &&
+      (definition.build?.context.includes("${git-sha}") || definition.build?.context.includes("${git-ref}"))
+    ) {
+      definition.build.context = definition.build.context.replace("${git-sha}", ref).replace("${git-ref}", ref);
+    }
 
     // These are inputs set in the metaframe and stored in the url hash params. They
     // are always type: DataRefType.utf8 because they come from the text editor
@@ -177,5 +191,5 @@ export const useDockerJobDefinition = () => {
     return () => {
       cancelled = true;
     };
-  }, [metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, namespaceConfig, debug]);
+  }, [gitsha, gitref, metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, namespaceConfig, debug]);
 };
