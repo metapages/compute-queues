@@ -12,8 +12,8 @@ Fill out details of the worker app TOML files. In particular make sure they have
 
 For each set of workers, create an empty app and stage a secret containing the unique queue ID. Then, deploy the app.
 ```sh
-fly apps create metapage-workers-a
-fly secrets set -a metapage-workers-a METAPAGE_QUEUE_ID=[generatedID]
+fly apps create metapage-io-workers-a
+fly secrets set -a metapage-io-workers-a METAPAGE_IO_QUEUE_ID=[generatedID]
 fly deploy -c workers-a.fly.toml --yes --ha=false
 ```
 
@@ -26,17 +26,17 @@ Check Fly.io's provided metrics dashboard to see if the metrics are being collec
 
 If needed, modify the contents of `autoscaler.fly.toml` to adjust the `FAS_APP_NAME` environment variable. This is used to target the apps that will be autoscaled, and it should be a wildcard that matches the prefix of the worker apps you've launched above. We'll make an empty app again, create an org-wide deploy token that gives the autoscaler permission to scale apps and read from Prometheus, and deploy the autoscaler:
 ```sh
-fly apps create metapage-autoscaler
+fly apps create metapage-io-autoscaler
 autoscaler_prometheus_token=$(fly tokens create readonly)
-fly secrets set -a metapage-autoscaler --stage FAS_PROMETHEUS_TOKEN=$autoscaler_prometheus_token
+fly secrets set -a metapage-io-autoscaler --stage FAS_PROMETHEUS_TOKEN=$autoscaler_prometheus_token
 autoscaler_api_token=$(fly tokens create org)
-fly secrets set -a metapage-autoscaler --stage FAS_API_TOKEN=$autoscaler_api_token
+fly secrets set -a metapage-io-autoscaler --stage FAS_API_TOKEN=$autoscaler_api_token
 fly deploy -c autoscaler.fly.toml --ha=false
 ```
 
 To destroy any apps, just run e.g.:
 ```sh
-fly apps destroy metapage-workers-a
+fly apps destroy metapage-io-workers-a
 ```
 
 This will destroy the app and *any* associated resources.
