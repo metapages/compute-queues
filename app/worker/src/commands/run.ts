@@ -9,8 +9,6 @@ import { DockerJobQueue, type DockerJobQueueArgs } from "/@/queue/index.ts";
 import mod from "../../mod.json" with { type: "json" };
 import {
   type BroadcastJobStates,
-  DockerJobState,
-  type JobStates,
   type PayloadClearJobCache,
   type WebsocketMessageSenderWorker,
   type WebsocketMessageServerBroadcast,
@@ -22,35 +20,6 @@ import { ensureDir } from "std/fs";
 import { join } from "std/path";
 
 const VERSION: string = mod.version;
-
-let jobList: JobStates = { jobs: {} };
-
-// Create a simple HTTP server
-const metricsHandler = (req: Request): Response => {
-  const url = new URL(req.url);
-  // Route the metrics endpoint
-  if (url.pathname === "/metrics") {
-    const unfinishedJobs = Object.values(jobList.jobs).filter((job) =>
-      job.state !== DockerJobState.Finished
-    );
-    const unfinishedQueueLength = unfinishedJobs.length;
-    // Simple Prometheus-compatible metric response
-    const response = `
-# HELP queue_length The number of outstanding jobs in the queue
-# TYPE queue_length gauge
-queue_length ${unfinishedQueueLength}
-`;
-    return new Response(response, {
-      status: 200,
-      headers: {
-        "content-type": "text/plain",
-      },
-    });
-  }
-
-  // We don't serve anything else
-  return new Response("Not Found", { status: 404 });
-};
 
 /**
  * Connect via websocket to the API server, and attach the DockerJobQueue object
@@ -165,7 +134,6 @@ export function connectToServer(
         case WebsocketMessageTypeServerBroadcast.JobStates: {
           const allJobsStatesPayload = possibleMessage
             .payload as BroadcastJobStates;
-          jobList = allJobsStatesPayload.state;
           if (!allJobsStatesPayload) {
             console.log({
               error: "Missing payload in message",
@@ -245,6 +213,7 @@ export const runCommand = new Command()
     "Data directory",
     { default: "/tmp/worker-metapage-io" },
   )
+  .option("--id [id:string]", "Custom worker ID")
   .action(async (options, queue: string) => {
     const {
       cpus,
@@ -253,6 +222,7 @@ export const runCommand = new Command()
       mode,
       port,
       dataDirectory,
+      id,
     } = options as {
       cpus: number;
       gpus: number;
@@ -260,8 +230,8 @@ export const runCommand = new Command()
       mode: string;
       port: number;
       dataDirectory: string;
+      id: string;
     };
-
     if (!queue) {
       throw new Error("Must supply the queue id");
     }
@@ -341,17 +311,8 @@ export const runCommand = new Command()
         queueId: config.queue,
         cpus: config.cpus,
         gpus: config.gpus,
-        workerId: config.id,
+        workerId: id || config.id,
         port: config.port,
       });
-
-      Deno.serve({
-        port: config.port,
-        onListen: () => {
-          console.log(
-            `Metrics accessible at: http://localhost:${config.port}/metrics`,
-          );
-        },
-      }, metricsHandler);
     }
   });

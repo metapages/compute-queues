@@ -1,22 +1,22 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 
 app = 'metapage-workers-a'
+primary_region = 'ord'
 
 [build]
-  image = 'metapage/metaframe-docker-worker:latest-standalone'
+#  image = 'metapage/metaframe-docker-worker:latest-standalone'
+  image = 'michaelendsley/worker-standalone:0.3.14'
 
 [[vm]]
-  memory = '2gb'
-  cpu_kind = 'shared'
-  cpus = 1
+  memory = '4gb'
+  cpu_kind = 'performance'
+  cpus = 2
+  size = 'l40s'
 
 [env]
-  METAPAGE_WORKER_CPUS = 1
+  METAPAGE_WORKER_CPUS = 2
   METAPAGE_WORKER_RUN_STANDALONE = true
-
-[metrics]
-  port = 8000
-  path = "/metrics"
+  METAPAGE_WORKER_GPUS = 1
 
 [[restart]]
   policy = "on-failure"

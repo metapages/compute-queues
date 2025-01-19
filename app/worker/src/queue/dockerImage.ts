@@ -142,7 +142,7 @@ export const ensureDockerImage = async (args: {
 
       const command = new Deno.Command("/usr/bin/docker", {
         cwd: buildDir,
-        clearEnv: true,
+        // clearEnv: true,
         // env: Record<string, string>
         args,
         stdout: "piped",
