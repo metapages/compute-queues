@@ -15,6 +15,7 @@ import {
   Icon,
   Input,
   InputGroup,
+  Link,
   Tag,
   Text,
   Tooltip,
@@ -110,7 +111,9 @@ export const QueueButtonAndLabel: React.FC = () => {
       {!queue || queue === "" ? (
         <Alert status="error">
           <AlertIcon />
-          ◀️ You must connect to a queue
+          <Link isExternal href="https://docs.metapage.io/docs/container-remote-mode">
+            ◀️ You must connect to a queue
+          </Link>
         </Alert>
       ) : null}
     </HStack>
