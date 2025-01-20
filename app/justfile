@@ -215,6 +215,7 @@ status-prod queue="public1":
 
 # Publish worker docker images with whatever versioning scheme is appropriate
 @publish-versioned-artifacts version="":
+    just browser/build
     just worker/publish-docker-images {{ version }}
 
 # DEV: generate TLS certs for HTTPS over localhost https://blog.filippo.io/mkcert-valid-https-certificates-for-localhost/
