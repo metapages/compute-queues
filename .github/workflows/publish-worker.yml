@@ -46,6 +46,11 @@ jobs:
         with:
           just-version: "1.35.0"
 
+      - name: Install deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.1.4"
+
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v2
 
