@@ -50,7 +50,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Build and release
-        run: just app/worker/publish-docker-images
+        run: just publish-versioned-artifacts
         env:
           DOCKER_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
