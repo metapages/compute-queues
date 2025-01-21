@@ -1,7 +1,6 @@
 import React from "react";
 
 import { QueueIconAndModal } from "/@/components/sections/queue/QueueIconAndModal";
-import { useStore } from "/@/store";
 
 import { Box, HStack, IconButton, Spacer, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { Question } from "@phosphor-icons/react";
@@ -10,9 +9,9 @@ import { EditInput } from "./footer/EditInput";
 
 export const MainFooter: React.FC = () => {
   const [isLargerThan400] = useMediaQuery("(min-width: 400px)");
-  const setRightPanelContext = useStore(state => state.setRightPanelContext);
-  const rightPanelContext = useStore(state => state.rightPanelContext);
-  const helpPanelShown = rightPanelContext === "help";
+  // const rightPanelContext = useStore(state => state.rightPanelContext);
+  // const setRightPanelContext = useStore(state => state.setRightPanelContext);
+  // const helpPanelShown = rightPanelContext === "help";
 
   return (
     <Box bg={"gray.100"} px={3} borderTop={"1px"} minWidth="100vw" h={"footerHeight"}>
