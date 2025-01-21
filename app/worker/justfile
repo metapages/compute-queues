@@ -144,7 +144,7 @@ docker-image-build-for-local version="":
 
 # Build and run a worker docker image, in standalone lcoal mode
 docker-image-run-local: (docker-image-build-for-local "local")
-    docker run --entrypoint "" --rm -p 8000:8000 -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local deno run --allow-all --unstable-kv --unstable-cron src/cli.ts run --cpus=1 --mode=local --data-directory /tmp/worker-metapage-io
+    docker run --rm -p 8000:8000 -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local run --cpus=1 --mode=local --data-directory /tmp/worker-metapage-io
 
 # Build and run a worker docker image, pointing to the local API
 docker-image-run-local1 queue="local1": (docker-image-build-for-local "local")
