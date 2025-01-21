@@ -1,9 +1,11 @@
 import React from "react";
-import { Box, HStack, Icon, Spacer, Tooltip, useMediaQuery } from "@chakra-ui/react";
-import { QuestionMark } from "@phosphor-icons/react";
-import { useStore } from "/@/store";
 
 import { QueueIconAndModal } from "/@/components/sections/queue/QueueIconAndModal";
+import { useStore } from "/@/store";
+
+import { Box, HStack, IconButton, Spacer, Tooltip, useMediaQuery } from "@chakra-ui/react";
+import { Question } from "@phosphor-icons/react";
+
 import { EditInput } from "./footer/EditInput";
 
 export const MainFooter: React.FC = () => {
@@ -21,13 +23,24 @@ export const MainFooter: React.FC = () => {
           <HStack gap={3}>
             <QueueIconAndModal />
             <Tooltip label={"Help"}>
-              <Icon
+              <IconButton
+                aria-label="help"
+                as="a"
+                href="https://docs.metapage.io/docs/containers"
+                target="_blank"
+                size="sm"
+                color="gray.400"
+                variant="link"
+                icon={<Question size={16} />}
+              />
+
+              {/* <Icon
                 bg={helpPanelShown ? "gray.300" : "none"}
                 p={"3px"}
                 borderRadius={"50%"}
                 as={QuestionMark}
                 onClick={() => setRightPanelContext(helpPanelShown ? null : "help")}
-              />
+              /> */}
             </Tooltip>
           </HStack>
         )}
