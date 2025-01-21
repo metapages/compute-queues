@@ -1,4 +1,4 @@
-app = 'metapage-fly-metrics-proxy'
+app = 'metapage-io-fly-metrics-proxy'
 primary_region = 'ord'
 
 [build]
@@ -9,11 +9,11 @@ primary_region = 'ord'
 [
   {
     "endpoint": "https://container.mtfm.io/[queue_id]/metrics",
-    "app_name": "metapage-workers-a"
+    "app_name": "metapage-io-workers-a"
   },
   {
     "endpoint": "https://container.mtfm.io/[queue_id]/metrics",
-    "app_name": "metapage-workers-b"
+    "app_name": "metapage-io-workers-b"
   }
 ]
 """

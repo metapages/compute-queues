@@ -1,6 +1,6 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 
-app = 'metapage-workers-b'
+app = 'metapage-io-workers-b'
 primary_region = 'ord'
 
 [build]
@@ -12,8 +12,8 @@ primary_region = 'ord'
   cpus = 2
 
 [env]
-  METAPAGE_WORKER_CPUS = '2'
-  METAPAGE_WORKER_RUN_STANDALONE = true
+  METAPAGE_IO_WORKER_CPUS = '2'
+  METAPAGE_IO_WORKER_RUN_STANDALONE = true
 
 [[restart]]
   policy = "on-failure"
