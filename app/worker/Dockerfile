@@ -58,7 +58,7 @@ COPY ./app/shared/src ./app/shared/src
 COPY ./app/shared/deno.json ./app/shared/deno.json
 
 # Copy assets
-COPY ./app/browser/dist ./app/browser/dist
+# COPY ./app/browser/dist ./app/browser/dist
 
 # Copy entrypoint
 COPY ./app/worker/entrypoint.sh /entrypoint.sh

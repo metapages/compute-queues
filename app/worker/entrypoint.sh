@@ -40,8 +40,8 @@ fi
 # Use dockerd's dummy endpoint to check if it's running yet.
 # It takes some seconds to start.
 while (! curl -s --unix-socket /var/run/docker.sock http/_ping 2>&1 >/dev/null); do
-  echo "Waiting for docker daemon to start..."
-  sleep 1
+    echo "Waiting for docker daemon to start..."
+    sleep 1
 done
 
 deno run \
@@ -52,5 +52,6 @@ deno run \
     --allow-env \
     --allow-run \
     --unstable-cron \
+    --unstable-kv \
     src/cli.ts \
     $CMD
