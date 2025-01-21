@@ -35,7 +35,7 @@ normal := '\033[0m'
 
 # Run the worker in local mode.
 local:
-    deno run --allow-all --unstable-kv --unstable-cron src/cli.ts run --mode=local --cpus=2 --gpus=0 local
+    deno run --allow-all --unstable-kv --unstable-cron src/cli.ts run --mode=local --cpus=2 --gpus=0
 
 # Run the worker locally, pointing to production API
 @prod queue="local1":
@@ -129,10 +129,10 @@ docker-image-build-for-local version="":
     if [ "$VERSION" = "" ]; then
         export VERSION=$(cat mod.json | jq -r '.version')
     fi
-    cd ../
+    cd ../../
     for arch in linux/amd64 linux/arm64  ; do 
         docker buildx build \
-            --file worker/Dockerfile \
+            --file app/worker/Dockerfile \
             --target worker \
             --build-arg VERSION=${VERSION:-cache} \
             --platform $arch \
@@ -142,8 +142,12 @@ docker-image-build-for-local version="":
     done
     echo "✅ metapage/metaframe-docker-worker:$VERSION"
 
+# Build and run a worker docker image, in standalone lcoal mode
+docker-image-run-local: (docker-image-build-for-local "local")
+    docker run --entrypoint "" --rm -p 8000:8000 -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local deno run --allow-all --unstable-kv --unstable-cron src/cli.ts run --cpus=1 --mode=local --data-directory /tmp/worker-metapage-io
+
 # Build and run a worker docker image, pointing to the local API
-docker-image-run-local queue="local1": (docker-image-build-for-local "local")
+docker-image-run-local1 queue="local1": (docker-image-build-for-local "local")
     docker run --net=host --entrypoint "" --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local deno run --allow-net --allow-read --allow-env --allow-run --unsafely-ignore-certificate-errors --unstable-kv --unstable-cron src/cli.ts run --cpus=1 --api-server-address=https://worker-metaframe.localhost {{ queue }}
 
 docker-image-run-prod queue="public1": (docker-image-build-for-local "local")

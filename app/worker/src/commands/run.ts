@@ -1,12 +1,14 @@
-import { Command } from "cliffy/command";
 import { config } from "/@/config.ts";
 import { ensureSharedVolume } from "/@/docker/volume.ts";
 import { localHandler } from "/@/lib/local-handler.ts";
-import { ms } from "ms";
-import ReconnectingWebSocket from "reconnecting-websocket";
 import { clearCache } from "/@/queue/dockerImage.ts";
 import { DockerJobQueue, type DockerJobQueueArgs } from "/@/queue/index.ts";
-import mod from "../../mod.json" with { type: "json" };
+import { Command } from "cliffy/command";
+import { ms } from "ms";
+import ReconnectingWebSocket from "reconnecting-websocket";
+import { ensureDir } from "std/fs";
+import { join } from "std/path";
+
 import {
   type BroadcastJobStates,
   type PayloadClearJobCache,
@@ -16,8 +18,8 @@ import {
   WebsocketMessageTypeWorkerToServer,
   type WebsocketMessageWorkerToServer,
 } from "@metapages/compute-queues-shared";
-import { ensureDir } from "std/fs";
-import { join } from "std/path";
+
+import mod from "../../mod.json" with { type: "json" };
 
 const VERSION: string = mod.version;
 
@@ -190,7 +192,7 @@ export function connectToServer(
 
 export const runCommand = new Command()
   .name("run")
-  .arguments("<queue:string>")
+  .arguments("[queue:string]")
   .description("Connect the worker to a queue")
   .env(
     "API_SERVER_ADDRESS=<value:string>",
@@ -214,7 +216,7 @@ export const runCommand = new Command()
     { default: "/tmp/worker-metapage-io" },
   )
   .option("--id [id:string]", "Custom worker ID")
-  .action(async (options, queue: string) => {
+  .action(async (options, queue?: string) => {
     const {
       cpus,
       gpus,
@@ -232,16 +234,21 @@ export const runCommand = new Command()
       dataDirectory: string;
       id: string;
     };
-    if (!queue) {
-      throw new Error("Must supply the queue id");
-    }
 
     config.cpus = typeof cpus === "number" ? cpus : 1;
     config.gpus = typeof gpus === "number" ? gpus : 0;
     config.mode = mode;
-    config.queue = config.mode === "local" ? "local" : queue;
+    config.queue = config.mode === "local" ? "local" : queue || "";
     config.port = typeof port === "number" ? port : 8000;
     config.dataDirectory = dataDirectory || "/tmp/worker-metapage-io";
+
+    if (!queue && config.mode === "remote") {
+      throw new Error("Remote mode: must supply the queue id");
+    }
+
+    if (config.mode === "local") {
+      Deno.env.set("DENO_KV_URL", join(config.dataDirectory, "kv"));
+    }
 
     config.server = apiServerAddress ?? "";
 
@@ -260,12 +267,14 @@ export const runCommand = new Command()
       );
 
       await ensureSharedVolume();
+      console.log("✅ shared volume");
 
       const cacheDir = join(config.dataDirectory, "cache");
       await ensureDir(config.dataDirectory);
       await ensureDir(cacheDir);
       await Deno.chmod(config.dataDirectory, 0o777);
       await Deno.chmod(cacheDir, 0o777);
+      console.log("✅ data directory");
 
       Deno.serve(
         {
@@ -306,7 +315,8 @@ export const runCommand = new Command()
 
       connectToServer({
         server: config.mode === "local"
-          ? `http://localhost:${config.port}`
+          // ? `http://localhost:${config.port}`
+          ? `http://0.0.0.0:${config.port}`
           : config.server,
         queueId: config.queue,
         cpus: config.cpus,
