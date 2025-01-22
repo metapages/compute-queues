@@ -132,6 +132,8 @@ services:
       dockerfile: app/worker/Dockerfile
       target: worker
     environment:
+      # Workaround for correct URLs in the browser to avoid CORS issues
+      - DEV_ONLY_EXTERNAL_SERVER_ADDRESS=https://worker-metaframe.localhost:${APP_PORT:-443}
       # APP_PORT is only needed for the upload/curl/dns/docker fiasco
       - APP_PORT=${APP_PORT:-443}
       - IGNORE_CERTIFICATE_ERRORS=true
@@ -140,8 +142,6 @@ services:
       - DENO_INSTALL_ROOT=/deno
       - REDIS_URL=redis://redis:6379
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
-      - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
-      - DENO_KV_URL=http://denokv:4512
     volumes:
       - ./deno.json:/app/deno.json
       - ./app/shared:/app/app/shared

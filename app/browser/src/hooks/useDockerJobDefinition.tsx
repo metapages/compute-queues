@@ -187,6 +187,9 @@ export const useDockerJobDefinition = () => {
         debug,
         control: namespaceConfig,
       };
+      if (debug) {
+        console.log("newJobDefinition", newJobDefinition);
+      }
 
       setNewJobDefinition(newJobDefinition);
     })();

@@ -90,6 +90,7 @@ export const shaDockerJob = (
         }
       });
     }
+    // other aspects not relevant to the hash
   });
 
   return shaObject(jobReadyForSha);

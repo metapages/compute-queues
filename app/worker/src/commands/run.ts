@@ -239,12 +239,14 @@ export const runCommand = new Command()
     config.gpus = typeof gpus === "number" ? gpus : 0;
     config.mode = mode;
     config.queue = config.mode === "local" ? "local" : queue || "";
-    config.port = typeof port === "number" ? port : 8000;
-    config.dataDirectory = dataDirectory || "/tmp/worker-metapage-io";
-
     if (!queue && config.mode === "remote") {
       throw new Error("Remote mode: must supply the queue id");
     }
+    config.port = typeof port === "number" ? port : 8000;
+    config.dataDirectory = join(
+      dataDirectory || "/tmp/worker-metapage-io",
+      config.mode,
+    );
 
     if (config.mode === "local") {
       Deno.env.set("DENO_KV_URL", join(config.dataDirectory, "kv"));
@@ -308,6 +310,7 @@ export const runCommand = new Command()
         config.mode,
         config.cpus,
         config.gpus,
+        config.dataDirectory,
         config.server,
       );
 
