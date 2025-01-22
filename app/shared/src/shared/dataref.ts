@@ -77,7 +77,7 @@ export const dataRefToBuffer = async (
 // with a DataRef pointing to the cloud blob
 // We assume (roughly) immutable uploads based on hash
 // so we keep a tally of already uploaded blobs
-const AlreadyUploaded: { [hash: string]: boolean } = {};
+const AlreadyUploaded: { [address: string]: { [hash: string]: boolean } } = {};
 export const copyLargeBlobsToCloud = async (
   inputs: InputsRefs | undefined,
   address: string,
@@ -123,9 +123,12 @@ export const copyLargeBlobsToCloud = async (
         // upload and replace the dataref
 
         const hash = await sha256Buffer(uint8ArrayIfBig);
+        const urlUpload = `${address}/api/v1/upload/${hash}`;
         // but not if we already have, since these files are immutable
-        if (!AlreadyUploaded[hash]) {
-          const urlUpload = `${address}/api/v1/upload/${hash}`;
+        if (!AlreadyUploaded[address]) {
+          AlreadyUploaded[address] = {};
+        }
+        if (!AlreadyUploaded[address][hash]) {
           // Then upload directly to S3/MinIO using the presigned URL
           const responseUpload = await fetch(urlUpload, {
             // @ts-ignore: TS2353
@@ -145,7 +148,7 @@ export const copyLargeBlobsToCloud = async (
             hash: hash,
           };
           result[name] = ref; // the server gave us this ref to use
-          AlreadyUploaded[hash] = true;
+          AlreadyUploaded[address][hash] = true;
         } else {
           result[name] = {
             value: `${address}/api/v1/download/${hash}`,

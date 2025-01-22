@@ -64,15 +64,15 @@ export const putJsonToS3 = async (
 
   // Then upload directly to S3/MinIO using the presigned URL
   const responseUpload = await fetch(urlUpload, {
-    // @ts-ignore: TS2353
     method: "PUT",
-    // @ts-ignore: TS2353
     redirect: "follow",
     body: JSON.stringify(data),
     headers: { "Content-Type": "application/json" },
   });
   if (!responseUpload.ok) {
-    throw new Error(`Failed to upload URL: ${urlUpload}`);
+    throw new Error(
+      `Failed to upload URL: status ${responseUpload.status} ${urlUpload}`,
+    );
   }
   await responseUpload.text();
 

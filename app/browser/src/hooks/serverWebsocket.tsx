@@ -164,6 +164,7 @@ export const serverWebsocket = (): void => {
     rws?.addEventListener("close", onClose);
 
     return () => {
+      rwsRef.current = null;
       rws?.removeEventListener("message", onMessage);
       rws?.removeEventListener("error", onError);
       rws?.removeEventListener("open", onOpen);

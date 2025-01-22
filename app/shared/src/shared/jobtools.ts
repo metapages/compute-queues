@@ -175,8 +175,11 @@ export const fileToDataref = async (
     );
     FileHashesUploaded.set(hash, true);
 
+    const actualAddress = Deno.env.get("DEV_ONLY_EXTERNAL_SERVER_ADDRESS") ||
+      address;
+
     const dataRef: DataRef = {
-      value: `${address}/api/v1/download/${hash}`,
+      value: `${actualAddress}/api/v1/download/${hash}`,
       type: DataRefType.url,
     };
     return dataRef;
@@ -246,6 +249,11 @@ export const dataRefToFile = async (
         const cacheExists = await exists(cachedFilePath);
 
         if (cacheExists) {
+          try {
+            Deno.removeSync(filename);
+          } catch (_) {
+            // swallow error
+          }
           try {
             await Deno.link(cachedFilePath, filename);
             console.log(

@@ -189,6 +189,7 @@ export class BaseDockerJobQueue {
       const payload: BroadcastChannelMessage = event.data;
       let jobStates: JobStates | undefined;
       let jobs: JobsStateMap | undefined;
+
       // console.log(`🌘 recieved broadcast message ${payload.type}`, payload)
       switch (payload.type) {
         case "job-states-minimal": {
@@ -461,7 +462,8 @@ export class BaseDockerJobQueue {
    * @param jobId
    */
   async broadcastAndDeleteCachedJob(jobId: string): Promise<boolean> {
-    if (!this.state.jobs[jobId]) {
+    const job = this.state.jobs[jobId] || await this.db.jobGet(jobId);
+    if (!job) {
       console.log(
         `[${
           this.address.substring(
@@ -473,8 +475,7 @@ export class BaseDockerJobQueue {
       return false;
     }
 
-    const currentState =
-      this.state.jobs[jobId].history[this.state.jobs[jobId].history.length - 1];
+    const currentState = job.history[job.history.length - 1];
     if (!isJobCacheAllowedToBeDeleted(currentState)) {
       console.log(
         `[${
@@ -482,9 +483,9 @@ export class BaseDockerJobQueue {
             0,
             6,
           )
-        }]🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${
-          this.state.jobs[jobId].state
-        } [${jobId.substring(0, 6)}]`,
+        }]🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${job.state} [${
+          jobId.substring(0, 6)
+        }]`,
       );
       return false;
     }
@@ -492,7 +493,7 @@ export class BaseDockerJobQueue {
     // Can only send the message to the workers with the whole definition
     // because the definition used to construct unique cache keys
     const jobDefinition = (
-      this.state.jobs[jobId].history[0].value as StateChangeValueQueued
+      job.history[0].value as StateChangeValueQueued
     ).definition;
     if (jobDefinition) {
       this.broadcastToLocalWorkers(
@@ -511,7 +512,7 @@ export class BaseDockerJobQueue {
     await this.deleteJobFromDb(jobId).catch((err) => {
       console.log(`💥💥💥 ERROR deleting job: ${err}`, jobId);
     });
-    await this.deleteCachedJob(jobId);
+    this.deleteCachedJob(jobId);
 
     this.channel.postMessage({
       type: "delete-cached-job",
@@ -1160,7 +1161,6 @@ export class BaseDockerJobQueue {
           console.log("emitter error", err);
         }
 
-        // console.log('possibleMessage', possibleMessage);
         switch (possibleMessage.type) {
           case WebsocketMessageTypeWorkerToServer.StateChange: {
             const change: StateChange = possibleMessage.payload as StateChange;

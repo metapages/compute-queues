@@ -19,6 +19,33 @@ const CACHED_DOCKER_IMAGES: { [key: string]: boolean } = {};
 const ROOT_BUILD_DIR = "/tmp/docker-builds";
 const ROOT_BUILD_DIR_DOWNLOADS = `${ROOT_BUILD_DIR}/downloads`;
 
+let DockerBinPath = "/usr/bin/docker";
+
+async function getDockerBinaryPath(): Promise<string> {
+  try {
+    const process = new Deno.Command("which", {
+      args: ["docker"],
+    });
+    const { code, stdout } = await process.output();
+
+    if (code !== 0) {
+      throw new Error("Docker binary not found");
+    }
+
+    const path = new TextDecoder().decode(stdout).trim();
+    return path;
+  } catch (error) {
+    console.error("Error finding docker binary:", error);
+    throw error;
+  }
+}
+
+try {
+  DockerBinPath = await getDockerBinaryPath();
+} catch (error) {
+  console.error("Error finding docker binary:", error);
+}
+
 export const clearCache = async (args: { build?: DockerJobImageBuild }) => {
   const buildSha = await getBuildSha(args);
   const image = getDockerImageName(buildSha);
@@ -140,7 +167,7 @@ export const ensureDockerImage = async (args: {
         } as JobStatusPayload,
       });
 
-      const command = new Deno.Command("/usr/bin/docker", {
+      const command = new Deno.Command(DockerBinPath, {
         cwd: buildDir,
         // clearEnv: true,
         // env: Record<string, string>
@@ -492,7 +519,6 @@ const getDownloadLinkFromContext = (context: string): string => {
     const matches = new RegExp(
       /https:\/\/github.com\/([-\w]{6,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([-\/\w\.\}\{\$]{1,100}))?/,
     ).exec(context);
-    console.log("matches", matches);
     if (!matches) {
       throw new Error(`Invalid GitHub URL: ${context}`);
     }

@@ -184,7 +184,6 @@ export class DockerJobQueue {
   }
 
   onUpdateSetAllJobStates(message: computeQueuesShared.BroadcastJobStates) {
-    // console.log(`workerState ${JSON.stringify(state, null, '  ')}`)
     this._checkRunningJobs(message);
     this._claimJobs(message);
   }
