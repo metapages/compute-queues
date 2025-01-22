@@ -1,18 +1,19 @@
-import React from "react";
-
 import { QueueIconAndModal } from "/@/components/sections/queue/QueueIconAndModal";
 
 import { Box, HStack, IconButton, Spacer, Tooltip, useMediaQuery } from "@chakra-ui/react";
-import { Question } from "@phosphor-icons/react";
+import { CloudArrowUp, House, Question } from "@phosphor-icons/react";
 
 import { EditInput } from "./footer/EditInput";
+import { useHashParam } from "@metapages/hash-query/react-hooks";
 
 export const MainFooter: React.FC = () => {
   const [isLargerThan400] = useMediaQuery("(min-width: 400px)");
+  const [queue] = useHashParam("queue", "");
   // const rightPanelContext = useStore(state => state.rightPanelContext);
   // const setRightPanelContext = useStore(state => state.setRightPanelContext);
   // const helpPanelShown = rightPanelContext === "help";
 
+  const isLocalMode = queue === "local";
   return (
     <Box bg={"gray.100"} px={3} borderTop={"1px"} minWidth="100vw" h={"footerHeight"}>
       <HStack justify={"space-between"} h={"3.5rem"}>
@@ -21,6 +22,22 @@ export const MainFooter: React.FC = () => {
         {isLargerThan400 && (
           <HStack gap={3}>
             <QueueIconAndModal />
+            <Tooltip label={isLocalMode ? "Local mode help" : "Remote mode help"}>
+              <IconButton
+                aria-label={isLocalMode ? "help local mode" : "help remote mode"}
+                as="a"
+                href={
+                  isLocalMode
+                    ? "https://docs.metapage.io/docs/container-local-mode"
+                    : "https://docs.metapage.io/docs/container-remote-mode"
+                }
+                target="_blank"
+                size="sm"
+                color="gray.400"
+                variant="link"
+                icon={isLocalMode ? <House size={16} /> : <CloudArrowUp size={16} />}
+              />
+            </Tooltip>
             <Tooltip label={"Help"}>
               <IconButton
                 aria-label="help"

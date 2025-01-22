@@ -45,7 +45,7 @@ dev target="": _mkcert _install _build_shared
     set -eo pipefail
 
     # default
-    export VITE_SERVER_ORIGIN="https://worker-metaframe.localhost"
+    export VITE_SERVER_ORIGIN="https://worker-metaframe.localhost:{{ APP_PORT }}"
     if [ "{{ target }}" = "local" ]; then
         export VITE_SERVER_ORIGIN="https://{{ APP_FQDN }}:{{ APP_PORT }}"
     elif [ "{{ target }}" != "" ]; then
