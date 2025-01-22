@@ -26,14 +26,16 @@ export interface Arguments {
  * configuration, set once at the start of the program.
  */
 export const config: Arguments = {
-  cpus: 1, //cpus: { type: Number, alias: 'c', description: 'Number of CPUs allowed (default 1)', defaultValue: 1 },
-  server: "https://container.mtfm.io", // { type: String, alias: 's', description: `Custom server (default: https://container.mtfm.io)`, optional: true, defaultValue: "https://container.mtfm.io" },
-  queue: "", //{ type: String, alias: 'q', description: 'Queue id. Browser links to this queue ' },
-  id: MACHINE_ID, //{ type: String, alias: 'i', description: `Worker Id (default:${MACHINE_ID})`, defaultValue: MACHINE_ID },
-  gpus: 0, //{ type: Number, alias: 'g', description: `Enable "--gpus all" flag if the job requests and the worker supports`, optional: true },
-  mode: "remote", //{ type: String, alias: 'm', description: `Mode (default: remote)`, optional: true },
-  port: 8000, //{ type: Number, alias: 'p', description: `Port (default: 8000)`, optional: true },
-  dataDirectory: "/tmp/worker-metapage-io", //{ type: String, alias: 'd', description: `Data directory (default: /tmp/worker-metapage-io)`, optional: true },
+  cpus: Number(Deno.env.get("METAPAGE_IO_WORKER_CPUS")) || 1, //cpus: { type: Number, alias: 'c', description: 'Number of CPUs allowed (default 1)', defaultValue: 1 },
+  server: Deno.env.get("METAPAGE_IO_API_SERVER_ADDRESS") ||
+    "https://container.mtfm.io", // { type: String, alias: 's', description: `Custom server (default: https://container.mtfm.io)`, optional: true, defaultValue: "https://container.mtfm.io" },
+  queue: Deno.env.get("METAPAGE_IO_QUEUE_ID") || "", //{ type: String, alias: 'q', description: 'Queue id. Browser links to this queue ' },
+  id: Deno.env.get("METAPAGE_IO_CUSTOM_WORKER_ID") || MACHINE_ID, //{ type: String, alias: 'i', description: `Worker Id (default:${MACHINE_ID})`, defaultValue: MACHINE_ID },
+  gpus: Number(Deno.env.get("METAPAGE_IO_WORKER_GPUS")) || 0, //{ type: Number, alias: 'g', description: `Enable "--gpus all" flag if the job requests and the worker supports`, optional: true },
+  mode: Deno.env.get("METAPAGE_IO_WORKER_MODE") || "remote", //{ type: String, alias: 'm', description: `Mode (default: remote)`, optional: true },
+  port: Number(Deno.env.get("METAPAGE_IO_API_SERVER_PORT")) || 8000, //{ type: Number, alias: 'p', description: `Port (default: 8000)`, optional: true },
+  dataDirectory: Deno.env.get("METAPAGE_IO_DATA_DIRECTORY") ||
+    "/tmp/worker-metapage-io", //{ type: String, alias: 'd', description: `Data directory (default: /tmp/worker-metapage-io)`, optional: true },
 };
 
 export const getConfig = (): Arguments => {

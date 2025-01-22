@@ -235,16 +235,22 @@ export const runCommand = new Command()
       id: string;
     };
 
-    config.cpus = typeof cpus === "number" ? cpus : 1;
-    config.gpus = typeof gpus === "number" ? gpus : 0;
-    config.mode = mode;
-    config.queue = config.mode === "local" ? "local" : queue || "";
-    if (!queue && config.mode === "remote") {
+    config.cpus = typeof cpus === "number" ? cpus : config.cpus;
+    config.gpus = typeof gpus === "number" ? gpus : config.gpus;
+    config.id = typeof id === "string" ? id : config.id;
+    config.mode = typeof mode === "string" ? mode : config.mode;
+    config.queue = config.mode === "local"
+      ? "local"
+      : typeof queue === "string"
+      ? queue
+      : config.queue;
+
+    if (!config.queue && config.mode === "remote") {
       throw new Error("Remote mode: must supply the queue id");
     }
-    config.port = typeof port === "number" ? port : 8000;
+    config.port = typeof port === "number" ? port : config.port;
     config.dataDirectory = join(
-      dataDirectory || "/tmp/worker-metapage-io",
+      dataDirectory || config.dataDirectory,
       config.mode,
     );
 
@@ -252,7 +258,7 @@ export const runCommand = new Command()
       Deno.env.set("DENO_KV_URL", join(config.dataDirectory, "kv"));
     }
 
-    config.server = apiServerAddress ?? "";
+    config.server = apiServerAddress ?? config.server;
 
     if (config.mode === "local") {
       config.server = config.server || `http://localhost:${config.port}`;
@@ -292,10 +298,10 @@ export const runCommand = new Command()
 
             // Once the server is listening, establish the connection
             connectToServer({
-              server: config.server || "",
+              server: config.server,
               queueId: config.queue,
               cpus: config.cpus,
-              gpus: config.gpus ?? 0,
+              gpus: config.gpus,
               workerId: config.id,
               port: config.port,
             });
@@ -324,7 +330,7 @@ export const runCommand = new Command()
         queueId: config.queue,
         cpus: config.cpus,
         gpus: config.gpus,
-        workerId: id || config.id,
+        workerId: config.id,
         port: config.port,
       });
     }
