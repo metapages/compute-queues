@@ -202,18 +202,17 @@ export const runCommand = new Command()
       required: false,
     },
   )
-  .option("-c, --cpus [cpus:number]", "Available CPU cpus", { default: 1 })
+  .option("-c, --cpus [cpus:number]", "Available CPU cpus")
   .option(
     "-a, --api-server-address [api-server-address:string]",
     "Custom API queue server",
   )
-  .option("-g, --gpus [gpus:number]", "Available GPUs", { default: 0 })
-  .option("-m, --mode [mode:string]", "Mode", { default: "remote" })
-  .option("-p, --port [port:number]", "Port number", { default: 8000 })
+  .option("-g, --gpus [gpus:number]", "Available GPUs")
+  .option("-m, --mode [mode:string]", "Mode")
+  .option("-p, --port [port:number]", "Port number")
   .option(
     "-d, --data-directory [dataDirectory:string]",
     "Data directory",
-    { default: "/tmp/worker-metapage-io" },
   )
   .option("--id [id:string]", "Custom worker ID")
   .action(async (options, queue?: string) => {
