@@ -56,7 +56,7 @@ export const serverWebsocket = (): void => {
 
     const url = `${
       queue === "local" && !origin ? websocketConnectionUrlLocalmode : origin ? origin : websocketConnectionUrl
-    }${queue}/client`;
+    }/${queue}/client`;
 
     setIsServerConnected(false);
     rwsRef.current = new ReconnectingWebSocket(url);

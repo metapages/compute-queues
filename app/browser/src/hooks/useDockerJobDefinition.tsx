@@ -20,7 +20,7 @@ import { useHashParam, useHashParamBoolean, useHashParamJson } from "@metapages/
 import { DataRefSerialized, Metaframe } from "@metapages/metapage";
 import { useMetaframeAndInput } from "@metapages/metapage-react";
 
-import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
+import { getIOBaseUrl } from "../config";
 import { useStore } from "../store";
 
 /**
@@ -28,6 +28,8 @@ import { useStore } from "../store";
  * combines them together, and sets the docker job definition in the store
  */
 export const useDockerJobDefinition = () => {
+  const [queue] = useHashParam("queue");
+
   // TODO: unclear if this does anything anymore
   const [debug] = useHashParamBoolean("debug");
 
@@ -164,11 +166,12 @@ export const useDockerJobDefinition = () => {
 
       // at this point, these inputs *could* be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
-      definition.inputs = await copyLargeBlobsToCloud(definition.inputs, UPLOAD_DOWNLOAD_BASE_URL);
+      const ioBaseUrl = getIOBaseUrl(queue);
+      definition.inputs = await copyLargeBlobsToCloud(definition.inputs, ioBaseUrl);
       if (cancelled) {
         return;
       }
-      definition.configFiles = await copyLargeBlobsToCloud(definition.configFiles, UPLOAD_DOWNLOAD_BASE_URL);
+      definition.configFiles = await copyLargeBlobsToCloud(definition.configFiles, ioBaseUrl);
       if (cancelled) {
         return;
       }
@@ -191,5 +194,5 @@ export const useDockerJobDefinition = () => {
     return () => {
       cancelled = true;
     };
-  }, [gitsha, gitref, metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, namespaceConfig, debug]);
+  }, [queue, gitsha, gitref, metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, namespaceConfig, debug]);
 };

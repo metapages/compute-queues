@@ -23,7 +23,7 @@ export const handleOptions = (request: Request): Response => {
     // Handle standard OPTIONS request.
     return new Response(null, {
       headers: {
-        Allow: "GET, HEAD, POST, OPTIONS",
+        Allow: "GET, HEAD, POST, PUT, OPTIONS",
       },
     });
   }

@@ -119,7 +119,7 @@ app.use("*", async (c, next) => {
   if (req.method === "OPTIONS") {
     const requestedHeaders = req.header("Access-Control-Request-Headers") ??
       "*";
-    c.header("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS");
+    c.header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, OPTIONS");
     c.header("Access-Control-Allow-Headers", requestedHeaders);
     c.header("Access-Control-Max-Age", "86400");
     return c.body(null, 204);

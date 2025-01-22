@@ -11,15 +11,16 @@ import {
 import { isIframe, MetaframeInputMap } from "@metapages/metapage";
 import { useMetaframeAndInput } from "@metapages/metapage-react";
 
-import { UPLOAD_DOWNLOAD_BASE_URL } from "../config";
+import { getIOBaseUrl } from "../config";
 import { DockerRunResultWithOutputs } from "/@shared/client";
 import { useStore } from "../store";
 import { useOptionResolveDataRefs } from "./useOptionResolveDataRefs";
+import { useHashParam } from "@metapages/hash-query/react-hooks";
 
-const datarefKeyToUrl = async (ref: DataRef): Promise<DataRef> => {
+const datarefKeyToUrl = async (ref: DataRef, baseUrl: string): Promise<DataRef> => {
   if (ref.type === DataRefType.key) {
     return {
-      value: `${UPLOAD_DOWNLOAD_BASE_URL}/api/v1/download/${ref.value}`,
+      value: `${baseUrl}/api/v1/download/${ref.value}`,
       type: DataRefType.url,
     };
   } else {
@@ -27,10 +28,14 @@ const datarefKeyToUrl = async (ref: DataRef): Promise<DataRef> => {
   }
 };
 
-const convertMetaframeOutputKeysToUrls = async (outputs: MetaframeInputMap): Promise<MetaframeInputMap> => {
+const convertMetaframeOutputKeysToUrls = async (
+  outputs: MetaframeInputMap,
+  queue: string,
+): Promise<MetaframeInputMap> => {
+  const ioBaseUrl = getIOBaseUrl(queue);
   const newOutputs: MetaframeInputMap = {};
   for (const [key, _value] of Object.entries(outputs)) {
-    newOutputs[key] = await datarefKeyToUrl(outputs[key]);
+    newOutputs[key] = await datarefKeyToUrl(outputs[key], ioBaseUrl);
   }
   return newOutputs;
 };
@@ -39,6 +44,7 @@ const convertMetaframeOutputKeysToUrls = async (outputs: MetaframeInputMap): Pro
  * Automatically send the finished job outputs to the metaframe
  */
 export const useSendJobOutputs = () => {
+  const [queue] = useHashParam("queue");
   // You usually don't want this on, that means big blobs
   // are going to move around your system
   const [resolveDataRefs] = useOptionResolveDataRefs();
@@ -94,13 +100,14 @@ export const useSendJobOutputs = () => {
       if (resolveDataRefs) {
         // TODO: use a local cache to avoid re-downloading the same outputs
         // console.log(`💚 💖 Resolving data refs for metaframe`);
+        const ioBaseUrl = getIOBaseUrl(queue);
         const metaframeOutputs: MetaframeInputMap | undefined = await convertJobOutputDataRefsToExpectedFormat(
           outputs,
-          UPLOAD_DOWNLOAD_BASE_URL,
+          ioBaseUrl,
         );
 
         const keysToUrlsOutputs = metaframeOutputs
-          ? await convertMetaframeOutputKeysToUrls(metaframeOutputs)
+          ? await convertMetaframeOutputKeysToUrls(metaframeOutputs, queue)
           : metaframeOutputs;
 
         try {
@@ -113,11 +120,11 @@ export const useSendJobOutputs = () => {
         jobHashOutputsLastSent.current = dockerJobServer.hash;
       } else {
         // console.log(`💚 Sending outputs to metaframe`, outputs);
-        const keysToUrlsOutputs = outputs ? await convertMetaframeOutputKeysToUrls(outputs) : outputs;
+        const keysToUrlsOutputs = outputs ? await convertMetaframeOutputKeysToUrls(outputs, queue) : outputs;
         // console.log(`💚💚 Sending outputs to metaframe keysToUrlsOutputs`, keysToUrlsOutputs);
         metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
         jobHashOutputsLastSent.current = dockerJobServer.hash;
       }
     })();
-  }, [dockerJobServer, metaframeBlob?.metaframe]);
+  }, [queue, dockerJobServer, metaframeBlob?.metaframe]);
 };
