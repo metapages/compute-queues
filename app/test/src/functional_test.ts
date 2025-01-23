@@ -248,7 +248,12 @@ Deno.test(
       definitions.map(async (definition, i) => {
         const message = await createNewContainerJobMessage({
           definition,
+          // https://github.com/metapages/compute-queues/issues/144
           namespace,
+          control: {
+            // https://github.com/metapages/compute-queues/issues/144
+            userspace: namespace,
+          },
         });
         jobIdsSubmissionOrder.push(message.jobId);
         if (i + 1 < count) {
