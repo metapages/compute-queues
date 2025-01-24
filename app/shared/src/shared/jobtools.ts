@@ -1,10 +1,11 @@
-import { ensureDir, exists } from "std/fs";
-import { dirname } from "std/path";
-import { retryAsync } from "retry";
 import { crypto } from "@std/crypto";
 import { encodeHex } from "@std/encoding";
 import { LRUCache } from "lru-cache";
+import { retryAsync } from "retry";
+import { ensureDir, exists } from "std/fs";
+import { dirname } from "std/path";
 
+import { join } from "std/path";
 import { decodeBase64 } from "/@/shared/base64.ts";
 import {
   ENV_VAR_DATA_ITEM_LENGTH_MAX,
@@ -22,13 +23,7 @@ import {
   type WebsocketMessageClientToServer,
   WebsocketMessageTypeClientToServer,
 } from "/@/shared/types.ts";
-import {
-  fetchRobust,
-  sanitizeFilename,
-  sha256Stream,
-  shaDockerJob,
-} from "/@/shared/util.ts";
-import { join } from "std/path";
+import { sanitizeFilename, shaDockerJob } from "/@/shared/util.ts";
 
 const IGNORE_CERTIFICATE_ERRORS: boolean =
   Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
@@ -243,9 +238,21 @@ export const dataRefToFile = async (
       return;
     }
     case DataRefType.url: {
-      if (ref.hash) {
-        const sanitizedHash = sanitizeFilename(ref.hash);
+      // console.log(`🐸🐪 dataRefToFile ref`, ref);
+      const url: string = ref.value;
+      let hash = /\/api\/v1\/download\/([0-9a-z]+)[\/$]?/.exec(
+        new URL(url).pathname,
+      )?.[1];
+      // console.log(`🐸🐪 dataRefToFile hash`, hash);
+      if (!hash) {
+        hash = ref.hash;
+      }
+
+      if (hash) {
+        const sanitizedHash = sanitizeFilename(hash);
+        // console.log(`🐸🐪 dataRefToFile sanitizedHash`, sanitizedHash);
         const cachedFilePath = join(dataDirectory, "cache", sanitizedHash);
+        // console.log(`🐸🐪 dataRefToFile cachedFilePath`, cachedFilePath);
         const cacheExists = await exists(cachedFilePath);
 
         if (cacheExists) {
@@ -257,38 +264,57 @@ export const dataRefToFile = async (
           try {
             await Deno.link(cachedFilePath, filename);
             console.log(
-              `Hard link created from cache for hash ${ref.hash} to ${filename}.`,
+              `Hard link created from cache for hash ${hash} to ${filename}.`,
             );
             return;
           } catch (linkError) {
             console.error(
-              `Failed to create hard link from cache for hash ${ref.hash}:`,
+              `Failed to create hard link from cache for hash ${hash}:`,
               linkError,
             );
             throw linkError;
           }
         } else {
           console.log(
-            `Cache miss for hash ${ref.hash}. Proceeding to download.`,
+            `Cache miss for hash ${hash}. Proceeding to download.`,
           );
         }
       }
 
       try {
         // Download the file to the desired filename
-        const arrayBufferFromUrl =
-          (await fetchRobust(ref.value as string)).body;
-        if (!arrayBufferFromUrl) {
-          throw new Error(`Failed to fetch data from URL ${ref.value}`);
-        }
-        await Deno.writeFile(filename, arrayBufferFromUrl, {
-          mode: 0o644,
-        });
-        console.log(`Downloaded and wrote data to ${filename}.`);
 
-        if (ref.hash) {
-          const computedHash = await sha256Stream(arrayBufferFromUrl);
-          const sanitizedHash = sanitizeFilename(computedHash);
+        let count = 0;
+        await retryAsync(
+          async () => {
+            try {
+              const fileResponse = await fetch(url, { redirect: "follow" });
+
+              if (fileResponse.ok && fileResponse.body) {
+                const file = await Deno.open(filename, {
+                  write: true,
+                  create: true,
+                  mode: 0o644,
+                });
+                await fileResponse.body.pipeTo(file.writable);
+              }
+            } catch (error) {
+              count++;
+              throw new Error(
+                `Failed attempt ${count} to download ${url}: ${error}`,
+              );
+            }
+          },
+          { delay: 1000, maxTry: 5 },
+        );
+
+        // console.log(`Downloaded and wrote data to ${filename}.`);
+
+        hash = hash || (await hashFileOnDisk(filename));
+
+        if (hash) {
+          // const computedHash = await sha256Stream(arrayBufferFromUrl);
+          const sanitizedHash = sanitizeFilename(hash);
           const cachedFilePath = join(dataDirectory, "cache", sanitizedHash);
           const cacheExists = await exists(cachedFilePath);
 
@@ -297,7 +323,7 @@ export const dataRefToFile = async (
             await Deno.remove(filename);
             await Deno.link(cachedFilePath, filename);
             console.log(
-              `Deleted downloaded file. Created hard link from cache for hash ${computedHash} to ${filename}.`,
+              `Deleted downloaded file. Created hard link from cache for hash ${hash} to ${filename}.`,
             );
           } else {
             // Create a hard link from the downloaded file to cache
