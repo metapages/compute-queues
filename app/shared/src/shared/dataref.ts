@@ -87,7 +87,6 @@ export const copyLargeBlobsToCloud = async (
   }
   const result: InputsRefs = {};
 
-  console.log(`🎈🎈🎈 copyLargeBlobsToCloud`, inputs);
   await Promise.all(
     Object.keys(inputs).map(async (name) => {
       const type: DataRefType = inputs[name]?.type || DataRefTypeDefault;
