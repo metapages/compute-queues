@@ -1,5 +1,6 @@
 import React from "react";
 
+import { useStore } from "/@/store";
 import {
   ConsoleLogLine,
   DockerJobDefinitionRow,
@@ -7,16 +8,15 @@ import {
   DockerJobState,
   StateChangeValueFinished,
 } from "/@shared/client";
-import { useStore } from "/@/store";
 
 import { Box, HStack, Icon, Spinner, Text, useToast, VStack } from "@chakra-ui/react";
-import { useHashParam } from "@metapages/hash-query/react-hooks";
 import { Check, HourglassMedium, Prohibit, WarningCircle } from "@phosphor-icons/react";
+import { useQueue } from "/@/hooks/useQueue";
 
 const STATUS_ICON_SIZE = 6;
 export const JobStatus: React.FC = () => {
   const toast = useToast();
-  const [queue] = useHashParam("queue");
+  const { resolvedQueue } = useQueue();
 
   const workers = useStore(state => state.workers);
   const job = useStore(state => state.jobState);
@@ -28,7 +28,7 @@ export const JobStatus: React.FC = () => {
     return <></>;
   }
 
-  if (!queue || queue === "") return <></>;
+  if (!resolvedQueue) return <></>;
 
   const { icon, text, exitCode, desc, jobId, showExitCodeRed } = getJobStateValues(
     job,

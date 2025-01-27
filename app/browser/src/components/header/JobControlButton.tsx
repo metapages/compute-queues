@@ -4,10 +4,10 @@ import { useJobSubmissionHook } from "/@/hooks/useJobSubmissionHook";
 import { DockerJobFinishedReason, DockerJobState, StateChangeValueFinished } from "/@shared/client";
 
 import { Button, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
-import { useHashParam } from "@metapages/hash-query/react-hooks";
 import { Lock, Play, Queue as QueueIcon, Repeat, Stop } from "@phosphor-icons/react";
 
 import { useStore } from "../../store";
+import { useQueue } from "/@/hooks/useQueue";
 
 export const JobControlButton: React.FC = () => {
   const serverJobState = useStore(state => state.jobState);
@@ -15,7 +15,7 @@ export const JobControlButton: React.FC = () => {
 
   const [isLargerThan600] = useMediaQuery("(min-width: 600px)");
   const [isJobRequeued, setIsJobRequeued] = useState(false);
-  const [queue] = useHashParam("queue", "");
+  const { resolvedQueue } = useQueue();
 
   const mainInputFileContent = useStore(state => state.mainInputFileContent);
   const setUserClickedRun = useStore(state => state.setUserClickedRun);
@@ -156,7 +156,7 @@ export const JobControlButton: React.FC = () => {
     return noBuildButton;
   }
 
-  if (!queue) {
+  if (!resolvedQueue) {
     // return noQueueButton;
     return null;
   }

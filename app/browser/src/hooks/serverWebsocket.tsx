@@ -3,6 +3,7 @@
  */
 import { useEffect, useRef } from "react";
 
+import ReconnectingWebSocket from "reconnecting-websocket";
 import {
   BroadcastJobStates,
   BroadcastWorkers,
@@ -11,18 +12,16 @@ import {
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from "/@shared/client";
-import ReconnectingWebSocket from "reconnecting-websocket";
-
-import { useHashParam } from "@metapages/hash-query/react-hooks";
 
 import { websocketConnectionUrl, websocketConnectionUrlLocalmode } from "../config";
 import { cacheInsteadOfSendMessages, useStore } from "../store";
+import { useQueue } from "./useQueue";
 
 /**
  * Sets states bits in the store
  */
 export const serverWebsocket = (): void => {
-  const [queueOrUrl] = useHashParam("queue");
+  const { resolvedQueue: resolvedQueueOrUrl } = useQueue();
 
   const setIsServerConnected = useStore(state => state.setIsServerConnected);
 
@@ -43,13 +42,13 @@ export const serverWebsocket = (): void => {
   const timeLastPingRef = useRef<number>(Date.now());
 
   useEffect(() => {
-    if (!queueOrUrl || queueOrUrl === "") {
+    if (!resolvedQueueOrUrl) {
       return;
     }
-    let queue: string = queueOrUrl;
+    let queue: string = resolvedQueueOrUrl;
     let origin: string | undefined;
-    if (queueOrUrl.startsWith("http")) {
-      const urlBlob = new URL(queueOrUrl);
+    if (resolvedQueueOrUrl.startsWith("http")) {
+      const urlBlob = new URL(resolvedQueueOrUrl);
       queue = urlBlob.pathname.replace("/", "");
       origin = urlBlob.origin + "/";
     }
@@ -176,7 +175,7 @@ export const serverWebsocket = (): void => {
       clearTimeout(pongTimeoutRef.current);
     };
   }, [
-    queueOrUrl,
+    resolvedQueueOrUrl,
     setSendMessage,
     setIsServerConnected,
     setJobStates,

@@ -4,16 +4,15 @@ import { Box, HStack, IconButton, Spacer, Tooltip, useMediaQuery } from "@chakra
 import { CloudArrowUp, House, Question } from "@phosphor-icons/react";
 
 import { EditInput } from "./footer/EditInput";
-import { useHashParam } from "@metapages/hash-query/react-hooks";
+import { useQueue } from "../hooks/useQueue";
 
 export const MainFooter: React.FC = () => {
   const [isLargerThan400] = useMediaQuery("(min-width: 400px)");
-  const [queue] = useHashParam("queue", "");
+  const { isLocalMode } = useQueue();
   // const rightPanelContext = useStore(state => state.rightPanelContext);
   // const setRightPanelContext = useStore(state => state.setRightPanelContext);
   // const helpPanelShown = rightPanelContext === "help";
 
-  const isLocalMode = queue === "local";
   return (
     <Box bg={"gray.100"} px={3} borderTop={"1px"} minWidth="100vw" h={"footerHeight"}>
       <HStack justify={"space-between"} h={"3.5rem"}>
