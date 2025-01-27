@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 
 import { useStore } from "/@/store";
 import { useFormik } from "formik";
@@ -20,8 +20,9 @@ import {
   Text,
   Tooltip,
 } from "@chakra-ui/react";
-import { useHashParam } from "@metapages/hash-query/react-hooks";
 import { LocalModeToggle } from "./LocalModeToggle";
+import { useQueue } from "/@/hooks/useQueue";
+import { QueueOverrideButtonAndLabel } from "./QueueOverrideButtonAndLabel";
 
 const validationSchema = yup.object({
   queue: yup.string(),
@@ -29,11 +30,8 @@ const validationSchema = yup.object({
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
 export const QueueButtonAndLabel: React.FC = () => {
-  const [queue, setQueue] = useHashParam("queue", "");
-  const [isLocalMode, setIsLocalMode] = useState<boolean>(queue === "local");
-  useEffect(() => {
-    setIsLocalMode(queue === "local");
-  }, [queue]);
+  const { queue, setQueue, resolvedQueue, isLocalMode, ignoreQueueOverride } = useQueue();
+
   const [showInput, setShowInput] = useState(false);
   const isServerConnected = useStore(state => state.isServerConnected);
 
@@ -59,6 +57,7 @@ export const QueueButtonAndLabel: React.FC = () => {
 
   return (
     <HStack width="100%" pl={"1rem"}>
+      <QueueOverrideButtonAndLabel />
       <LocalModeToggle />
       <Tooltip
         label={
@@ -69,14 +68,14 @@ export const QueueButtonAndLabel: React.FC = () => {
         <Icon
           // onFocus https://github.com/chakra-ui/chakra-ui/issues/5304#issuecomment-1102836734
           onFocus={e => e.preventDefault()}
-          as={queue && isServerConnected ? WifiHigh : WifiSlash}
-          color={!(queue && isServerConnected) && "red"}
+          as={resolvedQueue && isServerConnected ? WifiHigh : WifiSlash}
+          color={!(resolvedQueue && isServerConnected) && "red"}
           aria-label="edit docker job queue"
           boxSize="7"
         />
       </Tooltip>
-      <Text p={2}>Queue key:</Text>
-      {showInput ? (
+      <Text p={2}>Queue:</Text>
+      {showInput && ignoreQueueOverride ? (
         <>
           <form onSubmit={formik.handleSubmit}>
             <HStack>
@@ -103,12 +102,12 @@ export const QueueButtonAndLabel: React.FC = () => {
         </>
       ) : (
         <HStack gap={5}>
-          {queue ? <Tag>{queue}</Tag> : null}{" "}
-          {isLocalMode ? null : <Text onClick={() => setShowInput(true)}>Edit</Text>}
+          {resolvedQueue ? <Tag>{resolvedQueue}</Tag> : null}{" "}
+          {isLocalMode || !ignoreQueueOverride ? null : <Text onClick={() => setShowInput(true)}>Edit</Text>}
         </HStack>
       )}
 
-      {!queue || queue === "" ? (
+      {!resolvedQueue ? (
         <Alert status="error">
           <AlertIcon />
           <Link isExternal href="https://docs.metapage.io/docs/container-remote-mode">

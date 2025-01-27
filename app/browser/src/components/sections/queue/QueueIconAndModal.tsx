@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Container,
   Icon,
@@ -10,19 +9,20 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { Queue as QueueIcon } from "@phosphor-icons/react";
+import React from "react";
 import { Queue } from "/@/components/sections/queue/Queue";
+import { useQueue } from "/@/hooks/useQueue";
 import { useStore } from "/@/store";
-import { useHashParam } from "@metapages/hash-query/react-hooks";
 
 export const QueueIconAndModal: React.FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const workers = useStore(state => state.workers);
-  const [queue] = useHashParam("queue", "");
+  const { resolvedQueue } = useQueue();
   const workerCount = workers?.workers ? Object.keys(workers.workers).length : 0;
   const isNoWorkers = workerCount === 0;
   // const backgroundColor = !queue ? "red.300" : isNoWorkers ? "orange" : "none";
-  const color = !queue ? undefined : isNoWorkers ? "orange" : "none";
-  const textColor = !queue ? (isOpen ? undefined : "red.300") : isNoWorkers ? undefined : undefined;
+  const color = !resolvedQueue ? undefined : isNoWorkers ? "orange" : "none";
+  const textColor = !resolvedQueue ? (isOpen ? undefined : "red.300") : isNoWorkers ? undefined : undefined;
 
   return (
     <>
@@ -36,9 +36,13 @@ export const QueueIconAndModal: React.FC = () => {
         </Text>
       ) : null} */}
       <Tooltip
-        defaultIsOpen={!queue && !isOpen}
+        defaultIsOpen={!resolvedQueue && !isOpen}
         label={
-          !queue ? "Set a queue key" : isNoWorkers ? `Queue workers: ${workerCount}` : `Queue workers: ${workerCount}`
+          !resolvedQueue
+            ? "Set a queue key"
+            : isNoWorkers
+              ? `Queue workers: ${workerCount}`
+              : `Queue workers: ${workerCount}`
         }>
         <Icon
           as={QueueIcon}
