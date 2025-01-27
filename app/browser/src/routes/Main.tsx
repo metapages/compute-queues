@@ -1,22 +1,22 @@
-import React from "react";
 import { Alert, AlertIcon, Box, Container, HStack, Link, useMediaQuery, VStack } from "@chakra-ui/react";
+import React from "react";
 
 import { useStore } from "../store";
 
+import { useQueue } from "../hooks/useQueue";
+import { JobStatus } from "/@/components/footer/JobStatus";
+import { JobControlButton } from "/@/components/header/JobControlButton";
 import { MainFooter } from "/@/components/MainFooter";
 import { MainHeader } from "/@/components/MainHeader";
-import { PanelLogs } from "/@/components/sections/PanelLogs";
+import { PanelDocs } from "/@/components/sections/PanelDocs";
 import { PanelEditor } from "/@/components/sections/PanelEditor";
 import { PanelInputs } from "/@/components/sections/PanelInputs";
+import { PanelLogs } from "/@/components/sections/PanelLogs";
 import { PanelOutputs } from "/@/components/sections/PanelOutputs";
 import { PanelSettings } from "/@/components/sections/PanelSettings";
-import { JobControlButton } from "/@/components/header/JobControlButton";
-import { JobStatus } from "/@/components/footer/JobStatus";
-import { PanelDocs } from "/@/components/sections/PanelDocs";
-import { useHashParam } from "@metapages/hash-query/react-hooks";
 
 export const Main: React.FC = () => {
-  const [queueOrUrl] = useHashParam("queue");
+  const { resolvedQueue: resolvedQueueOrUrl } = useQueue();
   const isServerConnected = useStore(state => state.isServerConnected);
   const rightPanelContext = useStore(state => state.rightPanelContext);
   const [isWiderThan1000] = useMediaQuery("(min-width: 1000px)");
@@ -66,7 +66,7 @@ export const Main: React.FC = () => {
         <Box minW={leftWidth} minH={"contentHeight"}>
           {!isServerConnected ? (
             <Box minW={leftWidth} minH={"contentHeight"}>
-              {queueOrUrl === "local" ? (
+              {resolvedQueueOrUrl === "local" ? (
                 <Alert status="error">
                   <AlertIcon />
                   The local worker agent is not connected 👉 &nbsp;{" "}
