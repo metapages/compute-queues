@@ -76,6 +76,7 @@ export const shaDockerJob = (
             (configFiles[key] as DataRef<string>)?.value,
           );
         }
+        delete configFiles[key].hash;
       });
     }
 
@@ -88,6 +89,7 @@ export const shaDockerJob = (
             (inputs[key] as DataRef<string>)?.value,
           );
         }
+        delete inputs[key].hash;
       });
     }
     // other aspects not relevant to the hash
