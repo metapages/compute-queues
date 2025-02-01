@@ -87,3 +87,5 @@ RUN apt-get update && \
 COPY ./app/worker/daemon.json /etc/docker/daemon.json
 
 ENTRYPOINT ["/entrypoint.sh"]
+
+CMD ["run"]
