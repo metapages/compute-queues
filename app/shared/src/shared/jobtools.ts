@@ -166,7 +166,7 @@ export const fileToDataref = async (
           );
         }
       },
-      { delay: 1000, maxTry: 5 },
+      { delay: 2000, maxTry: 20 },
     );
     FileHashesUploaded.set(hash, true);
 
