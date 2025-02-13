@@ -25,12 +25,12 @@ normal := '\033[0m'
     echo -e ""
     echo -e "            directly using deno:"
     echo -e ""
-    echo -e "                just run --cpus=1 --api-server-address=https://worker-metaframe.localhost local1"
+    echo -e "                just run --cpus=1 --api-address=https://worker-metaframe.localhost local1"
     echo -e ""
     echo -e "            using the docker image (build and run):"
     echo -e ""
     echo -e "                just docker-image-run cache && \\"
-    echo -e "                    run --cpus=1 --api-server-address=https://worker-metaframe.localhost local1"
+    echo -e "                    run --cpus=1 --api-address=https://worker-metaframe.localhost local1"
     echo -e ""
 
 # Run the worker in local mode.
@@ -39,7 +39,7 @@ local:
 
 # Run the worker locally, pointing to production API
 @prod queue="local1":
-    deno run --watch --allow-all --unstable-kv  --unstable-cron src/cli.ts run --cpus=1 --api-server-address=https://container.mtfm.io {{ queue }}
+    deno run --watch --allow-all --unstable-kv  --unstable-cron src/cli.ts run --cpus=1 --api-address=https://container.mtfm.io {{ queue }}
 
 # Quick type check
 @check:
