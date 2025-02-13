@@ -3,7 +3,7 @@ import { ensureSharedVolume } from "/@/docker/volume.ts";
 import { localHandler } from "/@/lib/local-handler.ts";
 import { clearCache } from "/@/queue/dockerImage.ts";
 import { DockerJobQueue, type DockerJobQueueArgs } from "/@/queue/index.ts";
-import { Command } from "cliffy/command";
+import { Command } from "@cliffy/command";
 import { ms } from "ms";
 import ReconnectingWebSocket from "reconnecting-websocket";
 import { ensureDir } from "std/fs";
@@ -20,8 +20,193 @@ import {
 } from "@metapages/compute-queues-shared";
 
 import mod from "../../mod.json" with { type: "json" };
+import { processes, waitForDocker } from "/@/processes.ts";
 
 const VERSION: string = mod.version;
+
+const EnvPrefix = "METAPAGE_IO_";
+
+export const runCommand = new Command()
+  .name("run")
+  .arguments("[queue:string]")
+  .description("Connect the worker to a queue")
+  .option("-c, --cpus [cpus:number]", "Available CPU cores", { default: 1 })
+  .option(
+    "-a, --api-address [api-address:string]",
+    "Custom API queue server",
+  )
+  .option("-g, --gpus [gpus:number]", "Available GPUs")
+  .option("-m, --mode [mode:string]", "Mode [default: remote]", {
+    default: "remote",
+  })
+  .option("-p, --port [port:number]", "Port when mode=local", { default: 8000 })
+  .option(
+    "-d, --data-directory [dataDirectory:string]",
+    "Data directory",
+    { default: "/tmp/worker-metapage-io" },
+  )
+  .option("--id [id:string]", "Custom worker ID")
+  .action(async (options, queue?: string) => {
+    const METAPAGE_IO_CPUS = Deno.env.get(`${EnvPrefix}CPUS`);
+    config.cpus = typeof options.cpus === "number"
+      ? options.cpus
+      : (METAPAGE_IO_CPUS ? parseInt(METAPAGE_IO_CPUS) : 1);
+
+    const METAPAGE_IO_GPUS = Deno.env.get(`${EnvPrefix}GPUS`);
+    config.gpus = typeof options.gpus === "number"
+      ? options.gpus
+      : (METAPAGE_IO_GPUS ? parseInt(METAPAGE_IO_GPUS) : 0);
+
+    const METAPAGE_IO_MODE = Deno.env.get(`${EnvPrefix}MODE`);
+    config.mode = options.mode === "remote" || options.mode === "local"
+      ? options.mode
+      : (METAPAGE_IO_MODE || "remote");
+
+    const METAPAGE_IO_QUEUE = Deno.env.get(`${EnvPrefix}QUEUE`);
+    config.queue = config.mode === "local"
+      ? "local"
+      : queue || METAPAGE_IO_QUEUE || "";
+    if (!queue && config.mode === "remote") {
+      throw new Error("Remote mode: must supply the queue id");
+    }
+
+    const METAPAGE_IO_PORT = Deno.env.get(`${EnvPrefix}PORT`);
+    config.port = typeof options.port === "number"
+      ? options.port
+      : (METAPAGE_IO_PORT ? parseInt(METAPAGE_IO_PORT) : 8000);
+    config.dataDirectory = join(
+      options.dataDirectory && typeof (options.dataDirectory) === "string"
+        ? options.dataDirectory
+        : "/tmp/worker-metapage-io",
+      config.mode,
+    );
+
+    if (config.mode === "local") {
+      Deno.env.set("DENO_KV_URL", join(config.dataDirectory, "kv"));
+    }
+
+    const METAPAGE_IO_API_ADDRESS = Deno.env.get(`${EnvPrefix}API_ADDRESS`);
+    config.server = typeof (options.apiAddress) === "string"
+      ? options.apiAddress
+      : (METAPAGE_IO_API_ADDRESS ?? config.server);
+    if (config.mode === "local") {
+      config.server = `http://localhost:${config.port}`;
+    }
+
+    const kv = await Deno.openKv(Deno.env.get("DENO_KV_URL"));
+    const existingId: string | null = (await kv.get<string>(["workerId"]))
+      ?.value;
+    if (existingId) {
+      config.id = existingId;
+    } else {
+      config.id = crypto.randomUUID();
+      kv.set(["workerId"], config.id); // don't need to await
+    }
+
+    // If this is set, we are going to generate it every time
+    if (Deno.env.get("METAPAGE_IO_GENERATE_WORKER_ID")) {
+      config.id = crypto.randomUUID();
+    }
+
+    console.log(
+      `Worker config: [id=%s...] [queue=%s] [mode=%s] [cpus=%s] [gpus=%s] [dataDirectory=%s] [api=%s] ${
+        config.mode === "local" ? "[port=%s]" : ""
+      }`,
+      config.id.substring(0, 6),
+      config.queue,
+      config.mode,
+      config.cpus,
+      config.gpus,
+      config.dataDirectory,
+      config.server,
+      config.mode === "local" ? config.port : "",
+    );
+
+    // Check if we need to run in standalone mode
+    if (Deno.env.get("METAPAGE_IO_WORKER_RUN_STANDALONE") === "true") {
+      console.log(
+        `Standalone mode: starting dockerd`,
+      );
+      (async () => {
+        const dockerd = new Deno.Command("dockerd", {
+          args: ["-p", "/var/run/docker.pid"],
+        });
+        processes.dockerd = dockerd.spawn();
+        const result = await processes.dockerd.output();
+        console.log("dockerd exited");
+        console.log(result);
+      })();
+    }
+
+    await waitForDocker();
+    // If GPUs are configured, run ldconfig
+    if (config.gpus && config.gpus > 0) {
+      try {
+        // https://github.com/NVIDIA/nvidia-docker/issues/1399
+        Deno.stdout.writeSync(
+          new TextEncoder().encode(
+            `[gpus=${config.gpus}] rebuild ldconfig cache...`,
+          ),
+        );
+        const ldconfig = new Deno.Command("ldconfig");
+        await ldconfig.output();
+        console.log("✅");
+      } catch (err) {
+        console.log(`⚠️ ldconfig error ${`${err}`.split(":")[0]}`);
+      }
+    }
+    await ensureSharedVolume();
+
+    if (config.mode === "local") {
+      const cacheDir = join(config.dataDirectory, "cache");
+      await ensureDir(config.dataDirectory);
+      await ensureDir(cacheDir);
+      await Deno.chmod(config.dataDirectory, 0o777);
+      await Deno.chmod(cacheDir, 0o777);
+      console.log(
+        `[mode=local] Data directory [${config.dataDirectory}] created ✅`,
+      );
+      console.log(`[mode=local] Cache directory [${cacheDir}] created ✅`);
+
+      Deno.serve(
+        {
+          port: config.port,
+          onError: (e: unknown) => {
+            console.error(e);
+            return new Response("Internal Server Error", { status: 500 });
+          },
+          onListen: ({ hostname, port }) => {
+            console.log(
+              `[mode=local] listening on hostname=${hostname} port=${port} 🚀 `,
+            );
+
+            // Once the server is listening, establish the connection
+            connectToServer({
+              server: config.server || "",
+              queueId: config.queue,
+              cpus: config.cpus,
+              gpus: config.gpus ?? 0,
+              workerId: config.id,
+              port: config.port,
+            });
+          },
+        },
+        localHandler,
+      );
+    } else {
+      connectToServer({
+        server: config.mode === "local"
+          // ? `http://localhost:${config.port}`
+          ? `http://0.0.0.0:${config.port}`
+          : config.server,
+        queueId: config.queue,
+        cpus: config.cpus,
+        gpus: config.gpus,
+        workerId: config.id,
+        port: config.port,
+      });
+    }
+  });
 
 /**
  * Connect via websocket to the API server, and attach the DockerJobQueue object
@@ -38,8 +223,6 @@ export function connectToServer(
   },
 ) {
   const { server, queueId, cpus, gpus, workerId, port } = args;
-
-  console.log("CLI:", args);
 
   const url = config.mode === "local"
     ? `ws://localhost:${port}/${queueId}/worker`
@@ -189,143 +372,3 @@ export function connectToServer(
     }
   });
 }
-
-export const runCommand = new Command()
-  .name("run")
-  .arguments("[queue:string]")
-  .description("Connect the worker to a queue")
-  .env(
-    "API_SERVER_ADDRESS=<value:string>",
-    "Custom API queue server",
-    {
-      global: true,
-      required: false,
-    },
-  )
-  .option("-c, --cpus [cpus:number]", "Available CPU cpus", { default: 1 })
-  .option(
-    "-a, --api-server-address [api-server-address:string]",
-    "Custom API queue server",
-  )
-  .option("-g, --gpus [gpus:number]", "Available GPUs", { default: 0 })
-  .option("-m, --mode [mode:string]", "Mode", { default: "remote" })
-  .option("-p, --port [port:number]", "Port number", { default: 8000 })
-  .option(
-    "-d, --data-directory [dataDirectory:string]",
-    "Data directory",
-    { default: "/tmp/worker-metapage-io" },
-  )
-  .option("--id [id:string]", "Custom worker ID")
-  .action(async (options, queue?: string) => {
-    const {
-      cpus,
-      gpus,
-      apiServerAddress,
-      mode,
-      port,
-      dataDirectory,
-      id,
-    } = options as {
-      cpus: number;
-      gpus: number;
-      apiServerAddress: string;
-      mode: string;
-      port: number;
-      dataDirectory: string;
-      id: string;
-    };
-
-    config.cpus = typeof cpus === "number" ? cpus : 1;
-    config.gpus = typeof gpus === "number" ? gpus : 0;
-    config.mode = mode;
-    config.queue = config.mode === "local" ? "local" : queue || "";
-    if (!queue && config.mode === "remote") {
-      throw new Error("Remote mode: must supply the queue id");
-    }
-    config.port = typeof port === "number" ? port : 8000;
-    config.dataDirectory = join(
-      dataDirectory || "/tmp/worker-metapage-io",
-      config.mode,
-    );
-
-    if (config.mode === "local") {
-      Deno.env.set("DENO_KV_URL", join(config.dataDirectory, "kv"));
-    }
-
-    config.server = apiServerAddress ?? "";
-
-    if (config.mode === "local") {
-      config.server = config.server || `http://localhost:${config.port}`;
-
-      console.log(
-        "run %s mode %s with cpus=%s gpu=%s at server %s dataDirectory=%s port=%s",
-        config.queue,
-        config.mode,
-        config.cpus,
-        config.gpus,
-        config.server,
-        config.dataDirectory,
-        config.port,
-      );
-
-      await ensureSharedVolume();
-      console.log("✅ shared volume");
-
-      const cacheDir = join(config.dataDirectory, "cache");
-      await ensureDir(config.dataDirectory);
-      await ensureDir(cacheDir);
-      await Deno.chmod(config.dataDirectory, 0o777);
-      await Deno.chmod(cacheDir, 0o777);
-      console.log("✅ data directory");
-
-      Deno.serve(
-        {
-          port: config.port,
-          onError: (e: unknown) => {
-            console.error(e);
-            return new Response("Internal Server Error", { status: 500 });
-          },
-          onListen: ({ hostname, port }) => {
-            console.log(
-              `🚀 Local mode listening on hostname=${hostname} port=${port}`,
-            );
-
-            // Once the server is listening, establish the connection
-            connectToServer({
-              server: config.server || "",
-              queueId: config.queue,
-              cpus: config.cpus,
-              gpus: config.gpus ?? 0,
-              workerId: config.id,
-              port: config.port,
-            });
-          },
-        },
-        localHandler,
-      );
-    } else {
-      console.log(
-        "run %s mode %s with cpus=%s gpu=%s at server %s",
-        config.queue,
-        config.mode,
-        config.cpus,
-        config.gpus,
-        config.dataDirectory,
-        config.server,
-      );
-
-      await ensureSharedVolume();
-
-      connectToServer({
-        server: config.mode === "local"
-          // ? `http://localhost:${config.port}`
-          ? `http://0.0.0.0:${config.port}`
-          : config.server,
-        queueId: config.queue,
-        cpus: config.cpus,
-        gpus: config.gpus,
-        workerId: id || config.id,
-        port: config.port,
-      });
-    }
-  });

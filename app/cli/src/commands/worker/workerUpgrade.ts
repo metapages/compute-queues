@@ -1,4 +1,4 @@
-import { Command } from "cliffy/command";
+import { Command } from "@cliffy/command";
 import { compareVersions } from "compare-versions";
 
 export const workerUpgrade = new Command()

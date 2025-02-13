@@ -1,19 +1,26 @@
-import { Command } from "cliffy/command";
+import { Command } from "@cliffy/command";
 
 import { runCommand } from "/@/commands/run.ts";
 import { testCommand } from "/@/commands/test.ts";
+import { processes } from "/@/processes.ts";
+
+const args = Deno.args;
 
 // running in docker doesn't automatically kill on ctrl-c
 // https://github.com/nodejs/node/issues/4182
 Deno.addSignalListener("SIGINT", () => {
-  console.log("Maybe do some cleanup? Tell the server we are exiting?");
-  console.log("SIGINT exiting...");
+  console.log("SIGINT Cleaning up processes...");
+  if (processes.dockerd) {
+    processes.dockerd.kill("SIGINT");
+  }
   Deno.exit(0);
 });
 
 Deno.addSignalListener("SIGTERM", () => {
-  console.log("Maybe do some cleanup? Tell the server we are exiting?");
-  console.log("SIGINT exiting...");
+  console.log("SIGTERM Cleaning up processes...");
+  if (processes.dockerd) {
+    processes.dockerd.kill("SIGTERM");
+  }
   Deno.exit(0);
 });
 
@@ -36,4 +43,4 @@ await new Command()
   .action(function () {
     this.showHelp();
   })
-  .parse(Deno.args);
+  .parse(args);

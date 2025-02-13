@@ -25,12 +25,12 @@ normal := '\033[0m'
     echo -e ""
     echo -e "            directly using deno:"
     echo -e ""
-    echo -e "                just run --cpus=1 --api-server-address=https://worker-metaframe.localhost local1"
+    echo -e "                just run --cpus=1 --api-address=https://worker-metaframe.localhost local1"
     echo -e ""
     echo -e "            using the docker image (build and run):"
     echo -e ""
     echo -e "                just docker-image-run cache && \\"
-    echo -e "                    run --cpus=1 --api-server-address=https://worker-metaframe.localhost local1"
+    echo -e "                    run --cpus=1 --api-address=https://worker-metaframe.localhost local1"
     echo -e ""
 
 # Run the worker in local mode.
@@ -39,7 +39,7 @@ local:
 
 # Run the worker locally, pointing to production API
 @prod queue="local1":
-    deno run --watch --allow-all --unstable-kv  --unstable-cron src/cli.ts run --cpus=1 --api-server-address=https://container.mtfm.io {{ queue }}
+    deno run --watch --allow-all --unstable-kv  --unstable-cron src/cli.ts run --cpus=1 --api-address=https://container.mtfm.io {{ queue }}
 
 # Quick type check
 @check:
@@ -144,11 +144,11 @@ docker-image-build-for-local version="":
 
 # Build and run a worker docker image, in standalone lcoal mode
 docker-image-run-local: (docker-image-build-for-local "local")
-    docker run --rm -p 8000:8000 -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local run --cpus=1 --mode=local --data-directory /tmp/worker-metapage-io
+    docker run --rm -p 8000:8000 -v $PWD/src:/app/app/worker/src -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local run --cpus=1 --mode=local --data-directory /tmp/worker-metapage-io
 
 # Build and run a worker docker image, pointing to the local API
 docker-image-run-local1 queue="local1": (docker-image-build-for-local "local")
-    docker run --net=host --entrypoint "" --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local deno run --allow-net --allow-read --allow-env --allow-run --unsafely-ignore-certificate-errors --unstable-kv --unstable-cron src/cli.ts run --cpus=1 --api-server-address=https://worker-metaframe.localhost {{ queue }}
+    docker run --net=host --entrypoint "" --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local deno run --allow-net --allow-read --allow-env --allow-run --unsafely-ignore-certificate-errors --unstable-kv --unstable-cron src/cli.ts run --cpus=1 --api-address=https://worker-metaframe.localhost {{ queue }}
 
 docker-image-run-prod queue="public1": (docker-image-build-for-local "local")
-    docker run -ti -v /Users/dion/dev/git/metapages/worker.metapage.io/app:/app -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local run --cpus=1 --api-server-address=https://container.mtfm.io {{ queue }}
+    docker run -ti -v $PWD/src:/app/app/worker/src -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:local run --cpus=1 --api-address=https://container.mtfm.io {{ queue }}
