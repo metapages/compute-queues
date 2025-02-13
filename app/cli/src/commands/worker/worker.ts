@@ -1,4 +1,4 @@
-import { Command } from "cliffy/command";
+import { Command } from "@cliffy/command";
 
 import { workerUpgrade } from "/@/commands/worker/workerUpgrade.ts";
 

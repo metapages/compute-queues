@@ -60,9 +60,6 @@ COPY ./app/shared/deno.json ./app/shared/deno.json
 # Copy assets
 # COPY ./app/browser/dist ./app/browser/dist
 
-# Copy entrypoint
-COPY ./app/worker/entrypoint.sh /entrypoint.sh
-
 RUN deno cache --reload .
 
 WORKDIR /app/app/worker
@@ -72,7 +69,7 @@ ENV VERSION=$VERSION
 
 LABEL container.mtfm.io=worker
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["deno", "run", "--allow-all", "--unstable-kv", "--unstable-cron", "src/cli.ts"]
 
 # The standalone worker contains its own copy of dockerd, so it doesn't need to rely
 # on access to the host, and can run in environments where a docker socket isn't provided.
@@ -86,4 +83,4 @@ RUN apt-get update && \
 
 COPY ./app/worker/daemon.json /etc/docker/daemon.json
 
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["deno", "run", "--allow-all", "--unstable-kv", "--unstable-cron", "src/cli.ts"]

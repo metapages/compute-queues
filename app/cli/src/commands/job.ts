@@ -1,4 +1,4 @@
-import { Command } from "cliffy/command";
+import { Command } from "@cliffy/command";
 
 import { jobAdd } from "/@/commands/jobAdd.ts";
 import { jobAwait } from "/@/commands/jobAwait.ts";

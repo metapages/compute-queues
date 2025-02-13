@@ -12,7 +12,7 @@ import {
 } from "@metapages/compute-queues-shared";
 import { exists } from "std/fs";
 import { basename } from "std/path";
-import { Command } from "cliffy/command";
+import { Command } from "@cliffy/command";
 import { closed, open } from "@korkje/wsi";
 import { readAll, writeAllSync } from "std/io";
 

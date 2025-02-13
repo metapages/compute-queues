@@ -1,4 +1,4 @@
-import { Command } from "cliffy/command";
+import { Command } from "@cliffy/command";
 
 import { docker } from "/@/queue/dockerClient.ts";
 
