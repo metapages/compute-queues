@@ -70,16 +70,16 @@ export const Main: React.FC = () => {
                 <Alert status="error">
                   <AlertIcon />
                   The local worker agent is not connected 👉 &nbsp;{" "}
-                  <Link isExternal href="https://docs.metapage.io/docs/container-local-mode">
-                    https://docs.metapage.io/docs/container-local-mode
+                  <Link isExternal href="https://metapage.io/settings/queues">
+                    /settings/queues
                   </Link>
                 </Alert>
               ) : (
                 <Alert status="error">
                   <AlertIcon />
                   No queue set 👉 &nbsp;{" "}
-                  <Link isExternal href="https://docs.metapage.io/docs/container-remote-mode">
-                    https://docs.metapage.io/docs/container-remote-mode
+                  <Link isExternal href="https://metapage.io/settings/queues">
+                    /settings/queues
                   </Link>
                 </Alert>
               )}
