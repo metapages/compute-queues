@@ -142,12 +142,11 @@ export const useDockerJobDefinition = () => {
           if (isDataRef(value)) {
             definition.inputs![fixedName] = value;
           } else if (typeof value === "object") {
-            if (value?.type) {
-              definition.inputs![fixedName] = {
-                value,
-                type: DataRefType.json,
-              };
-            }
+            // assume object is a json object
+            definition.inputs![fixedName] = {
+              value,
+              type: DataRefType.json,
+            };
           } else if (typeof value === "string") {
             definition.inputs![fixedName] = {
               value,
