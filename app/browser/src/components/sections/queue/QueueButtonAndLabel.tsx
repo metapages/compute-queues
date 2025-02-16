@@ -110,7 +110,7 @@ export const QueueButtonAndLabel: React.FC = () => {
       {!resolvedQueue ? (
         <Alert status="error">
           <AlertIcon />
-          <Link isExternal href="https://docs.metapage.io/docs/container-remote-mode">
+          <Link isExternal href="https://metapage.io/settings/queues">
             ◀️ You must connect to a queue
           </Link>
         </Alert>
