@@ -284,7 +284,7 @@ export const TabConfigureImage: React.FC<{
               </Radio>
               {tab === "useExisting" && existingImageInputs()}
               <Radio value="fromRepo" colorScheme={"blackAlpha"}>
-                <Text>Build Image from Repo</Text>
+                <Text>Build Image</Text>
               </Radio>
               {tab === "fromRepo" && externalImageInputs()}
             </VStack>
