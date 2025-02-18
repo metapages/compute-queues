@@ -21,6 +21,7 @@ import {
 
 import mod from "../../mod.json" with { type: "json" };
 import { processes, waitForDocker } from "/@/processes.ts";
+import { getKv } from "../../../shared/src/shared/kv.ts";
 
 const VERSION: string = mod.version;
 
@@ -93,7 +94,7 @@ export const runCommand = new Command()
       config.server = `http://localhost:${config.port}`;
     }
 
-    const kv = await Deno.openKv(Deno.env.get("DENO_KV_URL"));
+    const kv = await getKv(); //Deno.openKv(Deno.env.get("DENO_KV_URL"));
     const existingId: string | null = (await kv.get<string>(["workerId"]))
       ?.value;
     if (existingId) {
