@@ -517,7 +517,7 @@ const getDownloadLinkFromContext = (context: string): string => {
     // Create a personal access token at https://github.com/settings/tokens/new?scopes=repo
     // const octokit = new Octokit({ auth: `personal-access-token123` });
     const matches = new RegExp(
-      /https:\/\/github.com\/([-\w]{6,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([-\/\w\.\}\{\$]{1,100}))?/,
+      /https:\/\/github.com\/([-\w]{1,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([-\/\w\.\}\{\$]{1,100}))?/,
     ).exec(context);
     if (!matches) {
       throw new Error(`Invalid GitHub URL: ${context}`);
