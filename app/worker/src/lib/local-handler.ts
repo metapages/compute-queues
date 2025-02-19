@@ -66,6 +66,37 @@ const downloadHandler = async (c: Context) => {
   }
 };
 
+const existsHandler = async (c: Context) => {
+  const key: string | undefined = c.req.param("key");
+
+  if (!key) {
+    c.status(400);
+    return c.text("Missing key");
+  }
+
+  const config = getConfig();
+  const filePath = join(config.dataDirectory, "cache", key);
+
+  try {
+    // Check if the file exists
+    const fileInfo = await Deno.stat(filePath);
+    if (fileInfo.isFile) {
+      c.status(200);
+      return c.json({ exists: true });
+    } else {
+      c.status(404);
+      return c.json({ exists: false });
+    }
+  } catch (err) {
+    if (err instanceof Deno.errors.NotFound) {
+      c.status(404);
+      return c.json({ exists: false });
+    }
+    console.error("Error checking file exists:", err);
+    return c.text((err as Error).message, 500);
+  }
+};
+
 const uploadHandler = async (c: Context) => {
   const key: string | undefined = c.req.param("key");
 
@@ -99,6 +130,12 @@ const uploadHandler = async (c: Context) => {
 
     // Stream the request body directly to the file
     await stream.pipeTo(file.writable);
+    try {
+      // https://github.com/denoland/deno/issues/14210
+      file.close();
+    } catch (_) {
+      // pass
+    }
 
     return c.text(`file saved to ${fullFilePath}`);
   } catch (err) {
@@ -129,6 +166,7 @@ app.use("*", async (c, next) => {
 });
 
 app.get("/api/v1/download/:key", downloadHandler);
+app.get("/api/v1/exists/:key", existsHandler);
 app.put("/api/v1/upload/:key", uploadHandler);
 
 app.get("/health", (c: Context) => c.text("OK"));

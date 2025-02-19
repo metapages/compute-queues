@@ -11,6 +11,7 @@ import { downloadHandler as downloadHandlerDeprecated } from "/@/routes/deprecat
 import { copyJobToQueueHandler } from "/@/routes/api/v1/copy.ts";
 import { submitJobToQueueHandler } from "/@/routes/api/v1/submit.ts";
 import { getJobIdsHandler } from "/@/routes/api/v1/jobIds.ts";
+import { existsHandler } from "/@/routes/api/v1/exists.ts";
 
 const app = new Hono();
 
@@ -35,6 +36,7 @@ app.use("/*", cors() // cors({
 app.get("/healthz", (c: Context) => c.text("OK"));
 
 app.get("/api/v1/download/:key", downloadHandler);
+app.get("/api/v1/exists/:key", existsHandler);
 app.put("/api/v1/upload/:key", uploadHandler);
 app.post("/api/v1/copy", copyJobToQueueHandler);
 app.post("/:queue/job", submitJobToQueueHandler);

@@ -262,6 +262,8 @@ export function connectToServer(
   };
   const dockerJobQueue = new DockerJobQueue(dockerJobQueueArgs);
 
+  wsPool.add(rws);
+
   rws.addEventListener("error", (error: Error) => {
     console.log(`Websocket error=${error.message}`);
   });
@@ -273,11 +275,18 @@ export function connectToServer(
     dockerJobQueue.register();
   });
 
+  let closed = false;
   rws.addEventListener("close", () => {
+    closed = true;
+    wsPool.remove(rws);
     console.log(`💥🚀💥 disconnected! ${url}`);
   });
   const intervalSinceNoTrafficToTriggerReconnect = ms("15s") as number;
-  setInterval(() => {
+  const twoSeconds = ms("2s") as number;
+  const reconnectCheck = () => {
+    if (closed) {
+      return;
+    }
     if (
       (Date.now() - timeLastPong) >= intervalSinceNoTrafficToTriggerReconnect &&
       rws.readyState === rws.OPEN
@@ -289,7 +298,9 @@ export function connectToServer(
       );
       rws.reconnect();
     }
-  }, ms("2s") as number);
+    setTimeout(reconnectCheck, twoSeconds);
+  };
+  setTimeout(reconnectCheck, twoSeconds);
 
   rws.addEventListener("message", (message: MessageEvent) => {
     try {
@@ -394,3 +405,49 @@ export function connectToServer(
     }
   });
 }
+
+export class WebSocketPool {
+  private static MAX_CONNECTIONS = 1000;
+  private connections = new Set<WebSocket>();
+
+  add(ws: WebSocket) {
+    if (this.connections.size >= WebSocketPool.MAX_CONNECTIONS) {
+      throw new Error("Maximum WebSocket connections reached");
+    }
+    this.connections.add(ws);
+
+    ws.addEventListener("close", () => {
+      this.connections.delete(ws);
+    });
+  }
+
+  remove(ws: WebSocket) {
+    this.connections.delete(ws);
+  }
+
+  closeAll() {
+    for (const ws of this.connections) {
+      try {
+        ws.close();
+      } catch (err) {
+        console.error("Error closing WebSocket:", err);
+      }
+    }
+    this.connections.clear();
+  }
+
+  get size() {
+    return this.connections.size;
+  }
+}
+
+const wsPool = new WebSocketPool();
+
+// Add to app/worker/src/commands/run.ts
+const cleanup = () => {
+  wsPool.closeAll();
+  // Close any other open resources
+};
+
+globalThis.addEventListener("unload", cleanup);
+globalThis.addEventListener("beforeunload", cleanup);
