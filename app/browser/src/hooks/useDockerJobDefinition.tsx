@@ -195,6 +195,7 @@ export const useDockerJobDefinition = () => {
       // at this point, these inputs *could* be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
       const ioBaseUrl = getIOBaseUrl(resolvedQueue);
+
       definition.inputs = await copyLargeBlobsToCloud(definition.inputs, ioBaseUrl);
       if (cancelled) {
         return;

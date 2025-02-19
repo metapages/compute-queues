@@ -53,13 +53,18 @@ export const serverWebsocket = (): void => {
       origin = urlBlob.origin + "/";
     }
 
-    const url = `${
+    let url = `${
       queue === "local" && !origin ? websocketConnectionUrlLocalmode : origin ? origin : websocketConnectionUrl
     }/${queue}/client`;
+    if (url.startsWith("http")) {
+      const urlBlob = new URL(url);
+      urlBlob.pathname = urlBlob.pathname.replace("//", "/");
+      url = urlBlob.href;
+    }
 
     setIsServerConnected(false);
     rwsRef.current = new ReconnectingWebSocket(url);
-    const rws = rwsRef.current;
+    let rws = rwsRef.current;
 
     const onMessage = (message: MessageEvent) => {
       try {
@@ -169,10 +174,13 @@ export const serverWebsocket = (): void => {
       rws?.removeEventListener("open", onOpen);
       rws?.removeEventListener("close", onClose);
       rws?.close();
+      rws = null;
       setIsServerConnected(false);
       setSendMessage(cacheInsteadOfSendMessages);
       clearTimeout(pingTimeoutRef.current);
       clearTimeout(pongTimeoutRef.current);
+      setJobStates({});
+      setWorkers({ workers: [] });
     };
   }, [
     resolvedQueueOrUrl,

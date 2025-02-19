@@ -89,15 +89,16 @@ export const addJobProcessSubmissionWebhook = async (opts: {
   control: DockerJobControlConfig;
 }): Promise<void> => {
   const { jobId, namespace, queue, control } = opts;
-  console.log(`🔥 addJobProcessSubmissionWebhook [${jobId.substring(0, 6)}]`);
 
   if (!control?.callbacks?.queued) {
     console.log(
-      `🔥💦  addJobProcessSubmissionWebhook [${
-        jobId.substring(0, 6)
-      }] no config`,
+      `👀  addJobProcessSubmissionWebhook [${jobId.substring(0, 6)}] no config`,
     );
     return;
+  } else {
+    console.log(
+      `[${jobId.substring(0, 6)}] 🚀 addJobProcessSubmissionWebhook `,
+    );
   }
 
   // console.log(

@@ -209,6 +209,10 @@ status-test port:
 status-prod queue="public1":
     curl https://container.mtfm.io/{{ queue }}/status | jq .
 
+# Calls the status endpoint of the production API at a given queue
+status-local:
+    curl http://localhost:8000/local/status | jq .
+
 # Clean up the test stack, if it didn't exit cleanly
 @test-cleanup:
     docker compose --project-name=test -f ../docker-compose.yml -f ../docker-compose-remote.yml down || true

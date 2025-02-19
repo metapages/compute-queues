@@ -300,7 +300,8 @@ export enum WebsocketMessageTypeClientToServer {
 export interface PayloadClearJobCache {
   jobId: string;
   // why do we need the definition here?
-  definition: DockerJobDefinitionInputRefs;
+  // because the definition defines the cached docker image
+  definition?: DockerJobDefinitionInputRefs;
 }
 
 export interface PayloadResubmitJob {

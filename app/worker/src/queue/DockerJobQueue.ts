@@ -167,14 +167,6 @@ export class DockerJobQueue {
     }
   }
 
-  // take jobs off the queue
-  // kill jobs the server says to kill
-  // onState(state: BroadcastState) {
-  //     // console.log(`workerState ${JSON.stringify(state, null, '  ')}`)
-  //     this._checkRunningJobs(state);
-  //     this._claimJobs(state);
-  // }
-
   async onUpdateUpdateASubsetOfJobs(
     message: computeQueuesShared.BroadcastJobStates,
   ) {
@@ -306,57 +298,78 @@ export class DockerJobQueue {
     // }
   }
 
-  async _claimJobs(message: computeQueuesShared.BroadcastJobStates) {
-    const jobStates = message.state.jobs;
-    // check if the server says I have a job running (that I told it)
-    // but I don't have it running now (I restarted?) and didn't reconnect
-    // to the running container
-
-    const jobsServerSaysAreRunningOnMe = Object.keys(jobStates).filter((key) =>
-      jobStates[key].state === computeQueuesShared.DockerJobState.Running &&
-      (jobStates[key].value as computeQueuesShared.StateChangeValueRunning)
-          .worker === this.workerId
-    );
-    for (const runningJobId of jobsServerSaysAreRunningOnMe) {
-      if (!this.queue[runningJobId]) {
-        await this._startJob(jobStates[runningJobId]);
-      }
+  private _isClaimingJobs: boolean = false;
+  private _needsAnotherClaimJobs: boolean = false;
+  _claimJobs(message: computeQueuesShared.BroadcastJobStates) {
+    // If already running, set flag for another run and return
+    if (this._isClaimingJobs) {
+      this._needsAnotherClaimJobs = true;
+      return;
     }
 
-    // only care about queued jobs
-    const queuedJobKeys: string[] = Object.keys(jobStates)
-      .filter((key) =>
-        jobStates[key].state === computeQueuesShared.DockerJobState.Queued ||
-        jobStates[key].state === computeQueuesShared.DockerJobState.ReQueued
-      );
-    // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
-    // Go through the queued jobs and start them if we have capacity
-    // let index = 0;
-    while (queuedJobKeys.length > 0) {
-      const jobKey = queuedJobKeys.pop()!;
-      const job = jobStates[jobKey];
-      const definition =
-        (job.history[0].value as computeQueuesShared.StateChangeValueQueued)
-          .definition;
-      // Can I start this job?
-      // This logic *could* be above in the while loop, but it's going to get
-      // more complicated when we add more features, so make the check steps explicit
-      // even if it's a bit more verbose
-      const cpusOK = Object.keys(this.queue).length < this.cpus;
+    // Set running flag
+    this._isClaimingJobs = true;
+    try {
+      do {
+        this._needsAnotherClaimJobs = false;
+        const jobStates = message.state.jobs;
 
-      if (cpusOK) {
-        // cpu capacity is 👍
-        // GPUs?
-        if (definition.gpu) {
-          if (!this.isGPUCapacity()) {
-            // no gpu capacity but the job needs it
-            // skip this job
-            continue;
+        // Original _claimJobs logic here
+        const jobsServerSaysAreRunningOnMe = Object.keys(jobStates).filter((
+          key,
+        ) =>
+          jobStates[key].state === computeQueuesShared.DockerJobState.Running &&
+          (jobStates[key].value as computeQueuesShared.StateChangeValueRunning)
+              .worker === this.workerId
+        );
+        for (const runningJobId of jobsServerSaysAreRunningOnMe) {
+          if (!this.queue[runningJobId]) {
+            this._startJob(jobStates[runningJobId]);
           }
         }
-        // console.log(`[${job.hash}] about to claim ${JSON.stringify(job)}`)
-        await this._startJob(job);
-      }
+
+        // only care about queued jobs
+        const queuedJobKeys: string[] = Object.keys(jobStates)
+          .filter((key) =>
+            jobStates[key].state ===
+              computeQueuesShared.DockerJobState.Queued ||
+            jobStates[key].state === computeQueuesShared.DockerJobState.ReQueued
+          );
+        // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
+        // Go through the queued jobs and start them if we have capacity
+        // let index = 0;
+        while (queuedJobKeys.length > 0) {
+          const jobKey = queuedJobKeys.pop()!;
+          if (this.queue[jobKey]) {
+            continue;
+          }
+          const job = jobStates[jobKey];
+          const definition =
+            (job.history[0].value as computeQueuesShared.StateChangeValueQueued)
+              .definition;
+          // Can I start this job?
+          // This logic *could* be above in the while loop, but it's going to get
+          // more complicated when we add more features, so make the check steps explicit
+          // even if it's a bit more verbose
+          const cpusOK = Object.keys(this.queue).length < this.cpus;
+
+          if (cpusOK) {
+            // cpu capacity is 👍
+            // GPUs?
+            if (definition.gpu) {
+              if (!this.isGPUCapacity()) {
+                // no gpu capacity but the job needs it
+                // skip this job
+                continue;
+              }
+            }
+            this._startJob(job);
+          }
+        }
+      } while (this._needsAnotherClaimJobs);
+    } finally {
+      // Clear running flag when done
+      this._isClaimingJobs = false;
     }
   }
 
@@ -419,12 +432,15 @@ export class DockerJobQueue {
 
     (async () => {
       let volumes: Volume[];
+      let outputsDir: string;
       try {
-        volumes = await convertIOToVolumeMounts(
+        const volumesResult = await convertIOToVolumeMounts(
           { id: jobBlob.hash, definition },
           config.server,
           this.workerId,
         );
+        volumes = volumesResult.volumes;
+        outputsDir = volumesResult.outputsDir;
       } catch (err) {
         console.error(`💥 [${this.workerIdShort}]`, err);
         // TODO too much code duplication here
@@ -472,10 +488,9 @@ export class DockerJobQueue {
         env: definition.env,
         shmSize: definition.shmSize,
         volumes,
+        outputsDir,
         deviceRequests,
         durationMax: definition.durationMax,
-        // outStream?: Writable;
-        // errStream?: Writable;
       };
 
       const dockerExecution: DockerJobExecution = dockerJobExecute(
