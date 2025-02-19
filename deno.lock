@@ -40,7 +40,6 @@
     "npm:fast-deep-equal@*": "3.1.3",
     "npm:fetch-retry@5.0.6": "5.0.6",
     "npm:klaw@4.1.0": "4.1.0",
-    "npm:lru-cache@11.0.1": "11.0.1",
     "npm:mutative@1.0.11": "1.0.11",
     "npm:nanoevents@9.0.0": "9.0.0",
     "npm:object-hash@3.0.0": "3.0.0",
@@ -5631,9 +5630,6 @@
     "long@5.2.4": {
       "integrity": "sha512-qtzLbJE8hq7VabR3mISmVGtoXP8KGc2Z/AT8OuqlYD7JTR3oqrgwdjnk07wpj1twXxYmgDXgoKVWUG/fReSzHg=="
     },
-    "lru-cache@11.0.1": {
-      "integrity": "sha512-CgeuL5uom6j/ZVrg7G/+1IXqRY8JXX4Hghfy5YE0EhoYQWvndP1kufu58cmZLNIDKnRhZrXfdS9urVWx98AipQ=="
-    },
     "mkdirp-classic@0.5.3": {
       "integrity": "sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A=="
     },
@@ -6417,7 +6413,6 @@
       "npm:fast-deep-equal@*",
       "npm:fetch-retry@5.0.6",
       "npm:klaw@4.1.0",
-      "npm:lru-cache@11.0.1",
       "npm:mutative@1.0.11",
       "npm:nanoevents@9.0.0",
       "npm:object-hash@3.0.0",

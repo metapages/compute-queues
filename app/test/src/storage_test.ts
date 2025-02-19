@@ -14,6 +14,7 @@ import {
 import {
   createNewContainerJobMessage,
   fileToDataref,
+  hashFileOnDisk,
 } from "../../shared/src/shared/jobtools.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
@@ -153,6 +154,33 @@ Deno.test("Test upload and download", async () => {
   const downloadResponse = await fetch(downloadUrl);
   const downloadResponseBody = await downloadResponse.text();
   assertEquals(downloadResponseBody, content);
+});
+
+Deno.test("Test exists API", async () => {
+  const word = `hello${Math.floor(Math.random() * 10000)}`;
+  const content = `${Array(50).fill(word).join("")}`;
+  const rootName = `hello${Math.floor(Math.random() * 10000)}.txt`;
+  const fileName = `/tmp/${rootName}`;
+
+  await Deno.writeTextFile(fileName, content);
+  const hash = await hashFileOnDisk(fileName);
+
+  // check that the file DOES NOT exist
+  const existsResponse1 = await fetch(
+    `${API_URL}/api/v1/exists/${hash}`,
+  );
+  assertEquals(existsResponse1.status, 404);
+  const existsResponseBody1 = await existsResponse1.json();
+  assertEquals(existsResponseBody1.exists, false);
+
+  // upload the file
+  const dataref = await fileToDataref(fileName, API_URL);
+
+  // check that the file DOES exist
+  const existsResponse2 = await fetch(dataref.value);
+  const contentDownloaded = await existsResponse2.text();
+  assertEquals(existsResponse2.status, 200);
+  assertEquals(contentDownloaded, content);
 });
 
 Deno.test(

@@ -153,6 +153,7 @@ _up mode="remote" +args="": (_validate_mode mode) _ensure-all _mkcert
     docker rm dev-worker-1 2>/dev/null || true
     docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml up --remove-orphans {{ args }}
 
+# Watch the local dev stack, running the tests when files change
 @watch mode="remote" +args="": _build_shared
     docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml -f ../docker-compose-test-{{ mode }}.yml up --remove-orphans {{ args }}
 

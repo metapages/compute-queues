@@ -39,6 +39,10 @@ cyan := "\\e[36m"
 @test mode="remote":
     just app test {{ mode }}
 
+# Watch the local dev stack, running the tests when files change
+@watch mode="remote" +args="":
+    just app watch {{ mode }} {{ args }}
+
 # Bump the version, commit, CI will deploy and publish artifacts
 @deploy version="":
     just app/deploy {{ version }}
