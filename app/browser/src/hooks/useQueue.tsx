@@ -7,7 +7,7 @@ export const useQueue = () => {
   // set/injected by the parent page
   const [queueOverride] = useHashParam("queueOverride", "");
   const [ignoreQueueOverride, setIgnoreQueueOverride] = useHashParamBoolean("ignoreQueueOverride");
-  const resolvedQueue = (!ignoreQueueOverride && queueOverride) || queue;
+  const resolvedQueue = (!ignoreQueueOverride && queueOverride) ? queueOverride : queue;
   const isLocalMode = resolvedQueue === "local";
 
   const toggleLocalMode = useCallback(() => {
