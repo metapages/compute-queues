@@ -159,10 +159,10 @@ export const fileToDataref = async (
             `Failed attempt ${count} to upload ${file} to ${uploadUrl} code=${code} stdout=${
               new TextDecoder().decode(
                 stdout,
-              )
-            } stderr=${new TextDecoder().decode(stderr)} command='curl ${
-              args.join(" ")
-            }'`,
+              ).substring(0, 1000)
+            } stderr=${
+              new TextDecoder().decode(stderr).substring(0, 1000)
+            } command='curl ${args.join(" ")}'`,
           );
         }
       },

@@ -12,5 +12,8 @@ export const getIOBaseUrl = (queue: string): string => {
   if (queue === "local") {
     return LocalModeBaseUrl;
   }
+  if (queue.startsWith("http")) {
+    return new URL(queue).origin;
+  }
   return serverOrigin;
 };

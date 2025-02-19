@@ -6,7 +6,7 @@ import { DockerJobQueue, type DockerJobQueueArgs } from "/@/queue/index.ts";
 import { Command } from "@cliffy/command";
 import { ms } from "ms";
 import ReconnectingWebSocket from "reconnecting-websocket";
-import { ensureDir } from "std/fs";
+import { ensureDir, existsSync } from "std/fs";
 import { join } from "std/path";
 
 import {
@@ -360,6 +360,27 @@ export function connectToServer(
           );
           if (clearJobCacheConfirm?.definition?.build) {
             clearCache({ build: clearJobCacheConfirm.definition.build });
+          }
+
+          if (clearJobCacheConfirm?.jobId) {
+            const jobCacheDir = join(
+              config.dataDirectory,
+              clearJobCacheConfirm.jobId,
+            );
+            if (existsSync(jobCacheDir)) {
+              try {
+                console.log(
+                  `[${
+                    clearJobCacheConfirm.jobId?.substring(0, 6)
+                  }] 🔥 deleting job cache dir ${jobCacheDir}`,
+                );
+                Deno.removeSync(jobCacheDir, { recursive: true });
+              } catch (err) {
+                console.log(
+                  `Error deleting job cache dir ${jobCacheDir}: ${err}`,
+                );
+              }
+            }
           }
           break;
         }

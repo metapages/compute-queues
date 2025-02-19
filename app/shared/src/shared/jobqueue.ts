@@ -483,7 +483,7 @@ export class BaseDockerJobQueue {
             0,
             6,
           )
-        }]🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${job.state} [${
+        }] 🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${job.state} [${
           jobId.substring(0, 6)
         }]`,
       );
@@ -495,19 +495,16 @@ export class BaseDockerJobQueue {
     const jobDefinition = (
       job.history[0].value as StateChangeValueQueued
     ).definition;
-    if (jobDefinition) {
-      this.broadcastToLocalWorkers(
-        JSON.stringify({
-          type: WebsocketMessageTypeServerBroadcast.ClearJobCache,
-          payload: {
-            jobId,
-            definition: jobDefinition,
-          } as PayloadClearJobCache,
-        } as WebsocketMessageServerBroadcast),
-      );
-    } else {
-      jobDefinition;
-    }
+
+    this.broadcastToLocalWorkers(
+      JSON.stringify({
+        type: WebsocketMessageTypeServerBroadcast.ClearJobCache,
+        payload: {
+          jobId,
+          definition: jobDefinition,
+        } as PayloadClearJobCache,
+      } as WebsocketMessageServerBroadcast),
+    );
 
     await this.deleteJobFromDb(jobId).catch((err) => {
       console.log(`💥💥💥 ERROR deleting job: ${err}`, jobId);
@@ -528,6 +525,7 @@ export class BaseDockerJobQueue {
    */
   deleteCachedJob(jobId: string) {
     delete this.state.jobs[jobId];
+
     console.log(
       `[${this.address.substring(0, 6)}] deletedCachedJob [${
         jobId.substring(
