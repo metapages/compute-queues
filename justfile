@@ -35,9 +35,13 @@ cyan := "\\e[36m"
 @dev mode="remote" +args="": (_validate_mode mode)
     just app/dev {{ mode }} {{ args }}
 
-# Runs All Functional Tests and checks code
+# Runs All Functional Tests and checks code (for the mode specified)
 @test mode="remote":
     just app test {{ mode }}
+
+# Runs All Functional Tests and checks code
+test-all:
+    just app test-all
 
 # Watch the local dev stack, running the tests when files change
 @watch mode="remote" +args="":

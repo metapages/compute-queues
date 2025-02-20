@@ -10,6 +10,7 @@ ENV DOCKER_VERSION=5:27.1.1-1~debian.12~bookworm
 
 RUN apt-get update && apt-get -y install \
 	curl \
+	unzip \
 	gnupg
 
 # Set up nvidia repository for GPU support in docker

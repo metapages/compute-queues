@@ -138,6 +138,9 @@ test mode="remote" +args="": _build_shared check (_validate_mode mode)
     just shared/test
     just cli/test
 
+# Runs All Functional Tests and checks code
+test-all: (test "remote") (test "local")
+
 # Start the docker compose local stack
 _up mode="remote" +args="": (_validate_mode mode) _ensure-all _mkcert
     #!/usr/bin/env bash
