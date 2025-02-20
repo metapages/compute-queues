@@ -509,8 +509,9 @@ const parseDockerUrl = (s: string): DockerUrlBlob => {
   return url;
 };
 
-const getDownloadLinkFromContext = (context: string): string => {
+const getDownloadLinkFromContext = async (context: string): Promise<string> => {
   // https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
+  console.log("getDownloadLinkFromContext", context);
   if (context.endsWith(".tar.gz") || context.endsWith(".zip")) {
     return context;
   } else if (context.startsWith("https://github.com")) {
@@ -533,7 +534,19 @@ const getDownloadLinkFromContext = (context: string): string => {
       );
     }
 
-    return `https://api.github.com/repos/${owner}/${repo}/tarball/${ref}`;
+    let archiveUrl =
+      `https://github.com/${owner}/${repo}/archive/refs/heads/${ref}.zip`;
+    if (ref === "main") {
+      // check if the repo has a master branch instead of main
+      const response = await fetch(archiveUrl, { redirect: "follow" });
+      if (response.status === 404) {
+        archiveUrl =
+          `https://github.com/${owner}/${repo}/archive/refs/heads/master.zip`;
+      }
+      response.body?.cancel();
+    }
+
+    return archiveUrl;
 
     // const octokit = new Octokit();
     // // https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#download-a-repository-archive-tar
@@ -589,7 +602,7 @@ const downloadContextIntoDirectory = async (args: {
   // TODO: for now, just download the context as is
   // First check if the context has been already downloaded
   // ch
-  const downloadUrl = getDownloadLinkFromContext(context);
+  const downloadUrl = await getDownloadLinkFromContext(context);
   const filePathForDownload = getFilePathForDownload(downloadUrl);
 
   console.log(`downloadContextIntoDirectory downloadUrl=${downloadUrl}`);
@@ -731,6 +744,10 @@ const downloadContextIntoDirectory = async (args: {
           logs: [[`zip uncompressing context: ${context}`, Date.now()]],
         } as JobStatusPayload,
       });
+      // https://github.com/moncefplastin07/deno-zip/issues/16#issue-2777397629
+      // @ts-ignore Deno.close is not part of Deno 2
+      (Deno as { close?: () => void }).close =
+        (Deno as { close?: () => void }).close || function () {};
       await decompress(filePathForDownload, destination);
     } else {
       throw new Error(
