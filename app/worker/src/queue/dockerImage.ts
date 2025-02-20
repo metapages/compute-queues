@@ -746,7 +746,8 @@ const downloadContextIntoDirectory = async (args: {
       });
       // https://github.com/moncefplastin07/deno-zip/issues/16#issue-2777397629
       // @ts-ignore Deno.close is not part of Deno 2
-      (Deno as any).close = (Deno as any).close || function () {};
+      (Deno as { close?: () => void }).close =
+        (Deno as { close?: () => void }).close || function () {};
       await decompress(filePathForDownload, destination);
     } else {
       throw new Error(
