@@ -534,14 +534,16 @@ const getDownloadLinkFromContext = async (context: string): Promise<string> => {
       );
     }
 
-    let archiveUrl =
-      `https://github.com/${owner}/${repo}/archive/refs/heads/${ref}.zip`;
+    let archiveUrl = `https://github.com/${owner}/${
+      repo.replace(".git", "")
+    }/archive/refs/heads/${ref}.zip`;
     if (ref === "main") {
       // check if the repo has a master branch instead of main
       const response = await fetch(archiveUrl, { redirect: "follow" });
       if (response.status === 404) {
-        archiveUrl =
-          `https://github.com/${owner}/${repo}/archive/refs/heads/master.zip`;
+        archiveUrl = `https://github.com/${owner}/${
+          repo.replace(".git", "")
+        }/archive/refs/heads/master.zip`;
       }
       response.body?.cancel();
     }
