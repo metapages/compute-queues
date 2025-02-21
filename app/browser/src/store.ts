@@ -409,6 +409,7 @@ export const useStore = create<MainStore>((set, get) => ({
   setRightPanelContext: (rightPanelContext: string | null) => {
     set(() => ({ rightPanelContext }));
   },
+  // rightPanelContext: "editScript",
   rightPanelContext: null,
 
   mainInputFile: null,

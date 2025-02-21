@@ -8,6 +8,7 @@ import { useFormik } from "formik";
 import * as yup from "yup";
 
 import {
+  Box,
   Button,
   Divider,
   FormControl,
@@ -20,6 +21,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
+import { useOptionShowTerminalFirst } from "/@/hooks/useOptionShowTerminalFirst";
 
 const validationSchema = yup.object({
   command: yup.string().optional(),
@@ -50,6 +52,7 @@ export const TabConfigureJob: React.FC = () => {
   const [jobDefinitionBlob, setJobDefinitionBlob] = useHashParamJson<DockerJobDefinitionParamsInUrlHash>("job");
   const [debug, setDebug] = useHashParamBoolean("debug");
   const [jobStartAutomatically, toggleJobStartAutomatically] = useOptionJobStartAutomatically();
+  const [showTerminalFirst, toggleShowTerminalFirst, loading] = useOptionShowTerminalFirst();
   const [resolveDataRefs, toggleResolveDataRefs] = useOptionResolveDataRefs();
 
   const onSubmit = useCallback(
@@ -147,6 +150,21 @@ export const TabConfigureJob: React.FC = () => {
               </FormLabel>
               <Switch id="debug" name="debug" onChange={handleSwitchChange} isChecked={debug} />
             </FormControl>
+
+            <Box>
+              <Text mb={2} fontWeight="bold" color="black">
+                Show terminal / code by default
+              </Text>
+              <Switch
+                isDisabled={loading}
+                isChecked={showTerminalFirst}
+                onChange={toggleShowTerminalFirst}
+                colorScheme="blue"
+              />
+              <Text fontSize="sm" color="gray.600" mt={1}>
+                {showTerminalFirst ? "Terminal shown by default" : "Code shown by default"}
+              </Text>
+            </Box>
 
             <Divider />
             <Text align="center" fontWeight="bold">

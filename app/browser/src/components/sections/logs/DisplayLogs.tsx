@@ -44,7 +44,7 @@ export const DisplayLogs: React.FC<{
       myref.current._outerRef.scroll({
         top: myref.current._outerRef.scrollHeight,
         left: 0,
-        behavior: "smooth",
+        // behavior: "smooth",
       });
     }
   };
