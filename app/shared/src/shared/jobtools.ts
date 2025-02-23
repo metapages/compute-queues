@@ -80,8 +80,7 @@ export const createNewContainerJobMessage = async (opts: {
 export const bufferToBase64Ref = (
   buffer: Uint8Array,
 ): DataRef => {
-  const decoder = new TextDecoder("utf8");
-  const value = btoa(decoder.decode(buffer));
+  const value = btoa(String.fromCharCode.apply(null, [...buffer]));
   return {
     value,
     type: DataRefType.base64,
