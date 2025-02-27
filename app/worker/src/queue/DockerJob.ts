@@ -17,6 +17,7 @@ import {
 import { docker } from "/@/queue/dockerClient.ts";
 import { DockerBuildError, ensureDockerImage } from "/@/queue/dockerImage.ts";
 import { dirname, join } from "std/path";
+import { DockerNetworkForJobs } from "/@/docker/network.ts";
 
 // Minimal interface for interacting with docker jobs:
 //  inputs:
@@ -128,6 +129,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     },
     User: `${Deno.uid()}:${Deno.gid()}`,
   };
+
+  // Connect container to our network
+  createOptions.HostConfig!.NetworkMode = DockerNetworkForJobs;
 
   createOptions.Env.push("JOB_INPUTS=/inputs");
   createOptions.Env.push("JOB_OUTPUTS=/outputs");

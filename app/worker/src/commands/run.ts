@@ -22,6 +22,7 @@ import {
 import mod from "../../mod.json" with { type: "json" };
 import { processes, waitForDocker } from "/@/processes.ts";
 import { getKv } from "../../../shared/src/shared/kv.ts";
+import { ensureIsolateNetwork } from "/@/docker/network.ts";
 
 const VERSION: string = mod.version;
 
@@ -156,7 +157,9 @@ export const runCommand = new Command()
         console.log(`⚠️ ldconfig error ${`${err}`.split(":")[0]}`);
       }
     }
+
     await ensureSharedVolume();
+    await ensureIsolateNetwork();
 
     if (config.mode === "local") {
       const cacheDir = join(config.dataDirectory, "cache");
