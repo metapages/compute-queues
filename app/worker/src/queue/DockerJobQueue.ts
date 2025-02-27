@@ -10,6 +10,7 @@ import {
 } from "/@/queue/DockerJob.ts";
 import { convertIOToVolumeMounts, getOutputs } from "/@/queue/IO.ts";
 import { convertStringToDockerCommand } from "/@/queue/utils.ts";
+import { ensureIsolateNetwork } from "/@/docker/network.ts";
 
 const Version: string = mod.version;
 
@@ -492,6 +493,10 @@ export class DockerJobQueue {
         deviceRequests,
         durationMax: definition.durationMax,
       };
+
+      // Not awaiting, it should have already been created, but let's
+      // check on every job anyway, but out of band
+      ensureIsolateNetwork(false);
 
       const dockerExecution: DockerJobExecution = dockerJobExecute(
         executionArgs,

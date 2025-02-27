@@ -1,6 +1,6 @@
 import { docker } from "/@/queue/dockerClient.ts";
 
-export const DockerJobSharedVolumeName = "worker-job-cache";
+export const DockerJobSharedVolumeName = "metaframe-container-worker-cache";
 
 export const ensureSharedVolume = async () => {
   const vol = docker.getVolume(DockerJobSharedVolumeName);
