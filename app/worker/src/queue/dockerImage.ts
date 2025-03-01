@@ -51,7 +51,7 @@ export const clearCache = async (args: { build?: DockerJobImageBuild }) => {
   const image = getDockerImageName(buildSha);
   docker.getImage(image).remove({}, (err: unknown, result: unknown) => {
     console.log("docker.image.remove result", result);
-    console.log("docker.image.remove err", err);
+    console.log(`docker.image.remove ${`${err}`.split("\n")[0]}`);
   });
 };
 
@@ -511,7 +511,6 @@ const parseDockerUrl = (s: string): DockerUrlBlob => {
 
 const getDownloadLinkFromContext = async (context: string): Promise<string> => {
   // https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
-  console.log("getDownloadLinkFromContext", context);
   if (context.endsWith(".tar.gz") || context.endsWith(".zip")) {
     return context;
   } else if (context.startsWith("https://github.com")) {
@@ -534,20 +533,34 @@ const getDownloadLinkFromContext = async (context: string): Promise<string> => {
       );
     }
 
-    let archiveUrl = `https://github.com/${owner}/${
-      repo.replace(".git", "")
-    }/archive/refs/heads/${ref}.zip`;
+    const possibleArchiveUrls = [
+      `https://github.com/${owner}/${
+        repo.replace(".git", "")
+      }/archive/refs/heads/${ref}.zip`,
+      `https://github.com/${owner}/${
+        repo.replace(".git", "")
+      }/archive/${ref}.zip`,
+    ];
     if (ref === "main") {
       // check if the repo has a master branch instead of main
-      const response = await fetch(archiveUrl, { redirect: "follow" });
-      if (response.status === 404) {
-        archiveUrl = `https://github.com/${owner}/${
+      possibleArchiveUrls.push(
+        `https://github.com/${owner}/${
           repo.replace(".git", "")
-        }/archive/refs/heads/master.zip`;
-      }
-      response.body?.cancel();
+        }/archive/refs/heads/master.zip`,
+      );
     }
 
+    let archiveUrl = "";
+    for (const possibleArchiveUrl of possibleArchiveUrls) {
+      const response = await fetch(possibleArchiveUrl, {
+        method: "HEAD",
+        redirect: "follow",
+      });
+      if (response.status === 200) {
+        archiveUrl = possibleArchiveUrl;
+        break;
+      }
+    }
     return archiveUrl;
 
     // const octokit = new Octokit();
