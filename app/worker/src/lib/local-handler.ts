@@ -11,7 +11,7 @@ import {
   userJobQueues,
 } from "@metapages/compute-queues-shared";
 
-import { getConfig } from "/@/config.ts";
+import { config, getConfig } from "/@/config.ts";
 import { join } from "std/path";
 
 export class LocalDockerJobQueue extends BaseDockerJobQueue {
@@ -19,11 +19,14 @@ export class LocalDockerJobQueue extends BaseDockerJobQueue {
     serverId: string;
     address: string;
     dataDirectory: string;
+    debug?: boolean;
   }) {
     super(opts);
   }
 }
 
+// TODO: this does not store anything actually. It might
+// be fixed in a pending PR
 const jobList: JobStates = { jobs: {} };
 const app = new Hono();
 
@@ -240,12 +243,17 @@ const handleWebsocket = async (socket: WebSocket, request: Request) => {
     return;
   }
 
+  if (config.debug) {
+    console.log(`➕ websocket connection type=${type} queue=${queue}`);
+  }
+
   // Initialize queue if it doesn't exist
   if (!userJobQueues[queue]) {
     userJobQueues[queue] = new LocalDockerJobQueue({
       serverId: "local",
       address: queue,
       dataDirectory: getConfig().dataDirectory,
+      debug: config.debug,
     });
     await userJobQueues[queue].setup();
   }
@@ -256,7 +264,7 @@ const handleWebsocket = async (socket: WebSocket, request: Request) => {
   } else if (type === "worker") {
     userJobQueues[queue].connectWorker({ socket }, queue);
   } else {
-    console.log("Unknown type, closing socket");
+    console.log(`💥 Unknown type=[${type}], closing websocket`);
     socket.close();
     return;
   }

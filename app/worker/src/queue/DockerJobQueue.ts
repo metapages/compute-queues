@@ -168,12 +168,12 @@ export class DockerJobQueue {
     }
   }
 
-  async onUpdateUpdateASubsetOfJobs(
+  onUpdateUpdateASubsetOfJobs(
     message: computeQueuesShared.BroadcastJobStates,
   ) {
     message.isSubset = true;
     this._checkRunningJobs(message);
-    await this._claimJobs(message);
+    this._claimJobs(message);
   }
 
   onUpdateSetAllJobStates(message: computeQueuesShared.BroadcastJobStates) {
@@ -185,6 +185,14 @@ export class DockerJobQueue {
     const jobStates = message.state.jobs;
     // we get
     const isAllJobs = !message.isSubset;
+
+    if (config.debug) {
+      console.log(
+        `🎳 _checkRunningJobs this.queue=[${
+          Object.keys(this.queue).join(",")
+        }] jobStates=[${Object.keys(jobStates).join(",")}]`,
+      );
+    }
 
     // make sure our local jobs should be running (according to the server state)
     for (const [locallyRunningJobId, _] of Object.entries(this.queue)) {
@@ -199,15 +207,22 @@ export class DockerJobQueue {
             } in server state, killing and removing`,
           );
           this._killJobAndIgnore(locallyRunningJobId);
-          return;
+          continue;
         } else {
           // this job isn't in this update, but this update is not all jobs, so the server
           // hasn't changed our job state. so bail out
-          return;
+          continue;
         }
       }
 
       const serverJobState = jobStates[locallyRunningJobId];
+
+      if (config.debug) {
+        console.log(
+          `🎳 _checkRunningJobs new [${locallyRunningJobId}]`,
+          serverJobState,
+        );
+      }
 
       switch (serverJobState.state) {
         case computeQueuesShared.DockerJobState.Finished:
@@ -303,7 +318,20 @@ export class DockerJobQueue {
   private _needsAnotherClaimJobs: boolean = false;
   _claimJobs(message: computeQueuesShared.BroadcastJobStates) {
     // If already running, set flag for another run and return
+
+    if (config.debug) {
+      console.log(
+        `[${this.workerIdShort}] 🎳 _claimJobs this.queue=[${
+          Object.keys(this.queue).join(",")
+        }] jobStates=[${Object.keys(message.state.jobs).join(",")}]`,
+      );
+    }
     if (this._isClaimingJobs) {
+      if (config.debug) {
+        console.log(
+          `[${this.workerIdShort}] [${message.state.jobs.length}] already running, setting flag for another run`,
+        );
+      }
       this._needsAnotherClaimJobs = true;
       return;
     }
@@ -323,6 +351,14 @@ export class DockerJobQueue {
           (jobStates[key].value as computeQueuesShared.StateChangeValueRunning)
               .worker === this.workerId
         );
+        if (config.debug) {
+          console.log(
+            `[${this.workerIdShort}] 🎳 _claimJobs jobsServerSaysAreRunningOnMe=[${
+              Object.keys(jobsServerSaysAreRunningOnMe).join(",")
+            }]`,
+          );
+        }
+
         for (const runningJobId of jobsServerSaysAreRunningOnMe) {
           if (!this.queue[runningJobId]) {
             this._startJob(jobStates[runningJobId]);
@@ -336,6 +372,14 @@ export class DockerJobQueue {
               computeQueuesShared.DockerJobState.Queued ||
             jobStates[key].state === computeQueuesShared.DockerJobState.ReQueued
           );
+        console.log("queuedJobKeys", queuedJobKeys);
+        if (config.debug) {
+          console.log(
+            `[${this.workerIdShort}] 🎳 _claimJobs queuedJobKeys=[${
+              queuedJobKeys.join(",")
+            }]`,
+          );
+        }
         // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
         // Go through the queued jobs and start them if we have capacity
         // let index = 0;
@@ -361,6 +405,13 @@ export class DockerJobQueue {
               if (!this.isGPUCapacity()) {
                 // no gpu capacity but the job needs it
                 // skip this job
+                if (config.debug) {
+                  console.log(
+                    `[${this.workerIdShort}]  🎳 _claimJobs job=[${
+                      jobKey.substring(0, 6)
+                    }] no gpu capacity but definition.gpu=[${definition.gpu}]`,
+                  );
+                }
                 continue;
               }
             }

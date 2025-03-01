@@ -48,6 +48,7 @@ export const runCommand = new Command()
     { default: "/tmp/worker-metapage-io" },
   )
   .option("--id [id:string]", "Custom worker ID")
+  .option("--debug [debug:boolean]", "Debug mode", { default: undefined })
   .action(async (options, queue?: string) => {
     const METAPAGE_IO_CPUS = Deno.env.get(`${EnvPrefix}CPUS`);
     config.cpus = typeof options.cpus === "number"
@@ -83,6 +84,11 @@ export const runCommand = new Command()
       config.mode,
     );
 
+    const METAPAGE_IO_DEBUG = Deno.env.get(`${EnvPrefix}DEBUG`);
+    config.debug = !!(typeof (options.debug) === "boolean"
+      ? options.debug
+      : METAPAGE_IO_DEBUG === "true");
+
     if (config.mode === "local") {
       Deno.env.set("DENO_KV_URL", join(config.dataDirectory, "kv"));
     }
@@ -111,7 +117,7 @@ export const runCommand = new Command()
     }
 
     console.log(
-      `Worker config: [id=%s...] [queue=%s] [mode=%s] [cpus=%s] [gpus=%s] [dataDirectory=%s] [api=%s] ${
+      `Worker config: [id=%s...] [queue=%s] [mode=%s] [cpus=%s] [gpus=%s] [dataDirectory=%s] [api=%s] [debug=%s] ${
         config.mode === "local" ? "[port=%s]" : ""
       }`,
       config.id.substring(0, 6),
@@ -121,6 +127,7 @@ export const runCommand = new Command()
       config.gpus,
       config.dataDirectory,
       config.server,
+      config.debug,
       config.mode === "local" ? config.port : "",
     );
 
@@ -322,10 +329,14 @@ export function connectToServer(
       }
 
       if (!messageString.startsWith("{")) {
-        console.log("message not JSON");
+        if (config.debug) {
+          console.log("➡️ 📧 to worker message not JSON", messageString);
+        }
         return;
       }
-      // console.log('message', messageString);
+      if (config.debug) {
+        console.log("➡️ 📧 to worker message", messageString);
+      }
       const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(
         messageString,
       );
