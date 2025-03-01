@@ -16,13 +16,36 @@ import {
   shaDockerJob,
 } from "/@shared/client";
 
-import { useHashParam, useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
+import { getHashParamsFromWindow } from "@metapages/hash-query";
+import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { DataRefSerialized, Metaframe } from "@metapages/metapage";
 import { useMetaframeAndInput } from "@metapages/metapage-react";
 
 import { getIOBaseUrl } from "../config";
 import { useStore } from "../store";
 import { useQueue } from "./useQueue";
+
+const HashParamKeysSystem = new Set([
+  "autostart",
+  "control",
+  "config",
+  "debug",
+  "definition",
+  "inputs",
+  "queueOverride",
+  "ignoreQueueOverride",
+  "job",
+  "queue",
+]);
+
+const getNonSystemHashParams = (): Record<string, string> => {
+  const [_, hashParams] = getHashParamsFromWindow();
+  // never inject system params.
+  HashParamKeysSystem.forEach(key => {
+    delete hashParams[key];
+  });
+  return hashParams;
+};
 
 /**
  * Gets the configuration from 1) the URL hash parameters and 2) the metaframe inputs,
@@ -58,10 +81,6 @@ export const useDockerJobDefinition = () => {
     }
   }, [metaframeBlob?.metaframe]);
 
-  // these can be injected by the parent page
-  const [gitsha] = useHashParam("git-sha");
-  const [gitref] = useHashParam("git-ref");
-
   // When all the things are updated, set the new job definition
   const setNewJobDefinition = useStore(state => state.setNewJobDefinition);
 
@@ -73,14 +92,23 @@ export const useDockerJobDefinition = () => {
       ...definitionParamsInUrl,
     };
 
-    // maybe inject the gitsha and gitref into the definition
-    const ref = gitref || gitsha;
-    if (
-      ref &&
-      definition.build?.context &&
-      (definition.build?.context.includes("${git-sha}") || definition.build?.context.includes("${git-ref}"))
-    ) {
-      definition.build.context = definition.build.context.replace("${git-sha}", ref).replace("${git-ref}", ref);
+    const hashParams = getNonSystemHashParams();
+
+    definition.env = {
+      ...definition.env,
+      ...hashParams,
+    };
+
+    // inject any hash params into the definition
+    if (definition.command) {
+      Object.keys(hashParams).forEach(key => {
+        definition.command = definition.command.replace("${" + key + "}", hashParams[key]);
+      });
+    }
+    if (definition.build?.context) {
+      Object.keys(hashParams).forEach(key => {
+        definition.build.context = definition.build.context.replace("${" + key + "}", hashParams[key]);
+      });
     }
 
     // These are inputs set in the metaframe and stored in the url hash params. They
@@ -142,12 +170,11 @@ export const useDockerJobDefinition = () => {
           if (isDataRef(value)) {
             definition.inputs![fixedName] = value;
           } else if (typeof value === "object") {
-            if (value?.type) {
-              definition.inputs![fixedName] = {
-                value,
-                type: DataRefType.json,
-              };
-            }
+            // assume object is a json object
+            definition.inputs![fixedName] = {
+              value,
+              type: DataRefType.json,
+            };
           } else if (typeof value === "string") {
             definition.inputs![fixedName] = {
               value,
@@ -168,6 +195,7 @@ export const useDockerJobDefinition = () => {
       // at this point, these inputs *could* be very large blobs.
       // any big things are uploaded to cloud storage, then the input is replaced with a reference to the cloud lump
       const ioBaseUrl = getIOBaseUrl(resolvedQueue);
+
       definition.inputs = await copyLargeBlobsToCloud(definition.inputs, ioBaseUrl);
       if (cancelled) {
         return;
@@ -198,14 +226,5 @@ export const useDockerJobDefinition = () => {
     return () => {
       cancelled = true;
     };
-  }, [
-    resolvedQueue,
-    gitsha,
-    gitref,
-    metaframeBlob.inputs,
-    definitionParamsInUrl,
-    jobInputsFromUrl,
-    namespaceConfig,
-    debug,
-  ]);
+  }, [resolvedQueue, metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, namespaceConfig, debug]);
 };

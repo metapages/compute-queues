@@ -1,6 +1,5 @@
 import type { Buffer } from "std/node/buffer";
-import type { Writable } from "std/node/stream";
-import { existsSync } from "std/fs";
+import { ensureDirSync, existsSync } from "std/fs";
 import type Docker from "dockerode";
 import bytes from "bytes";
 
@@ -17,6 +16,8 @@ import {
 } from "@metapages/compute-queues-shared";
 import { docker } from "/@/queue/dockerClient.ts";
 import { DockerBuildError, ensureDockerImage } from "/@/queue/dockerImage.ts";
+import { dirname, join } from "std/path";
+import { DockerNetworkForJobs } from "/@/docker/network.ts";
 
 // Minimal interface for interacting with docker jobs:
 //  inputs:
@@ -66,8 +67,7 @@ export interface DockerJobArgs {
   workdir?: string;
   shmSize?: string;
   volumes?: Array<Volume>;
-  outStream?: Writable;
-  errStream?: Writable;
+  outputsDir?: string;
   deviceRequests?: DockerApiDeviceRequest[];
   durationMax?: number;
 }
@@ -87,10 +87,7 @@ if (!existsSync("/var/run/docker.sock")) {
 
 export const JobCacheDirectory = "/job-cache";
 
-export const dockerJobExecute = (
-  args: DockerJobArgs,
-): DockerJobExecution => {
-  // console.log('dockerJobExecute args', args);
+export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   const {
     sender,
     id,
@@ -101,8 +98,7 @@ export const dockerJobExecute = (
     shmSize,
     entrypoint,
     volumes,
-    outStream,
-    errStream,
+    outputsDir,
     deviceRequests,
   } = args;
 
@@ -134,6 +130,9 @@ export const dockerJobExecute = (
     User: `${Deno.uid()}:${Deno.gid()}`,
   };
 
+  // Connect container to our network
+  createOptions.HostConfig!.NetworkMode = DockerNetworkForJobs;
+
   createOptions.Env.push("JOB_INPUTS=/inputs");
   createOptions.Env.push("JOB_OUTPUTS=/outputs");
   createOptions.Env.push(`JOB_CACHE=${JobCacheDirectory}`);
@@ -164,37 +163,46 @@ export const dockerJobExecute = (
     `${DockerJobSharedVolumeName}:${JobCacheDirectory}:Z`,
   );
 
+  let logFileStdout: Deno.FsFile | null = null;
+  let logFileStderr: Deno.FsFile | null = null;
+  const stdoutLogFileName = outputsDir
+    ? join(outputsDir, "stdout.log")
+    : undefined;
+  const stderrLogFileName = outputsDir
+    ? join(outputsDir, "stderr.log")
+    : undefined;
+
+  const encoder = new TextEncoder();
+
   const grabberOutStream = StreamTools.createTransformStream((s: string) => {
-    result.logs.push([s.toString(), Date.now()]);
+    const log = s.toString();
+    logFileStdout?.write(encoder.encode(log));
+    result.logs.push([log, Date.now()]);
     sender({
       type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
       payload: {
         jobId: id,
         step: `${DockerJobState.Running}`,
-        logs: [[s.toString(), Date.now()]],
+        logs: [[log, Date.now()]],
       } as JobStatusPayload,
     });
     return s;
   });
-  if (outStream) {
-    grabberOutStream.pipe(outStream!);
-  }
 
   const grabberErrStream = StreamTools.createTransformStream((s: string) => {
-    result.logs.push([s.toString(), Date.now(), true]);
+    const log = s.toString();
+    logFileStderr?.write(encoder.encode(log));
+    result.logs.push([log, Date.now(), true]);
     sender({
       type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
       payload: {
         jobId: id,
         step: `${DockerJobState.Running}`,
-        logs: [[s.toString(), Date.now(), true]],
+        logs: [[log, Date.now(), true]],
       } as JobStatusPayload,
     });
     return s;
   });
-  if (errStream) {
-    grabberErrStream.pipe(errStream!);
-  }
 
   const finish = async () => {
     try {
@@ -208,7 +216,9 @@ export const dockerJobExecute = (
       const message = err && typeof err === "object" && "message" in err
         ? err.message
         : `Unknown error: ${String(err)}`;
-      result.logs = err && typeof err === "object" && "logs" in err &&
+      result.logs = err &&
+          typeof err === "object" &&
+          "logs" in err &&
           Array.isArray(err.logs)
         ? err.logs
         : [];
@@ -234,21 +244,109 @@ export const dockerJobExecute = (
         "container.mtfm.io/id": args.id,
       },
     });
-    const existingJobContainer = runningContainers.find((container: unknown) =>
-      container &&
-      typeof container === "object" &&
-      "Labels" in container &&
-      typeof container.Labels === "object" &&
-      container.Labels != null &&
-      "container.mtfm.io/id" in container.Labels &&
-      container.Labels["container.mtfm.io/id"] === args.id
+    const existingJobContainer = runningContainers.find(
+      (container: unknown) =>
+        container &&
+        typeof container === "object" &&
+        "Labels" in container &&
+        typeof container.Labels === "object" &&
+        container.Labels != null &&
+        "container.mtfm.io/id" in container.Labels &&
+        container.Labels["container.mtfm.io/id"] === args.id,
     );
 
     if (existingJobContainer) {
       container = docker.getContainer(existingJobContainer.Id);
+      if (container) {
+        // First get existing logs from files
+        const existsStdOut = stdoutLogFileName
+          ? existsSync(stdoutLogFileName)
+          : false;
+        const textStdOut = existsStdOut && stdoutLogFileName
+          ? await Deno.readTextFile(stdoutLogFileName)
+          : "";
+        if (textStdOut) {
+          const logs = textStdOut
+            .split("\n")
+            .map((line) => [line, Date.now(), false]);
+          sender({
+            type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+            payload: {
+              jobId: id,
+              step: `${DockerJobState.Running}`,
+              logs,
+            } as JobStatusPayload,
+          });
+        }
+
+        const existsStderr = stderrLogFileName
+          ? existsSync(stderrLogFileName)
+          : false;
+        const textStderr = existsStderr && stderrLogFileName
+          ? await Deno.readTextFile(stderrLogFileName)
+          : "";
+        if (textStderr) {
+          const logs = textStderr
+            .split("\n")
+            .map((line) => [line, Date.now(), true]);
+          sender({
+            type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
+            payload: {
+              jobId: id,
+              step: `${DockerJobState.Running}`,
+              logs,
+            } as JobStatusPayload,
+          });
+        }
+
+        // Attach to container streams immediately to capture new logs
+        const stream = await container.attach({
+          stream: true,
+          stdout: true,
+          stderr: true,
+        });
+        container.modem.demuxStream(stream, grabberOutStream, grabberErrStream);
+      }
     }
 
-    // console.log("🚀 createOptions", createOptions);
+    // create the log file, depending on if the container was already running
+    // if it was running, we don't want to overwrite the log file
+    if (!existingJobContainer) {
+      if (stdoutLogFileName) {
+        try {
+          Deno.removeSync(stdoutLogFileName);
+        } catch (_) {
+          /* do nothing */
+        }
+      }
+      if (stderrLogFileName) {
+        try {
+          Deno.removeSync(stderrLogFileName);
+        } catch (_) {
+          /* do nothing */
+        }
+      }
+    }
+    if (stdoutLogFileName) {
+      ensureDirSync(dirname(stdoutLogFileName));
+      logFileStdout = stdoutLogFileName
+        ? await Deno.open(stdoutLogFileName, {
+          write: true,
+          create: true,
+          append: true,
+        })
+        : null;
+    }
+    if (stderrLogFileName) {
+      ensureDirSync(dirname(stderrLogFileName));
+      logFileStderr = stderrLogFileName
+        ? await Deno.open(stderrLogFileName, {
+          write: true,
+          create: true,
+          append: true,
+        })
+        : null;
+    }
 
     if (!container) {
       container = await docker.createContainer(createOptions);
@@ -273,6 +371,9 @@ export const dockerJobExecute = (
     console.log("🚀 container started, waiting...", id);
     const dataWait = await container!.wait();
     console.log("🚀 container finished", dataWait);
+
+    logFileStdout?.close();
+    logFileStderr?.close();
 
     result.StatusCode = dataWait != null ? dataWait.StatusCode : null;
 

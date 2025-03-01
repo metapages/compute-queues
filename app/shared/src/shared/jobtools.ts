@@ -1,6 +1,5 @@
 import { crypto } from "@std/crypto";
 import { encodeHex } from "@std/encoding";
-import { LRUCache } from "lru-cache";
 import { retryAsync } from "retry";
 import { ensureDir, exists } from "std/fs";
 import { dirname } from "std/path";
@@ -27,11 +26,6 @@ import { sanitizeFilename, shaDockerJob } from "/@/shared/util.ts";
 
 const IGNORE_CERTIFICATE_ERRORS: boolean =
   Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
-
-const FileHashesUploaded = new LRUCache<string, boolean>({
-  max: 10000,
-  ttl: 1000 * 60 * 60 * 24 * 6, // 6 days, less than the time (one week) that the server will keep the file
-});
 
 /**
  * If two workers claim a job, this function will resolve which worker should take the job.
@@ -86,8 +80,7 @@ export const createNewContainerJobMessage = async (opts: {
 export const bufferToBase64Ref = (
   buffer: Uint8Array,
 ): DataRef => {
-  const decoder = new TextDecoder("utf8");
-  const value = btoa(decoder.decode(buffer));
+  const value = btoa(String.fromCharCode.apply(null, [...buffer]));
   return {
     value,
     type: DataRefType.base64,
@@ -129,13 +122,17 @@ export const fileToDataref = async (
   const hash = await hashFileOnDisk(file);
 
   if (size > ENV_VAR_DATA_ITEM_LENGTH_MAX) {
-    if (FileHashesUploaded.has(hash)) {
+    const existsUrl = `${address}/api/v1/exists/${hash}`;
+    const existsResponse = await fetch(existsUrl);
+    if (existsResponse.status === 200) {
+      existsResponse.body?.cancel();
       const existsRef: DataRef = {
         value: hash,
         type: DataRefType.key,
       };
       return existsRef;
     }
+    existsResponse.body?.cancel();
 
     const uploadUrl = `${address}/api/v1/upload/${hash}`;
 
@@ -159,16 +156,15 @@ export const fileToDataref = async (
             `Failed attempt ${count} to upload ${file} to ${uploadUrl} code=${code} stdout=${
               new TextDecoder().decode(
                 stdout,
-              )
-            } stderr=${new TextDecoder().decode(stderr)} command='curl ${
-              args.join(" ")
-            }'`,
+              ).substring(0, 1000)
+            } stderr=${
+              new TextDecoder().decode(stderr).substring(0, 1000)
+            } command='curl ${args.join(" ")}'`,
           );
         }
       },
       { delay: 2000, maxTry: 20 },
     );
-    FileHashesUploaded.set(hash, true);
 
     const actualAddress = Deno.env.get("DEV_ONLY_EXTERNAL_SERVER_ADDRESS") ||
       address;
@@ -180,7 +176,7 @@ export const fileToDataref = async (
     return dataRef;
   } else {
     const fileBuffer: Uint8Array = await Deno.readFile(file);
-    const ref: DataRef = await bufferToBase64Ref(fileBuffer);
+    const ref: DataRef = bufferToBase64Ref(fileBuffer);
     return ref;
   }
 };
@@ -287,11 +283,12 @@ export const dataRefToFile = async (
         let count = 0;
         await retryAsync(
           async () => {
+            let file: Deno.FsFile | null = null;
             try {
               const fileResponse = await fetch(url, { redirect: "follow" });
 
               if (fileResponse.ok && fileResponse.body) {
-                const file = await Deno.open(filename, {
+                file = await Deno.open(filename, {
                   write: true,
                   create: true,
                   mode: 0o644,
@@ -303,6 +300,15 @@ export const dataRefToFile = async (
               throw new Error(
                 `Failed attempt ${count} to download ${url}: ${error}`,
               );
+            } finally {
+              if (file) {
+                try {
+                  // https://github.com/denoland/deno/issues/14210
+                  file.close();
+                } catch (_) {
+                  // pass
+                }
+              }
             }
           },
           { delay: 1000, maxTry: 5 },
@@ -374,5 +380,11 @@ export const hashFileOnDisk: (filePath: string) => Promise<string> = async (
   const readableStream = file.readable;
   const fileHashBuffer = await crypto.subtle.digest("SHA-256", readableStream);
   const fileHash = encodeHex(fileHashBuffer);
+  try {
+    // https://github.com/denoland/deno/issues/14210
+    file.close();
+  } catch (_) {
+    // pass
+  }
   return fileHash;
 };

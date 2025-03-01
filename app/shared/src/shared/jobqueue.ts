@@ -154,6 +154,7 @@ export class BaseDockerJobQueue {
   protected readonly channel: BroadcastChannel;
   protected readonly channelEmitter: Emitter<BroadcastMessageEvents>;
   protected db!: DB;
+  protected readonly debug: boolean;
 
   // intervals
   protected _intervalWorkerBroadcast: number | undefined;
@@ -166,13 +167,15 @@ export class BaseDockerJobQueue {
     serverId: string;
     address: string;
     dataDirectory?: string;
+    debug?: boolean;
   }) {
-    const { serverId, address, dataDirectory } = opts;
+    const { serverId, address, dataDirectory, debug } = opts;
     console.log(`➕ 🎾 UserDockerJobQueue ${address}`);
 
     this.address = address;
     this.serverId = serverId;
     this.dataDirectory = dataDirectory || "/tmp/worker-metaframe";
+    this.debug = debug || false;
     this.workers = {
       otherWorkers: new Map(),
       myWorkers: [],
@@ -483,7 +486,7 @@ export class BaseDockerJobQueue {
             0,
             6,
           )
-        }]🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${job.state} [${
+        }] 🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${job.state} [${
           jobId.substring(0, 6)
         }]`,
       );
@@ -495,19 +498,16 @@ export class BaseDockerJobQueue {
     const jobDefinition = (
       job.history[0].value as StateChangeValueQueued
     ).definition;
-    if (jobDefinition) {
-      this.broadcastToLocalWorkers(
-        JSON.stringify({
-          type: WebsocketMessageTypeServerBroadcast.ClearJobCache,
-          payload: {
-            jobId,
-            definition: jobDefinition,
-          } as PayloadClearJobCache,
-        } as WebsocketMessageServerBroadcast),
-      );
-    } else {
-      jobDefinition;
-    }
+
+    this.broadcastToLocalWorkers(
+      JSON.stringify({
+        type: WebsocketMessageTypeServerBroadcast.ClearJobCache,
+        payload: {
+          jobId,
+          definition: jobDefinition,
+        } as PayloadClearJobCache,
+      } as WebsocketMessageServerBroadcast),
+    );
 
     await this.deleteJobFromDb(jobId).catch((err) => {
       console.log(`💥💥💥 ERROR deleting job: ${err}`, jobId);
@@ -528,6 +528,7 @@ export class BaseDockerJobQueue {
    */
   deleteCachedJob(jobId: string) {
     delete this.state.jobs[jobId];
+
     console.log(
       `[${this.address.substring(0, 6)}] deletedCachedJob [${
         jobId.substring(
@@ -634,7 +635,7 @@ export class BaseDockerJobQueue {
     const allPersistedJobInTheQueue = await this.db.queueGetAll(this.address);
     allPersistedJobInTheQueue.forEach((j) => (this.state.jobs[j.hash] = j));
     console.log(
-      `On startup, got ${allPersistedJobInTheQueue.length} jobs from the db`,
+      `On startup, from queue [${this.address}] got ${allPersistedJobInTheQueue.length} jobs from the db`,
     );
     // Why broadcast here? New UserDockerJobQueue instances will get their
     // own state from the db. Probably race conditions, it won't hurt at all
@@ -1125,6 +1126,9 @@ export class BaseDockerJobQueue {
     connection.socket.addEventListener("message", (event) => {
       try {
         const { data: message } = event;
+        if (this.debug) {
+          console.log(`➡️ 📧 to worker`, message);
+        }
         // console.log('message', message);
         const messageString = message.toString().trim();
         if (messageString === "PING") {
@@ -1252,6 +1256,9 @@ export class BaseDockerJobQueue {
       }
     });
 
+    if (this.debug) {
+      console.log(`⬅️ 📧 w sendJobStatesToWebsocket worker`);
+    }
     await this.sendJobStatesToWebsocket(connection.socket);
   }
 

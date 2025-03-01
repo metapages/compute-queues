@@ -1,4 +1,4 @@
-import { emptyDir, ensureDir, exists } from "std/fs";
+import { emptyDir, ensureDir, exists, existsSync } from "std/fs";
 import { dirname, join } from "std/path";
 import klaw from "klaw";
 
@@ -23,7 +23,7 @@ export const convertIOToVolumeMounts = async (
   job: { id: string; definition: DockerJobDefinitionInputRefs },
   address: string,
   workerId: string,
-): Promise<Volume[]> => {
+): Promise<{ volumes: Volume[]; outputsDir: string }> => {
   const config = getConfig();
   const { id, definition } = job;
   const baseDir = join(config.dataDirectory, id);
@@ -98,7 +98,7 @@ export const convertIOToVolumeMounts = async (
     }
   }
 
-  return result;
+  return { volumes: result, outputsDir };
 };
 
 const getLocalDataRef = async (file: string, address: string) => {
@@ -108,11 +108,15 @@ const getLocalDataRef = async (file: string, address: string) => {
   const cachedFilePath = join(config.dataDirectory, "cache", sanitizedHash);
   await ensureDir(dirname(cachedFilePath));
 
-  if (await exists(cachedFilePath)) {
-    await Deno.remove(file);
-    await Deno.link(cachedFilePath, file);
-  } else {
-    await Deno.link(file, cachedFilePath);
+  try {
+    if (existsSync(cachedFilePath)) {
+      Deno.removeSync(file);
+      Deno.linkSync(cachedFilePath, file);
+    } else {
+      Deno.linkSync(file, cachedFilePath);
+    }
+  } catch (err) {
+    console.error("💥 Failed to link file", file, err);
   }
 
   const dataRef: DataRef = {

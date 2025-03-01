@@ -51,7 +51,7 @@ export const clearCache = async (args: { build?: DockerJobImageBuild }) => {
   const image = getDockerImageName(buildSha);
   docker.getImage(image).remove({}, (err: unknown, result: unknown) => {
     console.log("docker.image.remove result", result);
-    console.log("docker.image.remove err", err);
+    console.log(`docker.image.remove ${`${err}`.split("\n")[0]}`);
   });
 };
 
@@ -509,7 +509,7 @@ const parseDockerUrl = (s: string): DockerUrlBlob => {
   return url;
 };
 
-const getDownloadLinkFromContext = (context: string): string => {
+const getDownloadLinkFromContext = async (context: string): Promise<string> => {
   // https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
   if (context.endsWith(".tar.gz") || context.endsWith(".zip")) {
     return context;
@@ -517,7 +517,7 @@ const getDownloadLinkFromContext = (context: string): string => {
     // Create a personal access token at https://github.com/settings/tokens/new?scopes=repo
     // const octokit = new Octokit({ auth: `personal-access-token123` });
     const matches = new RegExp(
-      /https:\/\/github.com\/([-\w]{6,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([-\/\w\.\}\{\$]{1,100}))?/,
+      /https:\/\/github.com\/([-\w]{1,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([-\/\w\.\}\{\$]{1,100}))?/,
     ).exec(context);
     if (!matches) {
       throw new Error(`Invalid GitHub URL: ${context}`);
@@ -533,7 +533,35 @@ const getDownloadLinkFromContext = (context: string): string => {
       );
     }
 
-    return `https://api.github.com/repos/${owner}/${repo}/tarball/${ref}`;
+    const possibleArchiveUrls = [
+      `https://github.com/${owner}/${
+        repo.replace(".git", "")
+      }/archive/refs/heads/${ref}.zip`,
+      `https://github.com/${owner}/${
+        repo.replace(".git", "")
+      }/archive/${ref}.zip`,
+    ];
+    if (ref === "main") {
+      // check if the repo has a master branch instead of main
+      possibleArchiveUrls.push(
+        `https://github.com/${owner}/${
+          repo.replace(".git", "")
+        }/archive/refs/heads/master.zip`,
+      );
+    }
+
+    let archiveUrl = "";
+    for (const possibleArchiveUrl of possibleArchiveUrls) {
+      const response = await fetch(possibleArchiveUrl, {
+        method: "HEAD",
+        redirect: "follow",
+      });
+      if (response.status === 200) {
+        archiveUrl = possibleArchiveUrl;
+        break;
+      }
+    }
+    return archiveUrl;
 
     // const octokit = new Octokit();
     // // https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#download-a-repository-archive-tar
@@ -589,7 +617,7 @@ const downloadContextIntoDirectory = async (args: {
   // TODO: for now, just download the context as is
   // First check if the context has been already downloaded
   // ch
-  const downloadUrl = getDownloadLinkFromContext(context);
+  const downloadUrl = await getDownloadLinkFromContext(context);
   const filePathForDownload = getFilePathForDownload(downloadUrl);
 
   console.log(`downloadContextIntoDirectory downloadUrl=${downloadUrl}`);
@@ -731,6 +759,10 @@ const downloadContextIntoDirectory = async (args: {
           logs: [[`zip uncompressing context: ${context}`, Date.now()]],
         } as JobStatusPayload,
       });
+      // https://github.com/moncefplastin07/deno-zip/issues/16#issue-2777397629
+      // @ts-ignore Deno.close is not part of Deno 2
+      (Deno as { close?: () => void }).close =
+        (Deno as { close?: () => void }).close || function () {};
       await decompress(filePathForDownload, destination);
     } else {
       throw new Error(

@@ -7,7 +7,7 @@ import {
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
-import { Command } from "cliffy/command";
+import { Command } from "@cliffy/command";
 import { closed, open } from "@korkje/wsi";
 
 export const jobAwait = new Command()

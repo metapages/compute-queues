@@ -1,5 +1,8 @@
 # Compute queues and the worker to run them all
 
+Online docs: https://docs.metapage.io/docs/containers
+[Online docs notion source](https://www.notion.so/metapages/Containers-182018579bb580c2bd76ed4b74eef1eb?pvs=4)
+
 ## High level commands:
 
 - develop: `just dev`
