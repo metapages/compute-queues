@@ -421,7 +421,7 @@ export function connectToServer(
 }
 
 export class WebSocketPool {
-  private static MAX_CONNECTIONS = 1000;
+  private static MAX_CONNECTIONS = 20000;
   private connections = new Set<WebSocket>();
 
   add(ws: WebSocket) {

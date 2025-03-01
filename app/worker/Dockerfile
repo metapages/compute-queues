@@ -85,3 +85,4 @@ RUN apt-get update && \
 COPY ./app/worker/daemon.json /etc/docker/daemon.json
 
 ENTRYPOINT ["deno", "run", "--allow-all", "--unstable-kv", "--unstable-cron", "src/cli.ts"]
+
