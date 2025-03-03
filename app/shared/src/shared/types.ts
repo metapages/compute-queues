@@ -50,6 +50,8 @@ export type DockerJobImageBuild = {
   // An actual Dockerfile content
   dockerfile?: string;
   buildArgs?: string[];
+  // https://docs.docker.com/reference/cli/docker/buildx/build/#platform
+  platform?: string;
 };
 
 // inputs values are base64 encoded strings
