@@ -30,6 +30,7 @@ const validationSchema = yup.object({
   dockerfile: yup.string().optional(),
   image: yup.string(),
   target: yup.string().optional(),
+  platform: yup.string().optional(),
 });
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
@@ -41,6 +42,7 @@ const linkMap = {
   filename: "https://docs.docker.com/build/building/packaging/#filenames",
   target: "https://docs.docker.com/build/building/multi-stage/#stop-at-a-specific-build-stage",
   buildArgs: "https://docs.docker.com/reference/cli/docker/buildx/build/#build-arg",
+  platform: "https://docs.docker.com/reference/cli/docker/buildx/build/#platform",
 };
 
 const labelMap = {
@@ -48,6 +50,7 @@ const labelMap = {
   context: "Git Repo URL",
   filename: "Dockerfile Name",
   buildArgs: "Build Args",
+  platform: "Platform  (--platform)",
 };
 const labelSubMap = {
   buildArgs: "Comma Separated",
@@ -95,6 +98,10 @@ export const TabConfigureImage: React.FC<{
 
         if (values.context) {
           newJobDefinitionBlob.build.context = values.context;
+        }
+
+        if (values.platform) {
+          newJobDefinitionBlob.build.platform = values.platform;
         }
 
         if (values.filename) {
@@ -153,6 +160,7 @@ export const TabConfigureImage: React.FC<{
       dockerfile: jobDefinitionBlob?.build?.dockerfile,
       filename: jobDefinitionBlob?.build?.filename,
       target: jobDefinitionBlob?.build?.target,
+      platform: jobDefinitionBlob?.build?.platform,
     },
     onSubmit,
     validationSchema,
@@ -172,6 +180,7 @@ export const TabConfigureImage: React.FC<{
     !!formik.values.buildArgs ||
     !!formik.values.context ||
     !!formik.values.filename ||
+    !!formik.values.platform ||
     !!formik.values.target;
 
   const existingImageInputs = () => {
@@ -224,7 +233,7 @@ export const TabConfigureImage: React.FC<{
             </HStack>
           </Box>
         </FormControl>
-        {["context", "filename", "target", "buildArgs"].map(key => {
+        {["context", "filename", "target", "platform", "buildArgs"].map(key => {
           const labelJsx: ReactNode = <FormLink href={linkMap[key]} label={labelMap[key] || key} />;
           return (
             <VStack w="100%" key={key}>

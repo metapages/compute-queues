@@ -104,13 +104,19 @@ export const ensureDockerImage = async (args: {
 
     image = getDockerImageName(buildSha);
 
-    imageExists = await checkForDockerImage({ jobId, image, sender });
+    imageExists = await checkForDockerImage({
+      jobId,
+      image,
+      sender,
+      platform: build?.platform,
+    });
     if (imageExists) {
       console.log("✅ ensureDockerImage: image exists");
       return image;
     }
 
-    const { dockerfile, context, filename, target /*, buildArgs */ } = build;
+    const { dockerfile, context, filename, platform, target /*, buildArgs */ } =
+      build;
 
     if (!dockerfile && !context) {
       throw new DockerBuildError(
@@ -152,6 +158,9 @@ export const ensureDockerImage = async (args: {
       }
       if (target) {
         args.push(`--target=${target}`);
+      }
+      if (platform) {
+        args.push(`--platform=${platform}`);
       }
       args.push(`--tag=${image}`);
       args.push(".");
@@ -359,8 +368,9 @@ const checkForDockerImage = async (args: {
   jobId: string;
   image: string;
   sender: WebsocketMessageSenderWorker;
+  platform?: string;
 }): Promise<boolean> => {
-  const { image, sender, jobId } = args;
+  const { image, sender, jobId, platform } = args;
   // https://github.com/metapages/compute-queues/issues/59
   // if (CACHED_DOCKER_IMAGES[image]) {
   //   // console.log(`👀 ensureDockerImage: ${image} FOUND IMAGE IN MY FAKE CACHE`)
@@ -376,7 +386,7 @@ const checkForDockerImage = async (args: {
   //   return true;
   // }
 
-  const imageExists = await hasImage(image);
+  const imageExists = await hasImage({ imageUrl: image });
   // console.log(`👀 ensureDockerImage: ${image} imageExists=${imageExists}`)
   // console.log('imageExists', imageExists);
   if (imageExists) {
@@ -388,7 +398,9 @@ const checkForDockerImage = async (args: {
 
   try {
     await new Promise<void>((resolve, reject) => {
-      docker.pull(image, function (err: unknown, stream: unknown) {
+      docker.pull(image, {
+        platform,
+      }, function (err: unknown, stream: unknown) {
         if (err) {
           reject(err);
           return;
@@ -428,8 +440,10 @@ const checkForDockerImage = async (args: {
   return imageExists;
 };
 
-const hasImage = async (imageUrl: string): Promise<boolean> => {
-  // console.log("hasImage, imageUrl", imageUrl)
+const hasImage = async (
+  args: { imageUrl: string },
+): Promise<boolean> => {
+  const { imageUrl } = args;
   const images = await docker.listImages();
   return images.some((e: { RepoTags: string[] | null }) => {
     return (
