@@ -23,6 +23,7 @@ import { create } from "zustand";
 import { getHashParamValueJsonFromWindow, setHashParamValueJsonInWindow } from "@metapages/hash-query";
 
 import { deleteFinishedJob, getFinishedJob } from "./cache";
+import { LogsMode } from "./components/sections/logs/DisplayLogs";
 
 let _cachedMostRecentSubmit: WebsocketMessageClientToServer | undefined;
 
@@ -107,6 +108,8 @@ interface MainStore {
 
   userClickedRun: boolean;
   setUserClickedRun: (userClickedRun: boolean) => void;
+
+  copyLogsToClipboard: (mode: LogsMode) => void;
 }
 
 /**
@@ -437,5 +440,28 @@ export const useStore = create<MainStore>((set, get) => ({
     inputs[get().mainInputFile] = get().mainInputFileContent;
     setHashParamValueJsonInWindow("inputs", inputs);
     get().setMainInputFileContent(null);
+  },
+
+  copyLogsToClipboard: (mode: LogsMode) => {
+    let logs = [];
+    switch (mode) {
+      case "stdout+stderr":
+        logs = get().runLogs || [];
+        break;
+      case "stdout":
+        logs = (get().runLogs || []).filter(log => !log[2]);
+        break;
+      case "stderr":
+        logs = (get().runLogs || []).filter(log => log[2]);
+        break;
+      case "build":
+        logs = get().buildLogs || [];
+        break;
+    }
+    if (!logs || logs.length === 0) {
+      return;
+    }
+    const allLogsText = logs.join("\n");
+    navigator?.clipboard?.writeText(allLogsText);
   },
 }));
