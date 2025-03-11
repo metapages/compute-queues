@@ -31,7 +31,7 @@ export const PanelLogs: React.FC<{
       minW={"100%"}
       overflow={"scroll"}
       bg={"white"}>
-      <ConsoleHeader title={title} showSplit={showSplit} showCombine={showCombine} />
+      <ConsoleHeader mode={mode} title={title} showSplit={showSplit} showCombine={showCombine} />
       <Container h={"calc(100% - 1.5rem)"} p={0} minW={"100%"} overflow={"scroll"}>
         <DisplayLogs mode={mode} />
       </Container>

@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { ConsoleLogLine, DockerJobState, StateChangeValueFinished } from "/@shared/client";
-import { useStore } from "/@/store";
 import { AnsiUp } from "ansi_up";
 import linkifyHtml from "linkify-html";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { VariableSizeList as List } from "react-window";
+import { useStore } from "/@/store";
+import { ConsoleLogLine, DockerJobState, StateChangeValueFinished } from "/@shared/client";
 
-import { Code, VStack } from "@chakra-ui/react";
+import { Code, HStack, VStack } from "@chakra-ui/react";
 
 // import { OUTPUT_TABLE_ROW_HEIGHT, OutputTable } from "./OutputTable";
 
@@ -20,7 +20,7 @@ const LINE_HEIGHT = 20;
 export const DisplayLogs: React.FC<{
   mode: LogsMode;
 }> = ({ mode }) => {
-  const ansi_up = new AnsiUp();
+  const ansi_up = useMemo(() => new AnsiUp(), []);
   const logsRef = useRef<string[]>([]);
   const [logs, setLogs] = useState<string[]>([]);
   const [jobId, setJobId] = useState<string | undefined>();
@@ -148,6 +148,19 @@ export const DisplayLogs: React.FC<{
 
   return (
     <VStack alignItems={"flex-start"} h={"100%"} pl={3}>
+      {logsRef.current.length > 0 && (
+        <HStack w="100%" justifyContent="flex-end" pr={3} pt={2} pb={1}>
+          {/* <Button
+            size="sm"
+            leftIcon={<ClipboardText weight="bold" />}
+            onClick={copyLogsToClipboard}
+            colorScheme="gray"
+            variant="outline"
+          >
+            Copy
+          </Button> */}
+        </HStack>
+      )}
       <AutoSizer>
         {({ height, width }) => {
           return (
