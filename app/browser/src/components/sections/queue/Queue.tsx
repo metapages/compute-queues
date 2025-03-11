@@ -4,9 +4,9 @@ import React from "react";
 import { useActiveJobsCount } from "/@/hooks/useActiveJobsCount";
 import { useWorkersCount } from "/@/hooks/useWorkersCount";
 
-import { QueueButtonAndLabel } from "./QueueButtonAndLabel";
 import { JobsTable } from "/@/components/sections/queue/JobsTable";
 import { WorkersTable } from "/@/components/sections/queue/WorkersTable";
+import { QueueOverrideButtonAndLabel } from "./QueueOverrideButtonAndLabel";
 
 export const Queue: React.FC = () => {
   const activeJobsCount = useActiveJobsCount();
@@ -16,7 +16,7 @@ export const Queue: React.FC = () => {
 
   return (
     <VStack width="100%" justifyContent="flex-start" alignItems="flex-start">
-      <QueueButtonAndLabel />
+      <QueueOverrideButtonAndLabel />
       <HStack width="100%" justifyContent="flex-start" alignItems="stretch">
         <Tabs isFitted={true} width="100%" variant="enclosed">
           <TabList>
