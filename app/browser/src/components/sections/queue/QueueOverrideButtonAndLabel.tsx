@@ -8,7 +8,6 @@ import {
   InputGroup,
   InputLeftAddon,
   InputRightElement,
-  Show,
   Hide,
 } from "@chakra-ui/react";
 import { Cloud, Monitor, WifiHigh, WifiSlash } from "@phosphor-icons/react";
@@ -16,7 +15,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import debounce from "lodash/debounce";
 import { useQueue } from "/@/hooks/useQueue";
 
-export const QueueOverrideButtonAndLabel: React.FC<{}> = ({}) => {
+export const QueueOverrideButtonAndLabel: React.FC = () => {
   const { queue, setQueue, isLocalMode, toggleLocalMode } = useQueue();
   const [inputValue, setInputValue] = useState(queue);
 

@@ -1,7 +1,6 @@
 import { Icon, Tooltip } from "@chakra-ui/react";
 import { Queue as QueueIcon } from "@phosphor-icons/react";
 import React from "react";
-import { Queue } from "/@/components/sections/queue/Queue";
 import { useQueue } from "/@/hooks/useQueue";
 import { useStore } from "/@/store";
 
