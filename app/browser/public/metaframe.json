@@ -3,5 +3,6 @@
   "metadata": {
     "title": "Run a docker container",
     "author": "Dion Whitehead"
-  }
+  },
+  "allow": "clipboard-write"
 }
