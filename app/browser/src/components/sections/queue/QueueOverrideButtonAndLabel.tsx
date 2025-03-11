@@ -1,5 +1,16 @@
 import { LockIcon } from "@chakra-ui/icons";
-import { Box, Button, HStack, Icon, Input, InputGroup, InputLeftAddon, InputRightElement } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  HStack,
+  Icon,
+  Input,
+  InputGroup,
+  InputLeftAddon,
+  InputRightElement,
+  Show,
+  Hide,
+} from "@chakra-ui/react";
 import { Cloud, Monitor, WifiHigh, WifiSlash } from "@phosphor-icons/react";
 import React, { useCallback, useEffect, useState } from "react";
 import debounce from "lodash/debounce";
@@ -36,17 +47,17 @@ export const QueueOverrideButtonAndLabel: React.FC<{}> = ({}) => {
   };
 
   return (
-    <HStack w="100%" justifyContent="center" spacing={4} py={1} px={1}>
-      <HStack maxW="1200px" w="100%" spacing={4} minW="0">
-        <HStack gap={0} flexShrink={0}>
+    <HStack w="100%" justifyContent="center" spacing={2} py={1} px={1}>
+      <HStack maxW="1200px" w="100%" spacing={2} minW="0">
+        <HStack gap={0} flexShrink={0} minW="auto">
           <Button
             size="sm"
             aria-label="Remote"
             onClick={toggleLocalMode}
             colorScheme={isLocalMode ? "gray" : "blue"}
-            leftIcon={<Cloud />}
-            borderRadius={"8px 0px 0px 8px"}>
-            {"Remote"}
+            borderRadius="8px 0 0 8px">
+            <Cloud weight="bold" />
+            <Hide below="md">{"Remote"}</Hide>
           </Button>
 
           <Button
@@ -54,18 +65,22 @@ export const QueueOverrideButtonAndLabel: React.FC<{}> = ({}) => {
             aria-label="Local"
             onClick={toggleLocalMode}
             colorScheme={isLocalMode ? "blue" : "gray"}
-            leftIcon={<Monitor />}
-            borderRadius={"0px 8px 8px 0px"}>
-            {"Local"}
+            borderRadius="0 8px 8px 0">
+            <Monitor weight="bold" />
+            <Hide below="md">{"Local"}</Hide>
           </Button>
         </HStack>
 
-        <Icon as={isLocalMode ? WifiHigh : WifiSlash} flexShrink={0} />
+        <Hide below="sm">
+          <Icon as={isLocalMode ? WifiHigh : WifiSlash} flexShrink={0} weight="bold" />
+        </Hide>
 
-        <InputGroup size="md" flexGrow={1} minW="300px" fontFamily={"monospace"}>
-          <InputLeftAddon h="32px" fontSize="sm" fontWeight="semibold">
-            Queue Key
-          </InputLeftAddon>
+        <InputGroup size="md" flexGrow={1} minW="0" fontFamily="monospace">
+          <Hide below="md">
+            <InputLeftAddon h="32px" fontSize="sm" fontWeight="semibold">
+              Queue Key
+            </InputLeftAddon>
+          </Hide>
           <Input
             h="32px"
             value={isLocalMode ? "local" : inputValue}
