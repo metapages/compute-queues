@@ -13,8 +13,8 @@ interface ConsoleHeaderProps {
 
 export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({ title, showSplit, showCombine, mode }) => {
   const setRightPanelContext = useStore(state => state.setRightPanelContext);
-  const setRunLogs = useStore(state => state.setRunLogs);
-  const setBuildLogs = useStore(state => state.setBuildLogs);
+  // const setRunLogs = useStore(state => state.setRunLogs);
+  // const setBuildLogs = useStore(state => state.setBuildLogs);
 
   const onSplit = () => {
     setRightPanelContext("stderr");
@@ -23,10 +23,10 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({ title, showSplit, 
     setRightPanelContext(null);
   };
 
-  const clearLogs = () => {
-    setBuildLogs(null);
-    setRunLogs(null);
-  };
+  // const clearLogs = () => {
+  //   setBuildLogs(null);
+  //   setRunLogs(null);
+  // };
 
   const copyLogsToClipboard = useStore(state => state.copyLogsToClipboard);
   const toast = useToast();
