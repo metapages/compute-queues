@@ -446,13 +446,13 @@ export const useStore = create<MainStore>((set, get) => ({
     let logs = [];
     switch (mode) {
       case "stdout+stderr":
-        logs = get().runLogs ? get().runLogs : get().buildLogs || [];
+        logs = get().runLogs || [];
         break;
       case "stdout":
-        logs = get().runLogs ? get().runLogs.filter(log => !log[2]) : get().buildLogs || [];
+        logs = (get().runLogs || []).filter(log => !log[2]);
         break;
       case "stderr":
-        logs = get().runLogs ? get().runLogs.filter(log => log[2]) : get().buildLogs || [];
+        logs = (get().runLogs || []).filter(log => log[2]);
         break;
       case "build":
         logs = get().buildLogs || [];
