@@ -1,4 +1,4 @@
-import { QueueIconAndModal } from "/@/components/sections/queue/QueueIconAndModal";
+import { QueueControl } from "/@/components/sections/queue/QueueControl";
 
 import { Box, HStack, IconButton, Spacer, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { CloudArrowUp, House, Question } from "@phosphor-icons/react";
@@ -20,7 +20,7 @@ export const MainFooter: React.FC = () => {
         <Spacer />
         {isLargerThan400 && (
           <HStack gap={3}>
-            <QueueIconAndModal />
+            <QueueControl />
             <Tooltip label={isLocalMode ? "Local mode help" : "Remote mode help"}>
               <IconButton
                 aria-label={isLocalMode ? "help local mode" : "help remote mode"}

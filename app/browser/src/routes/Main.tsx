@@ -13,6 +13,7 @@ import { PanelEditor } from "/@/components/sections/PanelEditor";
 import { PanelInputs } from "/@/components/sections/PanelInputs";
 import { PanelLogs } from "/@/components/sections/PanelLogs";
 import { PanelOutputs } from "/@/components/sections/PanelOutputs";
+import { PanelQueue } from "/@/components/sections/PanelQueue";
 import { PanelSettings } from "/@/components/sections/PanelSettings";
 
 export const Main: React.FC = () => {
@@ -31,6 +32,7 @@ export const Main: React.FC = () => {
     editScript: <PanelEditor />,
     help: <PanelDocs />,
     stderr: <PanelLogs mode={"stderr"} />,
+    queue: <PanelQueue />,
   };
   const rightContent = rightPanelContext && rightPanelOptions[rightPanelContext];
   let rightWidth = "0%";
