@@ -17,7 +17,7 @@ import {
 } from "/@shared/client";
 
 import { getHashParamsFromWindow } from "@metapages/hash-query";
-import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
+import { useHashParam, useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { DataRefSerialized, Metaframe } from "@metapages/metapage";
 import { useMetaframeAndInput } from "@metapages/metapage-react";
 
@@ -36,6 +36,7 @@ const HashParamKeysSystem = new Set([
   "ignoreQueueOverride",
   "job",
   "queue",
+  "maxJobDuration",
 ]);
 
 const getNonSystemHashParams = (): Record<string, string> => {
@@ -56,7 +57,7 @@ export const useDockerJobDefinition = () => {
 
   // TODO: unclear if this does anything anymore
   const [debug] = useHashParamBoolean("debug");
-
+  const [maxJobDuration] = useHashParam("maxjobduration");
   // we listen to the job parameters embedded in the URL changing
   const [definitionParamsInUrl] = useHashParamJson<DockerJobDefinitionParamsInUrlHash | undefined>("job");
 
@@ -214,6 +215,7 @@ export const useDockerJobDefinition = () => {
         hash: jobHashCurrent,
         definition,
         debug,
+        maxJobDuration,
         control: namespaceConfig,
       };
       if (debug) {
@@ -226,5 +228,13 @@ export const useDockerJobDefinition = () => {
     return () => {
       cancelled = true;
     };
-  }, [resolvedQueue, metaframeBlob.inputs, definitionParamsInUrl, jobInputsFromUrl, namespaceConfig, debug]);
+  }, [
+    resolvedQueue,
+    metaframeBlob.inputs,
+    definitionParamsInUrl,
+    jobInputsFromUrl,
+    namespaceConfig,
+    debug,
+    maxJobDuration,
+  ]);
 };

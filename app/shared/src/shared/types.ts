@@ -76,7 +76,7 @@ export type DockerJobDefinitionInputsBase64V1 = {
   inputs?: InputsBase64String;
   // these are fixed and part of the job sha
   configFiles?: InputsBase64String;
-  durationMax?: number;
+  maxDuration?: string;
   gpu?: boolean;
 };
 
@@ -97,8 +97,9 @@ export type DockerJobDefinitionInputRefs =
 export interface DockerRunResult {
   StatusCode?: number;
   logs: ConsoleLogLine[];
-
+  duration?: number;
   error?: unknown;
+  isTimedOut: boolean;
 }
 
 export interface DockerRunResultWithOutputs extends DockerRunResult {
@@ -162,7 +163,7 @@ export type DockerJobControlConfig = {
     };
   };
   // if the job is not finished within this time, it is killed
-  ttl?: number;
+  maxDuration?: string;
   outputs?: {
     nhost?: {
       PAT: string;
@@ -180,6 +181,7 @@ export interface StateChangeValueQueued {
   definition: DockerJobDefinitionInputRefs;
   time: number;
   debug?: boolean;
+  maxJobDuration?: string;
   // the client that submitted the job
   // if there are multiple jobs from the same namespace,
   // only the most recent one is kept, all others are killed
@@ -242,6 +244,7 @@ export interface WorkerRegistration {
   cpus: number;
   gpus: number;
   time: number;
+  maxJobDuration: string;
 }
 
 export interface WorkerStatusResponse {
@@ -250,6 +253,7 @@ export interface WorkerStatusResponse {
   cpus: number;
   gpus: number;
   queue: Record<string, { jobId: string; finished: boolean }>;
+  maxJobDuration?: string;
 }
 
 export interface JobStatusPayload {
@@ -405,6 +409,7 @@ export interface DockerJobDefinitionMetadata {
   hash: string;
   definition: DockerJobDefinitionInputRefs;
   debug?: boolean;
+  maxJobDuration?: string;
   control?: DockerJobControlConfig;
 }
 

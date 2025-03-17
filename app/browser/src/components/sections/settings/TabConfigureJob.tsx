@@ -1,8 +1,10 @@
 import React, { ChangeEvent, ReactNode, useCallback } from "react";
 
 import { FormLink } from "/@/components/generic/FormLink";
+import { useMaxJobDuration } from "/@/hooks/useMaxJobDuration";
 import { useOptionJobStartAutomatically } from "/@/hooks/useOptionJobStartAutomatically";
 import { useOptionResolveDataRefs } from "/@/hooks/useOptionResolveDataRefs";
+import { useOptionShowTerminalFirst } from "/@/hooks/useOptionShowTerminalFirst";
 import { DockerJobDefinitionParamsInUrlHash } from "/@shared/client";
 import { useFormik } from "formik";
 import * as yup from "yup";
@@ -21,7 +23,6 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
-import { useOptionShowTerminalFirst } from "/@/hooks/useOptionShowTerminalFirst";
 
 const validationSchema = yup.object({
   command: yup.string().optional(),
@@ -31,6 +32,7 @@ const validationSchema = yup.object({
   workdir: yup.string().optional(),
   shmSize: yup.string().optional(),
   jobStartAutomatically: yup.boolean().optional(),
+  maxJobDuration: yup.string().optional(),
 });
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
@@ -39,6 +41,7 @@ const labelToName = {
   entrypoint: "Entrypoint  (--entrypoint)",
   workdir: "Workdir  (--workdir)",
   shmSize: "Shared Memory Size  (--shm-size)",
+  maxJobDuration: "Maximum Job Duration (e.g. 5m or 2h)",
 };
 
 const linkMap = {
@@ -54,7 +57,7 @@ export const TabConfigureJob: React.FC = () => {
   const [jobStartAutomatically, toggleJobStartAutomatically] = useOptionJobStartAutomatically();
   const [showTerminalFirst, toggleShowTerminalFirst, loading] = useOptionShowTerminalFirst();
   const [resolveDataRefs, toggleResolveDataRefs] = useOptionResolveDataRefs();
-
+  const [maxJobDuration, setMaxJobDuration] = useMaxJobDuration();
   const onSubmit = useCallback(
     (values: FormType) => {
       const newJobDefinitionBlob = { ...jobDefinitionBlob };
@@ -67,8 +70,9 @@ export const TabConfigureJob: React.FC = () => {
 
       setJobDefinitionBlob(newJobDefinitionBlob);
       setDebug(!!values.debug);
+      setMaxJobDuration(values.maxJobDuration);
     },
-    [jobDefinitionBlob, setJobDefinitionBlob, setDebug, toggleJobStartAutomatically],
+    [jobDefinitionBlob, setJobDefinitionBlob, setDebug, toggleJobStartAutomatically, setMaxJobDuration],
   );
 
   const formik = useFormik({
@@ -80,6 +84,7 @@ export const TabConfigureJob: React.FC = () => {
       workdir: jobDefinitionBlob?.workdir,
       jobStartAutomatically,
       shmSize: jobDefinitionBlob?.shmSize,
+      maxJobDuration,
     },
     onSubmit,
     validationSchema,
@@ -88,6 +93,8 @@ export const TabConfigureJob: React.FC = () => {
   // Custom handler for Switch onChange
   const handleSwitchChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
       const { name, checked } = event.target;
       formik.setFieldValue(name, checked);
       formik.submitForm();
@@ -107,7 +114,7 @@ export const TabConfigureJob: React.FC = () => {
               Container Settings
             </Text>
 
-            {["command", "entrypoint", "workdir", "shmSize"].map(key => {
+            {["command", "entrypoint", "workdir", "shmSize", "maxJobDuration"].map(key => {
               const labelJsx: ReactNode = <FormLink href={linkMap[key]} label={labelToName[key]} />;
               return (
                 <FormControl key={key}>

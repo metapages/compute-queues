@@ -1,5 +1,6 @@
 import React from "react";
 
+import { useQueue } from "/@/hooks/useQueue";
 import { useStore } from "/@/store";
 import {
   ConsoleLogLine,
@@ -8,10 +9,10 @@ import {
   DockerJobState,
   StateChangeValueFinished,
 } from "/@shared/client";
+import humanizeDuration from "humanize-duration";
 
 import { Box, HStack, Icon, Spinner, Text, useToast, VStack } from "@chakra-ui/react";
 import { Check, HourglassMedium, Prohibit, WarningCircle } from "@phosphor-icons/react";
-import { useQueue } from "/@/hooks/useQueue";
 
 const STATUS_ICON_SIZE = 6;
 export const JobStatus: React.FC = () => {
@@ -113,19 +114,19 @@ const getJobStateValues = (
       switch (resultFinished.reason) {
         case DockerJobFinishedReason.Cancelled:
           icon = <Icon as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-          text = "Job Cancelled";
+          text = `Job Cancelled ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration)})` : ""}`;
           break;
         case DockerJobFinishedReason.Error:
           showExitCodeRed = true;
           icon = <Icon color={"red"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-          text = "Job Failed";
+          text = `Job Failed ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration)})` : ""}`;
           // truncate to char len, add modal if it's longer than one line (to right of exit code)
           desc = errorBlob?.json?.message;
           exitCode = errorBlob?.statusCode;
           break;
         case DockerJobFinishedReason.Success:
           exitCode = resultFinished?.result?.StatusCode;
-          text = "Job Complete";
+          text = `Job Complete ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration)})` : ""}`;
           if (exitCode === 0) {
             icon = <Icon color={"green"} as={Check} boxSize={STATUS_ICON_SIZE} />;
           } else {
@@ -134,7 +135,7 @@ const getJobStateValues = (
           break;
         case DockerJobFinishedReason.TimedOut:
           icon = <Icon color={"orange"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-          text = "Job Timed Out";
+          text = `Job Timed Out ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration)})` : ""}`;
           break;
         case DockerJobFinishedReason.WorkerLost:
           icon = <Icon color={"orange"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;

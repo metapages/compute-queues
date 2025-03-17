@@ -171,6 +171,7 @@ export const useStore = create<MainStore>((set, get) => ({
       definition: definitionBlob.definition,
       time: Date.now(),
       control: definitionBlob.control,
+      maxJobDuration: definitionBlob.maxJobDuration,
     };
     if (definitionBlob.debug) {
       value.debug = true;

@@ -1,10 +1,14 @@
-import type { Buffer } from "std/node/buffer";
-import { ensureDirSync, existsSync } from "std/fs";
-import type Docker from "dockerode";
-import bytes from "bytes";
-
+import { DockerNetworkForJobs } from "/@/docker/network.ts";
 import * as StreamTools from "/@/docker/streamtools.ts";
 import { DockerJobSharedVolumeName } from "/@/docker/volume.ts";
+import { docker } from "/@/queue/dockerClient.ts";
+import { DockerBuildError, ensureDockerImage } from "/@/queue/dockerImage.ts";
+import bytes from "bytes";
+import type Docker from "dockerode";
+import { ensureDirSync, existsSync } from "std/fs";
+import type { Buffer } from "std/node/buffer";
+import { dirname, join } from "std/path";
+
 import {
   type DockerApiDeviceRequest,
   type DockerJobImageBuild,
@@ -14,10 +18,6 @@ import {
   type WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
 } from "@metapages/compute-queues-shared";
-import { docker } from "/@/queue/dockerClient.ts";
-import { DockerBuildError, ensureDockerImage } from "/@/queue/dockerImage.ts";
-import { dirname, join } from "std/path";
-import { DockerNetworkForJobs } from "/@/docker/network.ts";
 
 // Minimal interface for interacting with docker jobs:
 //  inputs:
@@ -69,7 +69,8 @@ export interface DockerJobArgs {
   volumes?: Array<Volume>;
   outputsDir?: string;
   deviceRequests?: DockerApiDeviceRequest[];
-  durationMax?: number;
+  // always defined, no jobs run forever
+  maxJobDuration: number;
 }
 
 // this comes out
@@ -93,19 +94,55 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     volumes,
     outputsDir,
     deviceRequests,
+    maxJobDuration,
   } = args;
 
   const result: DockerRunResult = {
     logs: [],
+    isTimedOut: false,
   };
 
   let container: Docker.Container | undefined;
 
+  let durationHandler: number | undefined;
+  let killed = false;
   const kill = async () => {
+    if (durationHandler) {
+      clearInterval(durationHandler);
+      durationHandler = undefined;
+    }
+    if (!finishTime) {
+      finishTime = Date.now();
+    }
+    if (!result.duration && startTime && finishTime) {
+      result.duration = finishTime - startTime;
+    }
     if (container) {
       await killAndRemove(container);
     }
+    killed = true;
   };
+
+  let startTime: number | undefined;
+  let finishTime: number | undefined;
+
+  const maxDurationCheck = () => {
+    if (startTime && !finishTime && !killed) {
+      const duration = Date.now() - startTime;
+      if (duration > maxJobDuration) {
+        console.log(
+          `💥💥💥 max duration exceeded [${duration} > ${maxJobDuration}]`,
+          id,
+        );
+        result.isTimedOut = true;
+        kill();
+      }
+    }
+    if (!finishTime && !killed) {
+      setTimeout(maxDurationCheck, 1000);
+    }
+  };
+  maxDurationCheck();
 
   const createOptions: Docker.ContainerCreateOptions = {
     Image: image,
@@ -361,9 +398,13 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       );
     }
 
-    console.log("🚀 container started, waiting...", id);
+    startTime = Date.now();
+
     const dataWait = await container!.wait();
-    console.log("🚀 container finished", dataWait);
+    finishTime = finishTime || Date.now();
+    if (!result.duration && finishTime && startTime) {
+      result.duration = finishTime - startTime;
+    }
 
     logFileStdout?.close();
     logFileStderr?.close();
