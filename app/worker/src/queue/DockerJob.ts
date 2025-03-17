@@ -78,13 +78,6 @@ export interface DockerJobExecution {
   kill: () => Promise<void>;
 }
 
-if (!existsSync("/var/run/docker.sock")) {
-  console.error(
-    'You must give access to the local docker daemon via: " -v /var/run/docker.sock:/var/run/docker.sock"',
-  );
-  Deno.exit(1);
-}
-
 export const JobCacheDirectory = "/job-cache";
 
 export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
