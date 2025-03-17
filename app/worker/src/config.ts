@@ -1,3 +1,5 @@
+import parseDuration from "parse-duration";
+
 export const VERSION: string = "0.2.0";
 
 export interface Arguments {
@@ -16,6 +18,7 @@ export interface Arguments {
   port: number;
   dataDirectory: string;
   debug: boolean;
+  maxJobDuration: number;
 }
 
 /**
@@ -33,6 +36,7 @@ export const config: Arguments = {
   port: 8000, //{ type: Number, alias: 'p', description: `Port (default: 8000)`, optional: true },
   dataDirectory: "/tmp/worker-metapage-io", //{ type: String, alias: 'd', description: `Data directory (default: /tmp/worker-metapage-io)`, optional: true },
   debug: false, //{ type: Boolean, alias: 'd', description: `Debug mode (default: false)`, optional: true },
+  maxJobDuration: parseDuration("5m") as number, //{ type: number, alias: 't', description: `Maximum duration of a job (default: 5m)`, optional: true },
 };
 
 export const getConfig = (): Arguments => {

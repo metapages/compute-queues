@@ -1,7 +1,5 @@
-import { resolvePreferredWorker } from "@metapages/compute-queues-shared";
-import mod from "../../mod.json" with { type: "json" };
 import { config } from "/@/config.ts";
-import * as computeQueuesShared from "@metapages/compute-queues-shared";
+import { ensureIsolateNetwork } from "/@/docker/network.ts";
 import {
   type DockerJobArgs,
   dockerJobExecute,
@@ -10,7 +8,12 @@ import {
 } from "/@/queue/DockerJob.ts";
 import { convertIOToVolumeMounts, getOutputs } from "/@/queue/IO.ts";
 import { convertStringToDockerCommand } from "/@/queue/utils.ts";
-import { ensureIsolateNetwork } from "/@/docker/network.ts";
+import parseDuration from "parse-duration";
+
+import * as computeQueuesShared from "@metapages/compute-queues-shared";
+import { resolvePreferredWorker } from "@metapages/compute-queues-shared";
+
+import mod from "../../mod.json" with { type: "json" };
 
 const Version: string = mod.version;
 
@@ -30,6 +33,8 @@ type WorkerJobQueueItem = {
 // const UPDATE_WORKERS_INTERVAL = ms("5s");
 
 export class DockerJobQueue {
+  maxJobDuration: number;
+  maxJobDurationString: string;
   workerId: string;
   workerIdShort: string;
   cpus: number;
@@ -48,12 +53,14 @@ export class DockerJobQueue {
   // jobs: { [hash in string]: DockerJobDefinitionInputRefs } = {};
 
   constructor(args: DockerJobQueueArgs) {
-    const { sender, cpus, gpus, id } = args;
+    const { sender, cpus, gpus, id, maxJobDuration } = args;
     this.cpus = cpus;
     this.gpus = gpus;
     this.sender = sender;
     this.workerId = id;
     this.workerIdShort = this.workerId.substring(0, 6);
+    this.maxJobDurationString = maxJobDuration;
+    this.maxJobDuration = parseDuration(maxJobDuration) as number;
   }
 
   gpuDeviceIndicesUsed(): number[] {
@@ -151,12 +158,17 @@ export class DockerJobQueue {
   }
 
   register() {
+    console.log(
+      "🚀 register this.maxJobDurationString",
+      this.maxJobDurationString,
+    );
     const registration: computeQueuesShared.WorkerRegistration = {
       time: Date.now(),
       version: Version,
       id: this.workerId,
       cpus: this.cpus,
       gpus: this.gpus,
+      maxJobDuration: this.maxJobDurationString,
     };
     this.sender({
       type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
@@ -429,9 +441,9 @@ export class DockerJobQueue {
     console.log(
       `[${this.workerIdShort}] [${jobBlob.hash.substring(0, 6)}] starting...`,
     );
-    const definition =
-      (jobBlob.history[0].value as computeQueuesShared.StateChangeValueQueued)
-        .definition;
+    const queueBlob = jobBlob.history[0]
+      .value as computeQueuesShared.StateChangeValueQueued;
+    const definition = queueBlob?.definition;
     if (!definition) {
       console.log(
         `💥 [${this.workerIdShort}] _startJob but no this.jobs[${
@@ -525,6 +537,7 @@ export class DockerJobQueue {
 
       // TODO hook up the durationMax to a timeout
       // TODO add input mounts
+
       const executionArgs: DockerJobArgs = {
         sender: this.sender,
         id: jobBlob.hash,
@@ -542,7 +555,12 @@ export class DockerJobQueue {
         volumes,
         outputsDir,
         deviceRequests,
-        durationMax: definition.durationMax,
+        maxJobDuration: queueBlob.maxJobDuration
+          ? Math.min(
+            parseDuration(queueBlob.maxJobDuration) as number,
+            config.maxJobDuration,
+          )
+          : config.maxJobDuration,
       };
 
       // Not awaiting, it should have already been created, but let's
@@ -583,6 +601,13 @@ export class DockerJobQueue {
           );
           result.logs = result.logs || [];
           if (result.StatusCode !== 0) {
+            if (result.isTimedOut) {
+              result.logs.push([
+                "💥 Timed out",
+                Date.now(),
+                true,
+              ]);
+            }
             result.logs.push([
               `💥 StatusCode: ${result.StatusCode}`,
               Date.now(),
@@ -617,7 +642,14 @@ export class DockerJobQueue {
           let valueFinished:
             | computeQueuesShared.StateChangeValueFinished
             | undefined;
-          if (result.error) {
+          if (result.isTimedOut) {
+            valueFinished = {
+              reason: computeQueuesShared.DockerJobFinishedReason.TimedOut,
+              worker: this.workerId,
+              time: Date.now(),
+              result: resultWithOutputs,
+            };
+          } else if (result.error) {
             valueFinished = {
               reason: computeQueuesShared.DockerJobFinishedReason.Error,
               worker: this.workerId,

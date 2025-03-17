@@ -1,14 +1,17 @@
 import { config } from "/@/config.ts";
+import { ensureIsolateNetwork } from "/@/docker/network.ts";
 import { ensureSharedVolume } from "/@/docker/volume.ts";
 import { localHandler } from "/@/lib/local-handler.ts";
+import { processes, waitForDocker } from "/@/processes.ts";
 import { clearCache } from "/@/queue/dockerImage.ts";
 import { DockerJobQueue, type DockerJobQueueArgs } from "/@/queue/index.ts";
-import { Command } from "@cliffy/command";
 import { ms } from "ms";
+import parseDuration from "parse-duration";
 import ReconnectingWebSocket from "reconnecting-websocket";
 import { ensureDir, existsSync } from "std/fs";
 import { join } from "std/path";
 
+import { Command } from "@cliffy/command";
 import {
   type BroadcastJobStates,
   type PayloadClearJobCache,
@@ -19,10 +22,8 @@ import {
   type WebsocketMessageWorkerToServer,
 } from "@metapages/compute-queues-shared";
 
-import mod from "../../mod.json" with { type: "json" };
-import { processes, waitForDocker } from "/@/processes.ts";
 import { getKv } from "../../../shared/src/shared/kv.ts";
-import { ensureIsolateNetwork } from "/@/docker/network.ts";
+import mod from "../../mod.json" with { type: "json" };
 
 const VERSION: string = mod.version;
 
@@ -48,6 +49,10 @@ export const runCommand = new Command()
     { default: "/tmp/worker-metapage-io" },
   )
   .option("--id [id:string]", "Custom worker ID")
+  .option(
+    "-t, --max-job-duration [maxJobDuration:string]",
+    "Maximum duration of a job. Default: 5m",
+  )
   .option("--debug [debug:boolean]", "Debug mode", { default: undefined })
   .action(async (options, queue?: string) => {
     const METAPAGE_IO_CPUS = Deno.env.get(`${EnvPrefix}CPUS`);
@@ -101,6 +106,15 @@ export const runCommand = new Command()
       config.server = `http://localhost:${config.port}`;
     }
 
+    const METAPAGE_IO_JOB_MAX_DURATION = Deno.env.get(
+      `${EnvPrefix}JOB_MAX_DURATION`,
+    );
+    const stringDuration = typeof (options.maxJobDuration) === "string"
+      ? options.maxJobDuration
+      : (METAPAGE_IO_JOB_MAX_DURATION || "5m");
+
+    config.maxJobDuration = parseDuration(stringDuration) as number;
+
     const kv = await getKv(); //Deno.openKv(Deno.env.get("DENO_KV_URL"));
     const existingId: string | null = (await kv.get<string>(["workerId"]))
       ?.value;
@@ -117,7 +131,7 @@ export const runCommand = new Command()
     }
 
     console.log(
-      `Worker config: [id=%s...] [queue=%s] [mode=%s] [cpus=%s] [gpus=%s] [dataDirectory=%s] [api=%s] [debug=%s] ${
+      `Worker config: [id=%s...] [queue=%s] [mode=%s] [cpus=%s] [gpus=%s] [maxDuration=%s] [dataDirectory=%s] [api=%s] [debug=%s] ${
         config.mode === "local" ? "[port=%s]" : ""
       }`,
       config.id.substring(0, 6),
@@ -125,6 +139,7 @@ export const runCommand = new Command()
       config.mode,
       config.cpus,
       config.gpus,
+      stringDuration,
       config.dataDirectory,
       config.server,
       config.debug,
@@ -199,6 +214,7 @@ export const runCommand = new Command()
               gpus: config.gpus ?? 0,
               workerId: config.id,
               port: config.port,
+              maxJobDuration: stringDuration,
             });
           },
         },
@@ -215,6 +231,7 @@ export const runCommand = new Command()
         gpus: config.gpus,
         workerId: config.id,
         port: config.port,
+        maxJobDuration: stringDuration,
       });
     }
   });
@@ -231,9 +248,10 @@ export function connectToServer(
     gpus: number;
     workerId: string;
     port: number;
+    maxJobDuration: string;
   },
 ) {
-  const { server, queueId, cpus, gpus, workerId, port } = args;
+  const { server, queueId, cpus, gpus, workerId, port, maxJobDuration } = args;
 
   const url = config.mode === "local"
     ? `ws://localhost:${port}/${queueId}/worker`
@@ -269,6 +287,7 @@ export function connectToServer(
     id: workerId,
     version: VERSION,
     time: Date.now(),
+    maxJobDuration,
   };
   const dockerJobQueue = new DockerJobQueue(dockerJobQueueArgs);
 

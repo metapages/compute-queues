@@ -1,6 +1,7 @@
 import React from "react";
-import { DockerJobState, JobsStateMap, StateChangeValueRunning } from "/@shared/client";
+
 import { useStore } from "/@/store";
+import { DockerJobState, JobsStateMap, StateChangeValueRunning } from "/@shared/client";
 
 import { Box, Table, TableCaption, Tbody, Td, Th, Thead, Tr } from "@chakra-ui/react";
 
@@ -18,11 +19,19 @@ export const WorkersTable: React.FC = () => {
             <Th w={"10%"}>CPUs</Th>
             <Th w={"10%"}>GPUs</Th>
             <Th w={"10%"}>Jobs</Th>
+            <Th w={"10%"}>Max Job Duration</Th>
           </Tr>
         </Thead>
         <Tbody>
           {workers?.workers?.map((worker, i) => (
-            <WorkerRow key={worker.id + i} gpus={worker.gpus} cpus={worker.cpus} workerId={worker.id} jobs={jobs} />
+            <WorkerRow
+              key={worker.id + i}
+              gpus={worker.gpus}
+              cpus={worker.cpus}
+              workerId={worker.id}
+              jobs={jobs}
+              maxDuration={worker.maxJobDuration}
+            />
           ))}
         </Tbody>
       </Table>
@@ -35,7 +44,8 @@ const WorkerRow: React.FC<{
   cpus: number;
   gpus: number;
   jobs: JobsStateMap;
-}> = ({ workerId, cpus, gpus, jobs }) => {
+  maxDuration: string;
+}> = ({ workerId, cpus, gpus, jobs, maxDuration }) => {
   // How many jobs is this worker running
   const jobCount = !jobs
     ? 0
@@ -58,6 +68,7 @@ const WorkerRow: React.FC<{
       <Td>{cpus}</Td>
       <Td>{gpus || 0}</Td>
       <Td>{jobCount}</Td>
+      <Td>{maxDuration}</Td>
     </Tr>
   );
 };
