@@ -9,7 +9,7 @@ FAS_APP_NAME = "metapage-io-workers-*"
 FAS_STARTED_MACHINE_COUNT = "ceil(queue_length / 1)"
 FAS_PROMETHEUS_ADDRESS = "https://api.fly.io/prometheus/metapage-io"
 FAS_PROMETHEUS_METRIC_NAME = "queue_length"
-FAS_PROMETHEUS_QUERY = "sum(queue_length{app_name='$APP_NAME'})"
+FAS_PROMETHEUS_QUERY = "max_over_time(queue_length{app_name='$APP_NAME'}[5m])"
 
 [metrics]
 port = 9090
