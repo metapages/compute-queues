@@ -8,7 +8,10 @@ export async function waitForDocker() {
   Deno.stdout.writeSync(
     new TextEncoder().encode("Waiting for docker daemon.."),
   );
-  while (true) {
+
+  let attempts=0;
+
+  while (attempts < 10) {
     Deno.stdout.writeSync(
       new TextEncoder().encode("."),
     );
@@ -19,10 +22,17 @@ export async function waitForDocker() {
         stderr: "null",
       });
       const { success } = await curl.output();
-      if (success) break;
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (success) {
+        console.log("✅");
+        return;
+      }
+    } catch (error) {
+      console.error(`Attempt ${attempts + 1} failed with error:`, error);
     }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    attempts++
   }
-  console.log("✅");
+
+  console.log("❌ Failed to reach the docker daemon within the timeout period. Is it running and available at /var/run/docker.sock?");
+  Deno.exit(1);
 }

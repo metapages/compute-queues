@@ -69,7 +69,7 @@ export const runCommand = new Command()
     config.queue = config.mode === "local"
       ? "local"
       : queue || METAPAGE_IO_QUEUE || "";
-    if (!queue && config.mode === "remote") {
+    if (!queue && !METAPAGE_IO_QUEUE && config.mode === "remote") {
       throw new Error("Remote mode: must supply the queue id");
     }
 
