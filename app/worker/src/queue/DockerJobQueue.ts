@@ -14,12 +14,14 @@ import * as computeQueuesShared from "@metapages/compute-queues-shared";
 import { resolvePreferredWorker } from "@metapages/compute-queues-shared";
 
 import mod from "../../mod.json" with { type: "json" };
+import { removeAllJobsFromQueueNotInSet } from "/@/queue/cleanup.ts";
 
 const Version: string = mod.version;
 
 export interface DockerJobQueueArgs
   extends computeQueuesShared.WorkerRegistration {
   sender: computeQueuesShared.WebsocketMessageSenderWorker;
+  queue: string;
 }
 
 type WorkerJobQueueItem = {
@@ -50,10 +52,10 @@ export class DockerJobQueue {
   // Tell the server our state change requests
   sender: computeQueuesShared.WebsocketMessageSenderWorker;
 
-  // jobs: { [hash in string]: DockerJobDefinitionInputRefs } = {};
+  queueKey: string;
 
   constructor(args: DockerJobQueueArgs) {
-    const { sender, cpus, gpus, id, maxJobDuration } = args;
+    const { sender, cpus, gpus, id, maxJobDuration, queue } = args;
     this.cpus = cpus;
     this.gpus = gpus;
     this.sender = sender;
@@ -61,6 +63,10 @@ export class DockerJobQueue {
     this.workerIdShort = this.workerId.substring(0, 6);
     this.maxJobDurationString = maxJobDuration;
     this.maxJobDuration = parseDuration(maxJobDuration) as number;
+    this.queueKey = queue;
+    if (!this.queueKey) {
+      throw new Error("queueKey is required");
+    }
   }
 
   gpuDeviceIndicesUsed(): number[] {
@@ -158,10 +164,6 @@ export class DockerJobQueue {
   }
 
   register() {
-    console.log(
-      "🚀 register this.maxJobDurationString",
-      this.maxJobDurationString,
-    );
     const registration: computeQueuesShared.WorkerRegistration = {
       time: Date.now(),
       version: Version,
@@ -204,6 +206,10 @@ export class DockerJobQueue {
           Object.keys(this.queue).join(",")
         }] jobStates=[${Object.keys(jobStates).join(",")}]`,
       );
+    }
+
+    if (isAllJobs) {
+      removeAllJobsFromQueueNotInSet(new Set(Object.keys(jobStates)));
     }
 
     // make sure our local jobs should be running (according to the server state)
@@ -384,7 +390,7 @@ export class DockerJobQueue {
               computeQueuesShared.DockerJobState.Queued ||
             jobStates[key].state === computeQueuesShared.DockerJobState.ReQueued
           );
-        console.log("queuedJobKeys", queuedJobKeys);
+
         if (config.debug) {
           console.log(
             `[${this.workerIdShort}] 🎳 _claimJobs queuedJobKeys=[${
@@ -538,8 +544,10 @@ export class DockerJobQueue {
       // TODO hook up the durationMax to a timeout
       // TODO add input mounts
 
+      console.log("queueKey", this.queueKey);
       const executionArgs: DockerJobArgs = {
         sender: this.sender,
+        queue: this.queueKey,
         id: jobBlob.hash,
         image: definition.image,
         build: definition.build,
@@ -565,7 +573,7 @@ export class DockerJobQueue {
 
       // Not awaiting, it should have already been created, but let's
       // check on every job anyway, but out of band
-      ensureIsolateNetwork(false);
+      ensureIsolateNetwork();
 
       const dockerExecution: DockerJobExecution = dockerJobExecute(
         executionArgs,

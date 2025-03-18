@@ -1,13 +1,19 @@
-import { DockerNetworkForJobs } from "/@/docker/network.ts";
-import * as StreamTools from "/@/docker/streamtools.ts";
-import { DockerJobSharedVolumeName } from "/@/docker/volume.ts";
-import { docker } from "/@/queue/dockerClient.ts";
-import { DockerBuildError, ensureDockerImage } from "/@/queue/dockerImage.ts";
 import bytes from "bytes";
 import type Docker from "dockerode";
 import { ensureDirSync, existsSync } from "std/fs";
 import type { Buffer } from "std/node/buffer";
 import { dirname, join } from "std/path";
+import { DockerNetworkForJobs } from "/@/docker/network.ts";
+import * as StreamTools from "/@/docker/streamtools.ts";
+import { DockerJobSharedVolumeName } from "/@/docker/volume.ts";
+import { docker } from "/@/queue/dockerClient.ts";
+import { DockerBuildError, ensureDockerImage } from "/@/queue/dockerImage.ts";
+
+import {
+  ContainerLabel,
+  ContainerLabelId,
+  ContainerLabelQueue,
+} from "/@/queue/constants.ts";
 
 import {
   type DockerApiDeviceRequest,
@@ -58,6 +64,7 @@ export interface Volume {
 // this goes in
 export interface DockerJobArgs {
   sender: WebsocketMessageSenderWorker;
+  queue: string;
   id: string;
   image?: string;
   build?: DockerJobImageBuild;
@@ -85,6 +92,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   const {
     sender,
     id,
+    queue,
     image,
     command,
     env,
@@ -155,7 +163,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     AttachStdout: true,
     AttachStderr: true,
     Labels: {
-      "container.mtfm.io/id": args.id,
+      [ContainerLabelId]: args.id,
+      [ContainerLabelQueue]: queue,
+      [ContainerLabel]: "true",
     },
     User: `${Deno.uid()}:${Deno.gid()}`,
   };
@@ -271,7 +281,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     // Check for existing job container
     const runningContainers = await docker.listContainers({
       Labels: {
-        "container.mtfm.io/id": args.id,
+        [ContainerLabelId]: args.id,
       },
     });
     const existingJobContainer = runningContainers.find(
@@ -281,8 +291,8 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         "Labels" in container &&
         typeof container.Labels === "object" &&
         container.Labels != null &&
-        "container.mtfm.io/id" in container.Labels &&
-        container.Labels["container.mtfm.io/id"] === args.id,
+        ContainerLabelId in container.Labels &&
+        container.Labels[ContainerLabelId] === args.id,
     );
 
     if (existingJobContainer) {

@@ -22,7 +22,6 @@ import type { Volume } from "/@/queue/DockerJob.ts";
 export const convertIOToVolumeMounts = async (
   job: { id: string; definition: DockerJobDefinitionInputRefs },
   address: string,
-  workerId: string,
 ): Promise<{ volumes: Volume[]; outputsDir: string }> => {
   const config = getConfig();
   const { id, definition } = job;
@@ -49,11 +48,11 @@ export const convertIOToVolumeMounts = async (
   await Deno.chmod(inputsDir, 0o777);
   await Deno.chmod(outputsDir, 0o777);
 
-  console.log(
-    `[${workerId.substring(0, 6)}] [${
-      id.substring(0, 6)
-    }] creating\n\t ${inputsDir}\n\t ${outputsDir}\n\t ${configFilesDir}`,
-  );
+  // console.log(
+  //   `[${workerId.substring(0, 6)}] [${
+  //     id.substring(0, 6)
+  //   }] creating\n\t ${inputsDir}\n\t ${outputsDir}\n\t ${configFilesDir}`,
+  // );
 
   // copy the inputs (if any)
   const inputs = definition.inputs;

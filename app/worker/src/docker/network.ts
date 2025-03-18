@@ -2,26 +2,16 @@ import { docker } from "/@/queue/dockerClient.ts";
 
 export const DockerNetworkForJobs = "metaframe-container-worker-network";
 
-export const ensureIsolateNetwork = async (log: boolean = true) => {
+export const ensureIsolateNetwork = async () => {
   const network = docker.getNetwork(DockerNetworkForJobs);
-  if (log) {
-    Deno.stdout.writeSync(
-      new TextEncoder().encode(
-        `Ensure docker network [${DockerNetworkForJobs}]...`,
-      ),
-    );
-  }
   try {
     await network.inspect();
-    if (log) {
-      console.log(`exists ✅`);
-    }
   } catch (_err) {
-    if (log) {
-      Deno.stdout.writeSync(new TextEncoder().encode("creating..."));
-    } else {
-      console.log("Re-creating network, it might have been deleted by docker");
-    }
+    Deno.stdout.writeSync(
+      new TextEncoder().encode(
+        "Re-creating network, it might have been deleted by docker...",
+      ),
+    );
     await docker.createNetwork({
       Name: DockerNetworkForJobs,
       Driver: "bridge",
@@ -35,8 +25,6 @@ export const ensureIsolateNetwork = async (log: boolean = true) => {
         "container.mtfm.io": "true",
       },
     });
-    if (log) {
-      console.log(`✅`);
-    }
+    console.log(`✅`);
   }
 };
