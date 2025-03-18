@@ -1,15 +1,14 @@
 import { config } from "/@/config.ts";
-import { ensureIsolateNetwork } from "/@/docker/network.ts";
-import { ensureSharedVolume } from "/@/docker/volume.ts";
-import { localHandler } from "/@/lib/local-handler.ts";
-import { processes, waitForDocker } from "/@/processes.ts";
-import { clearCache } from "/@/queue/dockerImage.ts";
-import { DockerJobQueue, type DockerJobQueueArgs } from "/@/queue/index.ts";
+
 import { ms } from "ms";
 import parseDuration from "parse-duration";
 import ReconnectingWebSocket from "reconnecting-websocket";
 import { ensureDir, existsSync } from "std/fs";
 import { join } from "std/path";
+import { localHandler } from "/@/lib/local-handler.ts";
+import { processes, waitForDocker } from "/@/processes.ts";
+import { clearCache } from "/@/queue/dockerImage.ts";
+import { DockerJobQueue, type DockerJobQueueArgs } from "/@/queue/index.ts";
 
 import { Command } from "@cliffy/command";
 import {
@@ -24,6 +23,7 @@ import {
 
 import { getKv } from "../../../shared/src/shared/kv.ts";
 import mod from "../../mod.json" with { type: "json" };
+import { prepGpus, runChecksOnInterval } from "/@/docker/utils.ts";
 
 const VERSION: string = mod.version;
 
@@ -163,25 +163,8 @@ export const runCommand = new Command()
     }
 
     await waitForDocker();
-    // If GPUs are configured, run ldconfig
-    if (config.gpus && config.gpus > 0) {
-      try {
-        // https://github.com/NVIDIA/nvidia-docker/issues/1399
-        Deno.stdout.writeSync(
-          new TextEncoder().encode(
-            `[gpus=${config.gpus}] rebuild ldconfig cache...`,
-          ),
-        );
-        const ldconfig = new Deno.Command("ldconfig");
-        await ldconfig.output();
-        console.log("✅");
-      } catch (err) {
-        console.log(`⚠️ ldconfig error ${`${err}`.split(":")[0]}`);
-      }
-    }
-
-    await ensureSharedVolume();
-    await ensureIsolateNetwork();
+    await prepGpus(config.gpus);
+    await runChecksOnInterval(config.queue);
 
     if (config.mode === "local") {
       const cacheDir = join(config.dataDirectory, "cache");
@@ -288,6 +271,7 @@ export function connectToServer(
     version: VERSION,
     time: Date.now(),
     maxJobDuration,
+    queue: queueId,
   };
   const dockerJobQueue = new DockerJobQueue(dockerJobQueueArgs);
 

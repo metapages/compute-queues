@@ -194,7 +194,7 @@ export const ensureDockerImage = async (args: {
             new TextDecoderStream(),
           )
         ) {
-          console.log(`DOCKER BUILD stdout: ${data}`);
+          // console.log(`DOCKER BUILD stdout: ${data}`);
           const time = Date.now();
           const decodedLines: ConsoleLogLine[] = data.trim().split("\n").map((
             l: string,
@@ -241,9 +241,9 @@ export const ensureDockerImage = async (args: {
 
       const { success, code, signal } = await process.status;
 
-      console.log("success", success);
-      console.log("status", code);
-      console.log("signal", signal);
+      // console.log("success", success);
+      // console.log("status", code);
+      // console.log("signal", signal);
 
       if (!success) {
         console.error(
