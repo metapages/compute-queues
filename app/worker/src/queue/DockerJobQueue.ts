@@ -507,7 +507,6 @@ export class DockerJobQueue {
         const volumesResult = await convertIOToVolumeMounts(
           { id: jobBlob.hash, definition },
           config.server,
-          this.workerId,
         );
         volumes = volumesResult.volumes;
         outputsDir = volumesResult.outputsDir;
