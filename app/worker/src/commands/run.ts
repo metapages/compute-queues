@@ -54,6 +54,10 @@ export const runCommand = new Command()
     "Maximum duration of a job. Default: 5m",
   )
   .option("--debug [debug:boolean]", "Debug mode", { default: undefined })
+  .option(
+    "--test-mode [testMode:boolean]",
+    "Test mode: jobs are ignored by existing workers on the same host",
+  )
   .action(async (options, queue?: string) => {
     const METAPAGE_IO_CPUS = Deno.env.get(`${EnvPrefix}CPUS`);
     config.cpus = typeof options.cpus === "number"
@@ -112,8 +116,9 @@ export const runCommand = new Command()
     const stringDuration = typeof (options.maxJobDuration) === "string"
       ? options.maxJobDuration
       : (METAPAGE_IO_JOB_MAX_DURATION || "5m");
-
     config.maxJobDuration = parseDuration(stringDuration) as number;
+
+    config.testMode = !!options.testMode;
 
     const kv = await getKv(); //Deno.openKv(Deno.env.get("DENO_KV_URL"));
     const existingId: string | null = (await kv.get<string>(["workerId"]))

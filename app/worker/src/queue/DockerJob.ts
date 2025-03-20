@@ -13,6 +13,7 @@ import {
   ContainerLabel,
   ContainerLabelId,
   ContainerLabelQueue,
+  ContainerLabelTestMode,
 } from "/@/queue/constants.ts";
 
 import {
@@ -24,6 +25,7 @@ import {
   type WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
 } from "@metapages/compute-queues-shared";
+import { config } from "/@/config.ts";
 
 // Minimal interface for interacting with docker jobs:
 //  inputs:
@@ -169,6 +171,10 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     },
     User: `${Deno.uid()}:${Deno.gid()}`,
   };
+
+  if (config.testMode) {
+    createOptions.Labels[ContainerLabelTestMode] = "true";
+  }
 
   // Connect container to our network
   createOptions.HostConfig!.NetworkMode = DockerNetworkForJobs;

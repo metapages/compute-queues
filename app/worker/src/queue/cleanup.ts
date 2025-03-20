@@ -2,6 +2,7 @@ import {
   ContainerLabel,
   ContainerLabelId,
   ContainerLabelQueue,
+  ContainerLabelTestMode,
 } from "/@/queue/constants.ts";
 import { docker } from "/@/queue/dockerClient.ts";
 
@@ -14,7 +15,8 @@ export const removeAllJobsFromOtherQueues = async (queue: string) => {
     const containerId = containerData.Id;
     const containerLabels = containerData.Labels;
     const containerQueue = containerLabels[ContainerLabelQueue];
-    if (containerQueue !== queue) {
+    const containerTestMode = containerLabels[ContainerLabelTestMode];
+    if (containerQueue !== queue && containerTestMode !== "true") {
       try {
         const container = await docker.getContainer(containerId);
         await container.kill();
