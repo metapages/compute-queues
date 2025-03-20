@@ -285,7 +285,15 @@ export const dataRefToFile = async (
           async () => {
             let file: Deno.FsFile | null = null;
             try {
-              const fileResponse = await fetch(url, { redirect: "follow" });
+              const fileResponse = await fetch(url, {
+                redirect: "follow",
+                headers: {
+                  // https://github.com/denoland/deno/issues/25992#issuecomment-2713481177
+                  // We hit the same issues as described above
+                  // This is a workaround to avoid the issue
+                  "accept-encoding": "identity",
+                },
+              });
 
               if (fileResponse.ok && fileResponse.body) {
                 file = await Deno.open(filename, {
