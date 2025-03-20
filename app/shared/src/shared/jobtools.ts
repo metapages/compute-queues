@@ -1,7 +1,7 @@
 import { crypto } from "@std/crypto";
 import { encodeHex } from "@std/encoding";
 import { retryAsync } from "retry";
-import { ensureDir, exists } from "std/fs";
+import { ensureDir, ensureDirSync, exists, existsSync } from "std/fs";
 import { dirname } from "std/path";
 
 import { join } from "std/path";
@@ -249,7 +249,7 @@ export const dataRefToFile = async (
         // console.log(`🐸🐪 dataRefToFile sanitizedHash`, sanitizedHash);
         const cachedFilePath = join(dataDirectory, "cache", sanitizedHash);
         // console.log(`🐸🐪 dataRefToFile cachedFilePath`, cachedFilePath);
-        const cacheExists = await exists(cachedFilePath);
+        const cacheExists = existsSync(cachedFilePath);
 
         if (cacheExists) {
           try {
@@ -258,7 +258,11 @@ export const dataRefToFile = async (
             // swallow error
           }
           try {
-            await Deno.link(cachedFilePath, filename);
+            const fileDirName = dirname(filename);
+            if (fileDirName && fileDirName !== "." && fileDirName !== "/") {
+              ensureDirSync(fileDirName);
+            }
+            Deno.linkSync(cachedFilePath, filename);
             console.log(
               `Hard link created from cache for hash ${hash} to ${filename}.`,
             );
