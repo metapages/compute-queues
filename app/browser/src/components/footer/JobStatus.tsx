@@ -14,6 +14,11 @@ import humanizeDuration from "humanize-duration";
 import { Box, HStack, Icon, Spinner, Text, useToast, VStack } from "@chakra-ui/react";
 import { Check, HourglassMedium, Prohibit, WarningCircle } from "@phosphor-icons/react";
 
+const humanizeDurationOptions = {
+  // round: true,
+  maxDecimalPoints: 1,
+};
+
 const STATUS_ICON_SIZE = 6;
 export const JobStatus: React.FC = () => {
   const toast = useToast();
@@ -66,9 +71,13 @@ export const JobStatus: React.FC = () => {
           {text}
         </Text>
         <HStack gap={2}>
-          {desc && <Text fontSize={"0.7rem"}>{desc}</Text>}
+          {desc && (
+            <Text display={{ base: "none", md: "block" }} fontSize={"0.7rem"}>
+              {desc}
+            </Text>
+          )}
           {jobId && (
-            <Text cursor={"copy"} onClick={copyJobId} fontSize={"0.7rem"}>
+            <Text display={{ base: "none", md: "block" }} cursor={"copy"} onClick={copyJobId} fontSize={"0.7rem"}>
               Job Id: {jobId.slice(0, 5)}
             </Text>
           )}
@@ -114,19 +123,19 @@ const getJobStateValues = (
       switch (resultFinished.reason) {
         case DockerJobFinishedReason.Cancelled:
           icon = <Icon as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-          text = `Job Cancelled ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration)})` : ""}`;
+          text = `Job Cancelled ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration, humanizeDurationOptions)})` : ""}`;
           break;
         case DockerJobFinishedReason.Error:
           showExitCodeRed = true;
           icon = <Icon color={"red"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-          text = `Job Failed ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration)})` : ""}`;
+          text = `Job Failed ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration, humanizeDurationOptions)})` : ""}`;
           // truncate to char len, add modal if it's longer than one line (to right of exit code)
           desc = errorBlob?.json?.message;
           exitCode = errorBlob?.statusCode;
           break;
         case DockerJobFinishedReason.Success:
           exitCode = resultFinished?.result?.StatusCode;
-          text = `Job Complete ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration)})` : ""}`;
+          text = `Job Complete ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration, humanizeDurationOptions)})` : ""}`;
           if (exitCode === 0) {
             icon = <Icon color={"green"} as={Check} boxSize={STATUS_ICON_SIZE} />;
           } else {
@@ -135,7 +144,7 @@ const getJobStateValues = (
           break;
         case DockerJobFinishedReason.TimedOut:
           icon = <Icon color={"orange"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-          text = `Job Timed Out ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration)})` : ""}`;
+          text = `Job Timed Out ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration, humanizeDurationOptions)})` : ""}`;
           break;
         case DockerJobFinishedReason.WorkerLost:
           icon = <Icon color={"orange"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
