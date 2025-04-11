@@ -92,6 +92,15 @@ export const shaDockerJob = (
         delete inputs[key].hash;
       });
     }
+
+    // remove the channel env var since it changes every refresh
+    if (draft?.env?.channel) {
+      delete draft.env.channel;
+    }
+    if (draft?.env?.CHANNEL) {
+      delete draft.env.CHANNEL;
+    }
+
     // other aspects not relevant to the hash
   });
 
