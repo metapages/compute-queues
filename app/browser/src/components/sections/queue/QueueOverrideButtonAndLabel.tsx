@@ -9,6 +9,8 @@ import {
   InputLeftAddon,
   InputRightElement,
   Hide,
+  Checkbox,
+  Tooltip,
 } from "@chakra-ui/react";
 import { Cloud, Monitor, WifiHigh, WifiSlash } from "@phosphor-icons/react";
 import React, { useCallback, useEffect, useState } from "react";
@@ -16,13 +18,14 @@ import debounce from "lodash/debounce";
 import { useQueue } from "/@/hooks/useQueue";
 
 export const QueueOverrideButtonAndLabel: React.FC = () => {
-  const { queue, setQueue, isLocalMode, toggleLocalMode } = useQueue();
-  const [inputValue, setInputValue] = useState(queue);
+  const { resolvedQueue, queue, setQueue, isLocalMode, toggleLocalMode, ignoreQueueOverride, setIgnoreQueueOverride } =
+    useQueue();
+  const [inputValue, setInputValue] = useState(resolvedQueue);
 
   // Update input value when queue changes
   useEffect(() => {
-    setInputValue(queue);
-  }, [queue]);
+    setInputValue(resolvedQueue);
+  }, [resolvedQueue]);
 
   // Debounced queue update
   const debouncedSetQueue = useCallback(
@@ -48,26 +51,47 @@ export const QueueOverrideButtonAndLabel: React.FC = () => {
   return (
     <HStack w="100%" justifyContent="center" spacing={2} py={1} px={1}>
       <HStack maxW="1200px" w="100%" spacing={2} minW="0">
-        <HStack gap={0} flexShrink={0} minW="auto">
-          <Button
+        <Tooltip
+          label={ignoreQueueOverride ? "Unselect to set queue from page" : "Select to set queue here"}
+          placement="top">
+          <Checkbox
+            isChecked={ignoreQueueOverride}
+            onChange={e => setIgnoreQueueOverride(e.target.checked)}
             size="sm"
-            aria-label="Remote"
-            onClick={toggleLocalMode}
-            colorScheme={isLocalMode ? "gray" : "blue"}
-            borderRadius="8px 0 0 8px">
-            <Cloud weight="bold" />
-            <Hide below="md">{"Remote"}</Hide>
-          </Button>
+            mr={2}
+          />
+        </Tooltip>
 
-          <Button
-            size="sm"
-            aria-label="Local"
-            onClick={toggleLocalMode}
-            colorScheme={isLocalMode ? "blue" : "gray"}
-            borderRadius="0 8px 8px 0">
-            <Monitor weight="bold" />
-            <Hide below="md">{"Local"}</Hide>
-          </Button>
+        <HStack gap={0} flexShrink={0} minW="auto">
+          {ignoreQueueOverride ? (
+            <>
+              <Button
+                isDisabled={!ignoreQueueOverride}
+                size="sm"
+                aria-label="Remote"
+                onClick={toggleLocalMode}
+                colorScheme={isLocalMode ? "gray" : "blue"}
+                borderRadius="8px 0 0 8px"
+                leftIcon={<Cloud weight="bold" />}>
+                <Hide below="md">{"Remote"}</Hide>
+              </Button>
+
+              <Button
+                isDisabled={!ignoreQueueOverride}
+                size="sm"
+                aria-label="Local"
+                onClick={toggleLocalMode}
+                colorScheme={isLocalMode ? "blue" : "gray"}
+                borderRadius="0 8px 8px 0"
+                leftIcon={<Monitor weight="bold" />}>
+                <Hide below="md">{"Local"}</Hide>
+              </Button>
+            </>
+          ) : (
+            <Hide below="md">
+              <Box>Set from page</Box>
+            </Hide>
+          )}
         </HStack>
 
         <Hide below="sm">
@@ -77,7 +101,7 @@ export const QueueOverrideButtonAndLabel: React.FC = () => {
         <InputGroup size="md" flexGrow={1} minW="0" fontFamily="monospace">
           <Hide below="md">
             <InputLeftAddon h="32px" fontSize="sm" fontWeight="semibold">
-              Queue Key
+              Queue
             </InputLeftAddon>
           </Hide>
           <Input
@@ -89,9 +113,9 @@ export const QueueOverrideButtonAndLabel: React.FC = () => {
             pr={!queue && !isLocalMode ? "100px" : "8px"}
           />
           <InputRightElement h="32px" w="auto" pr={2} zIndex={1}>
-            {isLocalMode ? (
+            {isLocalMode || !ignoreQueueOverride ? (
               <LockIcon color="gray.500" boxSize={3} />
-            ) : !queue ? (
+            ) : !queue && !resolvedQueue ? (
               <Box
                 bg="red.500"
                 color="white"
