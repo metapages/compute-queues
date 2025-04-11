@@ -257,7 +257,7 @@ export function connectToServer(
     connectionTimeout: 6000,
     maxRetries: Infinity,
     maxEnqueuedMessages: Infinity,
-    debug: true,
+    debug: config.debug,
   });
   const sender: WebsocketMessageSenderWorker = (
     message: WebsocketMessageWorkerToServer,
