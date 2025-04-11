@@ -249,15 +249,15 @@ export function connectToServer(
   console.log(`🪐 connecting... ${url}`);
   // @ts-ignore: frustrating cannot get compiler "default" import setup working
   const rws = new ReconnectingWebSocket(url, [], {
-    maxReconnectionDelay: 10000,
+    maxReconnectionDelay: 6000,
     minReconnectionDelay: 1000 + Math.random() * 4000,
-    reconnectionDelayGrowFactor: 1.3,
+    reconnectionDelayGrowFactor: 1,
     minUptime: 5000,
     // connectionTimeout: 4000,
     connectionTimeout: 6000,
     maxRetries: Infinity,
     maxEnqueuedMessages: Infinity,
-    // debug: true,
+    debug: true,
   });
   const sender: WebsocketMessageSenderWorker = (
     message: WebsocketMessageWorkerToServer,
