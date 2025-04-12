@@ -1,20 +1,24 @@
-import React, { ChangeEvent, ReactNode, useCallback } from "react";
+import React, { ChangeEvent, ReactNode, useCallback, useState } from "react";
 
+import { useFormik } from "formik";
+import * as yup from "yup";
 import { FormLink } from "/@/components/generic/FormLink";
 import { useMaxJobDuration } from "/@/hooks/useMaxJobDuration";
 import { useOptionJobStartAutomatically } from "/@/hooks/useOptionJobStartAutomatically";
 import { useOptionResolveDataRefs } from "/@/hooks/useOptionResolveDataRefs";
 import { useOptionShowTerminalFirst } from "/@/hooks/useOptionShowTerminalFirst";
 import { DockerJobDefinitionParamsInUrlHash } from "/@shared/client";
-import { useFormik } from "formik";
-import * as yup from "yup";
 
 import {
   Box,
   Button,
   Divider,
+  Flex,
   FormControl,
   FormLabel,
+  HStack,
+  Icon,
+  IconButton,
   Input,
   InputGroup,
   Link,
@@ -23,6 +27,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
+import { Plus, TrashSimple } from "@phosphor-icons/react";
 
 const validationSchema = yup.object({
   command: yup.string().optional(),
@@ -33,7 +38,9 @@ const validationSchema = yup.object({
   shmSize: yup.string().optional(),
   jobStartAutomatically: yup.boolean().optional(),
   maxJobDuration: yup.string().optional(),
+  newEnvVar: yup.string().optional(),
 });
+
 interface FormType extends yup.InferType<typeof validationSchema> {}
 
 const labelToName = {
@@ -58,6 +65,8 @@ export const TabConfigureJob: React.FC = () => {
   const [showTerminalFirst, toggleShowTerminalFirst, loading] = useOptionShowTerminalFirst();
   const [resolveDataRefs, toggleResolveDataRefs] = useOptionResolveDataRefs();
   const [maxJobDuration, setMaxJobDuration] = useMaxJobDuration();
+  const [newEnvVar, setNewEnvVar] = useState("");
+
   const onSubmit = useCallback(
     (values: FormType) => {
       const newJobDefinitionBlob = { ...jobDefinitionBlob };
@@ -75,6 +84,33 @@ export const TabConfigureJob: React.FC = () => {
     [jobDefinitionBlob, setJobDefinitionBlob, setDebug, toggleJobStartAutomatically, setMaxJobDuration],
   );
 
+  const handleAddEnvVar = useCallback(() => {
+    if (!newEnvVar.trim()) return;
+
+    const newJobDefinitionBlob = { ...jobDefinitionBlob };
+    if (!newJobDefinitionBlob.env) {
+      newJobDefinitionBlob.env = {};
+    }
+    const [key, value] = newEnvVar.trim().split("=");
+    if (key && value) {
+      newJobDefinitionBlob.env[key] = value;
+      setJobDefinitionBlob(newJobDefinitionBlob);
+      setNewEnvVar("");
+    }
+  }, [jobDefinitionBlob, newEnvVar, setJobDefinitionBlob]);
+
+  const handleDeleteEnvVar = useCallback(
+    (key: string) => {
+      const newJobDefinitionBlob = { ...jobDefinitionBlob };
+      if (newJobDefinitionBlob.env) {
+        const { [key]: _, ...rest } = newJobDefinitionBlob.env;
+        newJobDefinitionBlob.env = rest;
+        setJobDefinitionBlob(newJobDefinitionBlob);
+      }
+    },
+    [jobDefinitionBlob, setJobDefinitionBlob],
+  );
+
   const formik = useFormik({
     initialValues: {
       command: jobDefinitionBlob?.command,
@@ -85,6 +121,7 @@ export const TabConfigureJob: React.FC = () => {
       jobStartAutomatically,
       shmSize: jobDefinitionBlob?.shmSize,
       maxJobDuration,
+      newEnvVar,
     },
     onSubmit,
     validationSchema,
@@ -134,6 +171,49 @@ export const TabConfigureJob: React.FC = () => {
                 </FormControl>
               );
             })}
+
+            {/* Environment Variables Section */}
+            <Box>
+              <Text align="center" fontWeight="bold" mb={2}>
+                Environment Variables
+              </Text>
+              <VStack spacing={2} align="stretch">
+                {Object.entries(jobDefinitionBlob?.env || {}).map(([key, value]) => (
+                  <Flex key={key} align="center" justify="space-between">
+                    <Text>{`${key}=${value}`}</Text>
+                    <IconButton
+                      color="gray.300"
+                      variant="ghost"
+                      icon={<Icon as={TrashSimple} boxSize={5} />}
+                      aria-label="Delete environment variable"
+                      size="md"
+                      onClick={() => handleDeleteEnvVar(key)}
+                    />
+                  </Flex>
+                ))}
+                <HStack>
+                  <Input
+                    value={newEnvVar}
+                    onChange={e => setNewEnvVar(e.target.value)}
+                    placeholder="Add new environment variable (KEY=VALUE)"
+                    size="sm"
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddEnvVar();
+                      }
+                    }}
+                  />
+                  <IconButton
+                    variant="ghost"
+                    aria-label="Add environment variable"
+                    icon={<Plus />}
+                    size="md"
+                    onClick={handleAddEnvVar}
+                  />
+                </HStack>
+              </VStack>
+            </Box>
 
             <FormControl>
               <FormLabel htmlFor="gpu">
