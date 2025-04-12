@@ -2,6 +2,7 @@ import { config } from "/@/config.ts";
 
 import { ms } from "ms";
 import parseDuration from "parse-duration";
+import humanizeDuration from "humanize-duration";
 import ReconnectingWebSocket from "reconnecting-websocket";
 import { ensureDir, existsSync } from "std/fs";
 import { join } from "std/path";
@@ -280,58 +281,77 @@ export function connectToServer(
   };
   const dockerJobQueue = new DockerJobQueue(dockerJobQueueArgs);
 
-  wsPool.add(rws);
-
   rws.addEventListener("error", (error: Error) => {
     console.log(`Websocket error=${error.message}`);
   });
 
   rws.addEventListener("open", () => {
     console.log(`🚀 connected! ${url} `);
-    rws.send("PING");
+    // This isn't a PING, but it's when we start measuring
     _timeLastPing = Date.now();
     dockerJobQueue.register();
   });
 
-  let closed = false;
-  rws.addEventListener("close", () => {
-    closed = true;
-    wsPool.remove(rws);
-    console.log(`💥🚀💥 disconnected! ${url}`);
-  });
-  const intervalSinceNoTrafficToTriggerReconnect = ms("15s") as number;
-  const twoSeconds = ms("2s") as number;
-  const reconnectCheck = () => {
-    if (closed) {
-      return;
+  // let closed = false;
+  // const pingInterval =
+  setInterval(() => {
+    if (rws.readyState === rws.OPEN) {
+      // console.log("🌳 pinging");
+      rws.send("PING");
+      _timeLastPing = Date.now();
+      timeLastPong = Date.now();
+    } else {
+      console.log("🌳 🚩 pinging but not open");
     }
+  }, 5000);
+
+  rws.addEventListener("close", () => {
+    // closed = true;
+    // wsPool.remove(rws);
+    console.log(`💥🚀💥 disconnected! ${url}`);
+    // clearInterval(pingInterval);
+  });
+  const intervalSinceNoTrafficToTriggerReconnect = ms("10s") as number;
+  const reconnectCheckInterval = ms("3s") as number;
+  const reconnectCheck = () => {
     if (
       (Date.now() - timeLastPong) >= intervalSinceNoTrafficToTriggerReconnect &&
       rws.readyState === rws.OPEN
     ) {
       console.log(
         `Reconnecting because no PONG since ${
-          (Date.now() - timeLastPong) / 1000
-        }s `,
+          humanizeDuration(Date.now() - timeLastPong)
+        } >= ${humanizeDuration(intervalSinceNoTrafficToTriggerReconnect)}`,
       );
       rws.reconnect();
+      // } else {
+      //   console.log(
+      //     `Not reconnecting because no PONG since ${
+      //       humanizeDuration(Date.now() - timeLastPong)
+      //     } < ${humanizeDuration(intervalSinceNoTrafficToTriggerReconnect)}`,
+      //   );
     }
-    setTimeout(reconnectCheck, twoSeconds);
+    setTimeout(reconnectCheck, reconnectCheckInterval);
   };
-  setTimeout(reconnectCheck, twoSeconds);
+  setTimeout(reconnectCheck, reconnectCheckInterval);
 
   rws.addEventListener("message", (message: MessageEvent) => {
     try {
       const messageString = message.data.toString();
 
-      if (messageString === "PONG") {
+      if (messageString.startsWith("PONG")) {
         timeLastPong = Date.now();
-
-        // wait a bit then send a ping
-        setTimeout(() => {
-          rws.send("PING");
-          _timeLastPing = Date.now();
-        }, 5000);
+        const pongedWorkerId = messageString.split(" ")[1];
+        if (pongedWorkerId !== workerId) {
+          console.log(
+            `Server does not recognize us, registering again , sees [${pongedWorkerId}] expected [${workerId}]`,
+          );
+          dockerJobQueue.register();
+          // } else {
+          //   console.log(
+          //     `🌳 ✅ PONG from server`,
+          //   );
+        }
 
         return;
       }
@@ -353,6 +373,12 @@ export function connectToServer(
         case WebsocketMessageTypeServerBroadcast.JobStates: {
           const allJobsStatesPayload = possibleMessage
             .payload as BroadcastJobStates;
+          console.log(
+            `[${workerId?.substring(0, 6)}] got JobStates(${
+              allJobsStatesPayload?.state?.jobs?.length || 0
+            })`,
+          );
+
           if (!allJobsStatesPayload) {
             console.log({
               error: "Missing payload in message",
@@ -372,6 +398,11 @@ export function connectToServer(
             });
             break;
           }
+          console.log(
+            `[${workerId?.substring(0, 6)}] got JobStateUpdates(${
+              someJobsPayload?.state?.jobs?.length || 0
+            })`,
+          );
           dockerJobQueue.onUpdateUpdateASubsetOfJobs(someJobsPayload);
           break;
         }
@@ -427,49 +458,3 @@ export function connectToServer(
     }
   });
 }
-
-export class WebSocketPool {
-  private static MAX_CONNECTIONS = 20000;
-  private connections = new Set<WebSocket>();
-
-  add(ws: WebSocket) {
-    if (this.connections.size >= WebSocketPool.MAX_CONNECTIONS) {
-      throw new Error("Maximum WebSocket connections reached");
-    }
-    this.connections.add(ws);
-
-    ws.addEventListener("close", () => {
-      this.connections.delete(ws);
-    });
-  }
-
-  remove(ws: WebSocket) {
-    this.connections.delete(ws);
-  }
-
-  closeAll() {
-    for (const ws of this.connections) {
-      try {
-        ws.close();
-      } catch (err) {
-        console.error("Error closing WebSocket:", err);
-      }
-    }
-    this.connections.clear();
-  }
-
-  get size() {
-    return this.connections.size;
-  }
-}
-
-const wsPool = new WebSocketPool();
-
-// Add to app/worker/src/commands/run.ts
-const cleanup = () => {
-  wsPool.closeAll();
-  // Close any other open resources
-};
-
-globalThis.addEventListener("unload", cleanup);
-globalThis.addEventListener("beforeunload", cleanup);

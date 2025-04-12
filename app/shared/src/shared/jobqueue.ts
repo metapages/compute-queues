@@ -175,6 +175,7 @@ export class BaseDockerJobQueue {
     this.address = address;
     this.serverId = serverId;
     this.dataDirectory = dataDirectory || "/tmp/worker-metaframe";
+    // console.log("⚠️💥 HARDCODING debug=true, REMOVE ME BEFORE MERGE", debug);
     this.debug = debug || false;
     this.workers = {
       otherWorkers: new Map(),
@@ -1127,13 +1128,42 @@ export class BaseDockerJobQueue {
       try {
         const { data: message } = event;
         if (this.debug) {
-          console.log(`➡️ 📧 to worker`, message);
+          console.log(`➡️ 📧 from worker`, message);
         }
-        // console.log('message', message);
-        const messageString = message.toString().trim();
+        if (typeof message !== "string" || !message) {
+          // we currently do not support binary
+          if (this.debug) {
+            console.log(
+              `➡️ 📧 from worker is not a string rather:`,
+              typeof message,
+            );
+          }
+          return;
+        }
+
+        const messageString = message;
+        if (!messageString || messageString === "undefined") {
+          return;
+        }
+
         if (messageString === "PING") {
-          // console.log(`PING FROM ${worker?.id}`)
-          connection.socket.send("PONG");
+          // console.log(
+          //   `🌳 PING FROM ${
+          //     workerRegistration
+          //       ? workerRegistration.id.substring(0, 6)
+          //       : "unknown worker"
+          //   }`,
+          // );
+          connection.socket.send(
+            "PONG " + (workerRegistration?.id || "unknown"),
+          );
+          // console.log(
+          //   `🌳 sending PONG TO ${
+          //     workerRegistration
+          //       ? workerRegistration.id.substring(0, 6)
+          //       : "unknown worker"
+          //   }`,
+          // );
           // To help with missing workers, send the current state of the unclaimed jobs
           // to the worker when it pings
           this.sendJobStatesToWebsocket(
@@ -1285,8 +1315,15 @@ export class BaseDockerJobQueue {
     connection.socket.addEventListener("message", (event) => {
       try {
         const { data: message } = event;
-        // console.log('⏯️ browser message', message);
+        if (typeof message !== "string" || !message) {
+          // we currently do not support binary
+          return;
+        }
+
         const messageString = message.toString();
+        if (!messageString || messageString === "undefined") {
+          return;
+        }
         if (messageString === "PING") {
           // console.log(`PING FROM browser`);
           connection.socket.send("PONG");
@@ -1295,8 +1332,13 @@ export class BaseDockerJobQueue {
         if (!messageString.startsWith("{")) {
           console.log(
             `[${this.address.substring(0, 15)}] browser message not JSON`,
-            messageString.substr(0, 100),
+            messageString,
           );
+          console.log(
+            `[${this.address.substring(0, 15)}] browser message not JSON`,
+            typeof messageString,
+          );
+          // .substr(0, 100)
           return;
         }
         const possibleMessage: WebsocketMessageClientToServer = JSON.parse(
@@ -1431,9 +1473,10 @@ export class BaseDockerJobQueue {
       }
     }
 
-    if (Object.keys(jobStates.state.jobs).length === 0) {
-      return "";
-    }
+    // I think it's better to send the message even if there are no jobs
+    // if (Object.keys(jobStates.state.jobs).length === 0) {
+    //   return "";
+    // }
 
     const messageString = JSON.stringify(message);
     return messageString;
