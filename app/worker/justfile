@@ -33,6 +33,10 @@ normal := '\033[0m'
     echo -e "                    run --cpus=1 --api-address=https://worker-metaframe.localhost local1"
     echo -e ""
 
+# Run the worker locally, pointing to the local API
+@dev queue="local1":
+    deno run --unsafely-ignore-certificate-errors --watch --allow-all --unstable-kv  --unstable-cron src/cli.ts run --cpus=1 --api-address=https://worker-metaframe.localhost:{{ APP_PORT }} {{ queue }}
+
 # Run the worker in local mode. Add --debug to enable debug mode.
 local +args="":
     deno run --watch --allow-all --unstable-kv --unstable-cron src/cli.ts run --mode=local --cpus=2 --gpus=0 {{ args }}
