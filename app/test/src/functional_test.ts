@@ -390,6 +390,7 @@ Deno.test(
           const jobGetUrl = `${API_URL}/job/${jobId}`;
           const response = await fetch(jobGetUrl);
           if (!response.ok) {
+            await response.body?.cancel();
             console.error(`Error fetching job ${jobId}`, response.statusText);
             continue;
           }
