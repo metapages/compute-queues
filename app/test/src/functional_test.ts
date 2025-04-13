@@ -185,8 +185,8 @@ Deno.test("submit multiple jobs and get expected results", async () => {
           }
           if (jobState.state === DockerJobState.Finished) {
             const finishedState = jobState.value as StateChangeValueFinished;
-            const lines: string = finishedState.result?.logs?.map((l) =>
-              l[0]
+            const lines: string = finishedState.result?.logs?.map(
+              (l) => l[0],
             )[0]!;
             const i = messages.findIndex((m) => m.jobId === jobId);
             if (i >= 0 && lines && !jobIdsFinished.has(jobId)) {
@@ -271,14 +271,16 @@ Deno.test(
     const promiseEnd = Promise.withResolvers<string>();
 
     const getJobStateString = (jobsBroadcast: BroadcastJobStates): string => {
-      const jobStates = [...jobIdsToBeKilled].map((jobId) => {
-        const jobState = jobsBroadcast.state.jobs[jobId];
-        return `[${jobId.substring(0, 4)}: ${jobState?.state} ${
-          jobState?.state === DockerJobState.Finished
-            ? (jobState.value as StateChangeValueFinished).reason
-            : ""
-        }]`;
-      }).join("\n");
+      const jobStates = [...jobIdsToBeKilled]
+        .map((jobId) => {
+          const jobState = jobsBroadcast.state.jobs[jobId];
+          return `[${jobId.substring(0, 4)}: ${jobState?.state} ${
+            jobState?.state === DockerJobState.Finished
+              ? (jobState.value as StateChangeValueFinished).reason
+              : ""
+          }]`;
+        })
+        .join("\n");
       return `supreme: [${jobIdToSupercedeAllPrior.substring(0, 4)}: ${
         jobsBroadcast.state.jobs[jobIdToSupercedeAllPrior]?.state
       }], to die: ${jobStates}`;
@@ -351,9 +353,9 @@ Deno.test(
             promiseEnd.reject(
               new Error(
                 "Jobs finished not the correct reasons: " +
-                  [...jobIdsFinishReason.entries()].map(([key, value]) =>
-                    `${key.substring(0, 6)}=${value}`
-                  ).join(", "),
+                  [...jobIdsFinishReason.entries()]
+                    .map(([key, value]) => `${key.substring(0, 6)}=${value}`)
+                    .join(", "),
               ),
             );
             promiseEnd.resolve("done");
@@ -383,14 +385,28 @@ Deno.test(
       }
       const currentJobIdsKilled = new Set<string>();
       for (const jobId of jobIdsToBeKilled) {
-        const jobGetUrl = `${API_URL}/job/${jobId}`;
-        const response = await fetch(jobGetUrl);
-        const jobBlob = await response.json();
-        if (
-          jobBlob.state === "Finished" &&
-          jobBlob?.value?.reason === "JobReplacedByClient"
-        ) {
-          currentJobIdsKilled.add(jobId);
+        try {
+          const jobGetUrl = `${API_URL}/job/${jobId}`;
+          const response = await fetch(jobGetUrl);
+          const jobBlobText = await response.text();
+          let jobBlob: any;
+          try {
+            jobBlob = JSON.parse(jobBlobText);
+          } catch (errParsingJson: unknown) {
+            console.error(
+              `Error parsing job ${jobId} as JSON: ${jobBlobText}`,
+              errParsingJson,
+            );
+          }
+          if (
+            jobBlob &&
+            jobBlob.state === "Finished" &&
+            jobBlob?.value?.reason === "JobReplacedByClient"
+          ) {
+            currentJobIdsKilled.add(jobId);
+          }
+        } catch (err: unknown) {
+          console.error(`Error fetching job ${jobId}`, err);
         }
       }
       if (setsEqual(currentJobIdsKilled, jobIdsToBeKilled)) {
