@@ -389,20 +389,35 @@ Deno.test(
         try {
           const jobGetUrl = `${API_URL}/job/${jobId}`;
           const response = await fetch(jobGetUrl);
+          if (!response.ok) {
+            console.error(`Error fetching job ${jobId}`, response.statusText);
+            continue;
+          }
           const jobBlobText = await response.text();
-          let jobBlob: DockerJobDefinitionRow | undefined;
+          let jobBlob: DockerJobDefinitionRow | { error?: string } | undefined;
           try {
-            jobBlob = JSON.parse(jobBlobText);
+            jobBlob = JSON.parse(jobBlobText) as DockerJobDefinitionRow | {
+              error?: string;
+            };
           } catch (errParsingJson: unknown) {
             console.error(
               `Error parsing job ${jobId} as JSON: ${jobBlobText}`,
               errParsingJson,
             );
           }
+          if (!jobBlob) {
+            continue;
+          }
+          // Type narrowing to check if it's an error object
+          if ("error" in jobBlob && jobBlob.error) {
+            console.error(`Error fetching job ${jobId}`, jobBlob.error);
+            continue;
+          }
+          // Now TypeScript knows jobBlob must be DockerJobDefinitionRow
           if (
-            jobBlob &&
-            jobBlob.state === "Finished" &&
-            (jobBlob?.value as StateChangeValueFinished)?.reason ===
+            (jobBlob as DockerJobDefinitionRow).state === "Finished" &&
+            "value" in jobBlob &&
+            (jobBlob.value as StateChangeValueFinished)?.reason ===
               "JobReplacedByClient"
           ) {
             currentJobIdsKilled.add(jobId);

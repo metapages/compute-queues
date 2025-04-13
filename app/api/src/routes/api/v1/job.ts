@@ -16,7 +16,7 @@ export const getJobHandler = async (c: Context) => {
       return c.json({ error: "Job not found" });
     }
 
-    return c.json({ success: true, job });
+    return c.json(job);
   } catch (err) {
     console.error("Error getting job", err);
     return c.text((err as Error).message, 500);
