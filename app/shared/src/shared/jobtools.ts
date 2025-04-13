@@ -331,7 +331,6 @@ export const dataRefToFile = async (
         hash = hash || (await hashFileOnDisk(filename));
 
         if (hash) {
-          // const computedHash = await sha256Stream(arrayBufferFromUrl);
           const sanitizedHash = sanitizeFilename(hash);
           const cachedFilePath = join(dataDirectory, "cache", sanitizedHash);
           const cacheExists = await exists(cachedFilePath);

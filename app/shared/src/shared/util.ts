@@ -1,4 +1,7 @@
-import { Sha256 } from "https://deno.land/x/deno@v1.3.1/std/hash/sha256.ts";
+import equal from "fast-deep-equal/es6";
+import fetchRetry from "fetch-retry";
+import { create } from "mutative";
+import stringify from "safe-stable-stringify";
 import {
   type DataRef,
   type DockerJobDefinitionInputRefs,
@@ -6,10 +9,6 @@ import {
   DockerJobState,
   type StateChangeValueRunning,
 } from "/@/shared/types.ts";
-import fetchRetry from "fetch-retry";
-import { create } from "mutative";
-import stringify from "safe-stable-stringify";
-import equal from "fast-deep-equal/es6";
 
 const resolvePreferredWorker = (workerA: string, workerB: string) => {
   return workerA.localeCompare(workerB) < 0 ? workerA : workerB;
@@ -129,27 +128,6 @@ export const shaObject = (obj: unknown): Promise<string> => {
   const msgBuffer = new TextEncoder().encode(orderedStringFromObject);
   return sha256Buffer(msgBuffer);
 };
-
-// export const sha256Stream = async (
-//   stream: ReadableStream<Uint8Array>,
-// ): Promise<string> => {
-//   const hash = new Sha256();
-//   const reader = stream.getReader();
-
-//   try {
-//     while (true) {
-//       const { done, value } = await reader.read();
-//       if (done) {
-//         break;
-//       }
-//       hash.update(value);
-//     }
-//   } finally {
-//     reader.releaseLock();
-//   }
-
-//   return hash.toString();
-// };
 
 export const sha256Buffer = async (buffer: Uint8Array): Promise<string> => {
   const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);

@@ -4,6 +4,7 @@ import { closed, open } from "@korkje/wsi";
 import {
   type BroadcastJobStates,
   createNewContainerJobMessage,
+  type DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
   type StateChangeValueFinished,
@@ -389,7 +390,7 @@ Deno.test(
           const jobGetUrl = `${API_URL}/job/${jobId}`;
           const response = await fetch(jobGetUrl);
           const jobBlobText = await response.text();
-          let jobBlob: any;
+          let jobBlob: DockerJobDefinitionRow | undefined;
           try {
             jobBlob = JSON.parse(jobBlobText);
           } catch (errParsingJson: unknown) {
@@ -401,7 +402,8 @@ Deno.test(
           if (
             jobBlob &&
             jobBlob.state === "Finished" &&
-            jobBlob?.value?.reason === "JobReplacedByClient"
+            (jobBlob?.value as StateChangeValueFinished)?.reason ===
+              "JobReplacedByClient"
           ) {
             currentJobIdsKilled.add(jobId);
           }
