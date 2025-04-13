@@ -1,20 +1,19 @@
-FROM node:20.13.1-alpine3.20
+FROM denoland/deno:alpine-2.1.11
 
 RUN apk --no-cache --update add \
     bash \
     curl \
     git \
     jq \
-    openssh \
-    ripgrep
+    npm \
+    openssh
 
 # https://gist.github.com/squarebracket/e719069522436873bc6f13efb359cac9
 RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
 
 # Needs community repo
 RUN apk add --no-cache -X https://dl-cdn.alpinelinux.org/alpine/edge/community \
-    sd \
-    deno
+    sd
 
 ###############################################################################
 # justfile for running commands, you will mostly interact with just https://github.com/casey/just

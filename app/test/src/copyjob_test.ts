@@ -58,60 +58,76 @@ Deno.test(
       path: "/test",
       port,
       handler: async (req) => {
-        // Resolve the promise when we get the expected payload
-        const body: {
-          jobId: string;
-          queue: string;
-          namespace?: string;
-          config?: unknown;
-        } = await req.json();
-        assertEquals(body.config, webhookPayload);
-        assertEquals(body.jobId, jobId);
-        assertEquals(body.namespace, namespace);
-        assertEquals(body.queue, QUEUE_ID);
+        try {
+          // Resolve the promise when we get the expected payload
+          const body: {
+            jobId: string;
+            queue: string;
+            namespace?: string;
+            config?: unknown;
+          } = await req.json();
+          assertEquals(body.config, webhookPayload);
+          assertEquals(body.jobId, jobId);
+          assertEquals(body.namespace, namespace);
+          assertEquals(body.queue, QUEUE_ID);
 
-        const response = await fetch(`${API_URL}/api/v1/copy`, {
-          method: "POST",
-          body: JSON.stringify({
-            jobId,
-            queue: queueTarget,
-            namespace,
-            config: webhookPayload,
-          }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+          // Make sure to await and consume the response
+          const response = await fetch(`${API_URL}/api/v1/copy`, {
+            method: "POST",
+            body: JSON.stringify({
+              jobId,
+              queue: queueTarget,
+              namespace,
+              config: webhookPayload,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
 
-        assertEquals(response.status, 200);
-        const bodyFromCopyCall: { success: boolean } = await response.json();
-        assertEquals(bodyFromCopyCall.success, true);
-        // TODO: check that the job is in the second queue
+          assertEquals(response.status, 200);
+          const bodyFromCopyCall: { success: boolean } = await response.json();
+          assertEquals(bodyFromCopyCall.success, true);
 
-        const responseStatus = await fetch(`${API_URL}/${queueTarget}/status`);
-        const jobStatus: {
-          jobs: { [jobId: string]: { state: DockerJobState } };
-        } = await responseStatus.json();
-        // console.log("🐉 jobStatus", jobStatus);
-        assert(!!jobStatus?.jobs?.[jobId]);
+          // Make sure to await and consume the response
+          const responseStatus = await fetch(
+            `${API_URL}/${queueTarget}/status`,
+          );
+          const jobStatus: {
+            jobs: { [jobId: string]: { state: DockerJobState } };
+          } = await responseStatus.json();
+          assert(!!jobStatus?.jobs?.[jobId]);
 
-        webhookResolve();
-        return new Response("OK");
+          webhookResolve();
+          return new Response("OK");
+        } catch (error) {
+          console.error("Error in webhook handler:", error);
+          webhookResolve();
+          return new Response("Error", { status: 500 });
+        }
       },
       timeout: 12000,
     });
 
-    // Open the socket
-    const socket = new WebSocket(
-      `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
-    );
-    await open(socket);
-    // Send the job creation message. We don't care about it finishing.
-    socket.send(JSON.stringify(message));
+    try {
+      // Open the socket
+      const socket = new WebSocket(
+        `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
+      );
+      await open(socket);
 
-    await webhookCalled;
-    socket.close();
-    await closed(socket);
-    await shutdown();
+      // Send the job creation message
+      socket.send(JSON.stringify(message));
+
+      // Wait for webhook to be called
+      await webhookCalled;
+
+      // Clean up resources
+      socket.close();
+      await closed(socket);
+    } finally {
+      // Ensure webhook server is always shut down
+      await shutdown();
+    }
   },
 );
