@@ -35,7 +35,12 @@ export const callJobWebhook = async (
     const response = await fetch(webhookUrl, {
       redirect: "follow",
       method: "POST",
-      body: JSON.stringify({ jobId, queue, namespace, config: payload }),
+      body: JSON.stringify({
+        jobId,
+        queue,
+        namespace,
+        config: payload,
+      }),
       headers: {
         "Content-Type": "application/json",
       },

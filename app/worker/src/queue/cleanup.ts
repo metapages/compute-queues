@@ -15,6 +15,7 @@ export const removeAllJobsFromOtherQueues = async (queue: string) => {
     const containerId = containerData.Id;
     const containerLabels = containerData.Labels;
     const containerQueue = containerLabels[ContainerLabelQueue];
+    // jobs created during functional tests are ignored
     const containerTestMode = containerLabels[ContainerLabelTestMode];
     if (containerQueue !== queue && containerTestMode !== "true") {
       try {

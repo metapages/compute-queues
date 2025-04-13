@@ -375,6 +375,30 @@ Deno.test(
       }
     };
 
+    let jobsFinished = false;
+
+    const pollInterval = setInterval(async () => {
+      if (jobsFinished) {
+        clearInterval(pollInterval);
+      }
+      const currentJobIdsKilled = new Set<string>();
+      for (const jobId of jobIdsToBeKilled) {
+        const jobGetUrl = `${API_URL}/job/${jobId}`;
+        const response = await fetch(jobGetUrl);
+        const jobBlob = await response.json();
+        if (
+          jobBlob.state === "Finished" &&
+          jobBlob?.value?.reason === "JobReplacedByClient"
+        ) {
+          currentJobIdsKilled.add(jobId);
+        }
+      }
+      if (setsEqual(currentJobIdsKilled, jobIdsToBeKilled)) {
+        jobsFinished = true;
+        promiseEnd.resolve("done");
+      }
+    }, 1000);
+
     await open(socket);
     for (const { message } of messages) {
       // create a delay to simulate a slow client
@@ -383,6 +407,7 @@ Deno.test(
     }
 
     await promiseEnd.promise;
+    clearInterval(pollInterval);
 
     assertEquals(true, true);
 
@@ -390,3 +415,6 @@ Deno.test(
     await closed(socket);
   },
 );
+
+const setsEqual = (a: Set<string>, b: Set<string>) =>
+  a.size === b.size && [...a].every((x) => b.has(x));

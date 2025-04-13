@@ -335,6 +335,10 @@ export function connectToServer(
   };
   setTimeout(reconnectCheck, reconnectCheckInterval);
 
+  const logGotJobStatesEvery = 10;
+  let currentGotJobStates = 0;
+  let currentGotJobStateUpdates = 0;
+  const logGotJobStateUpdatesEvery = 10;
   rws.addEventListener("message", (message: MessageEvent) => {
     try {
       const messageString = message.data.toString();
@@ -373,11 +377,15 @@ export function connectToServer(
         case WebsocketMessageTypeServerBroadcast.JobStates: {
           const allJobsStatesPayload = possibleMessage
             .payload as BroadcastJobStates;
-          console.log(
-            `[${workerId?.substring(0, 6)}] got JobStates(${
-              allJobsStatesPayload?.state?.jobs?.length || 0
-            })`,
-          );
+          currentGotJobStates++;
+          if (currentGotJobStates > logGotJobStatesEvery) {
+            console.log(
+              `[${workerId?.substring(0, 6)}] got JobStates(${
+                allJobsStatesPayload?.state?.jobs?.length || 0
+              }) (only logging every ${logGotJobStatesEvery} messages)`,
+            );
+            currentGotJobStates = 0;
+          }
 
           if (!allJobsStatesPayload) {
             console.log({
@@ -398,11 +406,16 @@ export function connectToServer(
             });
             break;
           }
-          console.log(
-            `[${workerId?.substring(0, 6)}] got JobStateUpdates(${
-              someJobsPayload?.state?.jobs?.length || 0
-            })`,
-          );
+
+          if (currentGotJobStateUpdates > logGotJobStateUpdatesEvery) {
+            console.log(
+              `[${workerId?.substring(0, 6)}] got JobStateUpdates(${
+                someJobsPayload?.state?.jobs?.length || 0
+              })`,
+            );
+            currentGotJobStateUpdates = 0;
+          }
+
           dockerJobQueue.onUpdateUpdateASubsetOfJobs(someJobsPayload);
           break;
         }
