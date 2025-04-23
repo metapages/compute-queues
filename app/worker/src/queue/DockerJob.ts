@@ -212,11 +212,13 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   let logFileStdout: Deno.FsFile | null = null;
   let logFileStderr: Deno.FsFile | null = null;
   const stdoutLogFileName = outputsDir
-    ? join(outputsDir, "stdout.log")
+    ? join(outputsDir, "job", "stdout")
     : undefined;
+  stdoutLogFileName && ensureDirSync(dirname(stdoutLogFileName));
   const stderrLogFileName = outputsDir
-    ? join(outputsDir, "stderr.log")
+    ? join(outputsDir, "job", "stderr")
     : undefined;
+  stderrLogFileName && ensureDirSync(dirname(stderrLogFileName));
 
   const encoder = new TextEncoder();
 

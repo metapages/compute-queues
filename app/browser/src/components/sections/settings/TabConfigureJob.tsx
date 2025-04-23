@@ -11,7 +11,6 @@ import { DockerJobDefinitionParamsInUrlHash } from "/@shared/client";
 
 import {
   Box,
-  Button,
   Divider,
   Flex,
   FormControl,
@@ -28,6 +27,7 @@ import {
 } from "@chakra-ui/react";
 import { useHashParamBoolean, useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { Plus, TrashSimple } from "@phosphor-icons/react";
+import { useOptionAllowSetJob } from "/@/hooks/useOptionAllowSetJob";
 
 const validationSchema = yup.object({
   command: yup.string().optional(),
@@ -65,6 +65,7 @@ export const TabConfigureJob: React.FC = () => {
   const [showTerminalFirst, toggleShowTerminalFirst, loading] = useOptionShowTerminalFirst();
   const [resolveDataRefs, toggleResolveDataRefs] = useOptionResolveDataRefs();
   const [maxJobDuration, setMaxJobDuration] = useMaxJobDuration();
+  const [allowSetJob, toggleAllowSetJob] = useOptionAllowSetJob();
   const [newEnvVar, setNewEnvVar] = useState("");
 
   const onSubmit = useCallback(
@@ -141,16 +142,16 @@ export const TabConfigureJob: React.FC = () => {
 
   return (
     <VStack w="100%" alignItems="stretch">
-      <form onSubmit={formik.handleSubmit}>
-        <VStack alignItems="stretch" width="100%" pb={"2rem"}>
-          <VStack p={2} alignItems="stretch" width="100%" gap={"1.5rem"}>
-            <Text align="center" fontWeight="bold">
-              <Link href="https://www.docker.com/" target="_blank" rel="noopener noreferrer">
-                Docker
-              </Link>{" "}
-              Container Settings
-            </Text>
+      <VStack alignItems="stretch" width="100%" pb={"2rem"}>
+        <VStack p={2} alignItems="stretch" width="100%" gap={"1.5rem"}>
+          <Text align="center" fontWeight="bold">
+            <Link href="https://www.docker.com/" target="_blank" rel="noopener noreferrer">
+              Docker
+            </Link>{" "}
+            Container Settings
+          </Text>
 
+          <form onSubmit={formik.handleSubmit}>
             {["command", "entrypoint", "workdir", "shmSize", "maxJobDuration"].map(key => {
               const labelJsx: ReactNode = <FormLink href={linkMap[key]} label={labelToName[key]} />;
               return (
@@ -166,128 +167,150 @@ export const TabConfigureJob: React.FC = () => {
                       variant="outline"
                       onChange={formik.handleChange}
                       value={formik.values[key] || ""}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          formik.handleSubmit();
+                        }
+                      }}
                     />
                   </InputGroup>
                 </FormControl>
               );
             })}
+          </form>
 
-            {/* Environment Variables Section */}
-            <Box>
-              <Text align="center" fontWeight="bold" mb={2}>
-                Environment Variables
-              </Text>
-              <VStack spacing={2} align="stretch">
-                {Object.entries(jobDefinitionBlob?.env || {}).map(([key, value]) => (
-                  <Flex key={key} align="center" justify="space-between">
-                    <Text>{`${key}=${value}`}</Text>
-                    <IconButton
-                      color="gray.300"
-                      variant="ghost"
-                      icon={<Icon as={TrashSimple} boxSize={5} />}
-                      aria-label="Delete environment variable"
-                      size="md"
-                      onClick={() => handleDeleteEnvVar(key)}
-                    />
-                  </Flex>
-                ))}
-                <HStack>
-                  <Input
-                    value={newEnvVar}
-                    onChange={e => setNewEnvVar(e.target.value)}
-                    placeholder="Add new environment variable (KEY=VALUE)"
-                    size="sm"
-                    onKeyDown={e => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddEnvVar();
-                      }
-                    }}
-                  />
+          {/* Environment Variables Section */}
+          <Box>
+            <Text align="center" fontWeight="bold" mb={2}>
+              Environment Variables
+            </Text>
+            <VStack spacing={2} align="stretch">
+              {Object.entries(jobDefinitionBlob?.env || {}).map(([key, value]) => (
+                <Flex key={key} align="center" justify="space-between">
+                  <Text>{`${key}=${value}`}</Text>
                   <IconButton
+                    color="gray.300"
                     variant="ghost"
-                    aria-label="Add environment variable"
-                    icon={<Plus />}
+                    icon={<Icon as={TrashSimple} boxSize={5} />}
+                    aria-label="Delete environment variable"
                     size="md"
-                    onClick={handleAddEnvVar}
+                    onClick={() => handleDeleteEnvVar(key)}
                   />
-                </HStack>
-              </VStack>
-            </Box>
+                </Flex>
+              ))}
+              <HStack>
+                <Input
+                  value={newEnvVar}
+                  onChange={e => setNewEnvVar(e.target.value)}
+                  placeholder="Add new environment variable (KEY=VALUE)"
+                  size="sm"
+                  onKeyDown={e => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddEnvVar();
+                    }
+                  }}
+                />
+                <IconButton
+                  variant="ghost"
+                  aria-label="Add environment variable"
+                  icon={<Plus />}
+                  size="md"
+                  onClick={handleAddEnvVar}
+                />
+              </HStack>
+            </VStack>
+          </Box>
 
-            <FormControl>
-              <FormLabel htmlFor="gpu">
-                <Text>
-                  GPU{" "}
-                  <Link href="https://docs.docker.com/engine/containers/resource_constraints/#access-an-nvidia-gpu">
-                    {`(if worker supported, roughly equivalent to "--gpus '"device=0"'")`}
-                  </Link>
-                </Text>
-              </FormLabel>
-
-              <Switch id="gpu" name="gpu" onChange={handleSwitchChange} isChecked={formik.values.gpu} />
-            </FormControl>
-            <Divider />
-            <Text align="center" fontWeight="bold">
-              UI Settings
-            </Text>
-            <FormControl>
-              <FormLabel htmlFor="debug">
-                <Text>Debug</Text>
-              </FormLabel>
-              <Switch id="debug" name="debug" onChange={handleSwitchChange} isChecked={debug} />
-            </FormControl>
-
-            <Box>
-              <Text mb={2} fontWeight="bold" color="black">
-                Show terminal / code by default
+          <FormControl>
+            <FormLabel htmlFor="gpu">
+              <Text>
+                GPU{" "}
+                <Link href="https://docs.docker.com/engine/containers/resource_constraints/#access-an-nvidia-gpu">
+                  {`(if worker supported, roughly equivalent to "--gpus '"device=0"'")`}
+                </Link>
               </Text>
-              <Switch
-                isDisabled={loading}
-                isChecked={showTerminalFirst}
-                onChange={toggleShowTerminalFirst}
-                colorScheme="blue"
-              />
-              <Text fontSize="sm" color="gray.600" mt={1}>
-                {showTerminalFirst ? "Terminal shown by default" : "Code shown by default"}
-              </Text>
-            </Box>
+            </FormLabel>
 
-            <Divider />
-            <Text align="center" fontWeight="bold">
-              Misc Settings
+            <Switch id="gpu" name="gpu" onChange={handleSwitchChange} isChecked={formik.values.gpu} />
+          </FormControl>
+          <Divider />
+          <Text align="center" fontWeight="bold">
+            UI Settings
+          </Text>
+          <FormControl>
+            <FormLabel htmlFor="debug">
+              <Text>Debug</Text>
+            </FormLabel>
+            <Switch id="debug" name="debug" onChange={handleSwitchChange} isChecked={debug} />
+          </FormControl>
+
+          <Box>
+            <Text mb={2} fontWeight="bold" color="black">
+              Show terminal / code by default
             </Text>
+            <Switch
+              isDisabled={loading}
+              isChecked={showTerminalFirst}
+              onChange={toggleShowTerminalFirst}
+              colorScheme="blue"
+            />
+            <Text fontSize="sm" color="gray.600" mt={1}>
+              {showTerminalFirst ? "Terminal shown by default" : "Code shown by default"}
+            </Text>
+          </Box>
 
-            <FormControl>
-              <FormLabel htmlFor="jobStartAutomatically">
-                <Text>Run Job Automatically</Text>
-              </FormLabel>
-              <Switch
-                id="jobStartAutomatically"
-                name="jobStartAutomatically"
-                onChange={toggleJobStartAutomatically}
-                isChecked={jobStartAutomatically}
-              />
-            </FormControl>
+          <Divider />
+          <Text align="center" fontWeight="bold">
+            Misc Settings
+          </Text>
 
-            <FormControl>
-              <FormLabel htmlFor="jobStartAutomatically">
-                <Text>Resolve [data references] ▶️ [data] (send big data directly)</Text>
-              </FormLabel>
-              <Switch
-                id="resolveDataRefs"
-                name="resolveDataRefs"
-                onChange={toggleResolveDataRefs}
-                isChecked={resolveDataRefs}
-              />
-            </FormControl>
-          </VStack>
-          <Button alignSelf="center" type="submit" colorScheme="green" size="sm">
-            Save
-          </Button>
+          <Box>
+            <Text mb={2} fontWeight="bold" color="black">
+              Run Job Automatically
+            </Text>
+            <Switch
+              isDisabled={loading}
+              isChecked={jobStartAutomatically}
+              onChange={toggleJobStartAutomatically}
+              colorScheme="blue"
+            />
+            <Text fontSize="sm" color="gray.600" mt={1}>
+              {jobStartAutomatically ? "Jobs started automatically" : "Jobs started manually"}
+            </Text>
+          </Box>
+
+          <Box>
+            <Text mb={2} fontWeight="bold" color="black">
+              Resolve [data references] ▶️ [data] (send big data directly)
+            </Text>
+            <Switch
+              isDisabled={loading}
+              isChecked={resolveDataRefs}
+              onChange={toggleResolveDataRefs}
+              colorScheme="blue"
+            />
+            <Text fontSize="sm" color="gray.600" mt={1}>
+              {resolveDataRefs ? "Large blobs downloaded (slow)" : "Blobs are referenced (fast)"}
+            </Text>
+          </Box>
+
+          <Box>
+            <Text mb={2} fontWeight="bold" color="black">
+              Allow upstream metaframes to modify the job
+            </Text>
+            <Switch isDisabled={loading} isChecked={allowSetJob} onChange={toggleAllowSetJob} colorScheme="blue" />
+            <Text fontSize="sm" color="gray.600" mt={1}>
+              {allowSetJob ? "Job can be set at input: metaframe/job" : "Job cannot be set from another metaframe"}
+            </Text>
+          </Box>
         </VStack>
-        {/* {error ? <Message type="error" message={error} /> : null} */}
-      </form>
+        {/* <Button alignSelf="center" type="submit" colorScheme="green" size="sm">
+          Save
+        </Button> */}
+      </VStack>
+      {/* {error ? <Message type="error" message={error} /> : null} */}
     </VStack>
   );
 };

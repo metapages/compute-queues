@@ -24,9 +24,11 @@ import { useMetaframeAndInput } from "@metapages/metapage-react";
 import { getIOBaseUrl } from "../config";
 import { useStore } from "../store";
 import { useQueue } from "./useQueue";
+import { useOptionAllowSetJob } from "./useOptionAllowSetJob";
 
 const HashParamKeysSystem = new Set([
   "autostart",
+  "allowsetjob",
   "control",
   "config",
   "debug",
@@ -59,7 +61,9 @@ export const useDockerJobDefinition = () => {
   const [debug] = useHashParamBoolean("debug");
   const [maxJobDuration] = useHashParam("maxjobduration");
   // we listen to the job parameters embedded in the URL changing
-  const [definitionParamsInUrl] = useHashParamJson<DockerJobDefinitionParamsInUrlHash | undefined>("job");
+  const [definitionParamsInUrl, setDefinitionParamsInUrl] = useHashParamJson<
+    DockerJobDefinitionParamsInUrlHash | undefined
+  >("job");
 
   // input text files are stored in the URL hash
   const [jobInputsFromUrl] = useHashParamJson<JobInputs | undefined>("inputs");
@@ -81,6 +85,16 @@ export const useDockerJobDefinition = () => {
       metaframeBlob.metaframe.isInputOutputBlobSerialization = false;
     }
   }, [metaframeBlob?.metaframe]);
+
+  const [allowSetJob] = useOptionAllowSetJob();
+  // allow setting the job definition params in the url hash via the "metaframe/job" input
+  useEffect(() => {
+    if (!allowSetJob || !metaframeBlob?.inputs?.["job"]) {
+      return;
+    }
+    const jobInput = metaframeBlob.inputs["job"];
+    setDefinitionParamsInUrl(jobInput);
+  }, [allowSetJob, metaframeBlob.inputs, setDefinitionParamsInUrl]);
 
   // When all the things are updated, set the new job definition
   const setNewJobDefinition = useStore(state => state.setNewJobDefinition);
@@ -142,7 +156,9 @@ export const useDockerJobDefinition = () => {
       // convert inputs into internal data refs so workers can consume
       // Get ALL inputs, not just the most recent, since inputs come
       // in from different sources at different times, and we accumulate them
-      let inputs = metaframeBlob?.metaframe?.getInputs() || {};
+      let inputs = { ...(metaframeBlob?.metaframe?.getInputs() || {}) };
+      // This is a special input, it's the job definition, not a file input
+      delete inputs["job"];
 
       // TODO: this shouldn't be needed, but there is a bug:
       // https://github.com/metapages/metapage/issues/117
