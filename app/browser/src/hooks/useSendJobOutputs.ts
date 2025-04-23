@@ -16,6 +16,7 @@ import { useStore } from "../store";
 import { useOptionResolveDataRefs } from "./useOptionResolveDataRefs";
 import { useQueue } from "./useQueue";
 import { DockerRunResultWithOutputs } from "/@shared/client";
+import { useOptionAllowSetJob } from "./useOptionAllowSetJob";
 
 const datarefKeyToUrl = async (ref: DataRef, baseUrl: string): Promise<DataRef> => {
   if (ref.type === DataRefType.key) {
@@ -26,6 +27,11 @@ const datarefKeyToUrl = async (ref: DataRef, baseUrl: string): Promise<DataRef> 
   } else {
     return ref;
   }
+};
+
+export const getJobUrl = (queue: string, jobId: string): string => {
+  const ioBaseUrl = getIOBaseUrl(queue);
+  return `${ioBaseUrl}/api/v1/job/${jobId}`;
 };
 
 const convertMetaframeOutputKeysToUrls = async (
@@ -45,6 +51,7 @@ const convertMetaframeOutputKeysToUrls = async (
  */
 export const useSendJobOutputs = () => {
   const { resolvedQueue } = useQueue();
+  const [allowSetJob] = useOptionAllowSetJob();
   // You usually don't want this on, that means big blobs
   // are going to move around your system
   const [resolveDataRefs] = useOptionResolveDataRefs();
@@ -84,19 +91,36 @@ export const useSendJobOutputs = () => {
       // console.log(`💔 useEffect not sending outputs because result is undefined`);
       return;
     }
-    const { outputs } = result;
-    if (!outputs || Object.keys(outputs).length === 0) {
-      // console.log(`💔 NOT sending outputs there are none`);
-      jobHashOutputsLastSent.current = undefined;
-      return;
-    }
 
     if (jobHashOutputsLastSent.current === dockerJobServer.hash) {
       // console.log(`💔 NOT sending outputs to metaframe, did it already`);
       return;
     }
 
+    const { outputs } = result;
+
     (async () => {
+      const jobStatusJson = {};
+      if (allowSetJob) {
+        jobStatusJson["stdout"] = stateFinished?.result?.logs
+          ?.filter(([_, __, isstderr]) => !isstderr)
+          .map(log => {
+            log[0] = log[0].trimEnd();
+            return log;
+          });
+        jobStatusJson["stderr"] = stateFinished?.result?.logs
+          ?.filter(([_, __, isstderr]) => isstderr)
+          .map(log => {
+            log[0] = log[0].trimEnd();
+            return log;
+          });
+        jobStatusJson["statusCode"] = stateFinished?.result?.StatusCode;
+        jobStatusJson["error"] = stateFinished?.result?.error;
+        jobStatusJson["duration"] = stateFinished?.result?.duration;
+        jobStatusJson["isTimedOut"] = stateFinished?.result?.isTimedOut;
+        jobStatusJson["url"] = getJobUrl(resolvedQueue, dockerJobServer.hash);
+      }
+
       if (resolveDataRefs) {
         // TODO: use a local cache to avoid re-downloading the same outputs
         // console.log(`💚 💖 Resolving data refs for metaframe`);
@@ -113,7 +137,11 @@ export const useSendJobOutputs = () => {
         try {
           // previously we sent the job status code, logs etc, but just send the outputs
           // If you want to send the other stuff, you can on your own
-          metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
+          if (allowSetJob) {
+            metaframeObj.setOutputs!({ ...keysToUrlsOutputs, "job/result.json": jobStatusJson });
+          } else {
+            metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
+          }
         } catch (err) {
           console.error("Failed to send metaframe outputs", err);
         }
@@ -122,9 +150,13 @@ export const useSendJobOutputs = () => {
         // console.log(`💚 Sending outputs to metaframe`, outputs);
         const keysToUrlsOutputs = outputs ? await convertMetaframeOutputKeysToUrls(outputs, resolvedQueue) : outputs;
         // console.log(`💚💚 Sending outputs to metaframe keysToUrlsOutputs`, keysToUrlsOutputs);
-        metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
+        if (allowSetJob) {
+          metaframeObj.setOutputs!({ ...keysToUrlsOutputs, "job/result.json": jobStatusJson });
+        } else {
+          metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
+        }
         jobHashOutputsLastSent.current = dockerJobServer.hash;
       }
     })();
-  }, [resolvedQueue, dockerJobServer, metaframeBlob?.metaframe]);
+  }, [allowSetJob, resolvedQueue, dockerJobServer, metaframeBlob?.metaframe]);
 };

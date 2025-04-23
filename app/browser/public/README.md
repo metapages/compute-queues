@@ -21,6 +21,24 @@ to run a simple python job using the worker above:
 - env var `JOB_OUTPUTS` is the directory where job output files will be copied when the job finishes successfully.
   Defaults to `/outputs`
 
+### Set job and read results from another metaframe
+
+If the client option `Allow upstream metaframes to modify the job` is enabled, then the input field name `job` is
+treated as a job definition, and allows upsteam metaframes to modify the job, and read the outputs
+
+E.g. from another metaframe, send the value `job` as:
+
+```json
+{
+  "image": "alpine:3.18.5",
+  "command": "ls -la"
+}
+```
+
+This will run the above job, and the output of the job will be sent as the output `job/result.json`
+
+See [this example](https://metapage.io/dion/1220580fb99b4ec5a256519691579c3c)
+
 ### Define Inputs and Outputs
 
 In `Settings / Definition` you can define inputs and outputs. This doesn't change how the code runs, but it allows much

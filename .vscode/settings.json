@@ -16,7 +16,7 @@
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "denoland.vscode-deno",
   "files.watcherExclude": {
-    "**/dist": true
+    "**/dist/**": true
   },
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "[dotenv]": {

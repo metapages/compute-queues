@@ -37,10 +37,10 @@ export const dataRefToBuffer = async (
     case DataRefType.url: {
       try {
         const arrayBufferFromUrl = await urlToUint8Array(ref.value as string);
-        if (!ref.hash) {
-          const computedHash = await sha256Buffer(arrayBufferFromUrl);
-          ref.hash = computedHash;
-        }
+        // if (!ref.hash) {
+        //   const computedHash = await sha256Buffer(arrayBufferFromUrl);
+        //   ref.hash = computedHash;
+        // }
         return new Uint8Array(arrayBufferFromUrl);
       } catch (downloadError) {
         console.error(

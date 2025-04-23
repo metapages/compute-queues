@@ -4,5 +4,17 @@
     "title": "Run a docker container",
     "author": "Dion Whitehead"
   },
-  "allow": "clipboard-write"
+  "allow": "clipboard-write",
+  "inputs": {
+    "metaframe/job": {
+      "type": "json",
+      "description": "The job definition to run"
+    }
+  },
+  "outputs": {
+    "job/result.json": {
+      "type": "json",
+      "description": "The result of the job"
+    }
+  }
 }

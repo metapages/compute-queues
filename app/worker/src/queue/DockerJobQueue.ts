@@ -542,8 +542,6 @@ export class DockerJobQueue {
 
       // TODO hook up the durationMax to a timeout
       // TODO add input mounts
-
-      console.log("queueKey", this.queueKey);
       const executionArgs: DockerJobArgs = {
         sender: this.sender,
         queue: this.queueKey,
