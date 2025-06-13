@@ -933,6 +933,7 @@ export class BaseDockerJobQueue {
                   6,
                 )
               }] adding new job row to local state as Queued`,
+              valueQueued,
             );
 
             jobRow = {
