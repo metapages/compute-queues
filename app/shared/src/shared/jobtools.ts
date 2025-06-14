@@ -88,7 +88,13 @@ export const bufferToBase64Ref = (
 };
 
 // "-L" == follow redirects, very important
-let BaseCurlUploadArgs = ["-X", "PUT", "-L", "--upload-file"];
+let BaseCurlUploadArgs = [
+  "-X",
+  "PUT",
+  "--location",
+  "--fail-with-body",
+  "--upload-file",
+];
 // curl hard codes .localhost DNS resolution, so we need to add the resolve flags
 // I tried using something other than .localhost, but it didn't work for all kinds of reasons
 if (IGNORE_CERTIFICATE_ERRORS) {
