@@ -16,7 +16,7 @@ on:
 jobs:
   test_remote_mode:
     name: remote mode
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, Linux]
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
