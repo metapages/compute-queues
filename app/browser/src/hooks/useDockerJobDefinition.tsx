@@ -235,7 +235,7 @@ export const useDockerJobDefinition = () => {
         control: namespaceConfig,
       };
       if (debug) {
-        console.log("newJobDefinition", newJobDefinition);
+        console.log("container.mtfm.io DEBUG: newJobDefinition", newJobDefinition);
       }
 
       setNewJobDefinition(newJobDefinition);

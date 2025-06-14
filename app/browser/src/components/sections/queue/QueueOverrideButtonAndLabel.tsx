@@ -9,10 +9,10 @@ import {
   InputLeftAddon,
   InputRightElement,
   Hide,
-  Checkbox,
+  IconButton,
   Tooltip,
 } from "@chakra-ui/react";
-import { Cloud, Monitor, WifiHigh, WifiSlash } from "@phosphor-icons/react";
+import { Cloud, Monitor, WifiHigh, WifiSlash, Lock, LockOpen } from "@phosphor-icons/react";
 import React, { useCallback, useEffect, useState } from "react";
 import debounce from "lodash/debounce";
 import { useQueue } from "/@/hooks/useQueue";
@@ -52,68 +52,57 @@ export const QueueOverrideButtonAndLabel: React.FC = () => {
     <HStack w="100%" justifyContent="center" spacing={2} py={1} px={1}>
       <HStack maxW="1200px" w="100%" spacing={2} minW="0">
         <Tooltip
-          label={ignoreQueueOverride ? "Unselect to set queue from page" : "Select to set queue here"}
+          label={ignoreQueueOverride ? "Metapage ignored, queue set here" : "Queue set from metapage"}
           placement="top">
-          <Checkbox
-            isChecked={ignoreQueueOverride}
-            onChange={e => setIgnoreQueueOverride(e.target.checked)}
+          <IconButton
+            aria-label={ignoreQueueOverride ? "Disable local override" : "Enable local override"}
+            icon={<Icon as={ignoreQueueOverride ? LockOpen : Lock} weight="bold" />}
+            onClick={() => setIgnoreQueueOverride(!ignoreQueueOverride)}
             size="sm"
-            mr={2}
+            _hover={{ bg: "gray.300" }}
+            bg="none"
+            p={"3px"}
+            borderRadius={5}
+            boxSize="7"
+            transition="transform 0.2s"
           />
         </Tooltip>
-
         <HStack gap={0} flexShrink={0} minW="auto">
           {ignoreQueueOverride ? (
-            <>
-              <Button
-                isDisabled={!ignoreQueueOverride}
-                size="sm"
-                aria-label="Remote"
-                onClick={toggleLocalMode}
-                colorScheme={isLocalMode ? "gray" : "blue"}
-                borderRadius="8px 0 0 8px"
-                leftIcon={<Cloud weight="bold" />}>
-                <Hide below="md">{"Remote"}</Hide>
-              </Button>
-
-              <Button
-                isDisabled={!ignoreQueueOverride}
-                size="sm"
-                aria-label="Local"
-                onClick={toggleLocalMode}
-                colorScheme={isLocalMode ? "blue" : "gray"}
-                borderRadius="0 8px 8px 0"
-                leftIcon={<Monitor weight="bold" />}>
-                <Hide below="md">{"Local"}</Hide>
-              </Button>
-            </>
+            <Button
+              size="sm"
+              aria-label={isLocalMode ? "Switch to Remote" : "Switch to Local"}
+              onClick={toggleLocalMode}
+              colorScheme={"blue"}
+              borderRadius="8px"
+              leftIcon={isLocalMode ? <Monitor weight="bold" /> : <Cloud weight="bold" />}>
+              <Hide below="md">{isLocalMode ? "Local Queue" : "Cloud Queue"}</Hide>
+            </Button>
           ) : (
             <Hide below="md">
-              <Box>Set from page</Box>
+              <Box>Metapage set:</Box>
             </Hide>
           )}
         </HStack>
 
-        <Hide below="sm">
-          <Icon as={isLocalMode ? WifiHigh : WifiSlash} flexShrink={0} weight="bold" />
-        </Hide>
-
         <InputGroup size="md" flexGrow={1} minW="0" fontFamily="monospace">
           <Hide below="md">
             <InputLeftAddon h="32px" fontSize="sm" fontWeight="semibold">
-              Queue
+              <Hide below="sm">
+                <Icon as={isLocalMode ? WifiHigh : WifiSlash} flexShrink={0} weight="bold" />
+              </Hide>
             </InputLeftAddon>
           </Hide>
           <Input
             h="32px"
             value={isLocalMode ? "local" : inputValue}
             onChange={handleInputChange}
-            isDisabled={isLocalMode}
             fontSize="sm"
+            isDisabled={!ignoreQueueOverride}
             pr={!queue && !isLocalMode ? "100px" : "8px"}
           />
           <InputRightElement h="32px" w="auto" pr={2} zIndex={1}>
-            {isLocalMode || !ignoreQueueOverride ? (
+            {!ignoreQueueOverride ? (
               <LockIcon color="gray.500" boxSize={3} />
             ) : !queue && !resolvedQueue ? (
               <Box
