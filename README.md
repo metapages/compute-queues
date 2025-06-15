@@ -1,19 +1,34 @@
 # Public Compute Queues
 
-A common problem when publishing/sharing/archiving scientific workflows is that
-compute resources are not very portable. I cannot give you some data and code
-and reasonably expect you to run it within a human reasonable time. There's just
-too much variation between our computer environments, among many other reasons.
+A common problem in sharing scientific workflows is that compute isn’t portable.
+You can’t just share code and data and expect others to run it
+easily—differences in environments, libraries, and hardware often get in the
+way.
 
-**Public Compute Queues** are an answer to this problem: a web or cli client can
-submit docker jobs to a queue, and any workers connected to that queue will do
-the work and post the results when done.
+Public Compute Queues solve this. A lightweight web or CLI client submits Docker
+jobs to a queue. Any connected worker—yours, your institution’s, or a
+collaborator’s—can pick up the job, run it, and return the results.
 
-You can use your own compute workers, or your institutions, or your
-collaborators.
+The API is efficient, open-source, and built for flexibility: workers can run
+locally, on a cluster, or be dynamically scaled via cloud providers. Docker
+images can be pulled directly or built from a Git repo.
 
-The api that manages the compute queue is efficient, and both open and
-open-source.
+This repo includes: •	The queue and worker infrastructure •	Example cloud
+deployments •	Support for metapage-style workflows using containerized
+metaframes
+
+Why this matters
+
+Metapage workflows run in the browser—but many scientific tasks require
+environments like Python or R, which don’t run natively there. The container
+metaframe bridges this gap, letting workflows offload compute to a grid of
+Docker workers.
+
+You can plug in your own machine, run a personal queue, or connect a shared
+cluster. Anyone using your workflow will automatically run jobs on their own
+grid or local machine—no setup required.
+
+Compute becomes as shareable as your code. Just plug in.
 
 Online docs:
 [Online docs notion source](https://docs.metapage.io/docs/containers)
