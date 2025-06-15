@@ -90,6 +90,11 @@ publish-docker-images version="":
         export VERSION=$(cat mod.json | jq -r '.version')
     fi
     cd ../../
+
+    echo -e "👀 If this fails with a buildx or similar problem, try:"
+    echo -e "    docker buildx create --name multiarch --driver docker-container --use"
+    echo -e "    docker buildx inspect --bootstrap"
+
     docker buildx build --push \
         --file app/worker/Dockerfile \
         --target worker \
