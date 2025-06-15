@@ -13,11 +13,13 @@ The API is efficient, open-source, and built for flexibility: workers can run
 locally, on a cluster, or be dynamically scaled via cloud providers. Docker
 images can be pulled directly or built from a Git repo.
 
-This repo includes: •	The queue and worker infrastructure •	Example cloud
-deployments •	Support for metapage-style workflows using containerized
-metaframes
+This repo includes:
 
-Why this matters
+- The queue and worker infrastructure
+- Example cloud deployments
+- Support for metapage-style workflows using containerized metaframes
+
+## Why this matters
 
 Metapage workflows run in the browser—but many scientific tasks require
 environments like Python or R, which don’t run natively there. The container
