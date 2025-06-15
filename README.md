@@ -1,9 +1,43 @@
-# Compute queues and the worker to run them all
+# Public Compute Queues
 
-Online docs: https://docs.metapage.io/docs/containers
-[Online docs notion source](https://www.notion.so/metapages/Containers-182018579bb580c2bd76ed4b74eef1eb?pvs=4)
+A common problem when publishing/sharing/archiving scientific workflows is that
+compute resources are not very portable. I cannot give you some data and code
+and reasonably expect you to run it within a human reasonable time. There's just
+too much variation between our computer environments, among many other reasons.
 
-## High level commands:
+**Public Compute Queues** are an answer to this problem: a web or cli client can
+submit docker jobs to a queue, and any workers connected to that queue will do
+the work and post the results when done.
+
+You can use your own compute workers, or your institutions, or your
+collaborators.
+
+The api that manages the compute queue is efficient, and both open and
+open-source.
+
+Online docs:
+[Online docs notion source](https://docs.metapage.io/docs/containers)
+
+## Developers
+
+### Background
+
+This service provides docker compute functions as metaframes.
+
+This service provides an iframe, that allows users to configure running a
+specific docker container (a **job**) on a specific **queue**. The iframed
+browser window sends that job configuration to the server, the job is added to
+the queue, then workers pick up the job, run it, and send the results back.
+
+To run those docker containers, users can either rent compute from the metapage
+platform, or run worker(s) themselves, either on their own personal
+laptops/desktops, or on their own cluster infrastructure. Docker images can be
+used directly, or a git repo can be given, and the docker image built directly.
+
+This repo contains all the infrastructure for the queues, workers, and examples
+of cloud providers managing the horizintal scaling worker fleets.
+
+### High level commands:
 
 - develop: `just dev`
 - bump or set a new version and publish artifacts: `just deploy`
@@ -11,7 +45,7 @@ Online docs: https://docs.metapage.io/docs/containers
 
 Finer commands are `just` in subdirectories.
 
-## Overview
+### Overview
 
 **Quick links:**
 
@@ -61,9 +95,9 @@ flowchart LR
     w3 --- |get/put blobs| s3
 ```
 
-## Local development
+### Local development
 
-### Host requirements:
+#### Host requirements:
 
 - `just`: https://just.systems/man/en/chapter_1.html
 - `docker`: https://docs.docker.com/engine/install/
@@ -88,7 +122,7 @@ hono webserver).
 You can edit browser code, worker code, api code, and CLI and everything
 automatically updates.
 
-### Tests
+#### Tests
 
 - `just test`: runs the entire test suite, creating a new local stack
   - runs on every push to non-main branches
@@ -96,7 +130,7 @@ automatically updates.
   currently only permissions
   - see `just api/test` for more test related commands
 
-### Start each service separately
+#### Start each service separately
 
 You can develop workers locally, pointing to prod or local API
 
@@ -122,7 +156,7 @@ You can develop the browser locally, pointing to prod or local API
   just browser prod
 ```
 
-### Submit jobs via the CLI
+#### Submit jobs via the CLI
 
 To the local stack:
 
@@ -141,7 +175,7 @@ deno run --allow-all src/cli.ts job add public1 --file ../../README.md -c 'sh -c
 The CLI tool has yet to be versioned and binaries built
 https://github.com/metapages/compute-queues/issues/21
 
-### Local development: cloud compute providers
+#### Local development: cloud compute providers
 
 E.g. kubernetes, nomad.
 
@@ -154,7 +188,7 @@ E.g. kubernetes, nomad.
    1. You should see the docker runner at the bottom, change the slider to
       create compute jobs
 
-## Deployment (automation)
+### Deployment (automation)
 
 **(public) api:**
 
@@ -173,19 +207,12 @@ E.g. kubernetes, nomad.
   - our cloud worker providers update the worker version and redeploy
     - TODO: https://github.com/metapages/compute-queues/issues/3
 
-## Background
+## 💖🙏🤝 Acknowledgements
 
-This service provides docker compute functions as metaframes.
-
-This service provides an iframe, that allows users to configure running a
-specific docker container (a **job**) on a specific **queue**. The iframed
-browser window sends that job configuration to the server, the job is added to
-the queue, then workers pick up the job, run it, and send the results back.
-
-To run those docker containers, users can either rent compute from the metapage
-platform, or run worker(s) themselves, either on their own personal
-laptops/desktops, or on their own cluster infrastructure. Docker images can be
-used directly, or a git repo can be given, and the docker image built directly.
-
-This repo contains all the infrastructure for the queues, workers, and examples
-of cloud providers managing the horizintal scaling worker fleets.
+- `2025`: support for this work was funded by
+  [Astera](https://astera.org/open-science/) to which I am grateful. Due to this
+  support, I aim to keep this project open and supported for as long as it is
+  useful.
+- `2018`: the seed for this work was a previous project
+  (https://github.com/dionjwa/docker-cloud-compute) supported by Autodesk Life
+  Sciences (which was an amazing ambitious reach of innovation)
