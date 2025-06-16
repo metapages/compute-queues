@@ -158,6 +158,10 @@ export const fileToDataref = async (
         const { success, stdout, stderr, code } = await command.output();
         if (!success) {
           count++;
+          console.log(
+            `❗🐪 file upload fail [size=${size}] code=${code} ${file} to ${uploadUrl}`,
+            new TextDecoder().decode(stderr),
+          );
           throw new Error(
             `Failed attempt ${count} to upload ${file} to ${uploadUrl} code=${code} stdout=${
               new TextDecoder().decode(
@@ -166,6 +170,10 @@ export const fileToDataref = async (
             } stderr=${
               new TextDecoder().decode(stderr).substring(0, 1000)
             } command='curl ${args.join(" ")}'`,
+          );
+        } else {
+          console.log(
+            `✅🐪 file upload [size=${size}] ${file} to ${uploadUrl}`,
           );
         }
       },
