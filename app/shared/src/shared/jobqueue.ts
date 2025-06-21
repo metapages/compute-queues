@@ -1145,8 +1145,8 @@ export class BaseDockerJobQueue {
     let workerRegistration: WorkerRegistration;
     const emitter = createNanoEvents<NanoEventWorkerMessageEvents>();
     let lastPingTime = Date.now();
-    let messageCount = 0;
-    let connectionStartTime = Date.now();
+    const messageCount = 0;
+    const connectionStartTime = Date.now();
 
     connection.socket.addEventListener("close", () => {
       if (!this.address) {
@@ -1683,7 +1683,7 @@ export class BaseDockerJobQueue {
       console.log(`🚨 Failed sendJobStatesToWebsocket to connection ${err}`);
 
       // Retry once after a short delay
-      setTimeout(async () => {
+      setTimeout(() => {
         try {
           if (connection.readyState === WebSocket.OPEN) {
             connection.send(messageString);
