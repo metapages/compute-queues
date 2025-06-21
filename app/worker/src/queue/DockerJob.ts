@@ -40,24 +40,6 @@ import { config } from "/@/config.ts";
 //      - kill switch => Promise<void>
 // just that no more.
 
-// Docker specific
-// interface DockerVolumeDef {
-//   dockerOpts?: any; //:DockerConnectionOpts;
-//   docker?: Docker;
-//   name: string;
-// }
-
-// export interface MountedDockerVolumeDef extends DockerVolumeDef {
-// /* Container mount point */
-// mount?: string;
-// /* This path refers to a sub path inside a docker container */
-// path?: string;
-// }
-
-// const { docker, close } = createDockerClient(8343);
-// // Close all docker connections on exit
-// globalThis.addEventListener("unload", () => close());
-
 export interface Volume {
   host: string;
   container: string;

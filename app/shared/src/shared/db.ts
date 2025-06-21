@@ -168,13 +168,6 @@ export class DB {
       // );
 
       if (control) {
-        // console.log(
-        //   `queueJobAdd ${queue} [${job.hash.substring(
-        //     0,
-        //     6,
-        //   )
-        //   }] adding control and webhook`,
-        // );
         // partition jobs that might be shared by the same namespace
         await this.kv.set(["job-namespace-control", id, namespace], control, {
           expireIn: expireIn1Week,
@@ -204,40 +197,68 @@ export class DB {
     queue: string,
     id: string,
   ): Promise<DockerJobDefinitionRow | null> {
-    const entry = await this.kv.get<DataRef<DockerJobDefinitionRow>>([
-      "job",
-      queue,
-      id,
-    ]);
-    const jobDataRef: DataRef<DockerJobDefinitionRow> | null = entry.value;
-    if (!jobDataRef) {
+    try {
+      const entry = await this.kv.get<DataRef<DockerJobDefinitionRow>>([
+        "job",
+        queue,
+        id,
+      ]);
+      const jobDataRef: DataRef<DockerJobDefinitionRow> | null = entry.value;
+      if (!jobDataRef) {
+        return null;
+      }
+      if (jobDataRef?.type === DataRefType.key) {
+        try {
+          const job: DockerJobDefinitionRow | undefined =
+            await resolveDataRefFromS3(jobDataRef);
+          return job || null;
+        } catch (s3Error) {
+          console.error(
+            `Failed to resolve job data from S3 for queue ${queue}, job ${id}:`,
+            s3Error,
+          );
+          // Return null instead of throwing to allow graceful degradation
+          return null;
+        }
+      }
       return null;
+    } catch (err) {
+      console.error(`Error in queueJobGet for queue ${queue}, job ${id}:`, err);
+      throw err;
     }
-    if (jobDataRef?.type === DataRefType.key) {
-      const job: DockerJobDefinitionRow | undefined =
-        await resolveDataRefFromS3(jobDataRef);
-      return job || null;
-    }
-    return null;
   }
 
   async jobGet(
     id: string,
   ): Promise<DockerJobDefinitionRow | null> {
-    const entry = await this.kv.get<DataRef<DockerJobDefinitionRow>>([
-      "job",
-      id,
-    ]);
-    const jobDataRef: DataRef<DockerJobDefinitionRow> | null = entry.value;
-    if (!jobDataRef) {
+    try {
+      const entry = await this.kv.get<DataRef<DockerJobDefinitionRow>>([
+        "job",
+        id,
+      ]);
+      const jobDataRef: DataRef<DockerJobDefinitionRow> | null = entry.value;
+      if (!jobDataRef) {
+        return null;
+      }
+      if (jobDataRef?.type === DataRefType.key) {
+        try {
+          const job: DockerJobDefinitionRow | undefined =
+            await resolveDataRefFromS3(jobDataRef);
+          return job || null;
+        } catch (s3Error) {
+          console.error(
+            `Failed to resolve job data from S3 for job ${id}:`,
+            s3Error,
+          );
+          // Return null instead of throwing to allow graceful degradation
+          return null;
+        }
+      }
       return null;
+    } catch (err) {
+      console.error(`Error in jobGet for job ${id}:`, err);
+      throw err;
     }
-    if (jobDataRef?.type === DataRefType.key) {
-      const job: DockerJobDefinitionRow | undefined =
-        await resolveDataRefFromS3(jobDataRef);
-      return job || null;
-    }
-    return null;
   }
 
   async queueJobUpdate(
@@ -257,26 +278,41 @@ export class DB {
   }
 
   async queueGetAll(queue: string): Promise<DockerJobDefinitionRow[]> {
-    const entries = this.kv.list<DataRef<DockerJobDefinitionRow>>({
-      prefix: ["queue", queue],
-    });
-    const results: DockerJobDefinitionRow[] = [];
-    for await (const entry of entries) {
-      const jobDataRef:
-        | DataRef<DockerJobDefinitionRow>
-        | DockerJobDefinitionRow = entry.value;
-      if (
-        (jobDataRef as DataRef<DockerJobDefinitionRow> | undefined)?.type ===
-          DataRefType.key
-      ) {
-        const job: DockerJobDefinitionRow | undefined =
-          await resolveDataRefFromS3(jobDataRef);
-        if (job) {
-          results.push(job);
+    try {
+      const entries = this.kv.list<DataRef<DockerJobDefinitionRow>>({
+        prefix: ["queue", queue],
+      });
+      const results: DockerJobDefinitionRow[] = [];
+      for await (const entry of entries) {
+        const jobDataRef:
+          | DataRef<DockerJobDefinitionRow>
+          | DockerJobDefinitionRow = entry.value;
+        if (
+          (jobDataRef as DataRef<DockerJobDefinitionRow> | undefined)?.type ===
+            DataRefType.key
+        ) {
+          try {
+            const job: DockerJobDefinitionRow | undefined =
+              await resolveDataRefFromS3(jobDataRef);
+            if (job) {
+              results.push(job);
+            }
+          } catch (s3Error) {
+            console.error(
+              `Failed to resolve job data from S3 for queue ${queue}, job ${entry
+                .key[entry.key.length - 1] as string}:`,
+              s3Error,
+            );
+            // Continue processing other jobs even if this one fails
+            continue;
+          }
         }
       }
+      return results;
+    } catch (err) {
+      console.error(`Error in queueGetAll for queue ${queue}:`, err);
+      throw err;
     }
-    return results;
   }
 
   async queueGetJobIds(queue: string): Promise<string[]> {
@@ -313,18 +349,33 @@ export class DB {
   async resultCacheGet(
     id: string,
   ): Promise<DockerJobDefinitionRow | undefined> {
-    const cachedValueRefBlob = await this.kv.get<
-      DataRef<DockerJobDefinitionRow>
-    >(["cache", id]);
-    const cachedValueRef: DataRef<DockerJobDefinitionRow> | null =
-      cachedValueRefBlob?.value;
-    if (!cachedValueRef || !cachedValueRef?.value) {
-      return;
+    try {
+      const cachedValueRefBlob = await this.kv.get<
+        DataRef<DockerJobDefinitionRow>
+      >(["cache", id]);
+      const cachedValueRef: DataRef<DockerJobDefinitionRow> | null =
+        cachedValueRefBlob?.value;
+      if (!cachedValueRef || !cachedValueRef?.value) {
+        return;
+      }
+      try {
+        const job: DockerJobDefinitionRow | undefined =
+          await resolveDataRefFromS3<
+            DockerJobDefinitionRow
+          >(cachedValueRef);
+        return job?.history ? job : undefined;
+      } catch (s3Error) {
+        console.error(
+          `Failed to resolve cached result from S3 for id ${id}:`,
+          s3Error,
+        );
+        // Return undefined instead of throwing to allow graceful degradation
+        return undefined;
+      }
+    } catch (err) {
+      console.error(`Error in resultCacheGet for id ${id}:`, err);
+      throw err;
     }
-    const job: DockerJobDefinitionRow | undefined = await resolveDataRefFromS3<
-      DockerJobDefinitionRow
-    >(cachedValueRef);
-    return job?.history ? job : undefined;
   }
 
   async resultCacheRemove(id: string): Promise<void> {

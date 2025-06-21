@@ -40,18 +40,20 @@ export const resolvePreferredWorker = (
   return workerA.localeCompare(workerB) < 0 ? workerA : workerB;
 };
 
+export type JobMessagePayload = {
+  message: WebsocketMessageClientToServer;
+  jobId: string;
+  stageChange: StateChange;
+  queuedJob?: StateChangeValueQueued;
+};
+
 export const createNewContainerJobMessage = async (opts: {
   definition: DockerJobDefinitionInputRefs;
   debug?: boolean;
   jobId?: string;
   namespace?: string;
   control?: DockerJobControlConfig;
-}): Promise<{
-  message: WebsocketMessageClientToServer;
-  jobId: string;
-  stageChange: StateChange;
-  queuedJob?: StateChangeValueQueued;
-}> => {
+}): Promise<JobMessagePayload> => {
   let { definition, debug, jobId, namespace, control } = opts;
   const value: StateChangeValueQueued = {
     definition,
@@ -128,17 +130,25 @@ export const fileToDataref = async (
   const hash = await hashFileOnDisk(file);
 
   if (size > ENV_VAR_DATA_ITEM_LENGTH_MAX) {
-    const existsUrl = `${address}/api/v1/exists/${hash}`;
-    const existsResponse = await fetch(existsUrl);
-    if (existsResponse.status === 200) {
-      existsResponse.body?.cancel();
-      const existsRef: DataRef = {
-        value: hash,
-        type: DataRefType.key,
-      };
-      return existsRef;
+    try {
+      const existsUrl = `${address}/api/v1/exists/${hash}`;
+      const existsResponse = await fetch(existsUrl);
+      if (existsResponse.status === 200) {
+        existsResponse?.body?.cancel();
+        const existsRef: DataRef = {
+          value: hash,
+          type: DataRefType.key,
+        };
+        return existsRef;
+      } else {
+        // Consume the response body even when status is not 200
+        existsResponse?.body?.cancel();
+      }
+    } catch (e) {
+      console.error(
+        `🐸🐪 fileToDataref: error checking if file exists, but continuing: ${e}`,
+      );
     }
-    existsResponse.body?.cancel();
 
     const uploadUrl = `${address}/api/v1/upload/${hash}`;
 
@@ -152,12 +162,17 @@ export const fileToDataref = async (
 
     await retryAsync(
       async () => {
+        console.log(`🐸🐪 fileToDataref: curl ${args.join(" ")}`);
         const command = new Deno.Command("curl", {
           args,
         });
         const { success, stdout, stderr, code } = await command.output();
         if (!success) {
           count++;
+          console.log(
+            `❗🐪 file upload fail [size=${size}] code=${code} ${file} to ${uploadUrl}`,
+            new TextDecoder().decode(stderr),
+          );
           throw new Error(
             `Failed attempt ${count} to upload ${file} to ${uploadUrl} code=${code} stdout=${
               new TextDecoder().decode(
@@ -166,6 +181,10 @@ export const fileToDataref = async (
             } stderr=${
               new TextDecoder().decode(stderr).substring(0, 1000)
             } command='curl ${args.join(" ")}'`,
+          );
+        } else {
+          console.log(
+            `✅🐪 file upload [size=${size}] ${file} to ${uploadUrl}`,
           );
         }
       },
@@ -240,12 +259,10 @@ export const dataRefToFile = async (
       return;
     }
     case DataRefType.url: {
-      // console.log(`🐸🐪 dataRefToFile ref`, ref);
       const url: string = ref.value;
       let hash = /\/api\/v1\/download\/([0-9a-z]+)[\/$]?/.exec(
         new URL(url).pathname,
       )?.[1];
-      // console.log(`🐸🐪 dataRefToFile hash`, hash);
       if (!hash) {
         hash = ref.hash;
       }

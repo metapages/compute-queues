@@ -40,7 +40,6 @@ import {
   type WorkerStatusResponse,
 } from "/@/shared/types.ts";
 import { resolveMostCorrectJob } from "/@/shared/util.ts";
-// import LRU from 'https://deno.land/x/lru_cache@6.0.0-deno.4/mod.ts';
 import { ms } from "ms";
 import { createNanoEvents, type Emitter } from "nanoevents";
 import { delay } from "std/async/delay";
@@ -67,6 +66,38 @@ const INTERVAL_JOBS_BROADCAST = ms("10 seconds") as number;
 const INTERVAL_CHECK_FOR_DUPLICATE_JOBS_SAME_SOURCE = ms(
   "10 seconds",
 ) as number;
+
+// When multiple jobs with the same namespace exist we delete all except the newest
+// but if we have a long running valuable job we don't want to delete it
+// and the churn on a new metapage as the inputs arrive can resubmit a new job
+// that will be subsequently replaced by the actually current. So we need to pause
+// on deleting long-running jobs for a bit at least. There is no overall harm to this
+// except if a machine is bottlenecked. If it is, you can always delete the job in the queue
+// (and we need to show the job age)
+// returns the setInterval to check again
+// let NAMESPACE_MULTIPLE_JOB_DELETION_PAUSE = ms("10 seconds") as number;
+const getDeletionDelayForNamespaceSupersededJob = (
+  jobAge: number,
+): number => {
+  // const isTesting = Deno.env.get("TESTING") === "true";
+  // if (isTesting && Deno.env.get(NAMESPACE_MULTIPLE_JOB_REPLACEMENT_THRESHOLD)) {
+  //   NAMESPACE_MULTIPLE_JOB_REPLACEMENT_THRESHOLD = ms(Deno.env.get(NAMESPACE_MULTIPLE_JOB_REPLACEMENT_THRESHOLD)) as number;
+  // }
+
+  // if it's older than a minute let's slow down killing it for the replacement
+  if (jobAge > 60000) {
+    // we can wait 8s bit before killing it
+    return 8000;
+  } else if (jobAge > 20000) { //if it's older than 20s
+    return 4000; // wait 4 seconds
+  }
+  return 0; // default:kill it immediately
+};
+
+// const replacementThreshold = parseInt(
+//   Deno.env.get("JOB_REPLACEMENT_THRESHOLD_MS") || "60000",
+// );
+
 const INTERVAL_REMOVE_OLD_FINISHED_JOBS_FROM_QUEUE = ms("10 seconds") as number;
 
 type ServerWorkersObject = { [key: string]: WorkerRegistration[] };
@@ -153,7 +184,7 @@ export class BaseDockerJobQueue {
   protected readonly dataDirectory: string;
   protected readonly channel: BroadcastChannel;
   protected readonly channelEmitter: Emitter<BroadcastMessageEvents>;
-  protected db!: DB;
+  public db!: DB;
   protected readonly debug: boolean;
 
   // intervals
@@ -694,9 +725,9 @@ export class BaseDockerJobQueue {
 
     if (change && change.state) {
       console.log(
-        `${jobId.substring(0, 6)} stateChange ${
-          this.state.jobs[jobId] ? this.state!.jobs![jobId]!.state : ""
-        } => ${change.state} (existing job: ${!!this.state.jobs[jobId]})`,
+        `[${jobId.substring(0, 6)}] stateChange ${
+          this.state.jobs[jobId] ? this.state!.jobs![jobId]!.state + " " : ""
+        }=> ${change.state} (existing job: ${!!this.state.jobs[jobId]})`,
       );
     }
 
@@ -724,6 +755,10 @@ export class BaseDockerJobQueue {
         console.log(`💥 updateState but missing jobRow, maybe cache is bad?`);
         return;
       }
+
+      jobRow!.state = change.state;
+      jobRow!.value = change.value;
+
       if (change.state === DockerJobState.Queued) {
         jobRow!.history = [change];
         this.checkForSourceConflicts();
@@ -735,8 +770,6 @@ export class BaseDockerJobQueue {
         }
       }
 
-      jobRow!.state = change.state;
-      jobRow!.value = change.value;
       // broadcast first
       this.broadcastJobStatesToChannel([jobId]);
       this.broadcastJobStatesToWebsockets([jobId]);
@@ -744,16 +777,12 @@ export class BaseDockerJobQueue {
       try {
         // Finished jobs are cached in the db
         if (change.state === DockerJobState.Finished) {
-          // console.log("cacheadd");
           await this.db.resultCacheAdd(jobId, jobRow);
           // remove from the persisted cache so that metrics will be accurate
-          // console.log("cacheremove");
           await this.db.queueJobRemove(this.address, jobId);
         } else if (change.state === DockerJobState.Queued) {
-          // console.log("queueadd");
           await this.db.queueJobAdd(this.address, jobRow!);
         } else {
-          // console.log("queueupdate");
           await this.db.queueJobUpdate(this.address, jobRow!);
         }
       } catch (err) {
@@ -784,11 +813,11 @@ export class BaseDockerJobQueue {
             case DockerJobState.Queued:
             case DockerJobState.ReQueued:
             case DockerJobState.Running:
-              console.log(`${jobId.substring(0, 6)} Job finished`);
+              console.log(`[${jobId.substring(0, 6)}] Job finished`);
               await updateState();
               break;
             case DockerJobState.Finished:
-              console.log(`${jobId.substring(0, 6)} already finished?`);
+              console.log(`[${jobId.substring(0, 6)}] already finished?`);
               await broadcastCurrentStateBecauseIDoubtStateIsSynced();
               break;
           }
@@ -800,29 +829,29 @@ export class BaseDockerJobQueue {
           switch (this.state.jobs[jobId].state) {
             case DockerJobState.Queued:
               console.log(
-                `${
+                `[${
                   jobId.substring(
                     0,
                     6,
                   )
-                } Queued -> ReQueued (this means the worker went missing)`,
+                }] Queued -> ReQueued (this means the worker went missing)`,
               );
               await updateState();
               break;
             case DockerJobState.ReQueued: {
-              console.log(`${jobId.substring(0, 6)} ReQueued -> ReQueued`);
+              console.log(`[${jobId.substring(0, 6)}] ReQueued -> ReQueued`);
               const currentStateReQueued = this.state.jobs[jobId]
                 .value as StateChangeValueQueued;
               const incomingStateReQueued = change
                 .value as StateChangeValueQueued;
               if (incomingStateReQueued.time < currentStateReQueued.time) {
                 console.log(
-                  `${
+                  `[${
                     jobId.substring(
                       0,
                       6,
                     )
-                  } REPLACING! because incoming time is earlier ReQueued -> ReQueued`,
+                  }] REPLACING! because incoming time is earlier ReQueued -> ReQueued`,
                 );
                 // update via replacement
                 await updateState(true);
@@ -831,24 +860,24 @@ export class BaseDockerJobQueue {
             }
             case DockerJobState.Running: {
               console.log(
-                `${
+                `[${
                   jobId.substring(
                     0,
                     6,
                   )
-                } Running -> ReQueued? ❗❗ I hope this is because the worker went missing ❗`,
+                }] Running -> ReQueued? ❗❗ I hope this is because the worker went missing ❗`,
               );
               await updateState(true);
               break;
             }
             case DockerJobState.Finished: {
               console.log(
-                `${
+                `[${
                   jobId.substring(
                     0,
                     6,
                   )
-                } Finished -> ReQueued? What ❓❓❓. Rebroadcasting state`,
+                }] Finished -> ReQueued? What ❓❓❓. Rebroadcasting state`,
               );
               await broadcastCurrentStateBecauseIDoubtStateIsSynced();
               break;
@@ -858,7 +887,7 @@ export class BaseDockerJobQueue {
 
         // incoming state
         case DockerJobState.Queued: {
-          console.log(`${jobId.substring(0, 6)} Job wanting to be Queued`);
+          // console.log(`[${jobId.substring(0, 6)}] Job wanting to be Queued`);
           const valueQueued = change.value as StateChangeValueQueued;
 
           if (this.state.jobs[jobId]) {
@@ -868,7 +897,7 @@ export class BaseDockerJobQueue {
               case DockerJobState.Queued:
               case DockerJobState.Running:
                 console.log(
-                  `${jobId.substring(0, 6)} Queued -> ${
+                  `[${jobId.substring(0, 6)}] Queued -> ${
                     this.state.jobs[jobId].state
                   } ignoring queue request, job already queued or running`,
                 );
@@ -889,7 +918,7 @@ export class BaseDockerJobQueue {
                 switch (previousFinishedState.reason) {
                   case DockerJobFinishedReason.Cancelled:
                     console.log(
-                      `${jobId.substring(0, 6)} restarting from user`,
+                      `[${jobId.substring(0, 6)}] restarting from user`,
                     );
                     await updateState(true);
                     break;
@@ -933,7 +962,6 @@ export class BaseDockerJobQueue {
                   6,
                 )
               }] adding new job row to local state as Queued`,
-              valueQueued,
             );
 
             jobRow = {
@@ -944,6 +972,8 @@ export class BaseDockerJobQueue {
             };
             this.state.jobs[jobId] = jobRow;
             await updateState();
+            // Check for source conflicts immediately after adding a new job
+            this.checkForSourceConflicts();
           }
 
           break;
@@ -951,7 +981,7 @@ export class BaseDockerJobQueue {
         // incoming state
         case DockerJobState.Running:
           console.log(
-            `${jobId.substring(0, 6)} Job Running, previous job ${
+            `[${jobId.substring(0, 6)}] Job Running, previous job ${
               this.state.jobs[jobId].state
             }`,
           );
@@ -961,9 +991,12 @@ export class BaseDockerJobQueue {
             case DockerJobState.Finished:
               // it can NEVER go from Finished to Running
               console.log(
-                `${
-                  jobId.substring(0, 6)
-                } ignoring request state change ${change.state} !=> ${DockerJobState.Finished}`,
+                `[${
+                  jobId.substring(
+                    0,
+                    6,
+                  )
+                }] ignoring request state change ${change.state} !=> ${DockerJobState.Finished}`,
               );
               break;
             // yeah running can be set again, e.g. updated the value to include sub-states
@@ -994,12 +1027,12 @@ export class BaseDockerJobQueue {
                 const preferCurrentWorker =
                   preferredWorker === valueRunningCurrent.worker;
                 console.log(
-                  `${
+                  `[${
                     jobId.substring(
                       0,
                       6,
                     )
-                  } Running -> Running, but different worker, assigning to ${
+                  }] Running -> Running, but different worker, assigning to ${
                     preferredWorker.substring(
                       0,
                       6,
@@ -1014,12 +1047,12 @@ export class BaseDockerJobQueue {
                 }
               } else {
                 console.log(
-                  `${
+                  `[${
                     jobId.substring(
                       0,
                       6,
                     )
-                  } 🇨🇭🇨🇭🇨🇭 Running -> Running, same worker, so doing nothing: [${
+                  }] 🇨🇭🇨🇭🇨🇭 Running -> Running, same worker, so doing nothing: [${
                     valueRunningCurrent.worker.substring(
                       0,
                       6,
@@ -1041,8 +1074,6 @@ export class BaseDockerJobQueue {
     } catch (err) {
       console.log(`💥💥💥 ERROR ${err}`, (err as Error).stack);
     }
-
-    // console.log(`stateChange(${change.state}) end `)
   }
 
   protected async removeOldFinishedJobsFromQueue() {
@@ -1326,7 +1357,6 @@ export class BaseDockerJobQueue {
           return;
         }
         if (messageString === "PING") {
-          // console.log(`PING FROM browser`);
           connection.socket.send("PONG");
           return;
         }
@@ -1426,6 +1456,11 @@ export class BaseDockerJobQueue {
               // send the job state to the client
               this.sendJobStatesToWebsocket(connection.socket, [jobId]);
             })();
+            break;
+          }
+
+          case WebsocketMessageTypeClientToServer.QueryJobStates: {
+            this.broadcastJobStatesToWebsockets(undefined, true);
             break;
           }
 
@@ -1765,6 +1800,17 @@ export class BaseDockerJobQueue {
     return messageString;
   }
 
+  /**
+   * Jobs can be submitted with a namespace, and there can only be a single
+   * job for a given namespace. This is e.g. a job submitted by the metaframe
+   * client inside a metapage.
+   * There are some complicating factors:
+   *   - jobs can be rapidly submitted with different ids, and the job at
+   *     a given namespace should "settle", as inputs arrive. This means
+   *     that we cannot be too strict, and should only kill conflicting jobs
+   *     after some time interval that has allowed the client to finalize its
+   *     inputs and thus unique jobId
+   */
   checkForSourceConflicts() {
     // check all the jobs
     const namespacedJobs = new Map<string, string[]>(); // source -> [jobId, ...]
@@ -1788,7 +1834,11 @@ export class BaseDockerJobQueue {
     const now = Date.now();
     for (const [namespace, jobIds] of namespacedJobs.entries()) {
       if (jobIds.length > 1) {
-        console.log(`🚨 source conflict for ${namespace}: ${jobIds}`);
+        console.log(
+          `🚨 source conflict for ${namespace}: ${
+            jobIds.map((id) => id.substring(0, 6)).join(", ")
+          }`,
+        );
         // what do I do? keep the newest job, and kill the others.
         // we should hesitate to kill long running jobs, but we also
         // don't want to end up with a lot of them, so we have to strike
@@ -1798,8 +1848,8 @@ export class BaseDockerJobQueue {
         // then we kill the older jobs.
         // Otherwise, we keep the newest job.
         // latest last
-        // Plot twist: jobs can be started by multiple userspaces and be in different queues
-        // so finishing a job in one queue doesn't mean it's finished in all queues
+        // Plot twist: the same job can be started by multiple userspaces and be in different queues
+        // so finishing the job in one queue doesn't mean it's finished in all queues
         const sortedJobIds = jobIds.toSorted((a, b) => {
           const aJobTime = (
             this.state.jobs[a]?.history[0].value as StateChangeValueQueued
@@ -1809,29 +1859,34 @@ export class BaseDockerJobQueue {
           ).time;
           return aJobTime - bJobTime;
         });
-        const newestJobId = sortedJobIds.pop()!;
-        const newestJobTime = (
-          this.state.jobs[newestJobId]?.history[0]
-            .value as StateChangeValueQueued
-        ).time;
         for (const jobId of sortedJobIds) {
           const job = this.state.jobs[jobId];
           const jobTime = (job.history[0].value as StateChangeValueQueued).time;
-          const timeDifference = newestJobTime - jobTime;
           const jobAge = now - jobTime;
-          if (jobAge < 60000 || timeDifference > 60000) {
-            // kill it
-            // TODO: plot twist: but not if it's in other queues, but this queue
-            // should definitely remove it from its own queue
-            this.stateChange({
-              state: DockerJobState.Finished,
-              job: jobId,
-              value: {
-                reason: DockerJobFinishedReason.JobReplacedByClient,
-                time: Date.now(),
-              },
-            } as StateChange);
+          const deletionDelay = getDeletionDelayForNamespaceSupersededJob(
+            jobAge,
+          );
+          if (deletionDelay > 0) {
+            // check again in a bit
+            setTimeout(() => {
+              this.checkForSourceConflicts();
+            }, deletionDelay);
+            continue;
           }
+          // kill it
+          // TODO: plot twist: but not if it's in other queues, but this queue
+          // should definitely remove it from its own queue
+          console.log(
+            `[${jobId}] 🚨 source conflict for ${namespace}: DockerJobFinishedReason.JobReplacedByClient`,
+          );
+          this.stateChange({
+            state: DockerJobState.Finished,
+            job: jobId,
+            value: {
+              reason: DockerJobFinishedReason.JobReplacedByClient,
+              time: Date.now(),
+            },
+          } as StateChange);
         }
       }
     }

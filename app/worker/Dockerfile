@@ -7,11 +7,10 @@ ENV DOCKER_VERSION=5:27.1.1-1~debian.12~bookworm
 
 # # https://gist.github.com/squarebracket/e719069522436873bc6f13efb359cac9
 # RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
-
 RUN apt-get update && apt-get -y install \
 	curl \
-	unzip \
-	gnupg
+	gnupg \
+	unzip
 
 # Set up nvidia repository for GPU support in docker
 RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \

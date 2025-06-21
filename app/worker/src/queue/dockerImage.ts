@@ -12,14 +12,21 @@ import {
   WebsocketMessageTypeWorkerToServer,
 } from "@metapages/compute-queues-shared";
 import { docker } from "/@/queue/dockerClient.ts";
+import { getConfig } from "../config.ts";
 
 // assume that no images are deleted while we are running
 const CACHED_DOCKER_IMAGES: { [key: string]: boolean } = {};
 
-const ROOT_BUILD_DIR = "/tmp/docker-builds";
-const ROOT_BUILD_DIR_DOWNLOADS = `${ROOT_BUILD_DIR}/downloads`;
-
 let DockerBinPath = "/usr/bin/docker";
+
+const getDockerImageBuildDirectory = () => {
+  const config = getConfig();
+  return `${config.dataDirectory}/docker-builds`;
+};
+
+const getDockerImageBuildDownloadDirectory = () => {
+  return `${getDockerImageBuildDirectory()}/downloads`;
+};
 
 async function getDockerBinaryPath(): Promise<string> {
   try {
@@ -124,7 +131,7 @@ export const ensureDockerImage = async (args: {
       );
     }
 
-    const buildDir = `${ROOT_BUILD_DIR}/${buildSha}`;
+    const buildDir = `${getDockerImageBuildDirectory()}/${buildSha}`;
     await ensureDir(buildDir);
 
     if (context) {
@@ -433,8 +440,16 @@ const checkForDockerImage = async (args: {
         }
       });
     });
-  } catch (err) {
-    console.error("Didn't wanna pull", err);
+  } catch (err: unknown) {
+    const is404 = (err as { message?: string })?.message?.includes(
+      "HTTP code 404",
+    );
+    if (!is404) {
+      console.error(
+        "Didn't wanna pull but isn't just not found:",
+        (err as { message?: string })?.message,
+      );
+    }
   }
 
   return imageExists;
@@ -604,9 +619,13 @@ const getDownloadLinkFromContext = async (context: string): Promise<string> => {
 
 const getFilePathForDownload = (url: string): string => {
   if (url.startsWith("https://")) {
-    return `${ROOT_BUILD_DIR_DOWNLOADS}/${url.replace("https://", "")}`;
+    return `${getDockerImageBuildDownloadDirectory()}/${
+      url.replace("https://", "")
+    }`;
   } else if (url.startsWith("http://")) {
-    return `${ROOT_BUILD_DIR_DOWNLOADS}/${url.replace("http://", "")}`;
+    return `${getDockerImageBuildDownloadDirectory()}/${
+      url.replace("http://", "")
+    }`;
   }
   throw "Unsupported download link";
 };

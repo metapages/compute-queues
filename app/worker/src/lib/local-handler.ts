@@ -1,8 +1,13 @@
 import { type Context, Hono } from "hono";
 import { serveStatic } from "hono/middleware";
 import {
+  type DockerApiCopyJobToQueuePayload,
+  type DockerJobDefinitionRow,
   DockerJobState,
   type JobStates,
+  shaDockerJob,
+  type StateChange,
+  type StateChangeValueQueued,
 } from "@metapages/compute-queues-shared";
 import { createHandler } from "metapages/worker/routing/handlerDeno";
 
@@ -147,6 +152,117 @@ const uploadHandler = async (c: Context) => {
   }
 };
 
+const copyJobToQueueHandler = async (c: Context) => {
+  try {
+    const post = await c.req.json<DockerApiCopyJobToQueuePayload>();
+    const { jobId, queue, namespace, control } = post;
+
+    const existingJob: DockerJobDefinitionRow | null = jobList.jobs[jobId];
+
+    if (!existingJob) {
+      c.status(404);
+      return c.json({ error: "Job not found" });
+    }
+
+    // Initialize queue if it doesn't exist
+    const jobQueue = await ensureQueue(queue);
+
+    const stateChangeValue: StateChangeValueQueued = {
+      definition:
+        (existingJob.history[0].value as StateChangeValueQueued).definition,
+      time: Date.now(),
+      debug: false,
+      namespace,
+      control,
+    };
+    const stateChange: StateChange = {
+      job: jobId,
+      tag: "",
+      state: DockerJobState.Queued,
+      value: stateChangeValue,
+    };
+
+    await jobQueue.stateChange(stateChange);
+
+    c.status(200);
+    return c.json({ success: true });
+  } catch (err) {
+    console.error("Error downloading file:", err);
+    return c.text((err as Error).message, 500);
+  }
+};
+
+const getJobHandler = (c: Context) => {
+  try {
+    const jobId: string | undefined = c.req.param("jobId");
+    if (!jobId) {
+      c.status(404);
+      return c.json({ error: "No job provided" });
+    }
+
+    const job: DockerJobDefinitionRow | null = jobList.jobs[jobId];
+    if (!job) {
+      c.status(404);
+      return c.json({ error: "Job not found" });
+    }
+
+    return c.json(job);
+  } catch (err) {
+    console.error("Error getting job", err);
+    return c.text((err as Error).message, 500);
+  }
+};
+
+const submitJobToQueueHandler = async (c: Context) => {
+  try {
+    const queue: string | undefined = c.req.param("queue");
+    if (!queue) {
+      c.status(404);
+      return c.json({ error: "No queue specified" });
+    }
+    const jobToQueue = await c.req.json<StateChangeValueQueued>();
+    jobToQueue.control = jobToQueue.control || {};
+    jobToQueue.control.queueHistory = jobToQueue.control.queueHistory || [];
+    jobToQueue.control.queueHistory.push(queue);
+    const jobId = await shaDockerJob(jobToQueue.definition);
+
+    const jobQueue = await ensureQueue(queue);
+
+    const stateChange: StateChange = {
+      job: jobId,
+      tag: "",
+      state: DockerJobState.Queued,
+      value: jobToQueue,
+    };
+
+    // This needs to assume that a job submitted with a stateChange
+    // like this will have an expectation of persistance
+    await jobQueue.stateChange(stateChange);
+
+    c.status(200);
+    return c.json({ success: true, jobId });
+  } catch (err) {
+    console.error("Error submitting job:", err);
+    return c.text((err as Error).message, 500);
+  }
+};
+
+export const getJobIdsHandler = async (c: Context) => {
+  try {
+    const queue: string | undefined = c.req.param("queue");
+    if (!queue) {
+      c.status(404);
+      return c.json({ error: "No queue specified" });
+    }
+    const jobQueue = await ensureQueue(queue);
+    const jobIds = await jobQueue.db.queueGetJobIds(queue);
+    return c.json({ success: true, jobIds });
+  } catch (err) {
+    console.error("Error getting job ids:", err);
+    return c.text((err as Error).message, 500);
+  }
+};
+
 app.use("*", async (c, next) => {
   const req = c.req;
   const origin = req.header("Origin");
@@ -168,11 +284,17 @@ app.use("*", async (c, next) => {
   await next();
 });
 
+app.get("/health", (c: Context) => c.text("OK"));
+app.get("/healthz", (c: Context) => c.text("OK"));
+
 app.get("/api/v1/download/:key", downloadHandler);
 app.get("/api/v1/exists/:key", existsHandler);
 app.put("/api/v1/upload/:key", uploadHandler);
-
-app.get("/health", (c: Context) => c.text("OK"));
+app.post("/api/v1/copy", copyJobToQueueHandler);
+// app.get("/api/v1/job/:jobId", getJobHandler);
+app.get("/job/:jobId", getJobHandler);
+app.post("/:queue/job", submitJobToQueueHandler);
+app.get("/:queue/jobs", getJobIdsHandler);
 
 app.get("/metrics", () => {
   const unfinishedJobs = Object.values(jobList.jobs).filter(
@@ -231,22 +353,7 @@ app.get("/*", serveStatic({ root: "../browser/dist" }));
 app.get("/", serveStatic({ path: "../browser/dist/index.html" }));
 app.get("*", serveStatic({ path: "../browser/dist/index.html" }));
 
-const handleWebsocket = async (socket: WebSocket, request: Request) => {
-  const url = new URL(request.url);
-  const pathTokens = url.pathname.split("/").filter((x) => x !== "");
-  const queue = pathTokens[0];
-  const type = pathTokens[1];
-
-  if (!queue) {
-    console.log("No queue key, closing socket");
-    socket.close();
-    return;
-  }
-
-  if (config.debug) {
-    console.log(`➕ websocket connection type=${type} queue=${queue}`);
-  }
-
+const ensureQueue = async (queue: string): Promise<BaseDockerJobQueue> => {
   // Initialize queue if it doesn't exist
   if (!userJobQueues[queue]) {
     userJobQueues[queue] = new LocalDockerJobQueue({
@@ -257,12 +364,33 @@ const handleWebsocket = async (socket: WebSocket, request: Request) => {
     });
     await userJobQueues[queue].setup();
   }
+  return userJobQueues[queue];
+};
+
+const handleWebsocket = async (socket: WebSocket, request: Request) => {
+  const url = new URL(request.url);
+  const pathTokens = url.pathname.split("/").filter((x) => x !== "");
+  const queueKey = pathTokens[0];
+  const type = pathTokens[1];
+
+  if (!queueKey) {
+    console.log("No queue key, closing socket");
+    socket.close();
+    return;
+  }
+
+  if (config.debug) {
+    console.log(`➕ websocket connection type=${type} queue=${queueKey}`);
+  }
+
+  // Initialize queue if it doesn't exist
+  const queue = await ensureQueue(queueKey);
 
   // Handle client or worker connections
   if (type === "browser" || type === "client") {
-    userJobQueues[queue].connectClient({ socket });
+    queue.connectClient({ socket });
   } else if (type === "worker") {
-    userJobQueues[queue].connectWorker({ socket }, queue);
+    queue.connectWorker({ socket }, queueKey);
   } else {
     console.log(`💥 Unknown type=[${type}], closing websocket`);
     socket.close();
