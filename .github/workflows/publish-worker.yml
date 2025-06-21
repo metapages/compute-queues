@@ -3,7 +3,7 @@ name: Publish worker binary & container images
 on:
   push:
     branches:
-      - "main"
+      - "234-workers-disconnecting"
     paths:
       - "app/worker/mod.json"
 

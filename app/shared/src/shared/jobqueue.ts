@@ -191,6 +191,7 @@ export class BaseDockerJobQueue {
   protected _intervalWorkerBroadcast: number | undefined;
   protected _intervalJobsStatesMinimalBroadcast: number | undefined;
   protected _intervalJobsBroadcast: number | undefined;
+  protected _intervalFullJobSync: number | undefined;
   protected _intervalCheckForDuplicateJobsSameSource: number | undefined;
   protected _intervalRemoveOldFinishedJobsFromQueue: number | undefined;
 
@@ -404,6 +405,15 @@ export class BaseDockerJobQueue {
       }
     };
 
+    // Add broadcast channel error handling
+    this.channel.addEventListener("error", (event) => {
+      console.error(`🚨 Broadcast channel error:`, event);
+    });
+
+    this.channel.addEventListener("close", () => {
+      console.log(`🚨 Broadcast channel closed`);
+    });
+
     this._intervalWorkerBroadcast = setInterval(() => {
       this.broadcastWorkersToChannel();
       this.requeueJobsFromMissingWorkers();
@@ -417,6 +427,15 @@ export class BaseDockerJobQueue {
       this.broadcastJobStatesToWebsockets();
       this.broadcastJobStatesToChannel();
     }, INTERVAL_JOBS_BROADCAST);
+
+    // Add periodic full sync to ensure workers don't miss updates
+    this._intervalFullJobSync = setInterval(() => {
+      // Force a full job state broadcast every 2 minutes to catch any missed updates
+      this.broadcastJobStatesToWebsockets(undefined, true);
+      console.log(
+        `📡 Periodic full job state sync sent to ${this.workers.myWorkers.length} workers`,
+      );
+    }, ms("2 minutes") as number);
 
     this._intervalCheckForDuplicateJobsSameSource = setInterval(() => {
       this.checkForSourceConflicts();
@@ -706,6 +725,7 @@ export class BaseDockerJobQueue {
     clearInterval(this._intervalWorkerBroadcast);
     clearInterval(this._intervalJobsStatesMinimalBroadcast);
     clearInterval(this._intervalJobsBroadcast);
+    clearInterval(this._intervalFullJobSync);
     clearInterval(this._intervalCheckForDuplicateJobsSameSource);
     delete userJobQueues[this.address];
     console.log(`➖ 🗑️ 🎾 UserDockerJobQueue ${this.address}`);
@@ -1124,11 +1144,15 @@ export class BaseDockerJobQueue {
 
     let workerRegistration: WorkerRegistration;
     const emitter = createNanoEvents<NanoEventWorkerMessageEvents>();
+    let lastPingTime = Date.now();
+    let messageCount = 0;
+    let connectionStartTime = Date.now();
 
     connection.socket.addEventListener("close", () => {
       if (!this.address) {
         return;
       }
+      const uptime = Date.now() - connectionStartTime;
       console.log(
         `[${this.address.substring(0, 15)}] [${
           queue.substring(
@@ -1139,7 +1163,9 @@ export class BaseDockerJobQueue {
           workerRegistration
             ? workerRegistration.id.substring(0, 6)
             : "unknown worker"
-        }`,
+        } after ${
+          Math.round(uptime / 1000)
+        }s uptime, ${messageCount} messages sent`,
       );
       // https://github.com/ai/nanoevents?tab=readme-ov-file#remove-all-listeners
       emitter.events = {};
@@ -1179,6 +1205,7 @@ export class BaseDockerJobQueue {
         }
 
         if (messageString === "PING") {
+          lastPingTime = Date.now();
           // console.log(
           //   `🌳 PING FROM ${
           //     workerRegistration
@@ -1322,6 +1349,39 @@ export class BaseDockerJobQueue {
       console.log(`⬅️ 📧 w sendJobStatesToWebsocket worker`);
     }
     await this.sendJobStatesToWebsocket(connection.socket);
+
+    // Monitor worker connection health
+    const healthCheckInterval = setInterval(() => {
+      const timeSinceLastPing = Date.now() - lastPingTime;
+      const uptime = Date.now() - connectionStartTime;
+
+      if (timeSinceLastPing > 30000) { // 30 seconds
+        console.log(
+          `🚨 Worker ${
+            workerRegistration?.id?.substring(0, 6) || "unknown"
+          } hasn't pinged for ${
+            Math.round(timeSinceLastPing / 1000)
+          }s (uptime: ${Math.round(uptime / 1000)}s)`,
+        );
+      }
+
+      // Log health every 5 minutes
+      if (uptime % 300000 < 5000) { // Every 5 minutes
+        console.log(
+          `📊 Worker ${
+            workerRegistration?.id?.substring(0, 6) || "unknown"
+          } health: ` +
+            `uptime=${Math.round(uptime / 1000)}s, ` +
+            `lastPing=${Math.round(timeSinceLastPing / 1000)}s ago, ` +
+            `messages=${messageCount}`,
+        );
+      }
+    }, 10000); // Check every 10 seconds
+
+    // Clean up interval when connection closes
+    connection.socket.addEventListener("close", () => {
+      clearInterval(healthCheckInterval);
+    });
   }
 
   async connectClient(connection: { socket: WebSocket }) {
@@ -1522,29 +1582,66 @@ export class BaseDockerJobQueue {
     if (!messageString) {
       return;
     }
+    const failedWorkers: string[] = [];
+
     this.workers.myWorkers.forEach((worker) => {
       try {
-        worker.connection.send(messageString);
+        if (worker.connection.readyState === WebSocket.OPEN) {
+          worker.connection.send(messageString);
+        } else {
+          console.log(
+            `🚨 Worker ${
+              worker.registration.id.substring(0, 6)
+            } websocket not open (state: ${worker.connection.readyState})`,
+          );
+          failedWorkers.push(worker.registration.id);
+        }
       } catch (err) {
         console.log(
-          `Failed to send broadcast to worker ${err}\nmessage=${messageString}`,
+          `🚨 Failed to send message to worker ${
+            worker.registration.id.substring(0, 6)
+          }: ${err}`,
         );
+        failedWorkers.push(worker.registration.id);
       }
     });
+
+    // Remove failed workers
+    if (failedWorkers.length > 0) {
+      console.log(
+        `🚨 Removing ${failedWorkers.length} failed workers: ${
+          failedWorkers.map((id) => id.substring(0, 6)).join(", ")
+        }`,
+      );
+      this.workers.myWorkers = this.workers.myWorkers.filter(
+        (worker) => !failedWorkers.includes(worker.registration.id),
+      );
+      this.myWorkersHaveChanged();
+    }
   }
 
   protected broadcastToLocalClients(messageString: string) {
     if (!messageString) {
       return;
     }
-    this.clients.forEach((connection) => {
+    const failedClients: number[] = [];
+
+    this.clients.forEach((connection, index) => {
       try {
-        connection.send(messageString);
+        if (connection.readyState === WebSocket.OPEN) {
+          connection.send(messageString);
+        } else {
+          failedClients.push(index);
+        }
       } catch (err) {
-        console.log(
-          `Failed to send broadcast to client ${err}\nmessage=${messageString}`,
-        );
+        console.log(`Failed to send broadcast to browser ${err}`);
+        failedClients.push(index);
       }
+    });
+
+    // Remove failed clients (in reverse order to maintain indices)
+    failedClients.reverse().forEach((index) => {
+      this.clients.splice(index, 1);
     });
   }
 
@@ -1572,9 +1669,30 @@ export class BaseDockerJobQueue {
     try {
       if (connection.readyState === WebSocket.OPEN) {
         connection.send(messageString);
+        if (this.debug) {
+          console.log(
+            `📤 Sent job states to websocket (${jobIds?.length || "all"} jobs)`,
+          );
+        }
+      } else {
+        console.log(
+          `🚨 Cannot send job states: websocket not open (state: ${connection.readyState})`,
+        );
       }
     } catch (err) {
-      console.log(`Failed sendJobStatesToWebsocket to connection ${err}`);
+      console.log(`🚨 Failed sendJobStatesToWebsocket to connection ${err}`);
+
+      // Retry once after a short delay
+      setTimeout(async () => {
+        try {
+          if (connection.readyState === WebSocket.OPEN) {
+            connection.send(messageString);
+            console.log(`📤 Retry successful: sent job states to websocket`);
+          }
+        } catch (retryErr) {
+          console.log(`🚨 Retry failed sendJobStatesToWebsocket: ${retryErr}`);
+        }
+      }, 1000);
     }
   }
 
@@ -1712,6 +1830,7 @@ export class BaseDockerJobQueue {
     this.workers.myWorkers.forEach((w) => workerIds.add(w.registration.id));
 
     // check all the jobs
+    let requeuedCount = 0;
     for (
       const [jobId, job] of Object.entries<DockerJobDefinitionRow>(
         this.state.jobs,
@@ -1721,17 +1840,21 @@ export class BaseDockerJobQueue {
         const valueRunning = job.value as StateChangeValueRunning;
         if (!workerIds.has(valueRunning.worker)) {
           console.log(
-            `[${
+            `🚨 [${
               this.address.substring(
                 0,
                 15,
               )
-            }] 🪓 requeueing job ${
+            }] Requeuing job ${
               jobId.substring(
                 0,
                 6,
               )
-            } because worker ${valueRunning.worker.substring(0, 6)} is missing`,
+            } because worker ${
+              valueRunning.worker.substring(0, 6)
+            } is missing (last seen: ${
+              Math.round((now - valueRunning.time) / 1000)
+            }s ago)`,
           );
 
           const reQueueStateChange: StateChange = {
@@ -1743,8 +1866,15 @@ export class BaseDockerJobQueue {
             } as StateChangeValueReQueued,
           };
           this.stateChange(reQueueStateChange);
+          requeuedCount++;
         }
       }
+    }
+
+    if (requeuedCount > 0) {
+      console.log(
+        `🚨 Requeued ${requeuedCount} jobs from missing workers in queue ${this.address}`,
+      );
     }
   }
 

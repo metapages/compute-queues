@@ -172,13 +172,40 @@ export class DockerJobQueue {
       gpus: this.gpus,
       maxJobDuration: this.maxJobDurationString,
     };
-    this.sender({
-      type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
-        .WorkerRegistration,
-      payload: registration,
-    });
-    for (const runningQueueObject of Object.values(this.queue)) {
-      this.sender(runningQueueObject.runningMessageToServer);
+
+    try {
+      this.sender({
+        type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
+          .WorkerRegistration,
+        payload: registration,
+      });
+
+      // Send running jobs state
+      for (const runningQueueObject of Object.values(this.queue)) {
+        this.sender(runningQueueObject.runningMessageToServer);
+      }
+
+      console.log(`📝 Worker ${this.workerIdShort} registered successfully`);
+    } catch (err) {
+      console.log(`🚨 Failed to register worker ${this.workerIdShort}: ${err}`);
+
+      // Retry registration after a delay
+      setTimeout(() => {
+        try {
+          this.sender({
+            type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
+              .WorkerRegistration,
+            payload: registration,
+          });
+          console.log(
+            `📝 Worker ${this.workerIdShort} registration retry successful`,
+          );
+        } catch (retryErr) {
+          console.log(
+            `🚨 Worker ${this.workerIdShort} registration retry failed: ${retryErr}`,
+          );
+        }
+      }, 2000);
     }
   }
 
