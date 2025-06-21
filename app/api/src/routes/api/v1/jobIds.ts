@@ -10,7 +10,7 @@ export const getJobIdsHandler = async (c: Context) => {
       return c.json({ error: "No queue specified" });
     }
 
-    const jobIds = await db.queueGetJobIds(queue);
+    const jobIds: string[] = await db.queueGetJobIds(queue);
 
     return c.json({ success: true, jobIds });
   } catch (err) {

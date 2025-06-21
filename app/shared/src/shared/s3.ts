@@ -35,6 +35,14 @@ const config = {
     : undefined,
   forcePathStyle: AWS_ENDPOINT ? true : undefined,
   signatureVersion: "v4",
+  // Add connection timeout settings for better stability
+  requestHandler: {
+    // Increase timeout for S3 operations
+    requestTimeout: 30000, // 30 seconds
+  },
+  // Add retry configuration for the AWS SDK
+  maxAttempts: 3,
+  retryMode: "adaptive" as const,
 };
 
 export const s3Client = new S3Client(config);
@@ -44,8 +52,26 @@ try {
     "ListBucketsCommand Buckets:",
     data?.Buckets?.map((b) => b.Name),
   );
+  console.log("S3 Configuration:", {
+    bucket: Bucket,
+    region: AWS_REGION,
+    endpoint: AWS_ENDPOINT,
+    sslEnabled: config.sslEnabled,
+    forcePathStyle: config.forcePathStyle,
+    maxAttempts: config.maxAttempts,
+    retryMode: config.retryMode,
+  });
 } catch (err) {
   console.error(`Failed to ListBucketsCommand: ${err}`);
+  console.error("S3 Configuration (failed):", {
+    bucket: Bucket,
+    region: AWS_REGION,
+    endpoint: AWS_ENDPOINT,
+    sslEnabled: config.sslEnabled,
+    forcePathStyle: config.forcePathStyle,
+    maxAttempts: config.maxAttempts,
+    retryMode: config.retryMode,
+  });
 }
 
 export const putJsonToS3 = async (
@@ -62,25 +88,93 @@ export const putJsonToS3 = async (
     expiresIn: OneDayInSeconds,
   });
 
-  // Then upload directly to S3/MinIO using the presigned URL
-  const responseUpload = await fetch(urlUpload, {
-    method: "PUT",
-    redirect: "follow",
-    body: JSON.stringify(data),
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!responseUpload.ok) {
-    throw new Error(
-      `Failed to upload URL: status ${responseUpload.status} ${urlUpload}`,
-    );
-  }
-  await responseUpload.text();
+  // Retry logic for handling upload failures
+  const maxRetries = 3;
+  let lastError: Error | undefined;
 
-  const ref: DataRef = {
-    type: DataRefType.key,
-    value: key,
-  };
-  return ref;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Then upload directly to S3/MinIO using the presigned URL
+      const responseUpload = await fetch(urlUpload, {
+        method: "PUT",
+        redirect: "follow",
+        body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+        // Add timeout to prevent hanging requests
+        signal: AbortSignal.timeout(30000), // 30 second timeout
+      });
+
+      if (!responseUpload.ok) {
+        throw new Error(
+          `Failed to upload to S3: status ${responseUpload.status} ${urlUpload}`,
+        );
+      }
+
+      await responseUpload.text();
+
+      const ref: DataRef = {
+        type: DataRefType.key,
+        value: key,
+      };
+      return ref;
+    } catch (err) {
+      lastError = err as Error;
+
+      // Check if this is a retryable error
+      const isRetryable = isRetryableError(err as Error);
+
+      if (!isRetryable || attempt === maxRetries) {
+        console.error(
+          `putJsonToS3 failed for key ${key} after ${attempt} attempts:`,
+          err,
+        );
+        throw err;
+      }
+
+      // Exponential backoff with jitter
+      const delay = Math.min(
+        1000 * Math.pow(2, attempt - 1) + Math.random() * 1000,
+        5000,
+      );
+      console.warn(
+        `putJsonToS3 attempt ${attempt} failed for key ${key}, retrying in ${delay}ms:`,
+        err,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+};
+
+// Helper function to determine if an error is retryable
+const isRetryableError = (error: Error): boolean => {
+  const errorMessage = error.message.toLowerCase();
+  const errorString = error.toString().toLowerCase();
+
+  // Retry on network-related errors
+  const retryablePatterns = [
+    "connection error",
+    "peer closed connection",
+    "tls close_notify",
+    "unexpected eof",
+    "network error",
+    "timeout",
+    "connection reset",
+    "connection refused",
+    "host unreachable",
+    "network unreachable",
+    "temporary failure",
+    "service unavailable",
+    "internal server error",
+    "bad gateway",
+    "gateway timeout",
+    "connection closed before message completed",
+  ];
+
+  return retryablePatterns.some((pattern) =>
+    errorMessage.includes(pattern) || errorString.includes(pattern)
+  );
 };
 
 export const resolveDataRefFromS3 = async <T>(
@@ -100,11 +194,21 @@ export const getJsonFromS3 = async <T>(key: string): Promise<T | undefined> => {
   try {
     const result = await getObject(key);
     if (!result) {
+      console.warn(`getJsonFromS3: No data returned for key ${key}`);
       return undefined;
     }
     return JSON.parse(result) as T;
   } catch (err) {
-    console.log(`getJsonFromS3 error for key ${key} ${err}`);
+    const error = err as Error;
+    console.error(`getJsonFromS3 error for key ${key}:`, {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      key: key,
+    });
+
+    // Re-throw the error to allow callers to handle it appropriately
+    throw error;
   }
 };
 
@@ -135,15 +239,55 @@ const getObject = async (Key: string): Promise<string | undefined> => {
     expiresIn: OneDayInSeconds,
   });
 
-  const response = await fetch(url, {
-    // @ts-ignore: TS2353
-    method: "GET",
-    // @ts-ignore: TS2353
-    redirect: "follow",
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to upload URL: ${url}`);
+  // Retry logic for handling transient network errors
+  const maxRetries = 3;
+  let lastError: Error | undefined;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        // @ts-ignore: TS2353
+        method: "GET",
+        // @ts-ignore: TS2353
+        redirect: "follow",
+        // Add timeout to prevent hanging requests
+        signal: AbortSignal.timeout(30000), // 30 second timeout
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch from S3: status ${response.status} ${url}`,
+        );
+      }
+
+      const text = await response.text();
+      return text;
+    } catch (err) {
+      lastError = err as Error;
+
+      // Check if this is a retryable error
+      const isRetryable = isRetryableError(err as Error);
+
+      if (!isRetryable || attempt === maxRetries) {
+        console.error(
+          `getObject failed for key ${Key} after ${attempt} attempts:`,
+          err,
+        );
+        throw err;
+      }
+
+      // Exponential backoff with jitter
+      const delay = Math.min(
+        1000 * Math.pow(2, attempt - 1) + Math.random() * 1000,
+        5000,
+      );
+      console.warn(
+        `getObject attempt ${attempt} failed for key ${Key}, retrying in ${delay}ms:`,
+        err,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
   }
-  const text = await response.text();
-  return text;
+
+  throw lastError;
 };

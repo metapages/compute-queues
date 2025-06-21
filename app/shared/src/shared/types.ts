@@ -302,6 +302,7 @@ export enum WebsocketMessageTypeClientToServer {
   ClearJobCache = "ClearJobCache",
   ResubmitJob = "ResubmitJob",
   QueryJob = "QueryJob",
+  QueryJobStates = "QueryJobStates",
 }
 export interface PayloadClearJobCache {
   jobId: string;
@@ -443,4 +444,11 @@ export type DockerApiDeviceRequest = {
   Count?: number;
   DeviceIDs?: string[];
   Capabilities: string[][];
+};
+
+export type DockerApiCopyJobToQueuePayload = {
+  jobId: string;
+  queue: string;
+  namespace?: string;
+  control?: DockerJobControlConfig;
 };

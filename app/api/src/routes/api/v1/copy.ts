@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 
 import {
-  type DockerJobControlConfig,
+  type DockerApiCopyJobToQueuePayload,
   type DockerJobDefinitionRow,
   DockerJobState,
   type StateChange,
@@ -10,16 +10,9 @@ import {
 import { getApiDockerJobQueue } from "/@/routes/websocket.ts";
 import { db } from "/@/db/db.ts";
 
-type Payload = {
-  jobId: string;
-  queue: string;
-  namespace?: string;
-  control?: DockerJobControlConfig;
-};
-
 export const copyJobToQueueHandler = async (c: Context) => {
   try {
-    const post = await c.req.json<Payload>();
+    const post = await c.req.json<DockerApiCopyJobToQueuePayload>();
     const { jobId, queue, namespace, control } = post;
 
     const existingJob: DockerJobDefinitionRow | null = await db.jobGet(jobId);

@@ -14,7 +14,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "20"
+          node-version: "23.5.0"
 
       - name: Setup Just CLI
         uses: extractions/setup-just@v1
@@ -24,7 +24,7 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.1.4
+          deno-version: v2.3.6
 
       - name: Build shared
         run: just shared build

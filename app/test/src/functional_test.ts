@@ -4,11 +4,11 @@ import { closed, open } from "@korkje/wsi";
 import {
   type BroadcastJobStates,
   createNewContainerJobMessage,
-  type DockerJobDefinitionRow,
-  DockerJobFinishedReason,
   DockerJobState,
+  type JobMessagePayload,
   type StateChangeValueFinished,
   type WebsocketMessageServerBroadcast,
+  WebsocketMessageTypeClientToServer,
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
 
@@ -224,7 +224,7 @@ Deno.test("submit multiple jobs and get expected results", async () => {
 });
 
 Deno.test(
-  "submit multiple jobs from the same client source: older jobs are killed",
+  "submit multiple jobs from the same namespace: previous jobs are removed and replaced",
   async () => {
     const socket = new WebSocket(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
@@ -243,9 +243,8 @@ Deno.test(
     const jobIdsSubmissionOrder: string[] = [];
     const jobIdsToBeKilled: Set<string> = new Set();
     let jobIdToSupercedeAllPrior: string = "";
-    const jobIdsFinishReason = new Map<string, string>();
 
-    const messages = await Promise.all(
+    const messages: JobMessagePayload[] = await Promise.all(
       definitions.map(async (definition, i) => {
         const message = await createNewContainerJobMessage({
           definition,
@@ -271,21 +270,7 @@ Deno.test(
 
     const promiseEnd = Promise.withResolvers<string>();
 
-    const getJobStateString = (jobsBroadcast: BroadcastJobStates): string => {
-      const jobStates = [...jobIdsToBeKilled]
-        .map((jobId) => {
-          const jobState = jobsBroadcast.state.jobs[jobId];
-          return `[${jobId.substring(0, 4)}: ${jobState?.state} ${
-            jobState?.state === DockerJobState.Finished
-              ? (jobState.value as StateChangeValueFinished).reason
-              : ""
-          }]`;
-        })
-        .join("\n");
-      return `supreme: [${jobIdToSupercedeAllPrior.substring(0, 4)}: ${
-        jobsBroadcast.state.jobs[jobIdToSupercedeAllPrior]?.state
-      }], to die: ${jobStates}`;
-    };
+    let onlyAllowedJobRunning = false;
 
     socket.onmessage = (message: MessageEvent) => {
       const messageString = message.data.toString();
@@ -293,82 +278,24 @@ Deno.test(
         messageString,
       );
       switch (possibleMessage.type) {
-        case WebsocketMessageTypeServerBroadcast.JobStates:
-        case WebsocketMessageTypeServerBroadcast.JobStateUpdates: {
+        case WebsocketMessageTypeServerBroadcast.JobStates: {
           const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
           if (!someJobsPayload) {
             break;
           }
 
-          // const jobStates = [...jobIdsToBeKilled].map((jobId) => {
-          //   const jobState = someJobsPayload.state.jobs[jobId];
-          //   return `[${jobId.substring(0, 4)}: ${jobState?.state} ${
-          //     jobState?.state === DockerJobState.Finished
-          //       ? (jobState.value as StateChangeValueFinished).reason
-          //       : ""
-          //   }]`;
-          // }).join("\n");
-          // console.log(
-          //   `supreme: [${jobIdToSupercedeAllPrior.substring(0, 4)}: ${
-          //     someJobsPayload.state.jobs[jobIdToSupercedeAllPrior]?.state
-          //   }], to die: ${jobStates}`,
-          // );
+          // check that the desired job is on the queue and all other jobs are finished
+          const desiredJobOnQueue = !!someJobsPayload.state
+            .jobs[jobIdToSupercedeAllPrior];
+          const otherJobsNotPresentOrFinished =
+            [...jobIdsToBeKilled].filter((jobId) => {
+              const jobState = someJobsPayload.state.jobs[jobId];
+              return !jobState || jobState.state === DockerJobState.Finished;
+            }).length === (count - 1);
 
-          // All jobs except the last one should be killed/Finished
-          // TBH we don't care about the state of the last job, as long as
-          // it's queued/running
-          const jobsToBeKilledAreActually = new Set<string>();
-          const jobsToBeKilledFinishedForOtherReasons = new Set<string>();
-          jobIdsToBeKilled.forEach((jobId) => {
-            const jobState = someJobsPayload.state.jobs[jobId];
-            if (jobState?.state === DockerJobState.Finished) {
-              jobIdsFinishReason.set(
-                jobId,
-                (jobState.value as StateChangeValueFinished).reason,
-              );
-              const finishedState = jobState.value as StateChangeValueFinished;
-              if (
-                finishedState.reason ===
-                  DockerJobFinishedReason.JobReplacedByClient
-              ) {
-                jobsToBeKilledAreActually.add(jobId);
-              } else {
-                jobsToBeKilledFinishedForOtherReasons.add(jobId);
-              }
-            }
-          });
-
-          const finalJobIsQueuedOrRunning =
-            someJobsPayload.state.jobs[jobIdToSupercedeAllPrior]?.state ===
-              DockerJobState.Queued ||
-            someJobsPayload.state.jobs[jobIdToSupercedeAllPrior]?.state ===
-              DockerJobState.Running;
-          if (
-            jobsToBeKilledAreActually.size === jobIdsToBeKilled.size &&
-            finalJobIsQueuedOrRunning
-          ) {
+          if (desiredJobOnQueue && otherJobsNotPresentOrFinished) {
+            onlyAllowedJobRunning = true;
             promiseEnd.resolve("done");
-          }
-
-          if (jobIdsFinishReason.size === count) {
-            promiseEnd.reject(
-              new Error(
-                "Jobs finished not the correct reasons: " +
-                  [...jobIdsFinishReason.entries()]
-                    .map(([key, value]) => `${key.substring(0, 6)}=${value}`)
-                    .join(", "),
-              ),
-            );
-            promiseEnd.resolve("done");
-          }
-
-          if (jobsToBeKilledFinishedForOtherReasons.size > 0) {
-            promiseEnd.reject(
-              new Error(
-                "jobsToBeKilledFinishedForOtherReasons.size > 0: " +
-                  getJobStateString(someJobsPayload),
-              ),
-            );
           }
 
           break;
@@ -378,77 +305,81 @@ Deno.test(
       }
     };
 
-    let jobsFinished = false;
-
-    const pollInterval = setInterval(async () => {
-      if (jobsFinished) {
+    const pollInterval = setInterval(() => {
+      if (onlyAllowedJobRunning) {
         clearInterval(pollInterval);
+        return;
       }
-      const currentJobIdsKilled = new Set<string>();
-      for (const jobId of jobIdsToBeKilled) {
-        try {
-          const jobGetUrl = `${API_URL}/job/${jobId}`;
-          const response = await fetch(jobGetUrl);
-          if (!response.ok) {
-            await response.body?.cancel();
-            console.error(`Error fetching job ${jobId}`, response.statusText);
-            continue;
-          }
-          const jobBlobText = await response.text();
-          let jobBlob: DockerJobDefinitionRow | { error?: string } | undefined;
-          try {
-            jobBlob = JSON.parse(jobBlobText) as DockerJobDefinitionRow | {
-              error?: string;
-            };
-          } catch (errParsingJson: unknown) {
-            console.error(
-              `Error parsing job ${jobId} as JSON: ${jobBlobText}`,
-              errParsingJson,
-            );
-          }
-          if (!jobBlob) {
-            continue;
-          }
-          // Type narrowing to check if it's an error object
-          if ("error" in jobBlob && jobBlob.error) {
-            console.error(`Error fetching job ${jobId}`, jobBlob.error);
-            continue;
-          }
-          // Now TypeScript knows jobBlob must be DockerJobDefinitionRow
-          if (
-            (jobBlob as DockerJobDefinitionRow).state === "Finished" &&
-            "value" in jobBlob &&
-            (jobBlob.value as StateChangeValueFinished)?.reason ===
-              "JobReplacedByClient"
-          ) {
-            currentJobIdsKilled.add(jobId);
-          }
-        } catch (err: unknown) {
-          console.error(`Error fetching job ${jobId}`, err);
-        }
-      }
-      if (setsEqual(currentJobIdsKilled, jobIdsToBeKilled)) {
-        jobsFinished = true;
-        promiseEnd.resolve("done");
-      }
+      // query again
+      socket.send(
+        JSON.stringify({
+          type: WebsocketMessageTypeClientToServer.QueryJobStates,
+        }),
+      );
     }, 1000);
 
     await open(socket);
-    for (const { message } of messages) {
+    for (const messagePayload of messages) {
       // create a delay to simulate a slow client
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      socket.send(JSON.stringify(message));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      socket.send(JSON.stringify(messagePayload.message));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      // assert that all jobs are in the db
+      const exists = await jobExists(messagePayload.jobId);
+      if (!exists) {
+        throw `job ${messagePayload.jobId} not found in db`;
+      }
     }
 
+    // begin the polling
+    socket.send(
+      JSON.stringify({
+        type: WebsocketMessageTypeClientToServer.QueryJobStates,
+      }),
+    );
+
+    // this promise tests that only the last job is in the set of
+    // queued or running jobs send via the websocket
     await promiseEnd.promise;
     clearInterval(pollInterval);
-
-    assertEquals(true, true);
+    // this tests that only the last job is in the set of
+    // queued or running jobs send via the a request (not websocket)
+    const activeJobIds = await queuedOrRunningJobIds(QUEUE_ID);
+    assertEquals(activeJobIds.has(jobIdToSupercedeAllPrior), true);
 
     socket.close();
     await closed(socket);
   },
 );
 
-const setsEqual = (a: Set<string>, b: Set<string>) =>
-  a.size === b.size && [...a].every((x) => b.has(x));
+// const setsEqual = (a: Set<string>, b: Set<string>) =>
+//   a.size === b.size && [...a].every((x) => b.has(x));
+
+const jobExists = async (jobId: string): Promise<boolean> => {
+  const url = `${API_URL}/job/${jobId}`;
+  const response = await fetch(url);
+  if (response.status === 404 || !response.ok) {
+    response?.body?.cancel();
+    return true;
+  }
+  response?.body?.cancel();
+  return true;
+};
+
+const queuedOrRunningJobIds = async (queue: string): Promise<Set<string>> => {
+  const result = new Set<string>();
+  const url = `${API_URL}/${queue}/jobs`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    response?.body?.cancel();
+    throw new Error(
+      `Error fetching queued or running job ids: ${response.statusText}`,
+    );
+  }
+  const { success, error, jobIds } = await response.json();
+  if (!success) {
+    throw new Error(`Error fetching queued or running job ids: ${error}`);
+  }
+  jobIds.forEach((jobId: string) => result.add(jobId));
+  return result;
+};

@@ -6,10 +6,12 @@ export const ensureIsolateNetwork = async () => {
   const network = docker.getNetwork(DockerNetworkForJobs);
   try {
     await network.inspect();
+    // console.log(networkInfo);
+    // console.log(`✅ Network [${DockerNetworkForJobs}] ready`);
   } catch (_err) {
     Deno.stdout.writeSync(
       new TextEncoder().encode(
-        "Re-creating network, it might have been deleted by docker...",
+        `Re-creating network, it might have been deleted by docker\nError: ${_err}`,
       ),
     );
     await docker.createNetwork({
@@ -27,4 +29,7 @@ export const ensureIsolateNetwork = async () => {
     });
     console.log(`✅`);
   }
+  // if (network) {
+  //   console.log(`✅ Network [${DockerNetworkForJobs}] ready`);
+  // }
 };

@@ -7,7 +7,7 @@ export const getJobHandler = async (c: Context) => {
     const jobId: string | undefined = c.req.param("jobId");
     if (!jobId) {
       c.status(404);
-      return c.json({ error: "No queue specified" });
+      return c.json({ error: "No job provided" });
     }
 
     const job = await db.jobGet(jobId);
