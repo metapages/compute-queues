@@ -16,6 +16,9 @@ import { Cloud, Monitor, WifiHigh, WifiSlash, Lock, LockOpen } from "@phosphor-i
 import React, { useCallback, useEffect, useState } from "react";
 import debounce from "lodash/debounce";
 import { useQueue } from "/@/hooks/useQueue";
+import { isIframe } from "@metapages/metapage";
+
+const isInIframe = isIframe();
 
 export const QueueOverrideButtonAndLabel: React.FC = () => {
   const { resolvedQueue, queue, setQueue, isLocalMode, toggleLocalMode, ignoreQueueOverride, setIgnoreQueueOverride } =
@@ -98,7 +101,7 @@ export const QueueOverrideButtonAndLabel: React.FC = () => {
             value={isLocalMode ? "local" : inputValue}
             onChange={handleInputChange}
             fontSize="sm"
-            isDisabled={!ignoreQueueOverride}
+            isDisabled={!ignoreQueueOverride && isInIframe}
             pr={!queue && !isLocalMode ? "100px" : "8px"}
           />
           <InputRightElement h="32px" w="auto" pr={2} zIndex={1}>
