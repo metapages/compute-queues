@@ -1,13 +1,34 @@
-# Public Compute Queues
+# Project Asman: Public Compute Queues for everyone everywhere all at once
+
+- client: https://container.mtfm.io/
+- [basic demo](https://metapage.io/m/87ae11673508447e883b598bf7da9c5d)
+
+Open-source publicly available compute queues: run queues of containerized work
+on your laptop, workstations, compute clusters.
+
+- Every compute job is represented as a unique URL that contains all the context
+  required to run it.
+- Every queue is a unique URL. Queues are unguessable, instantly created, both
+  durable and disposable.
+
+## Background
 
 A common problem in sharing scientific workflows is that compute isn’t portable.
-You can’t just share code and data and expect others to run it
-easily—differences in environments, libraries, and hardware often get in the
-way.
+Workflow engines, such as [Nextflow](https://www.nextflow.io/), or code
+environments such [Jupyter Notebooks](https://jupyter.org/) have the compute
+tightly connected to the overall environment.
 
-Public Compute Queues solve this. A lightweight web or CLI client submits Docker
-jobs to a queue. Any connected worker—yours, your institution’s, or a
-collaborator’s—can pick up the job, run it, and return the results.
+This means you can’t just simply share code and data and expect others to run it
+easily—differences in environments, libraries, and hardware often get in the
+way, and most environments are highly complex to set up. These systems were not
+built from the beginning to be web-first shareable, and require an
+all-or-nothing approach to using those systems.
+
+Project Asman solves this. A lightweight web or CLI client submits Docker jobs
+to a queue. If the queue does not exist, it is immediately created. Any
+connected worker—yours, your institution’s, or a collaborator’s—can pick up the
+job, run it, and return the results. Supporting small teams to collaborate was a
+driving force for this project.
 
 The API is efficient, open-source, and built for flexibility: workers can run
 locally, on a cluster, or be dynamically scaled via cloud providers. Docker
@@ -19,32 +40,29 @@ This repo includes:
 - Example cloud deployments
 - Support for metapage-style workflows using containerized metaframes
 
-## Why this matters
-
-Metapage workflows run in the browser—but many scientific tasks require
-environments like Python or R, which don’t run natively there. The container
-metaframe bridges this gap, letting workflows offload compute to a grid of
-Docker workers.
-
-You can plug in your own machine, run a personal queue, or connect a shared
-cluster. Anyone using your workflow will automatically run jobs on their own
-grid or local machine—no setup required.
-
-Compute becomes as shareable as your code. Just plug in.
-
 Online docs:
 [Online docs notion source](https://docs.metapage.io/docs/containers)
 
 ## Developers
 
+The API runs as cloudflare or deno workers: highly efficient and cost-effective
+server endpoints that simply record the current job queue.
+
+Blob storage is via an S3 compatible API. Important: in the public version, all
+jobs are deleted after a week. This keeps costs extremely low, and allows us to
+provide public queues at low cost.
+
 ### Background
 
-This service provides docker compute functions as metaframes.
+This service provides docker compute functions as metaframes for the
+[metapage.io](https://metapage.io) platform. This allows sharing complex
+containerized workflows simply via URLs.
 
-This service provides an iframe, that allows users to configure running a
-specific docker container (a **job**) on a specific **queue**. The iframed
-browser window sends that job configuration to the server, the job is added to
-the queue, then workers pick up the job, run it, and send the results back.
+This service serves a web cliebt as an iframe (metaframe), that allows users to
+configure running a specific docker container (a **job**) on a specific
+**queue**. The iframed browser window sends that job configuration to the
+server, the job is added to the queue, then workers pick up the job, run it, and
+send the results back.
 
 To run those docker containers, users can either rent compute from the metapage
 platform, or run worker(s) themselves, either on their own personal
@@ -67,18 +85,6 @@ Finer commands are `just` in subdirectories.
 **Quick links:**
 
 - `production api`: https://container.mtfm.io/
-- `api deployment config`: https://dash.deno.com/projects/compute-queue-api
-- [testing metapage](https://app.metapage.io/dion/development-testing-container-mtfm-io-4f4f5b4c0a064bb3a185e18414dddb7b?view=settings)
-
-Run scientific workflow anywhere, reliably, via the browser. For compute heavy
-jobs, use your own computer, or run on a cluster. Share compute. Run scientific
-workflows no matter how old.
-
-This repo is the docker compute queue. It reliably, conveniently, and
-efficiently runs docker container jobs, using our infrastructure, or your own
-(computers).
-
-[Notion docs](https://www.notion.so/metapages/Arcadia-Astera-Compute-Cluster-Project-V2-3c7950a02bbe4eaa8389d62fd8439553?pvs=4)
 
 ```mermaid
 flowchart LR
@@ -129,8 +135,8 @@ just dev
 ```
 
 Go to this
-[Test metapage](https://app.metapage.io/dion/d31841d2c46d487b8b2d84795ab0f1b1?view=default)
-to interact with a running simulation.
+[Test metapage](https://metapage.io/m/d31841d2c46d487b8b2d84795ab0f1b1) to
+interact with a running simulation.
 
 You might need to wait a bit to refresh the browser, it incorrectly returns a
 `200` when there are no browser assets (yet). (This looks like a bug with the
