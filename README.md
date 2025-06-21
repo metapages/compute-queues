@@ -24,11 +24,15 @@ way, and most environments are highly complex to set up. These systems were not
 built from the beginning to be web-first shareable, and require an
 all-or-nothing approach to using those systems.
 
-Project Asman solves this. A lightweight web or CLI client submits Docker jobs
-to a queue. If the queue does not exist, it is immediately created. Any
-connected worker—yours, your institution’s, or a collaborator’s—can pick up the
-job, run it, and return the results. Supporting small teams to collaborate was a
-driving force for this project.
+Existing systems for work queues exist, but they are either built for different
+specific purposes, such as CI/CD pipelines (github actions and google cloud
+build), or they are internal and language specific.
+
+Project Asman solves this by providing a web-based queue API. A lightweight web
+or CLI client submits Docker jobs to a queue. If the queue does not exist, it is
+immediately created. Any connected worker—yours, your institution’s, or a
+collaborator’s—can pick up the job, run it, and return the results. Supporting
+small teams to collaborate was a driving force for this project.
 
 The API is efficient, open-source, and built for flexibility: workers can run
 locally, on a cluster, or be dynamically scaled via cloud providers. Docker
@@ -43,6 +47,32 @@ This repo includes:
 Online docs:
 [Online docs notion source](https://docs.metapage.io/docs/containers)
 
+## Quick setup / getting started
+
+### 1) Run a worker (optional)
+
+👉 You can skip this step if you use the queue `public1` where we supply a small
+amount of available compute.
+
+❗ Replace `my-unique-queue-name` with a unique id or uuid or queue name, it can
+be anything
+
+```sh
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.54.30 run --max-job-duration=20m --data-directory=/tmp/worker-metapage-io-remote --cpus=2 my-unique-queue-name
+```
+
+### 2) Run a compute job
+
+Go to the web client
+[configured with a simple job](https://container.mtfm.io/#?ignoreQueueOverride=true&job=JTdCJTIyY29tbWFuZCUyMiUzQSUyMmVjaG8lMjAlNUMlMjJoZWxsbyUyMHdvcmxkJTVDJTIyJTIyJTJDJTIyaW1hZ2UlMjIlM0ElMjJhbHBpbmUlM0EzLjE5LjElMjIlN0Q%3D&queue=public1).
+
+- Click on the queue button at the bottom right. Enter your queue name (same as
+  the worker queue)
+- Click `Run Job` and the web client will submit the job to the queue, which
+  will be picked up by the
+
+The URL hash content uniquely defines the container job definition.
+
 ## Developers
 
 The API runs as cloudflare or deno workers: highly efficient and cost-effective
@@ -52,7 +82,7 @@ Blob storage is via an S3 compatible API. Important: in the public version, all
 jobs are deleted after a week. This keeps costs extremely low, and allows us to
 provide public queues at low cost.
 
-### Background
+### Developer background
 
 This service provides docker compute functions as metaframes for the
 [metapage.io](https://metapage.io) platform. This allows sharing complex
