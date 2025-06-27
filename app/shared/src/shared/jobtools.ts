@@ -89,12 +89,25 @@ export const bufferToBase64Ref = (
   };
 };
 
-// "-L" == follow redirects, very important
+// "--location" == follow redirects, very important
 let BaseCurlUploadArgs = [
   "-X",
   "PUT",
   "--location",
   "--fail-with-body",
+  "--max-time",
+  "600", // 10 minutes total timeout
+  "--connect-timeout",
+  "30", // 30 seconds connection timeout
+  "--retry",
+  "3", // Retry failed requests up to 3 times
+  "--retry-delay",
+  "1", // Wait 1 second between retries
+  "--retry-max-time",
+  "60", // Don't retry for more than 60 seconds total
+  "--tcp-nodelay", // Disable Nagle's algorithm for better performance
+  "--keepalive-time",
+  "60", // Keep connections alive for 60 seconds
   "--upload-file",
 ];
 // curl hard codes .localhost DNS resolution, so we need to add the resolve flags
