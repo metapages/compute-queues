@@ -96,6 +96,19 @@ let BaseCurlUploadArgs = [
   "--location",
   "--fail-with-body",
   "--upload-file",
+  "--max-time",
+  "300", // 5 minutes total timeout
+  "--connect-timeout",
+  "30", // 30 seconds connection timeout
+  "--retry",
+  "3", // Retry failed requests up to 3 times
+  "--retry-delay",
+  "1", // Wait 1 second between retries
+  "--retry-max-time",
+  "60", // Don't retry for more than 60 seconds total
+  "--tcp-nodelay", // Disable Nagle's algorithm for better performance
+  "--keepalive-time",
+  "60", // Keep connections alive for 60 seconds
 ];
 // curl hard codes .localhost DNS resolution, so we need to add the resolve flags
 // I tried using something other than .localhost, but it didn't work for all kinds of reasons
