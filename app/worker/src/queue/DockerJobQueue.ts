@@ -143,6 +143,11 @@ export class DockerJobQueue {
   }
 
   status(): computeQueuesShared.WorkerStatusResponse {
+    const runningJobsCount = Object.keys(this.queue).length;
+    console.log(
+      `📊 Worker ${this.workerIdShort} status: ${runningJobsCount} running jobs, ${this.cpus} CPUs, ${this.gpus} GPUs`,
+    );
+
     return {
       time: Date.now(),
       id: this.workerId,
@@ -209,15 +214,27 @@ export class DockerJobQueue {
     }
   }
 
-  onUpdateUpdateASubsetOfJobs(
+  onUpdateSetAllJobStates(
     message: computeQueuesShared.BroadcastJobStates,
   ) {
-    message.isSubset = true;
+    const jobCount = Object.keys(message.state.jobs || {}).length;
+    console.log(
+      `🎯 Worker ${this.workerIdShort} processing ${jobCount} jobs from JobStates message`,
+    );
+
     this._checkRunningJobs(message);
     this._claimJobs(message);
   }
 
-  onUpdateSetAllJobStates(message: computeQueuesShared.BroadcastJobStates) {
+  onUpdateUpdateASubsetOfJobs(
+    message: computeQueuesShared.BroadcastJobStates,
+  ) {
+    const jobCount = Object.keys(message.state.jobs || {}).length;
+    console.log(
+      `🎯 Worker ${this.workerIdShort} processing ${jobCount} jobs from JobStateUpdates message`,
+    );
+
+    message.isSubset = true;
     this._checkRunningJobs(message);
     this._claimJobs(message);
   }
@@ -425,6 +442,11 @@ export class DockerJobQueue {
             }]`,
           );
         }
+
+        console.log(
+          `🎯 Worker ${this.workerIdShort} sees ${queuedJobKeys.length} queued jobs available to claim`,
+        );
+
         // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
         // Go through the queued jobs and start them if we have capacity
         // let index = 0;
@@ -460,7 +482,20 @@ export class DockerJobQueue {
                 continue;
               }
             }
+            console.log(
+              `🎯 Worker ${this.workerIdShort} claiming job ${
+                jobKey.substring(0, 6)
+              }`,
+            );
             this._startJob(job);
+          } else {
+            console.log(
+              `🎯 Worker ${this.workerIdShort} cannot claim job ${
+                jobKey.substring(0, 6)
+              } - no CPU capacity (${
+                Object.keys(this.queue).length
+              }/${this.cpus})`,
+            );
           }
         }
       } while (this._needsAnotherClaimJobs);

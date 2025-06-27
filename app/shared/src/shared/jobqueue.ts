@@ -350,6 +350,9 @@ export class BaseDockerJobQueue {
 
         case "status-request": {
           (async () => {
+            console.log(
+              `🌘 Received status request, collecting local worker status...`,
+            );
             const localWorkersResponse = await this.getStatusFromLocalWorkers();
             const response: BroadcastChannelStatusResponse = {
               id: this.serverId,
@@ -368,6 +371,11 @@ export class BaseDockerJobQueue {
                 ),
               ),
             };
+            console.log(
+              `🌘 Sending status response: ${
+                Object.keys(localWorkersResponse).length
+              } workers, ${Object.keys(response.jobs).length} jobs`,
+            );
             this.channel.postMessage({
               type: "status-response",
               value: response,
@@ -454,6 +462,26 @@ export class BaseDockerJobQueue {
     const remoteServersResponse = await this.getStatusFromRemoteWorkers();
     const localWorkersResponse = await this.getStatusFromLocalWorkers();
 
+    const jobCount = Object.keys(this.state.jobs).length;
+    const localWorkerCount = this.workers.myWorkers.length;
+    const otherWorkerCount =
+      Array.from(this.workers.otherWorkers.values()).flat().length;
+    const clientCount = this.clients.length;
+
+    console.log(
+      `📊 Queue ${this.address} status: ${jobCount} jobs, ${localWorkerCount} local workers, ${otherWorkerCount} other workers, ${clientCount} clients`,
+    );
+
+    // Log job states for debugging
+    const jobStates = Object.entries(this.state.jobs).map(([id, job]) => ({
+      id: id.substring(0, 6),
+      state: job.state,
+      worker: job.state === DockerJobState.Running
+        ? (job.value as StateChangeValueRunning)?.worker?.substring(0, 6)
+        : "none",
+    }));
+    console.log(`📊 Queue ${this.address} job states:`, jobStates);
+
     return {
       jobs: Object.fromEntries(
         Object.entries<DockerJobDefinitionRow>(this.state.jobs).map(
@@ -471,6 +499,15 @@ export class BaseDockerJobQueue {
       otherServers: remoteServersResponse,
       localWorkers: localWorkersResponse,
       clientCount: this.clients.length,
+      queueInfo: {
+        address: this.address,
+        serverId: this.serverId,
+        jobCount,
+        localWorkerCount,
+        otherWorkerCount,
+        clientCount,
+        jobStates,
+      },
     };
   }
 
@@ -484,12 +521,18 @@ export class BaseDockerJobQueue {
     // Then return the response
 
     const result: Record<string, BroadcastChannelStatusResponse> = {};
+
     // First attach a listener to the broadcast channel
     const unbindChannelListener = this.channelEmitter.on(
       "message",
       (payload: BroadcastChannelMessage) => {
         if (payload.type === "status-response") {
           const status = payload.value as BroadcastChannelStatusResponse;
+          console.log(
+            `🌘 got remote status from server ${status.id} with ${
+              Object.keys(status.workers).length
+            } workers and ${Object.keys(status.jobs).length} jobs`,
+          );
           result[status.id] = status;
           //   for (const [id, worker] of Object.entries(status.workers)) {
           //     result[id] = worker;
@@ -507,6 +550,9 @@ export class BaseDockerJobQueue {
     // Then remove the listener
     unbindChannelListener();
 
+    console.log(
+      `🌘 Collected status from ${Object.keys(result).length} remote servers`,
+    );
     return result;
   }
 
@@ -644,8 +690,23 @@ export class BaseDockerJobQueue {
           ) {
             const status = message.payload as WorkerStatusResponse;
             console.log(
-              `🌘 got status from worker ${status.id.substring(0, 6)}`,
+              `🌘 got status from worker ${status.id.substring(0, 6)} with ${
+                Object.keys(status.queue).length
+              } running jobs`,
             );
+
+            // Log what jobs the worker reports as running
+            const runningJobs = Object.entries(status.queue).map((
+              [jobId, job],
+            ) => ({
+              jobId: jobId.substring(0, 6),
+              finished: job.finished,
+            }));
+            console.log(
+              `🌘 Worker ${status.id.substring(0, 6)} running jobs:`,
+              runningJobs,
+            );
+
             result[status.id] = status;
           }
         },
@@ -670,6 +731,9 @@ export class BaseDockerJobQueue {
       eventUnbinds.pop()!();
     }
 
+    console.log(
+      `🌘 Collected status from ${Object.keys(result).length} local workers`,
+    );
     return result;
   }
 
@@ -1655,6 +1719,17 @@ export class BaseDockerJobQueue {
     if (!messageString) {
       return;
     }
+
+    const message = JSON.parse(messageString);
+    const jobCount = Object.keys(message.payload?.state?.jobs || {}).length;
+    const workerCount = this.workers.myWorkers.length;
+
+    console.log(
+      `📡 Broadcasting ${jobCount} jobs to ${workerCount} workers (${
+        isAll ? "full sync" : "incremental"
+      })`,
+    );
+
     this.broadcastToLocalWorkers(messageString);
     this.broadcastToLocalClients(messageString);
   }

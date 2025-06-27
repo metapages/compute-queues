@@ -425,6 +425,15 @@ export function connectToServer(
           const allJobsStatesPayload = possibleMessage
             .payload as BroadcastJobStates;
           currentGotJobStates++;
+
+          const jobCount =
+            Object.keys(allJobsStatesPayload?.state?.jobs || {}).length;
+          console.log(
+            `📥 Worker ${
+              workerId?.substring(0, 6)
+            } received JobStates with ${jobCount} jobs`,
+          );
+
           if (currentGotJobStates > logGotJobStatesEvery) {
             console.log(
               `[${workerId?.substring(0, 6)}] got JobStates(${
@@ -454,6 +463,14 @@ export function connectToServer(
             break;
           }
 
+          const jobCount =
+            Object.keys(someJobsPayload?.state?.jobs || {}).length;
+          console.log(
+            `📥 Worker ${
+              workerId?.substring(0, 6)
+            } received JobStateUpdates with ${jobCount} jobs`,
+          );
+
           if (currentGotJobStateUpdates > logGotJobStateUpdatesEvery) {
             console.log(
               `[${workerId?.substring(0, 6)}] got JobStateUpdates(${
@@ -468,6 +485,13 @@ export function connectToServer(
         }
         case WebsocketMessageTypeServerBroadcast.StatusRequest: {
           const status = dockerJobQueue.status();
+          console.log(
+            `📤 Worker ${
+              workerId?.substring(0, 6)
+            } responding to status request with ${
+              Object.keys(status.queue).length
+            } running jobs`,
+          );
           sender({
             type: WebsocketMessageTypeWorkerToServer.WorkerStatusResponse,
             payload: status,
