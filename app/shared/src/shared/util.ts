@@ -198,6 +198,27 @@ export const resolveMostCorrectJob = (
     return jobB;
   }
 
+  // Check worker priority if different
+  if (
+    jobA.state === DockerJobState.Running &&
+    jobB.state === DockerJobState.Running &&
+    ((jobA.value as StateChangeValueRunning).worker !==
+      (jobB.value as StateChangeValueRunning).worker)
+  ) {
+    const workerA = (jobA.value as StateChangeValueRunning).worker;
+    const workerB = (jobB.value as StateChangeValueRunning).worker;
+
+    const preferredWorker = resolvePreferredWorker(
+      workerA,
+      workerB,
+    );
+    if (preferredWorker === workerA) {
+      return jobA;
+    } else {
+      return jobB;
+    }
+  }
+
   const jobALastChange = jobA.history[jobA.history.length - 1];
   const isJobAFinished = jobALastChange.state === DockerJobState.Finished;
 
