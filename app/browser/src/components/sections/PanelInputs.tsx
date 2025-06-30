@@ -48,7 +48,7 @@ export const PanelInputs: React.FC = () => {
   const names: string[] = jobInputs ? Object.keys(jobInputs).sort() : [];
 
   return (
-    <PanelContainer gap={4}>
+    <PanelContainer gap={4} boxSizing="border-box">
       <PanelHeader title={`Inputs`} />
       <HStack px={4} width="100%" justifyContent="space-between">
         <Text>{`Container mounted scripts + config:`}</Text>
@@ -70,7 +70,7 @@ export const PanelInputs: React.FC = () => {
         </Table>
       </Container>
 
-      <HStack px={4} py={10} width="100%" justifyContent="space-between">
+      <HStack px={4} py={10} width="100%" justifyContent="space-between" boxSizing="border-box">
         <Text>{`/inputs/<dynamic from upstream>   (${dynamicInputs ? Object.keys(dynamicInputs).length : 0})`}</Text>
         <Spacer />
       </HStack>

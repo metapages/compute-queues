@@ -11,8 +11,10 @@ import {
 } from "/@shared/client";
 import humanizeDuration from "humanize-duration";
 
-import { Box, HStack, Icon, Spinner, Text, useToast, VStack } from "@chakra-ui/react";
+import { Box, HStack, Icon, Link, Spinner, Text, useToast, VStack } from "@chakra-ui/react";
 import { Check, HourglassMedium, Prohibit, WarningCircle } from "@phosphor-icons/react";
+import { useMinimalHeader } from "../../hooks/useMinimalHeader";
+import { ApiOrigin } from "/@/config";
 
 const humanizeDurationOptions = {
   // round: true,
@@ -23,6 +25,7 @@ const STATUS_ICON_SIZE = 6;
 export const JobStatus: React.FC = () => {
   const toast = useToast();
   const { resolvedQueue } = useQueue();
+  const isMinimalHeader = useMinimalHeader();
 
   const workers = useStore(state => state.workers);
   const job = useStore(state => state.jobState);
@@ -76,15 +79,19 @@ export const JobStatus: React.FC = () => {
               {desc}
             </Text>
           )}
-          {jobId && (
-            <Text display={{ base: "none", md: "block" }} cursor={"copy"} onClick={copyJobId} fontSize={"0.7rem"}>
-              Job Id: {jobId.slice(0, 5)}
-            </Text>
+          {!isMinimalHeader && jobId && (
+            <Link href={`${ApiOrigin}/job/${jobId}`} isExternal>
+              <Text display={{ base: "none", md: "block" }} cursor={"copy"} onClick={copyJobId} fontSize={"0.7rem"}>
+                Job Id: {jobId.slice(0, 5)}
+              </Text>
+            </Link>
           )}
-          {exitCode && (
-            <Text color={showExitCodeRed ? "red" : undefined} fontSize={"0.7rem"}>
-              Exit Code: {exitCode}
-            </Text>
+          {!isMinimalHeader && exitCode && (
+            <Link>
+              <Text color={showExitCodeRed ? "red" : undefined} fontSize={"0.7rem"}>
+                Exit Code: {exitCode}
+              </Text>
+            </Link>
           )}
         </HStack>
       </VStack>
