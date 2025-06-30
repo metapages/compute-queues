@@ -268,6 +268,9 @@ export function connectToServer(
 
   let timeLastPong = Date.now();
   let _timeLastPing = Date.now();
+  let consecutivePingFailures = 0;
+  let lastMessageReceived = Date.now();
+  let connectionUptime = Date.now();
 
   const dockerJobQueueArgs: DockerJobQueueArgs = {
     sender,
@@ -283,12 +286,23 @@ export function connectToServer(
 
   rws.addEventListener("error", (error: Error) => {
     console.log(`Websocket error=${error.message}`);
+    consecutivePingFailures++;
+    if (consecutivePingFailures > 3) {
+      console.log(
+        `🚨 Multiple websocket errors (${consecutivePingFailures}), forcing reconnect`,
+      );
+      rws.reconnect();
+    }
   });
 
   rws.addEventListener("open", () => {
     console.log(`🚀 connected! ${url} `);
     // This isn't a PING, but it's when we start measuring
     _timeLastPing = Date.now();
+    timeLastPong = Date.now();
+    lastMessageReceived = Date.now();
+    connectionUptime = Date.now();
+    consecutivePingFailures = 0;
     dockerJobQueue.register();
   });
 
@@ -297,40 +311,72 @@ export function connectToServer(
   setInterval(() => {
     if (rws.readyState === rws.OPEN) {
       // console.log("🌳 pinging");
-      rws.send("PING");
-      _timeLastPing = Date.now();
-      timeLastPong = Date.now();
+      try {
+        rws.send("PING");
+        _timeLastPing = Date.now();
+        // Reset failure counter on successful ping
+        consecutivePingFailures = 0;
+      } catch (err) {
+        console.log(`🚨 Failed to send PING: ${err}`);
+        consecutivePingFailures++;
+      }
     } else {
-      console.log("🌳 🚩 pinging but not open");
+      console.log("🌳 🚩 pinging but not open, state:", rws.readyState);
+      consecutivePingFailures++;
     }
   }, 5000);
 
   rws.addEventListener("close", () => {
     // closed = true;
     // wsPool.remove(rws);
-    console.log(`💥🚀💥 disconnected! ${url}`);
+    console.log(
+      `💥🚀💥 disconnected! ${url} after ${
+        Date.now() - connectionUptime
+      }ms uptime`,
+    );
     // clearInterval(pingInterval);
   });
+
   const intervalSinceNoTrafficToTriggerReconnect = ms("10s") as number;
   const reconnectCheckInterval = ms("3s") as number;
   const reconnectCheck = () => {
+    const timeSinceLastPong = Date.now() - timeLastPong;
+    const timeSinceLastMessage = Date.now() - lastMessageReceived;
+
     if (
-      (Date.now() - timeLastPong) >= intervalSinceNoTrafficToTriggerReconnect &&
+      timeSinceLastPong >= intervalSinceNoTrafficToTriggerReconnect &&
       rws.readyState === rws.OPEN
     ) {
       console.log(
-        `Reconnecting because no PONG since ${
-          humanizeDuration(Date.now() - timeLastPong)
+        `🚨 Reconnecting because no PONG since ${
+          humanizeDuration(timeSinceLastPong)
         } >= ${humanizeDuration(intervalSinceNoTrafficToTriggerReconnect)}`,
       );
       rws.reconnect();
-      // } else {
-      //   console.log(
-      //     `Not reconnecting because no PONG since ${
-      //       humanizeDuration(Date.now() - timeLastPong)
-      //     } < ${humanizeDuration(intervalSinceNoTrafficToTriggerReconnect)}`,
-      //   );
+    } else if (
+      timeSinceLastMessage >= (ms("30s") as number) &&
+      rws.readyState === rws.OPEN
+    ) {
+      console.log(
+        `🚨 No messages received for ${
+          humanizeDuration(timeSinceLastMessage)
+        }, reconnecting`,
+      );
+      rws.reconnect();
     }
+
+    // Log connection health every minute
+    if ((Date.now() % 60000) < 3000) { // Every minute
+      console.log(
+        `📊 Connection health: uptime=${
+          humanizeDuration(Date.now() - connectionUptime)
+        }, ` +
+          `lastPong=${humanizeDuration(timeSinceLastPong)}, ` +
+          `lastMessage=${humanizeDuration(timeSinceLastMessage)}, ` +
+          `pingFailures=${consecutivePingFailures}`,
+      );
+    }
+
     setTimeout(reconnectCheck, reconnectCheckInterval);
   };
   setTimeout(reconnectCheck, reconnectCheckInterval);
@@ -342,13 +388,14 @@ export function connectToServer(
   rws.addEventListener("message", (message: MessageEvent) => {
     try {
       const messageString = message.data.toString();
+      lastMessageReceived = Date.now(); // Update last message time
 
       if (messageString.startsWith("PONG")) {
         timeLastPong = Date.now();
         const pongedWorkerId = messageString.split(" ")[1];
         if (pongedWorkerId !== workerId) {
           console.log(
-            `Server does not recognize us, registering again , sees [${pongedWorkerId}] expected [${workerId}]`,
+            `🚨 Server does not recognize us, registering again , sees [${pongedWorkerId}] expected [${workerId}]`,
           );
           dockerJobQueue.register();
           // } else {
@@ -378,6 +425,15 @@ export function connectToServer(
           const allJobsStatesPayload = possibleMessage
             .payload as BroadcastJobStates;
           currentGotJobStates++;
+
+          const jobCount =
+            Object.keys(allJobsStatesPayload?.state?.jobs || {}).length;
+          console.log(
+            `📥 Worker ${
+              workerId?.substring(0, 6)
+            } received JobStates with ${jobCount} jobs`,
+          );
+
           if (currentGotJobStates > logGotJobStatesEvery) {
             console.log(
               `[${workerId?.substring(0, 6)}] got JobStates(${
@@ -407,6 +463,14 @@ export function connectToServer(
             break;
           }
 
+          const jobCount =
+            Object.keys(someJobsPayload?.state?.jobs || {}).length;
+          console.log(
+            `📥 Worker ${
+              workerId?.substring(0, 6)
+            } received JobStateUpdates with ${jobCount} jobs`,
+          );
+
           if (currentGotJobStateUpdates > logGotJobStateUpdatesEvery) {
             console.log(
               `[${workerId?.substring(0, 6)}] got JobStateUpdates(${
@@ -421,6 +485,13 @@ export function connectToServer(
         }
         case WebsocketMessageTypeServerBroadcast.StatusRequest: {
           const status = dockerJobQueue.status();
+          console.log(
+            `📤 Worker ${
+              workerId?.substring(0, 6)
+            } responding to status request with ${
+              Object.keys(status.queue).length
+            } running jobs`,
+          );
           sender({
             type: WebsocketMessageTypeWorkerToServer.WorkerStatusResponse,
             payload: status,
@@ -461,13 +532,17 @@ export function connectToServer(
           }
           break;
         }
-        default: {
-          //ignored
-          break;
-        }
+        default:
+          if (config.debug) {
+            console.log(
+              `[${
+                workerId?.substring(0, 6)
+              }] unhandled message type: ${possibleMessage.type}`,
+            );
+          }
       }
     } catch (err) {
-      console.log(err);
+      console.log(`🚨 Error processing message: ${err}`);
     }
   });
 }

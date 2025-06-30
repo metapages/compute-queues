@@ -143,6 +143,11 @@ export class DockerJobQueue {
   }
 
   status(): computeQueuesShared.WorkerStatusResponse {
+    const runningJobsCount = Object.keys(this.queue).length;
+    console.log(
+      `📊 Worker ${this.workerIdShort} status: ${runningJobsCount} running jobs, ${this.cpus} CPUs, ${this.gpus} GPUs`,
+    );
+
     return {
       time: Date.now(),
       id: this.workerId,
@@ -172,25 +177,64 @@ export class DockerJobQueue {
       gpus: this.gpus,
       maxJobDuration: this.maxJobDurationString,
     };
-    this.sender({
-      type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
-        .WorkerRegistration,
-      payload: registration,
-    });
-    for (const runningQueueObject of Object.values(this.queue)) {
-      this.sender(runningQueueObject.runningMessageToServer);
+
+    try {
+      this.sender({
+        type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
+          .WorkerRegistration,
+        payload: registration,
+      });
+
+      // Send running jobs state
+      for (const runningQueueObject of Object.values(this.queue)) {
+        this.sender(runningQueueObject.runningMessageToServer);
+      }
+
+      console.log(`📝 Worker ${this.workerIdShort} registered successfully`);
+    } catch (err) {
+      console.log(`🚨 Failed to register worker ${this.workerIdShort}: ${err}`);
+
+      // Retry registration after a delay
+      setTimeout(() => {
+        try {
+          this.sender({
+            type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
+              .WorkerRegistration,
+            payload: registration,
+          });
+          console.log(
+            `📝 Worker ${this.workerIdShort} registration retry successful`,
+          );
+        } catch (retryErr) {
+          console.log(
+            `🚨 Worker ${this.workerIdShort} registration retry failed: ${retryErr}`,
+          );
+        }
+      }, 2000);
     }
+  }
+
+  onUpdateSetAllJobStates(
+    message: computeQueuesShared.BroadcastJobStates,
+  ) {
+    const jobCount = Object.keys(message.state.jobs || {}).length;
+    console.log(
+      `🎯 Worker ${this.workerIdShort} processing ${jobCount} jobs from JobStates message`,
+    );
+
+    this._checkRunningJobs(message);
+    this._claimJobs(message);
   }
 
   onUpdateUpdateASubsetOfJobs(
     message: computeQueuesShared.BroadcastJobStates,
   ) {
-    message.isSubset = true;
-    this._checkRunningJobs(message);
-    this._claimJobs(message);
-  }
+    const jobCount = Object.keys(message.state.jobs || {}).length;
+    console.log(
+      `🎯 Worker ${this.workerIdShort} processing ${jobCount} jobs from JobStateUpdates message`,
+    );
 
-  onUpdateSetAllJobStates(message: computeQueuesShared.BroadcastJobStates) {
+    message.isSubset = true;
     this._checkRunningJobs(message);
     this._claimJobs(message);
   }
@@ -398,6 +442,11 @@ export class DockerJobQueue {
             }]`,
           );
         }
+
+        console.log(
+          `🎯 Worker ${this.workerIdShort} sees ${queuedJobKeys.length} queued jobs available to claim`,
+        );
+
         // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
         // Go through the queued jobs and start them if we have capacity
         // let index = 0;
@@ -433,7 +482,20 @@ export class DockerJobQueue {
                 continue;
               }
             }
+            console.log(
+              `🎯 Worker ${this.workerIdShort} claiming job ${
+                jobKey.substring(0, 6)
+              }`,
+            );
             this._startJob(job);
+          } else {
+            console.log(
+              `🎯 Worker ${this.workerIdShort} cannot claim job ${
+                jobKey.substring(0, 6)
+              } - no CPU capacity (${
+                Object.keys(this.queue).length
+              }/${this.cpus})`,
+            );
           }
         }
       } while (this._needsAnotherClaimJobs);
