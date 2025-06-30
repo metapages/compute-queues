@@ -15,13 +15,14 @@ import { PanelLogs } from "/@/components/sections/PanelLogs";
 import { PanelOutputs } from "/@/components/sections/PanelOutputs";
 import { PanelQueue } from "/@/components/sections/PanelQueue";
 import { PanelSettings } from "/@/components/sections/PanelSettings";
+import { useMinimalHeader } from "../hooks/useMinimalHeader.tsx";
 
 export const Main: React.FC = () => {
   const { resolvedQueue: resolvedQueueOrUrl } = useQueue();
   const isServerConnected = useStore(state => state.isServerConnected);
   const rightPanelContext = useStore(state => state.rightPanelContext);
   const [isWiderThan1000] = useMediaQuery("(min-width: 1000px)");
-  const [isTallerThan200] = useMediaQuery("(min-height: 200px)");
+  const isMinimalHeader = useMinimalHeader();
 
   const editorShown = rightPanelContext === "editScript";
   const stdErrShown = rightPanelContext === "stderr";
@@ -51,10 +52,18 @@ export const Main: React.FC = () => {
   }
   const leftWidth = `calc(100% - ${rightWidth})`;
 
-  if (!isTallerThan200) {
+  if (isMinimalHeader) {
     return (
-      <Container m={0} bg={"gray.300"} minW={"100%"} minH={"100%"} h={"100vh"} w={"100vw"}>
-        <HStack justifyContent={"space-around"} minH={"100%"}>
+      <Container
+        m={0}
+        // bg={"gray.300"}
+        minW={"100%"}
+        minHeight="100vh"
+        height="100vh"
+        w={"100vw"}
+        border="1px solid #E4E4E4"
+        boxSizing="border-box">
+        <HStack justifyContent="space-between" h="100%" alignItems="center" boxSizing="border-box">
           <JobStatus />
           <JobControlButton />
         </HStack>
@@ -62,9 +71,15 @@ export const Main: React.FC = () => {
     );
   }
   return (
-    <VStack gap={0} minWidth={"200px"} minHeight="100vh">
+    <VStack
+      gap={0}
+      minWidth={"200px"}
+      minHeight="100vh"
+      maxHeight="100vh"
+      border="1px solid #E4E4E4"
+      boxSizing="border-box">
       <MainHeader />
-      <HStack gap={0} w={"100%"} minW="100vw" minH={"contentHeight"}>
+      <HStack gap={0} w={"100%"} minW="100%" minH={"contentHeight"}>
         <Box minW={leftWidth} minH={"contentHeight"}>
           {!isServerConnected ? (
             <Box minW={leftWidth} minH={"contentHeight"}>
@@ -90,7 +105,7 @@ export const Main: React.FC = () => {
             <PanelLogs mode={stdErrShown ? "stdout" : "stdout+stderr"} />
           )}
         </Box>
-        <Box minW={rightWidth} minH={"contentHeight"} borderLeft={rightContent && "1px"}>
+        <Box minW={rightWidth} minH={"contentHeight"} borderLeft={rightContent && "1px"} boxSizing="border-box">
           {rightContent}
         </Box>
       </HStack>
