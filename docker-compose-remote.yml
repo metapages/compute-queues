@@ -58,7 +58,6 @@ services:
     logging:
       driver: ${LOGGING_API:-json-file}
 
-
   api2:
     depends_on:
       api1:
@@ -110,7 +109,6 @@ services:
       - "traefik.http.routers.api2.entrypoints=websecure"
     logging:
       driver: ${LOGGING_API:-json-file}
-
 
   api3:
     depends_on:
