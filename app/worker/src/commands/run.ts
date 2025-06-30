@@ -121,26 +121,29 @@ export const runCommand = new Command()
 
     config.testMode = !!options.testMode;
 
-    const kv = await getKv(); //Deno.openKv(Deno.env.get("DENO_KV_URL"));
-    const existingId: string | null = (await kv.get<string>(["workerId"]))
-      ?.value;
-    if (existingId) {
-      config.id = existingId;
+    if (options.id && typeof options.id === "string") {
+      config.id = options.id;
     } else {
-      config.id = crypto.randomUUID();
-      kv.set(["workerId"], config.id); // don't need to await
-    }
-
-    // If this is set, we are going to generate it every time
-    if (Deno.env.get("METAPAGE_IO_GENERATE_WORKER_ID")) {
-      config.id = crypto.randomUUID();
+      const kv = await getKv();
+      const existingId: string | null = (await kv.get<string>(["workerId"]))
+        ?.value;
+      if (existingId) {
+        config.id = existingId;
+      } else {
+        config.id = crypto.randomUUID();
+        kv.set(["workerId"], config.id); // don't need to await
+      }
+      // If this is set, we are going to generate it every time
+      if (Deno.env.get("METAPAGE_IO_GENERATE_WORKER_ID")) {
+        config.id = crypto.randomUUID();
+      }
     }
 
     console.log(
       `Worker config: [id=%s...] [queue=%s] [mode=%s] [cpus=%s] [gpus=%s] [maxDuration=%s] [dataDirectory=%s] [api=%s] [debug=%s] ${
         config.mode === "local" ? "[port=%s]" : ""
       }`,
-      config.id.substring(0, 6),
+      config.id.substring(0, 12),
       config.queue,
       config.mode,
       config.cpus,
@@ -171,6 +174,8 @@ export const runCommand = new Command()
     await waitForDocker();
     await prepGpus(config.gpus);
     await runChecksOnInterval(config.queue);
+
+    console.log("config.id", config.id);
 
     if (config.mode === "local") {
       const cacheDir = join(config.dataDirectory, "cache");
