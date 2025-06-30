@@ -5,7 +5,7 @@ name: Deno deploy api+browser
 on:
   push:
     branches:
-      - "234-workers-disconnecting"
+      - "main"
 
 jobs:
   deno-deploy-api-browser:
