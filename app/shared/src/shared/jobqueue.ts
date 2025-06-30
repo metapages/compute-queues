@@ -1035,7 +1035,7 @@ export class BaseDockerJobQueue {
                   }] Running -> Running, but different worker, assigning to ${
                     preferredWorker.substring(
                       0,
-                      6,
+                      12,
                     )
                   }`,
                 );
@@ -1147,10 +1147,12 @@ export class BaseDockerJobQueue {
         (w) => w.connection === connection.socket,
       );
       if (index > -1) {
-        if (workerRegistration !== this.workers.myWorkers[index].registration) {
-          throw new Error("worker registration mismatch");
-        }
-        // console.log(`🌪 Removing ${this.workers.myWorkers[index].registration.id}`);
+        // if (workerRegistration !== this.workers.myWorkers[index].registration) {
+        //   throw new Error("worker registration mismatch");
+        // }
+        console.log(
+          `🌪 Removing ${this.workers.myWorkers[index].registration.id}`,
+        );
         this.workers.myWorkers.splice(index, 1);
         this.myWorkersHaveChanged();
       }

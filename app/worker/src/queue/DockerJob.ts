@@ -62,12 +62,14 @@ export interface DockerJobArgs {
   deviceRequests?: DockerApiDeviceRequest[];
   // always defined, no jobs run forever
   maxJobDuration: number;
+  isKilled: { value: boolean };
 }
 
 // this comes out
 export interface DockerJobExecution {
-  finish: Promise<DockerRunResult>;
+  finish: Promise<DockerRunResult | undefined>;
   kill: () => Promise<void>;
+  isKilled: { value: boolean };
 }
 
 export const JobCacheDirectory = "/job-cache";
@@ -87,6 +89,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     outputsDir,
     deviceRequests,
     maxJobDuration,
+    isKilled,
   } = args;
 
   const result: DockerRunResult = {
@@ -97,7 +100,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   let container: Docker.Container | undefined;
 
   let durationHandler: number | undefined;
-  let killed = false;
+
   const kill = async () => {
     if (durationHandler) {
       clearInterval(durationHandler);
@@ -111,15 +114,19 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     }
     if (container) {
       await killAndRemove(container);
+    } else {
+      console.log(
+        `[${id.substring(0, 6)}] 💥💥💥 container object missing, cannot kill`,
+      );
     }
-    killed = true;
+    isKilled.value = true;
   };
 
   let startTime: number | undefined;
   let finishTime: number | undefined;
 
   const maxDurationCheck = () => {
-    if (startTime && !finishTime && !killed) {
+    if (startTime && !finishTime && !isKilled.value) {
       const duration = Date.now() - startTime;
       if (duration > maxJobDuration) {
         console.log(
@@ -130,7 +137,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         kill();
       }
     }
-    if (!finishTime && !killed) {
+    if (!finishTime && !isKilled.value) {
       setTimeout(maxDurationCheck, 1000);
     }
   };
@@ -235,6 +242,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   });
 
   const finish = async () => {
+    if (isKilled.value) {
+      return;
+    }
     try {
       createOptions.image = await ensureDockerImage({
         jobId: id,
@@ -267,6 +277,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         return result;
       }
     }
+    if (isKilled.value) {
+      return;
+    }
 
     // Check for existing job container
     const runningContainers = await docker.listContainers({
@@ -274,6 +287,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         [ContainerLabelId]: args.id,
       },
     });
+    if (isKilled.value) {
+      return;
+    }
     const existingJobContainer = runningContainers.find(
       (container: unknown) =>
         container &&
@@ -295,6 +311,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         const textStdOut = existsStdOut && stdoutLogFileName
           ? await Deno.readTextFile(stdoutLogFileName)
           : "";
+        if (isKilled.value) {
+          return;
+        }
         if (textStdOut) {
           const logs = textStdOut
             .split("\n")
@@ -315,6 +334,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         const textStderr = existsStderr && stderrLogFileName
           ? await Deno.readTextFile(stderrLogFileName)
           : "";
+        if (isKilled.value) {
+          return;
+        }
         if (textStderr) {
           const logs = textStderr
             .split("\n")
@@ -378,6 +400,10 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         : null;
     }
 
+    if (isKilled.value) {
+      return;
+    }
+
     if (!container) {
       container = await docker.createContainer(createOptions);
     }
@@ -388,6 +414,10 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       stderr: true,
     });
     container!.modem.demuxStream(stream, grabberOutStream, grabberErrStream);
+
+    if (isKilled.value) {
+      return;
+    }
 
     if (!existingJobContainer) {
       // is buffer
@@ -420,6 +450,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   return {
     kill,
     finish: finish(),
+    isKilled,
   };
 };
 
