@@ -532,7 +532,7 @@ export const getWorkerColorizedString = (worker: string): string => {
   const selectedColor = colorStyles[colorIndex];
   const resetColor = "\x1b[0m";
 
-  const s = `${selectedColor}[[${worker.substring(0, 14)}]]${resetColor}`;
+  const s = `${selectedColor}~~${worker.substring(0, 14)}~~${resetColor}`;
   workerColorCache.set(worker, s);
 
   return s;

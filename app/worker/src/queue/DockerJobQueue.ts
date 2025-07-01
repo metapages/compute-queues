@@ -15,6 +15,7 @@ import {
   type DockerJobDefinitionRow,
   getJobColorizedString,
   getQueueColorizedString,
+  getWorkerColorizedString,
   resolvePreferredWorker,
 } from "@metapages/compute-queues-shared";
 
@@ -66,7 +67,7 @@ export class DockerJobQueue {
     this.gpus = gpus;
     this.sender = sender;
     this.workerId = id;
-    this.workerIdShort = getQueueColorizedString(this.workerId);
+    this.workerIdShort = getWorkerColorizedString(this.workerId);
     this.maxJobDurationString = maxJobDuration;
     this.maxJobDuration = parseDuration(maxJobDuration) as number;
     this.queueKey = queue;

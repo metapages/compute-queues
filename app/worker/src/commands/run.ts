@@ -14,6 +14,7 @@ import { DockerJobQueue, type DockerJobQueueArgs } from "/@/queue/index.ts";
 import { Command } from "@cliffy/command";
 import {
   type BroadcastJobStates,
+  getWorkerColorizedString,
   type PayloadClearJobCache,
   type WebsocketMessageSenderWorker,
   type WebsocketMessageServerBroadcast,
@@ -175,8 +176,6 @@ export const runCommand = new Command()
     await prepGpus(config.gpus);
     await runChecksOnInterval(config.queue);
 
-    console.log("config.id", config.id);
-
     if (config.mode === "local") {
       const cacheDir = join(config.dataDirectory, "cache");
       await ensureDir(config.dataDirectory);
@@ -252,7 +251,7 @@ export function connectToServer(
     : `${server.replace("http", "ws")}/${queueId}/worker`;
 
   // @ts-ignore: frustrating cannot get compiler "default" import setup working
-  console.log(`🪐 connecting... ${url}`);
+  console.log(`${getWorkerColorizedString(workerId)} 🪐 connecting... ${url}`);
   // @ts-ignore: frustrating cannot get compiler "default" import setup working
   const rws = new ReconnectingWebSocket(url, [], {
     maxReconnectionDelay: 6000,
@@ -294,14 +293,16 @@ export function connectToServer(
     consecutivePingFailures++;
     if (consecutivePingFailures > 3) {
       console.log(
-        `🚨 Multiple websocket errors (${consecutivePingFailures}), forcing reconnect`,
+        `${
+          getWorkerColorizedString(workerId)
+        } 🚨 Multiple websocket errors (${consecutivePingFailures}), forcing reconnect`,
       );
       rws.reconnect();
     }
   });
 
   rws.addEventListener("open", () => {
-    console.log(`🚀 connected! ${url} `);
+    console.log(`${getWorkerColorizedString(workerId)} 🚀 connected! ${url} `);
     // This isn't a PING, but it's when we start measuring
     _timeLastPing = Date.now();
     timeLastPong = Date.now();
@@ -371,16 +372,16 @@ export function connectToServer(
     }
 
     // Log connection health every minute
-    if ((Date.now() % 60000) < 3000) { // Every minute
-      console.log(
-        `📊 Connection health: uptime=${
-          humanizeDuration(Date.now() - connectionUptime)
-        }, ` +
-          `lastPong=${humanizeDuration(timeSinceLastPong)}, ` +
-          `lastMessage=${humanizeDuration(timeSinceLastMessage)}, ` +
-          `pingFailures=${consecutivePingFailures}`,
-      );
-    }
+    // if ((Date.now() % 60000) < 3000) { // Every minute
+    //   console.log(
+    //     `📊 Connection health: uptime=${
+    //       humanizeDuration(Date.now() - connectionUptime)
+    //     }, ` +
+    //       `lastPong=${humanizeDuration(timeSinceLastPong)}, ` +
+    //       `lastMessage=${humanizeDuration(timeSinceLastMessage)}, ` +
+    //       `pingFailures=${consecutivePingFailures}`,
+    //   );
+    // }
 
     setTimeout(reconnectCheck, reconnectCheckInterval);
   };

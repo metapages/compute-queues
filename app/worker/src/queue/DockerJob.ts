@@ -69,7 +69,7 @@ export interface DockerJobArgs {
 // this comes out
 export interface DockerJobExecution {
   finish: Promise<DockerRunResult | undefined>;
-  kill: () => Promise<void>;
+  kill: () => void | Promise<void>;
   isKilled: { value: boolean };
 }
 
@@ -98,14 +98,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     isTimedOut: false,
   };
 
-  console.log("🏉🏉🏉 image", image);
-
   if (image?.startsWith(FakeJobImageSleepPrefix)) {
     const sleepForFakeJob =
       parseInt(image.replace(FakeJobImageSleepPrefix, "")) * 1000;
-    console.log(
-      `🎳🎳🎳 fake job image ${image} detected, sleeping for ${sleepForFakeJob}ms`,
-    );
     const isKilledFake: { value: boolean } = { value: false };
     let fakeJobTimeout: number | undefined;
     const fakeExecution: DockerJobExecution = {
@@ -120,7 +115,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
           resolve(result);
         }, sleepForFakeJob);
       }),
-      kill: async () => {
+      kill: () => {
         if (fakeJobTimeout) {
           clearTimeout(fakeJobTimeout);
         }
