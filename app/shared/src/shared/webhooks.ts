@@ -1,5 +1,6 @@
 import { ms } from "ms";
 import { getKv } from "/@/shared/kv.ts";
+import { getJobColorizedString } from "/@/shared/util.ts";
 import type { DockerJobControlConfig } from "/@/shared/types.ts";
 
 const kv = await getKv();
@@ -16,7 +17,7 @@ export const callJobWebhook = async (
   config: DockerJobControlConfig,
 ) => {
   console.log(
-    `🔥🔥 callJobWebhook [${jobId.substring(0, 6)}] `,
+    `🔥🔥 callJobWebhook ${getJobColorizedString(jobId)} `,
     queue,
     namespace,
   );
@@ -61,9 +62,9 @@ export const callJobWebhook = async (
     await deleteJobProcessSubmissionWebhook(queue, namespace, jobId);
   } catch (err) {
     console.error(
-      `Error calling [${
-        jobId.substring(0, 6)
-      }] webhook, will retry in a minute ${webhookUrl}:`,
+      `Error calling ${
+        getJobColorizedString(jobId)
+      } webhook, will retry in a minute ${webhookUrl}:`,
       (err?.toString())?.includes("Name or service not known")
         ? "Name or service not known"
         : err?.toString(),
@@ -97,12 +98,14 @@ export const addJobProcessSubmissionWebhook = async (opts: {
 
   if (!control?.callbacks?.queued) {
     console.log(
-      `👀  addJobProcessSubmissionWebhook [${jobId.substring(0, 6)}] no config`,
+      `👀  addJobProcessSubmissionWebhook ${
+        getJobColorizedString(jobId)
+      } no config`,
     );
     return;
   } else {
     console.log(
-      `[${jobId.substring(0, 6)}] 🚀 addJobProcessSubmissionWebhook `,
+      `${getJobColorizedString(jobId)} 🚀 addJobProcessSubmissionWebhook `,
     );
   }
 

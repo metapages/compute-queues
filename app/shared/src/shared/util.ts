@@ -344,6 +344,93 @@ export const getJobColorizedString = (jobId: string): string => {
     "\x1b[4;94m", // Underline Bright Blue
     "\x1b[4;95m", // Underline Bright Magenta
     "\x1b[4;96m", // Underline Bright Cyan
+    // "\x1b[7;31m", // Reverse Red
+    // "\x1b[7;32m", // Reverse Green
+    // "\x1b[7;33m", // Reverse Yellow
+    // "\x1b[7;34m", // Reverse Blue
+    // "\x1b[7;35m", // Reverse Magenta
+    // "\x1b[7;36m", // Reverse Cyan
+    // "\x1b[7;91m", // Reverse Bright Red
+    // "\x1b[7;92m", // Reverse Bright Green
+    // "\x1b[7;93m", // Reverse Bright Yellow
+    // "\x1b[7;94m", // Reverse Bright Blue
+    // "\x1b[7;95m", // Reverse Bright Magenta
+    // "\x1b[7;96m", // Reverse Bright Cyan
+  ];
+
+  const colorIndex = Math.abs(hash) % colorStyles.length;
+  const selectedColor = colorStyles[colorIndex];
+  const resetColor = "\x1b[0m";
+
+  const s = `${selectedColor}[${jobId.substring(0, 6)}]${resetColor}`;
+  jobColorCache.set(jobId, s);
+
+  return s;
+};
+
+const queueColorCache = new LRUCache<string, string>({
+  max: 1000,
+  ttl: 1000 * 60 * 60 * 24, // 24 hours
+});
+
+/**
+ * Creates a colorized console.log string deterministically based on jobId.
+ * Uses ANSI color codes to provide consistent color coding for job-related logs.
+ * @param jobId - The job identifier
+ * @returns A string with ANSI color codes that can be used in console.log
+ */
+export const getQueueColorizedString = (queue: string): string => {
+  const cachedColor = queueColorCache.get(queue);
+  if (cachedColor) {
+    return cachedColor;
+  }
+
+  // Generate a hash from the jobId to ensure deterministic color selection
+  let hash = 0;
+  for (let i = 0; i < queue.length; i++) {
+    const char = queue.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+
+  // Use the hash to select from a predefined set of colors and styles
+  const colorStyles = [
+    // "\x1b[31m", // Red
+    // "\x1b[32m", // Green
+    // "\x1b[33m", // Yellow
+    // "\x1b[34m", // Blue
+    // "\x1b[35m", // Magenta
+    // "\x1b[36m", // Cyan
+    // "\x1b[91m", // Bright Red
+    // "\x1b[92m", // Bright Green
+    // "\x1b[93m", // Bright Yellow
+    // "\x1b[94m", // Bright Blue
+    // "\x1b[95m", // Bright Magenta
+    // "\x1b[96m", // Bright Cyan
+    // "\x1b[1;31m", // Bold Red
+    // "\x1b[1;32m", // Bold Green
+    // "\x1b[1;33m", // Bold Yellow
+    // "\x1b[1;34m", // Bold Blue
+    // "\x1b[1;35m", // Bold Magenta
+    // "\x1b[1;36m", // Bold Cyan
+    // "\x1b[1;91m", // Bold Bright Red
+    // "\x1b[1;92m", // Bold Bright Green
+    // "\x1b[1;93m", // Bold Bright Yellow
+    // "\x1b[1;94m", // Bold Bright Blue
+    // "\x1b[1;95m", // Bold Bright Magenta
+    // "\x1b[1;96m", // Bold Bright Cyan
+    // "\x1b[4;31m", // Underline Red
+    // "\x1b[4;32m", // Underline Green
+    // "\x1b[4;33m", // Underline Yellow
+    // "\x1b[4;34m", // Underline Blue
+    // "\x1b[4;35m", // Underline Magenta
+    // "\x1b[4;36m", // Underline Cyan
+    // "\x1b[4;91m", // Underline Bright Red
+    // "\x1b[4;92m", // Underline Bright Green
+    // "\x1b[4;93m", // Underline Bright Yellow
+    // "\x1b[4;94m", // Underline Bright Blue
+    // "\x1b[4;95m", // Underline Bright Magenta
+    // "\x1b[4;96m", // Underline Bright Cyan
     "\x1b[7;31m", // Reverse Red
     "\x1b[7;32m", // Reverse Green
     "\x1b[7;33m", // Reverse Yellow
@@ -362,8 +449,8 @@ export const getJobColorizedString = (jobId: string): string => {
   const selectedColor = colorStyles[colorIndex];
   const resetColor = "\x1b[0m";
 
-  const s = `${selectedColor}[${jobId}]${resetColor}`;
-  jobColorCache.set(jobId, s);
+  const s = `${selectedColor}[${queue.substring(0, 12)}]${resetColor}`;
+  queueColorCache.set(queue, s);
 
   return s;
 };

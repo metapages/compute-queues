@@ -13,6 +13,7 @@ import parseDuration from "parse-duration";
 import * as computeQueuesShared from "@metapages/compute-queues-shared";
 import {
   type DockerJobDefinitionRow,
+  getJobColorizedString,
   resolvePreferredWorker,
 } from "@metapages/compute-queues-shared";
 
@@ -450,9 +451,9 @@ export class DockerJobQueue {
         for (const runningJobId of jobsServerSaysAreRunningOnMe) {
           if (!this.queue[runningJobId]) {
             console.log(
-              `[${this.workerIdShort}] 🎳 _claimJobs runningJobId=[${
-                runningJobId.substring(0, 6)
-              }] jobsServerSaysAreRunningOnMe, starting`,
+              `[${this.workerIdShort}] 🎳 _claimJobs runningJobId=${
+                getJobColorizedString(runningJobId)
+              } jobsServerSaysAreRunningOnMe, starting`,
             );
             this._startJob(jobStates[runningJobId]);
           }
@@ -709,12 +710,12 @@ export class DockerJobQueue {
         async (result: computeQueuesShared.DockerRunResult | undefined) => {
           if (!result) {
             console.log(
-              `[${jobBlob.hash.substring(0, 6)}] no result because killed`,
+              `${getJobColorizedString(jobBlob.hash)} no result because killed`,
             );
             return;
           }
           console.log(
-            `[${jobBlob.hash.substring(0, 6)}] result ${
+            `${getJobColorizedString(jobBlob.hash)} result ${
               JSON.stringify(result).substring(0, 100)
             }`,
           );
@@ -733,23 +734,23 @@ export class DockerJobQueue {
               true,
             ]);
             console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] 💥 StatusCode: ${result.StatusCode}`,
+              `[${this.workerIdShort}] ${
+                getJobColorizedString(jobBlob.hash)
+              } 💥 StatusCode: ${result.StatusCode}`,
             );
             console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] 💥 stderr: ${result.logs?.join("\n")?.substring(0, 200)}`,
+              `[${this.workerIdShort}] ${
+                getJobColorizedString(jobBlob.hash)
+              } 💥 stderr: ${result.logs?.join("\n")?.substring(0, 200)}`,
             );
           }
           if (result.error) {
             result.logs.push([`💥 ${result.error}`, Date.now(), true]);
             result.error = "Error";
             console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] 💥 error: ${result.error}`,
+              `[${this.workerIdShort}] ${
+                getJobColorizedString(jobBlob.hash)
+              } 💥 error: ${result.error}`,
             );
           }
 
@@ -761,9 +762,9 @@ export class DockerJobQueue {
                 .worker !== this.workerId
           ) {
             console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] finished here, but running elsewhere, ignoring job`,
+              `[${this.workerIdShort}] ${
+                getJobColorizedString(jobBlob.hash)
+              } finished here, but running elsewhere, ignoring job`,
             );
             return;
           }
@@ -773,9 +774,9 @@ export class DockerJobQueue {
                 .worker !== this.workerId
           ) {
             console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] finished here, but finished elsewhere, ignoring job`,
+              `[${this.workerIdShort}] ${
+                getJobColorizedString(jobBlob.hash)
+              } finished here, but finished elsewhere, ignoring job`,
             );
             return;
           }
@@ -903,7 +904,7 @@ export class DockerJobQueue {
   _killJobAndIgnore(locallyRunningJobId: string) {
     console.log(
       `[${this.workerIdShort}] Killing job ${
-        locallyRunningJobId.substring(0, 6)
+        getJobColorizedString(locallyRunningJobId)
       } (exists in our queue? ${!!this.queue[locallyRunningJobId]})`,
     );
     const localJob = this.queue[locallyRunningJobId];

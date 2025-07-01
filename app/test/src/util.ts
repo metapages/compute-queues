@@ -21,7 +21,7 @@ export const killJobOnQueue = async (
   jobId: string,
 ): Promise<boolean> => {
   const url = `${API_URL}/${queue}/job/${jobId}/cancel`;
-  const response = await fetch(url);
+  const response = await fetch(url, { method: "POST" });
   if (response.status === 404 || !response.ok) {
     response?.body?.cancel();
     return true;

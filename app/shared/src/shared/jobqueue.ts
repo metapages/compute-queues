@@ -39,7 +39,10 @@ import {
   type WorkerRegistration,
   type WorkerStatusResponse,
 } from "/@/shared/types.ts";
-import { resolveMostCorrectJob } from "/@/shared/util.ts";
+import {
+  getJobColorizedString,
+  resolveMostCorrectJob,
+} from "/@/shared/util.ts";
 import { ms } from "ms";
 import { createNanoEvents, type Emitter } from "nanoevents";
 import { delay } from "std/async/delay";
@@ -607,7 +610,10 @@ export class BaseDockerJobQueue {
     );
 
     await this.deleteJobFromDb(jobId).catch((err) => {
-      console.log(`💥💥💥 ERROR deleting job: ${err}`, jobId);
+      console.log(
+        `💥💥💥 ERROR deleting job: ${err}`,
+        getJobColorizedString(jobId),
+      );
     });
     this.deleteCachedJob(jobId);
 
@@ -897,11 +903,11 @@ export class BaseDockerJobQueue {
             case DockerJobState.Queued:
             case DockerJobState.ReQueued:
             case DockerJobState.Running:
-              console.log(`[${jobId.substring(0, 6)}] Job finished`);
+              console.log(`${getJobColorizedString(jobId)} Job finished`);
               await updateState();
               break;
             case DockerJobState.Finished:
-              console.log(`[${jobId.substring(0, 6)}] already finished?`);
+              console.log(`${getJobColorizedString(jobId)} already finished?`);
               await broadcastCurrentStateBecauseIDoubtStateIsSynced();
               break;
           }
@@ -913,29 +919,25 @@ export class BaseDockerJobQueue {
           switch (this.state.jobs[jobId].state) {
             case DockerJobState.Queued:
               console.log(
-                `[${
-                  jobId.substring(
-                    0,
-                    6,
-                  )
-                }] Queued -> ReQueued (this means the worker went missing)`,
+                `${
+                  getJobColorizedString(jobId)
+                } Queued -> ReQueued (this means the worker went missing)`,
               );
               await updateState();
               break;
             case DockerJobState.ReQueued: {
-              console.log(`[${jobId.substring(0, 6)}] ReQueued -> ReQueued`);
+              console.log(
+                `${getJobColorizedString(jobId)} ReQueued -> ReQueued`,
+              );
               const currentStateReQueued = this.state.jobs[jobId]
                 .value as StateChangeValueQueued;
               const incomingStateReQueued = change
                 .value as StateChangeValueQueued;
               if (incomingStateReQueued.time < currentStateReQueued.time) {
                 console.log(
-                  `[${
-                    jobId.substring(
-                      0,
-                      6,
-                    )
-                  }] REPLACING! because incoming time is earlier ReQueued -> ReQueued`,
+                  `${
+                    getJobColorizedString(jobId)
+                  } REPLACING! because incoming time is earlier ReQueued -> ReQueued`,
                 );
                 // update via replacement
                 await updateState(true);
@@ -944,24 +946,18 @@ export class BaseDockerJobQueue {
             }
             case DockerJobState.Running: {
               console.log(
-                `[${
-                  jobId.substring(
-                    0,
-                    6,
-                  )
-                }] Running -> ReQueued? ❗❗ I hope this is because the worker went missing ❗`,
+                `${
+                  getJobColorizedString(jobId)
+                } Running -> ReQueued? ❗❗ I hope this is because the worker went missing ❗`,
               );
               await updateState(true);
               break;
             }
             case DockerJobState.Finished: {
               console.log(
-                `[${
-                  jobId.substring(
-                    0,
-                    6,
-                  )
-                }] Finished -> ReQueued? What ❓❓❓. Rebroadcasting state`,
+                `${
+                  getJobColorizedString(jobId)
+                } Finished -> ReQueued? What ❓❓❓. Rebroadcasting state`,
               );
               await broadcastCurrentStateBecauseIDoubtStateIsSynced();
               break;
@@ -981,7 +977,7 @@ export class BaseDockerJobQueue {
               case DockerJobState.Queued:
               case DockerJobState.Running:
                 console.log(
-                  `[${jobId.substring(0, 6)}] Queued -> ${
+                  `${getJobColorizedString(jobId)} Queued -> ${
                     this.state.jobs[jobId].state
                   } ignoring queue request, job already queued or running`,
                 );
@@ -1002,17 +998,14 @@ export class BaseDockerJobQueue {
                 switch (previousFinishedState.reason) {
                   case DockerJobFinishedReason.Cancelled:
                     console.log(
-                      `[${jobId.substring(0, 6)}] restarting from user`,
+                      `${getJobColorizedString(jobId)} restarting from user`,
                     );
                     await updateState(true);
                     break;
                   case DockerJobFinishedReason.WorkerLost:
                     console.log(
                       `!!!! BAD LOGIC ${
-                        jobId.substring(
-                          0,
-                          6,
-                        )
+                        getJobColorizedString(jobId)
                       } restarting from worker lost`,
                     );
                     await updateState();
@@ -1021,12 +1014,9 @@ export class BaseDockerJobQueue {
                   case DockerJobFinishedReason.Error:
                   case DockerJobFinishedReason.TimedOut:
                     console.log(
-                      `[${
-                        jobId.substring(
-                          0,
-                          6,
-                        )
-                      }] ignoring Queued request current state=[${
+                      `${
+                        getJobColorizedString(jobId)
+                      } ignoring Queued request current state=[${
                         this.state.jobs[jobId].state
                       }] reason=[${previousFinishedState.reason}], job finished and not restartable`,
                     );
@@ -1040,12 +1030,9 @@ export class BaseDockerJobQueue {
           } else {
             // TODO: check for finished jobs in the db
             console.log(
-              `[${
-                jobId.substring(
-                  0,
-                  6,
-                )
-              }] adding new job row to local state as Queued`,
+              `${
+                getJobColorizedString(jobId)
+              } adding new job row to local state as Queued`,
             );
 
             jobRow = {
@@ -1065,7 +1052,7 @@ export class BaseDockerJobQueue {
         // incoming state
         case DockerJobState.Running:
           console.log(
-            `[${jobId.substring(0, 6)}] Job Running, previous job ${
+            `${getJobColorizedString(jobId)} Job Running, previous job ${
               this.state.jobs[jobId].state
             }`,
           );
