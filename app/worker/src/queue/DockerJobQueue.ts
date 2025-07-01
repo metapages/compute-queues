@@ -1,3 +1,4 @@
+import parseDuration from "parse-duration";
 import { config } from "/@/config.ts";
 import { ensureIsolateNetwork } from "/@/docker/network.ts";
 import {
@@ -8,13 +9,11 @@ import {
 } from "/@/queue/DockerJob.ts";
 import { convertIOToVolumeMounts, getOutputs } from "/@/queue/IO.ts";
 import { convertStringToDockerCommand } from "/@/queue/utils.ts";
-import parseDuration from "parse-duration";
 
 import * as computeQueuesShared from "@metapages/compute-queues-shared";
 import {
   type DockerJobDefinitionRow,
   getJobColorizedString,
-  getQueueColorizedString,
   getWorkerColorizedString,
   resolvePreferredWorker,
 } from "@metapages/compute-queues-shared";
