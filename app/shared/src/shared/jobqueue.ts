@@ -1722,15 +1722,15 @@ export class BaseDockerJobQueue {
       return;
     }
 
-    const message = JSON.parse(messageString);
-    const jobCount = Object.keys(message.payload?.state?.jobs || {}).length;
-    const workerCount = this.workers.myWorkers.length;
+    // const message = JSON.parse(messageString);
+    // const jobCount = Object.keys(message.payload?.state?.jobs || {}).length;
+    // const workerCount = this.workers.myWorkers.length;
 
-    console.log(
-      `📡 Broadcasting ${jobCount} jobs to ${workerCount} workers (${
-        isAll ? "full sync" : "incremental"
-      })`,
-    );
+    // console.log(
+    //   `📡 Broadcasting ${jobCount} jobs to ${workerCount} workers (${
+    //     isAll ? "full sync" : "incremental"
+    //   })`,
+    // );
 
     this.broadcastToLocalWorkers(messageString);
     this.broadcastToLocalClients(messageString);

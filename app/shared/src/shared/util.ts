@@ -2,6 +2,7 @@ import equal from "fast-deep-equal/es6";
 import fetchRetry from "fetch-retry";
 import { create } from "mutative";
 import stringify from "safe-stable-stringify";
+import { LRUCache } from "lru-cache";
 import {
   type DataRef,
   type DockerJobDefinitionInputRefs,
@@ -278,4 +279,55 @@ export const resolveMostCorrectJob = (
       ? jobA
       : jobB;
   }
+};
+
+const jobColorCache = new LRUCache<string, string>({
+  max: 1000,
+  ttl: 1000 * 60 * 60 * 24, // 24 hours
+});
+
+/**
+ * Creates a colorized console.log string deterministically based on jobId.
+ * Uses ANSI color codes to provide consistent color coding for job-related logs.
+ * @param jobId - The job identifier
+ * @returns A string with ANSI color codes that can be used in console.log
+ */
+export const getJobColorizedString = (jobId: string): string => {
+  const cachedColor = jobColorCache.get(jobId);
+  if (cachedColor) {
+    return cachedColor;
+  }
+
+  // Generate a hash from the jobId to ensure deterministic color selection
+  let hash = 0;
+  for (let i = 0; i < jobId.length; i++) {
+    const char = jobId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+
+  // Use the hash to select from a predefined set of colors
+  const colors = [
+    "\x1b[31m", // Red
+    "\x1b[32m", // Green
+    "\x1b[33m", // Yellow
+    "\x1b[34m", // Blue
+    "\x1b[35m", // Magenta
+    "\x1b[36m", // Cyan
+    "\x1b[91m", // Bright Red
+    "\x1b[92m", // Bright Green
+    "\x1b[93m", // Bright Yellow
+    "\x1b[94m", // Bright Blue
+    "\x1b[95m", // Bright Magenta
+    "\x1b[96m", // Bright Cyan
+  ];
+
+  const colorIndex = Math.abs(hash) % colors.length;
+  const selectedColor = colors[colorIndex];
+  const resetColor = "\x1b[0m";
+
+  const s = `${selectedColor}[${jobId}]${resetColor}`;
+  jobColorCache.set(jobId, s);
+
+  return s;
 };

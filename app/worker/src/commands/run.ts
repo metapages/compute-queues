@@ -431,13 +431,13 @@ export function connectToServer(
             .payload as BroadcastJobStates;
           currentGotJobStates++;
 
-          const jobCount =
-            Object.keys(allJobsStatesPayload?.state?.jobs || {}).length;
-          console.log(
-            `📥 Worker ${
-              workerId?.substring(0, 6)
-            } received JobStates with ${jobCount} jobs`,
-          );
+          // const jobCount =
+          //   Object.keys(allJobsStatesPayload?.state?.jobs || {}).length;
+          // console.log(
+          //   `📥 Worker ${
+          //     workerId?.substring(0, 6)
+          //   } received JobStates with ${jobCount} jobs`,
+          // );
 
           if (currentGotJobStates > logGotJobStatesEvery) {
             console.log(
@@ -468,13 +468,13 @@ export function connectToServer(
             break;
           }
 
-          const jobCount =
-            Object.keys(someJobsPayload?.state?.jobs || {}).length;
-          console.log(
-            `📥 Worker ${
-              workerId?.substring(0, 6)
-            } received JobStateUpdates with ${jobCount} jobs`,
-          );
+          // const jobCount =
+          //   Object.keys(someJobsPayload?.state?.jobs || {}).length;
+          // console.log(
+          //   `📥 Worker ${
+          //     workerId?.substring(0, 6)
+          //   } received JobStateUpdates with ${jobCount} jobs`,
+          // );
 
           if (currentGotJobStateUpdates > logGotJobStateUpdatesEvery) {
             console.log(

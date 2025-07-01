@@ -221,10 +221,10 @@ export class DockerJobQueue {
   onUpdateSetAllJobStates(
     message: computeQueuesShared.BroadcastJobStates,
   ) {
-    const jobCount = Object.keys(message.state.jobs || {}).length;
-    console.log(
-      `🎯 Worker ${this.workerIdShort} processing ${jobCount} jobs from JobStates message`,
-    );
+    // const jobCount = Object.keys(message.state.jobs || {}).length;
+    // console.log(
+    //   `🎯 Worker ${this.workerIdShort} processing ${jobCount} jobs from JobStates message`,
+    // );
     this._updateApiQueue(message);
     this._checkRunningJobs(message);
     this._claimJobs(message);
@@ -233,10 +233,10 @@ export class DockerJobQueue {
   onUpdateUpdateASubsetOfJobs(
     message: computeQueuesShared.BroadcastJobStates,
   ) {
-    const jobCount = Object.keys(message.state.jobs || {}).length;
-    console.log(
-      `🎯 Worker ${this.workerIdShort} processing ${jobCount} jobs from JobStateUpdates message`,
-    );
+    // const jobCount = Object.keys(message.state.jobs || {}).length;
+    // console.log(
+    //   `🎯 Worker ${this.workerIdShort} processing ${jobCount} jobs from JobStateUpdates message`,
+    // );
     message.isSubset = true;
     this._updateApiQueue(message);
     this._checkRunningJobs(message);
@@ -474,9 +474,11 @@ export class DockerJobQueue {
           );
         }
 
-        console.log(
-          `🎯 Worker ${this.workerIdShort} sees ${queuedJobKeys.length} queued jobs available to claim`,
-        );
+        if (queuedJobKeys.length > 0) {
+          console.log(
+            `🎯 Worker ${this.workerIdShort} sees ${queuedJobKeys.length} queued jobs available to claim`,
+          );
+        }
 
         // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
         // Go through the queued jobs and start them if we have capacity
@@ -592,12 +594,12 @@ export class DockerJobQueue {
     this.sender(runningMessageToServer);
 
     // after this it can all happen async
-    const isKilledLocal: { value: boolean } = {
+    const isKilled: { value: boolean } = {
       value: false,
     };
 
     (async () => {
-      if (isKilledLocal.value) {
+      if (isKilled.value) {
         return;
       }
       let volumes: Volume[];
@@ -616,7 +618,7 @@ export class DockerJobQueue {
         // TODO: cache locally before attempting to send
         delete this.queue[jobBlob.hash];
 
-        if (isKilledLocal.value) {
+        if (isKilled.value) {
           return;
         }
 
@@ -669,7 +671,7 @@ export class DockerJobQueue {
             config.maxJobDuration,
           )
           : config.maxJobDuration,
-        isKilled: isKilledLocal,
+        isKilled,
       };
 
       // Not awaiting, it should have already been created, but let's
@@ -679,6 +681,9 @@ export class DockerJobQueue {
       const dockerExecution: DockerJobExecution = dockerJobExecute(
         executionArgs,
       );
+      if (this.queue[jobBlob.hash]) {
+        this.queue[jobBlob.hash].execution = dockerExecution;
+      }
       if (!this.queue[jobBlob.hash]) {
         console.log(
           `[${this.workerIdShort}] [${
@@ -699,7 +704,6 @@ export class DockerJobQueue {
 
         return;
       }
-      this.queue[jobBlob.hash].execution = dockerExecution;
 
       dockerExecution.finish.then(
         async (result: computeQueuesShared.DockerRunResult | undefined) => {
@@ -903,13 +907,11 @@ export class DockerJobQueue {
       } (exists in our queue? ${!!this.queue[locallyRunningJobId]})`,
     );
     const localJob = this.queue[locallyRunningJobId];
-    if (localJob.execution) {
+    if (localJob?.execution) {
       localJob.execution.isKilled.value = true;
     }
 
     delete this.queue[locallyRunningJobId];
-    console.log("localJob?.execution?.kill?", localJob?.execution?.kill);
-    console.log("localJob?.execution?", localJob?.execution);
     localJob?.execution?.kill();
   }
 }
