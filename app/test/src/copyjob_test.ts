@@ -8,6 +8,7 @@ import {
   createNewContainerJobMessage,
   type DockerJobState,
 } from "@metapages/compute-queues-shared";
+import { killAllJobs } from "./util.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -19,6 +20,7 @@ Deno.test(
     if (QUEUE_ID === "local") {
       return;
     }
+    await killAllJobs(QUEUE_ID);
 
     // Create a server to receive the webhook
     // then have a job that calls it on submission

@@ -1,26 +1,15 @@
-import {
-  assert,
-  assertEquals,
-  assertGreater,
-  assertGreaterOrEqual,
-} from "std/assert";
+import { assert, assertEquals, assertGreaterOrEqual } from "std/assert";
 
 import { closed, open } from "@korkje/wsi";
 import {
-  type BroadcastJobStates,
   createNewContainerJobMessage,
-  DockerJobState,
+  FakeJobImageSleepPrefix,
   type JobMessagePayload,
-  type StateChangeValueFinished,
-  type WebsocketMessageServerBroadcast,
-  WebsocketMessageTypeClientToServer,
-  WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
 import {
   API_URL,
   jobExists,
   killAllJobs,
-  killJobOnQueue,
   QUEUE_ID,
   queuedOrRunningJobIds,
   TotalWorkerCpus,
@@ -29,11 +18,10 @@ import {
 Deno.test(
   "submit multiple jobs from the same namespace: previous RUNNING jobs are removed and replaced",
   async () => {
+    await killAllJobs(QUEUE_ID);
     const socket = new WebSocket(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
-
-    await killAllJobs(QUEUE_ID);
 
     const jobTime = 30;
     const timeoutInterval = setTimeout(() => {
@@ -42,7 +30,8 @@ Deno.test(
     const count = Math.max(TotalWorkerCpus - 1, 2); // the worker has 2 cpu slots, so both jobs can be running at the same time
     assertGreaterOrEqual(count, 2);
     const definitions = Array.from(Array(count).keys()).map((_: number) => ({
-      image: "alpine:3.18.5",
+      // image: "alpine:3.18.5",
+      image: FakeJobImageSleepPrefix + jobTime,
       // none of these jobs will finished, we are only testing replacement on the queue
       command: `sh -c "echo ${Math.random()}; sleep ${jobTime}"`,
     }));

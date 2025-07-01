@@ -21,6 +21,7 @@ import {
   type DockerJobImageBuild,
   DockerJobState,
   type DockerRunResult,
+  FakeJobImageSleepPrefix,
   type JobStatusPayload,
   type WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
@@ -96,6 +97,39 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     logs: [],
     isTimedOut: false,
   };
+
+  console.log("🏉🏉🏉 image", image);
+
+  if (image?.startsWith(FakeJobImageSleepPrefix)) {
+    const sleepForFakeJob =
+      parseInt(image.replace(FakeJobImageSleepPrefix, "")) * 1000;
+    console.log(
+      `🎳🎳🎳 fake job image ${image} detected, sleeping for ${sleepForFakeJob}ms`,
+    );
+    const isKilledFake: { value: boolean } = { value: false };
+    let fakeJobTimeout: number | undefined;
+    const fakeExecution: DockerJobExecution = {
+      finish: new Promise((resolve) => {
+        if (isKilledFake.value) {
+          return;
+        }
+        fakeJobTimeout = setTimeout(() => {
+          if (isKilledFake.value) {
+            return;
+          }
+          resolve(result);
+        }, sleepForFakeJob);
+      }),
+      kill: async () => {
+        if (fakeJobTimeout) {
+          clearTimeout(fakeJobTimeout);
+        }
+        isKilledFake.value = true;
+      },
+      isKilled: isKilledFake,
+    };
+    return fakeExecution;
+  }
 
   let container: Docker.Container | undefined;
 

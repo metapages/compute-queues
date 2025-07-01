@@ -2,6 +2,8 @@ export const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 export const API_URL = Deno.env.get("API_URL") ||
   (QUEUE_ID === "local" ? "http://worker:8000" : "http://api1:8081");
 
+export const FakeJobImageSleepPrefix = "fakejob:";
+
 // check against the --cpus=2 flag for the workers
 export const TotalWorkerCpus = QUEUE_ID === "local" ? 2 : 4;
 

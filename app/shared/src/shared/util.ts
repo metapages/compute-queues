@@ -11,6 +11,8 @@ import {
   type StateChangeValueRunning,
 } from "/@/shared/types.ts";
 
+export const FakeJobImageSleepPrefix = "fakejob:";
+
 const resolvePreferredWorker = (workerA: string, workerB: string) => {
   return workerA.localeCompare(workerB) < 0 ? workerA : workerB;
 };

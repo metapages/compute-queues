@@ -1,16 +1,15 @@
-import { assert, assertEquals } from "std/assert";
+import { assertEquals } from "std/assert";
 
 import { closed, open } from "@korkje/wsi";
 import {
   type BroadcastJobStates,
   createNewContainerJobMessage,
   DockerJobState,
-  type JobMessagePayload,
   type StateChangeValueFinished,
   type WebsocketMessageServerBroadcast,
-  WebsocketMessageTypeClientToServer,
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
+import { killAllJobs } from "./util.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -19,6 +18,7 @@ const API_URL = Deno.env.get("API_URL") ||
 Deno.test(
   "pretend to be a client: submit job and get expected results",
   async () => {
+    await killAllJobs(QUEUE_ID);
     const socket = new WebSocket(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
@@ -105,6 +105,7 @@ Deno.test(
 );
 
 Deno.test("submit multiple jobs and get expected results", async () => {
+  await killAllJobs(QUEUE_ID);
   const socket = new WebSocket(
     `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
   );
