@@ -316,13 +316,21 @@ queue_length ${unfinishedQueueLength}
   });
 });
 
-app.get("/:queue/status", (c) => {
+app.get("/:queue/status", async (c) => {
   const queue = c.req.param("queue");
   if (!queue) {
     c.status(400);
     return c.text("Missing queue");
   }
-  return c.json({ queue: jobList });
+
+  try {
+    const jobQueue = await ensureQueue(queue);
+    const status = await jobQueue.status();
+    return c.json(status as unknown);
+  } catch (err) {
+    console.error("Error getting queue status:", err);
+    return c.text((err as Error).message, 500);
+  }
 });
 
 app.get("/:queue/metrics", (c) => {

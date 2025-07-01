@@ -21,6 +21,7 @@ import {
   type DockerJobImageBuild,
   DockerJobState,
   type DockerRunResult,
+  FakeJobImageSleepPrefix,
   type JobStatusPayload,
   type WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
@@ -68,7 +69,7 @@ export interface DockerJobArgs {
 // this comes out
 export interface DockerJobExecution {
   finish: Promise<DockerRunResult | undefined>;
-  kill: () => Promise<void>;
+  kill: () => void | Promise<void>;
   isKilled: { value: boolean };
 }
 
@@ -96,6 +97,34 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     logs: [],
     isTimedOut: false,
   };
+
+  if (image?.startsWith(FakeJobImageSleepPrefix)) {
+    const sleepForFakeJob =
+      parseInt(image.replace(FakeJobImageSleepPrefix, "")) * 1000;
+    const isKilledFake: { value: boolean } = { value: false };
+    let fakeJobTimeout: number | undefined;
+    const fakeExecution: DockerJobExecution = {
+      finish: new Promise((resolve) => {
+        if (isKilledFake.value) {
+          return;
+        }
+        fakeJobTimeout = setTimeout(() => {
+          if (isKilledFake.value) {
+            return;
+          }
+          resolve(result);
+        }, sleepForFakeJob);
+      }),
+      kill: () => {
+        if (fakeJobTimeout) {
+          clearTimeout(fakeJobTimeout);
+        }
+        isKilledFake.value = true;
+      },
+      isKilled: isKilledFake,
+    };
+    return fakeExecution;
+  }
 
   let container: Docker.Container | undefined;
 

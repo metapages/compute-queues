@@ -3,6 +3,7 @@ import {
   type DataRef,
   DataRefType,
   type DockerJobDefinitionRow,
+  DockerJobState,
   type StateChangeValueQueued,
 } from "/@/shared/types.ts";
 import { addJobProcessSubmissionWebhook } from "/@/shared/webhooks.ts";
@@ -321,7 +322,9 @@ export class DB {
     });
     const results: string[] = [];
     for await (const entry of entries) {
-      console.log(entry.key);
+      if (entry.value.value.state === DockerJobState.Finished) {
+        continue;
+      }
       results.push(entry.key[entry.key.length - 1] as string);
     }
     return results;

@@ -1,3 +1,4 @@
+import parseDuration from "parse-duration";
 import { config } from "/@/config.ts";
 import { ensureIsolateNetwork } from "/@/docker/network.ts";
 import {
@@ -8,11 +9,12 @@ import {
 } from "/@/queue/DockerJob.ts";
 import { convertIOToVolumeMounts, getOutputs } from "/@/queue/IO.ts";
 import { convertStringToDockerCommand } from "/@/queue/utils.ts";
-import parseDuration from "parse-duration";
 
 import * as computeQueuesShared from "@metapages/compute-queues-shared";
 import {
   type DockerJobDefinitionRow,
+  getJobColorizedString,
+  getWorkerColorizedString,
   resolvePreferredWorker,
 } from "@metapages/compute-queues-shared";
 
@@ -64,7 +66,7 @@ export class DockerJobQueue {
     this.gpus = gpus;
     this.sender = sender;
     this.workerId = id;
-    this.workerIdShort = this.workerId.substring(0, 12);
+    this.workerIdShort = getWorkerColorizedString(this.workerId);
     this.maxJobDurationString = maxJobDuration;
     this.maxJobDuration = parseDuration(maxJobDuration) as number;
     this.queueKey = queue;
@@ -147,6 +149,11 @@ export class DockerJobQueue {
   }
 
   status(): computeQueuesShared.WorkerStatusResponse {
+    const runningJobsCount = Object.keys(this.queue).length;
+    console.log(
+      `${this.workerIdShort} status: ${runningJobsCount} running jobs, ${this.cpus} CPUs, ${this.gpus} GPUs`,
+    );
+
     return {
       time: Date.now(),
       id: this.workerId,
@@ -176,26 +183,65 @@ export class DockerJobQueue {
       gpus: this.gpus,
       maxJobDuration: this.maxJobDurationString,
     };
-    this.sender({
-      type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
-        .WorkerRegistration,
-      payload: registration,
-    });
-    for (const runningQueueObject of Object.values(this.queue)) {
-      this.sender(runningQueueObject.runningMessageToServer);
+
+    try {
+      this.sender({
+        type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
+          .WorkerRegistration,
+        payload: registration,
+      });
+
+      // Send running jobs state
+      for (const runningQueueObject of Object.values(this.queue)) {
+        this.sender(runningQueueObject.runningMessageToServer);
+      }
+
+      console.log(`${this.workerIdShort} registered successfully`);
+    } catch (err) {
+      console.log(
+        `${this.workerIdShort} 🚨 Failed to register worker : ${err}`,
+      );
+
+      // Retry registration after a delay
+      setTimeout(() => {
+        try {
+          this.sender({
+            type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
+              .WorkerRegistration,
+            payload: registration,
+          });
+          console.log(
+            `${this.workerIdShort} registration retry successful`,
+          );
+        } catch (retryErr) {
+          console.log(
+            `${this.workerIdShort} registration retry failed: ${retryErr}`,
+          );
+        }
+      }, 2000);
     }
   }
 
-  onUpdateUpdateASubsetOfJobs(
+  onUpdateSetAllJobStates(
     message: computeQueuesShared.BroadcastJobStates,
   ) {
-    message.isSubset = true;
+    // const jobCount = Object.keys(message.state.jobs || {}).length;
+    // console.log(
+    //   `🎯 Worker ${this.workerIdShort} processing ${jobCount} jobs from JobStates message`,
+    // );
     this._updateApiQueue(message);
     this._checkRunningJobs(message);
     this._claimJobs(message);
   }
 
-  onUpdateSetAllJobStates(message: computeQueuesShared.BroadcastJobStates) {
+  onUpdateUpdateASubsetOfJobs(
+    message: computeQueuesShared.BroadcastJobStates,
+  ) {
+    // const jobCount = Object.keys(message.state.jobs || {}).length;
+    // console.log(
+    //   `🎯 Worker ${this.workerIdShort} processing ${jobCount} jobs from JobStateUpdates message`,
+    // );
+    message.isSubset = true;
     this._updateApiQueue(message);
     this._checkRunningJobs(message);
     this._claimJobs(message);
@@ -206,6 +252,20 @@ export class DockerJobQueue {
     Object.keys(jobStates).forEach((jobId) => {
       this.apiQueue[jobId] = jobStates[jobId];
     });
+    if (!message.isSubset) {
+      // Remove jobs from apiQueue that aren't in the message
+      Object.keys(this.apiQueue).forEach((jobId) => {
+        if (!message.state.jobs[jobId]) {
+          delete this.apiQueue[jobId];
+        }
+      });
+    }
+    // Remove finished jobs from the apiQueue
+    Object.entries(this.apiQueue).forEach(([jobId, job]) => {
+      if (job.state === computeQueuesShared.DockerJobState.Finished) {
+        delete this.apiQueue[jobId];
+      }
+    });
   }
 
   _checkRunningJobs(message: computeQueuesShared.BroadcastJobStates) {
@@ -215,9 +275,9 @@ export class DockerJobQueue {
 
     if (config.debug) {
       console.log(
-        `🎳 _checkRunningJobs this.queue=[${
-          Object.keys(this.queue).join(",")
-        }] jobStates=[${Object.keys(jobStates).join(",")}]`,
+        `${this.workerIdShort} 🎳 _checkRunningJobs jobStates=[${
+          Object.keys(jobStates).join(",")
+        }]`,
       );
     }
 
@@ -233,8 +293,8 @@ export class DockerJobQueue {
         // we can only kill the job if we know it's not running on the server
         if (isAllJobs) {
           console.log(
-            `[${this.workerIdShort}] Cannot find local job ${
-              locallyRunningJobId.substring(0, 6)
+            `${this.workerIdShort} Cannot find local job ${
+              getJobColorizedString(locallyRunningJobId)
             } in server state, killing and removing`,
           );
           this._killJobAndIgnore(locallyRunningJobId);
@@ -250,7 +310,9 @@ export class DockerJobQueue {
 
       if (config.debug) {
         console.log(
-          `🎳 _checkRunningJobs new [${locallyRunningJobId}]`,
+          `🎳 _checkRunningJobs new ${
+            getJobColorizedString(locallyRunningJobId)
+          }`,
           serverJobState,
         );
       }
@@ -259,9 +321,9 @@ export class DockerJobQueue {
         case computeQueuesShared.DockerJobState.Finished:
           // FINE it finished elsewhere, how rude
           console.log(
-            `[${this.workerIdShort}] [${
-              locallyRunningJobId.substring(0, 6)
-            }] finished elsehwere, killing here`,
+            `${this.workerIdShort} ${
+              getJobColorizedString(locallyRunningJobId)
+            } finished elsehwere, killing here`,
           );
           this._killJobAndIgnore(locallyRunningJobId);
           break;
@@ -272,9 +334,9 @@ export class DockerJobQueue {
           // the worker gets another update immediately
           // The server will ignore this if it gets multiple times
           console.log(
-            `[${this.workerIdShort}] [${
-              locallyRunningJobId.substring(0, 6)
-            }] server says queued, I say running, sending running again`,
+            `${this.workerIdShort} ${
+              getJobColorizedString(locallyRunningJobId)
+            } server says queued, I say running, sending running again`,
           );
           this.sender({
             type: computeQueuesShared.WebsocketMessageTypeWorkerToServer
@@ -305,15 +367,15 @@ export class DockerJobQueue {
             );
             if (preferredWorker === this.workerId) {
               console.log(
-                `[${this.workerIdShort}] [${
-                  locallyRunningJobId.substring(0, 6)
-                }] running, but elsewhere apparently. We are keeping ours since we are preferred`,
+                `${this.workerIdShort} ${
+                  getJobColorizedString(locallyRunningJobId)
+                } running, but elsewhere apparently. We are keeping ours since we are preferred`,
               );
             } else {
               console.log(
-                `[${this.workerIdShort}] [${
-                  locallyRunningJobId.substring(0, 6)
-                }] running, but elsewhere also. Killing ours because preferred by ${
+                `${this.workerIdShort} ${
+                  getJobColorizedString(locallyRunningJobId)
+                } running, but elsewhere also. Killing ours because preferred by ${
                   preferredWorker.substring(0, 12)
                 }`,
               );
@@ -328,8 +390,8 @@ export class DockerJobQueue {
         serverJobState.state === computeQueuesShared.DockerJobState.Finished
       ) {
         console.log(
-          `[${this.workerIdShort}] Cannot find local job ${
-            locallyRunningJobId.substring(0, 6)
+          `${this.workerIdShort} Cannot find local job ${
+            getJobColorizedString(locallyRunningJobId)
           } in server state, killing and removing`,
         );
         this._killJobAndIgnore(locallyRunningJobId);
@@ -352,7 +414,7 @@ export class DockerJobQueue {
 
     if (config.debug) {
       console.log(
-        `[${this.workerIdShort}] 🎳 _claimJobs this.queue=[${
+        `${this.workerIdShort} 🎳 _claimJobs this.queue=[${
           Object.keys(this.queue).join(",")
         }] jobStates=[${Object.keys(message.state.jobs).join(",")}]`,
       );
@@ -360,7 +422,7 @@ export class DockerJobQueue {
     if (this._isClaimingJobs) {
       if (config.debug) {
         console.log(
-          `[${this.workerIdShort}] [${message.state.jobs.length}] already running, setting flag for another run`,
+          `${this.workerIdShort} [${message.state.jobs.length}] already running, setting flag for another run`,
         );
       }
       this._needsAnotherClaimJobs = true;
@@ -384,7 +446,7 @@ export class DockerJobQueue {
         );
         if (config.debug) {
           console.log(
-            `[${this.workerIdShort}] 🎳 _claimJobs jobsServerSaysAreRunningOnMe=[${
+            `${this.workerIdShort} 🎳 _claimJobs jobsServerSaysAreRunningOnMe=[${
               Object.keys(jobsServerSaysAreRunningOnMe).join(",")
             }]`,
           );
@@ -394,9 +456,9 @@ export class DockerJobQueue {
         for (const runningJobId of jobsServerSaysAreRunningOnMe) {
           if (!this.queue[runningJobId]) {
             console.log(
-              `[${this.workerIdShort}] 🎳 _claimJobs runningJobId=[${
-                runningJobId.substring(0, 6)
-              }] jobsServerSaysAreRunningOnMe, starting`,
+              `${this.workerIdShort} 🎳 _claimJobs runningJobId=${
+                getJobColorizedString(runningJobId)
+              } jobsServerSaysAreRunningOnMe, starting`,
             );
             this._startJob(jobStates[runningJobId]);
           }
@@ -412,11 +474,18 @@ export class DockerJobQueue {
 
         if (config.debug) {
           console.log(
-            `[${this.workerIdShort}] 🎳 _claimJobs queuedJobKeys=[${
+            `${this.workerIdShort} 🎳 _claimJobs queuedJobKeys=[${
               queuedJobKeys.join(",")
             }]`,
           );
         }
+
+        if (queuedJobKeys.length > 0) {
+          console.log(
+            `${this.workerIdShort} sees ${queuedJobKeys.length} queued jobs available to claim`,
+          );
+        }
+
         // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
         // Go through the queued jobs and start them if we have capacity
         // let index = 0;
@@ -444,15 +513,28 @@ export class DockerJobQueue {
                 // skip this job
                 if (config.debug) {
                   console.log(
-                    `[${this.workerIdShort}]  🎳 _claimJobs job=[${
-                      jobKey.substring(0, 6)
-                    }] no gpu capacity but definition.gpu=[${definition.gpu}]`,
+                    `${this.workerIdShort}  🎳 _claimJobs job=${
+                      getJobColorizedString(jobKey)
+                    } no gpu capacity but definition.gpu=[${definition.gpu}]`,
                   );
                 }
                 continue;
               }
             }
+            console.log(
+              `${this.workerIdShort} claiming job ${
+                getJobColorizedString(jobKey)
+              }`,
+            );
             this._startJob(job);
+          } else {
+            console.log(
+              `${this.workerIdShort} cannot claim job ${
+                getJobColorizedString(jobKey)
+              } - no CPU capacity (${
+                Object.keys(this.queue).length
+              }/${this.cpus})`,
+            );
           }
         }
       } while (this._needsAnotherClaimJobs);
@@ -464,15 +546,17 @@ export class DockerJobQueue {
 
   _startJob(jobBlob: computeQueuesShared.DockerJobDefinitionRow): void {
     console.log(
-      `[${this.workerIdShort}] [${jobBlob.hash.substring(0, 6)}] starting...`,
+      `${this.workerIdShort} ${
+        getJobColorizedString(jobBlob.hash)
+      } starting...`,
     );
     const queueBlob = jobBlob.history[0]
       .value as computeQueuesShared.StateChangeValueQueued;
     const definition = queueBlob?.definition;
     if (!definition) {
       console.log(
-        `💥 [${this.workerIdShort}] _startJob but no this.jobs[${
-          jobBlob.hash.substring(0, 6)
+        `${this.workerIdShort} 💥 _startJob but no this.jobs[${
+          getJobColorizedString(jobBlob.hash)
         }]`,
       );
       return;
@@ -518,12 +602,12 @@ export class DockerJobQueue {
     this.sender(runningMessageToServer);
 
     // after this it can all happen async
-    const isKilledLocal: { value: boolean } = {
+    const isKilled: { value: boolean } = {
       value: false,
     };
 
     (async () => {
-      if (isKilledLocal.value) {
+      if (isKilled.value) {
         return;
       }
       let volumes: Volume[];
@@ -536,13 +620,13 @@ export class DockerJobQueue {
         volumes = volumesResult.volumes;
         outputsDir = volumesResult.outputsDir;
       } catch (err) {
-        console.error(`💥 [${this.workerIdShort}]`, err);
+        console.error(`${this.workerIdShort} 💥 `, err);
         // TODO too much code duplication here
         // Delete from our local queue before sending
         // TODO: cache locally before attempting to send
         delete this.queue[jobBlob.hash];
 
-        if (isKilledLocal.value) {
+        if (isKilled.value) {
           return;
         }
 
@@ -595,7 +679,7 @@ export class DockerJobQueue {
             config.maxJobDuration,
           )
           : config.maxJobDuration,
-        isKilled: isKilledLocal,
+        isKilled,
       };
 
       // Not awaiting, it should have already been created, but let's
@@ -605,38 +689,40 @@ export class DockerJobQueue {
       const dockerExecution: DockerJobExecution = dockerJobExecute(
         executionArgs,
       );
+      if (this.queue[jobBlob.hash]) {
+        this.queue[jobBlob.hash].execution = dockerExecution;
+      }
       if (!this.queue[jobBlob.hash]) {
         console.log(
-          `[${this.workerIdShort}] [${
-            jobBlob.hash.substring(0, 6)
-          }] after await jobBlob.hash no job in queue so killing`,
+          `${this.workerIdShort} ${
+            getJobColorizedString(jobBlob.hash)
+          } after await jobBlob.hash no job in queue so killing`,
         );
         // what happened? the job was removed from the queue by someone else?
         try {
           dockerExecution.kill();
         } catch (err) {
           console.log(
-            `[${this.workerIdShort}] [${
-              jobBlob.hash.substring(0, 6)
-            }] ❗ dockerExecution.kill() errored but could be expeced`,
+            `${this.workerIdShort} ${
+              getJobColorizedString(jobBlob.hash)
+            } ❗ dockerExecution.kill() errored but could be expeced`,
             err,
           );
         }
 
         return;
       }
-      this.queue[jobBlob.hash].execution = dockerExecution;
 
       dockerExecution.finish.then(
         async (result: computeQueuesShared.DockerRunResult | undefined) => {
           if (!result) {
             console.log(
-              `[${jobBlob.hash.substring(0, 6)}] no result because killed`,
+              `${getJobColorizedString(jobBlob.hash)} no result because killed`,
             );
             return;
           }
           console.log(
-            `[${jobBlob.hash.substring(0, 6)}] result ${
+            `${getJobColorizedString(jobBlob.hash)} result ${
               JSON.stringify(result).substring(0, 100)
             }`,
           );
@@ -655,23 +741,23 @@ export class DockerJobQueue {
               true,
             ]);
             console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] 💥 StatusCode: ${result.StatusCode}`,
+              `${this.workerIdShort} ${
+                getJobColorizedString(jobBlob.hash)
+              } 💥 StatusCode: ${result.StatusCode}`,
             );
             console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] 💥 stderr: ${result.logs?.join("\n")?.substring(0, 200)}`,
+              `${this.workerIdShort} ${
+                getJobColorizedString(jobBlob.hash)
+              } 💥 stderr: ${result.logs?.join("\n")?.substring(0, 200)}`,
             );
           }
           if (result.error) {
             result.logs.push([`💥 ${result.error}`, Date.now(), true]);
             result.error = "Error";
             console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] 💥 error: ${result.error}`,
+              `${this.workerIdShort} ${
+                getJobColorizedString(jobBlob.hash)
+              } 💥 error: ${result.error}`,
             );
           }
 
@@ -683,9 +769,9 @@ export class DockerJobQueue {
                 .worker !== this.workerId
           ) {
             console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] finished here, but running elsewhere, ignoring job`,
+              `${this.workerIdShort} ${
+                getJobColorizedString(jobBlob.hash)
+              } finished here, but running elsewhere, ignoring job`,
             );
             return;
           }
@@ -695,9 +781,9 @@ export class DockerJobQueue {
                 .worker !== this.workerId
           ) {
             console.log(
-              `[${this.workerIdShort}] [${
-                jobBlob.hash.substring(0, 6)
-              }] finished here, but finished elsewhere, ignoring job`,
+              `${this.workerIdShort} ${
+                getJobColorizedString(jobBlob.hash)
+              } finished here, but finished elsewhere, ignoring job`,
             );
             return;
           }
@@ -728,7 +814,7 @@ export class DockerJobQueue {
             // get outputs
             try {
               // console.log(
-              //   `[${this.workerIdShort}] [${
+              //   `${this.workerIdShort} [${
               //     jobBlob.hash.substring(0, 6)
               //   }] uploading outputs`,
               // );
@@ -741,9 +827,9 @@ export class DockerJobQueue {
               };
             } catch (err) {
               console.log(
-                `[${this.workerIdShort}] [${
-                  jobBlob.hash.substring(0, 6)
-                }] 💥 failed to upload outputs ${err}`,
+                `${this.workerIdShort} ${
+                  getJobColorizedString(jobBlob.hash)
+                } 💥 failed to upload outputs ${err}`,
               );
               resultWithOutputs.logs = resultWithOutputs.logs || [];
               console.error(err);
@@ -778,9 +864,9 @@ export class DockerJobQueue {
         },
       ).catch((err) => {
         console.log(
-          `[${this.workerIdShort}] [${
-            jobBlob.hash.substring(0, 6)
-          }] 💥 errored ${err}`,
+          `${this.workerIdShort} ${
+            getJobColorizedString(jobBlob.hash)
+          } 💥 errored ${err}`,
         );
 
         // Delete from our local queue before sending
@@ -824,18 +910,16 @@ export class DockerJobQueue {
    */
   _killJobAndIgnore(locallyRunningJobId: string) {
     console.log(
-      `[${this.workerIdShort}] Killing job ${
-        locallyRunningJobId.substring(0, 6)
+      `${this.workerIdShort} Killing job ${
+        getJobColorizedString(locallyRunningJobId)
       } (exists in our queue? ${!!this.queue[locallyRunningJobId]})`,
     );
     const localJob = this.queue[locallyRunningJobId];
-    if (localJob.execution) {
+    if (localJob?.execution) {
       localJob.execution.isKilled.value = true;
     }
 
     delete this.queue[locallyRunningJobId];
-    console.log("localJob?.execution?.kill?", localJob?.execution?.kill);
-    console.log("localJob?.execution?", localJob?.execution);
     localJob?.execution?.kill();
   }
 }
