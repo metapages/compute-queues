@@ -41,6 +41,8 @@ import {
 } from "/@/shared/types.ts";
 import {
   getJobColorizedString,
+  getQueueColorizedString,
+  getWorkerColorizedString,
   resolveMostCorrectJob,
 } from "/@/shared/util.ts";
 import { ms } from "ms";
@@ -247,12 +249,9 @@ export class BaseDockerJobQueue {
               this.state.jobs[jobId].state !== state
             ) {
               console.log(
-                `[${
-                  this.address.substring(
-                    0,
-                    6,
-                  )
-                }] 📡 found job [${jobId.substring(0, 6)}] state mismatch`,
+                `${getQueueColorizedString(this.address)} 📡 found job ${
+                  getJobColorizedString(jobId)
+                } state mismatch`,
               );
 
               (async () => {
@@ -270,12 +269,9 @@ export class BaseDockerJobQueue {
                 if (resolvedJob && resolvedJob !== this.state.jobs[jobId]) {
                   this.state.jobs[jobId] = resolvedJob;
                   console.log(
-                    `[${
-                      this.address.substring(
-                        0,
-                        6,
-                      )
-                    }] 📡 recieved job-states-minimal job different, broadcasting...`,
+                    `${
+                      getQueueColorizedString(this.address)
+                    } 📡 recieved job-states-minimal job different, broadcasting...`,
                     jobId,
                   );
                   this.broadcastJobStatesToChannel([jobId]);
@@ -303,7 +299,7 @@ export class BaseDockerJobQueue {
           ) {
             if (!this.state.jobs[jobId]) {
               console.log(
-                `🌘 ...from merge adding jobId=${jobId.substring(0, 6)}`,
+                `🌘 ...from merge adding jobId=${getJobColorizedString(jobId)}`,
               );
               this.state.jobs[jobId] = job;
               jobIds.push(jobId);
@@ -483,7 +479,10 @@ export class BaseDockerJobQueue {
         ? (job.value as StateChangeValueRunning)?.worker?.substring(0, 6)
         : "none",
     }));
-    console.log(`📊 Queue ${this.address} job states:`, jobStates);
+    console.log(
+      `${getQueueColorizedString(this.address)} job states:`,
+      jobStates,
+    );
 
     return {
       jobs: Object.fromEntries(
@@ -568,12 +567,11 @@ export class BaseDockerJobQueue {
     const job = this.state.jobs[jobId] || await this.db.jobGet(jobId);
     if (!job) {
       console.log(
-        `[${
-          this.address.substring(
-            0,
-            6,
-          )
-        }]🗑️ NOT broadcastAndDeleteCachedJob no job [${jobId.substring(0, 6)}]`,
+        `${
+          getQueueColorizedString(this.address)
+        } 🗑️ NOT broadcastAndDeleteCachedJob no job ${
+          getJobColorizedString(jobId)
+        }`,
       );
       return false;
     }
@@ -581,13 +579,10 @@ export class BaseDockerJobQueue {
     const currentState = job.history[job.history.length - 1];
     if (!isJobCacheAllowedToBeDeleted(currentState)) {
       console.log(
-        `[${
-          this.address.substring(
-            0,
-            6,
-          )
-        }] 🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${job.state} [${
-          jobId.substring(0, 6)
+        `${
+          getQueueColorizedString(this.address)
+        } 🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${job.state} [${
+          getJobColorizedString(jobId)
         }]`,
       );
       return false;
@@ -633,12 +628,11 @@ export class BaseDockerJobQueue {
     delete this.state.jobs[jobId];
 
     console.log(
-      `[${this.address.substring(0, 6)}] deletedCachedJob [${
-        jobId.substring(
-          0,
-          6,
+      `${getQueueColorizedString(this.address)} deletedCachedJob ${
+        getJobColorizedString(
+          jobId,
         )
-      }]`,
+      }`,
     );
   }
 
@@ -646,11 +640,8 @@ export class BaseDockerJobQueue {
     await this.db.queueJobRemove(this.address, jobId);
     await this.db.resultCacheRemove(jobId);
     console.log(
-      `[${this.address.substring(0, 6)}] deleted from db: [${
-        jobId.substring(
-          0,
-          6,
-        )
+      `${getQueueColorizedString(this.address)} deleted from db: [${
+        getJobColorizedString(jobId)
       }]`,
     );
   }
@@ -664,13 +655,13 @@ export class BaseDockerJobQueue {
     await this.sendLogsToLocalClients(logs);
   }
 
-  async sendLogsToLocalClients(logs: JobStatusPayload) {
+  sendLogsToLocalClients(logs: JobStatusPayload) {
     // console.log(`⛈️ sendLogsToLocalClients`);
     const messageString = JSON.stringify({
       type: WebsocketMessageTypeServerBroadcast.JobStatusPayload,
       payload: logs,
     });
-    await this.broadcastToLocalClients(messageString);
+    this.broadcastToLocalClients(messageString);
   }
 
   async getStatusFromLocalWorkers(): Promise<
@@ -696,9 +687,9 @@ export class BaseDockerJobQueue {
           ) {
             const status = message.payload as WorkerStatusResponse;
             console.log(
-              `🌘 got status from worker ${status.id.substring(0, 6)} with ${
-                Object.keys(status.queue).length
-              } running jobs`,
+              `🌘 got status from worker ${
+                getWorkerColorizedString(status.id)
+              } with ${Object.keys(status.queue).length} running jobs`,
             );
 
             // Log what jobs the worker reports as running
@@ -709,7 +700,7 @@ export class BaseDockerJobQueue {
               finished: job.finished,
             }));
             console.log(
-              `🌘 Worker ${status.id.substring(0, 6)} running jobs:`,
+              `🌘 Worker ${getWorkerColorizedString(status.id)} running jobs:`,
               runningJobs,
             );
 
@@ -756,7 +747,9 @@ export class BaseDockerJobQueue {
     const allPersistedJobInTheQueue = await this.db.queueGetAll(this.address);
     allPersistedJobInTheQueue.forEach((j) => (this.state.jobs[j.hash] = j));
     console.log(
-      `On startup, from queue [${this.address}] got ${allPersistedJobInTheQueue.length} jobs from the db`,
+      `On startup, from queue ${
+        getQueueColorizedString(this.address)
+      } got ${allPersistedJobInTheQueue.length} jobs from the db`,
     );
     // Why broadcast here? New UserDockerJobQueue instances will get their
     // own state from the db. Probably race conditions, it won't hurt at all
@@ -798,7 +791,9 @@ export class BaseDockerJobQueue {
     clearInterval(this._intervalFullJobSync);
     clearInterval(this._intervalCheckForDuplicateJobsSameSource);
     delete userJobQueues[this.address];
-    console.log(`➖ 🗑️ 🎾 UserDockerJobQueue ${this.address}`);
+    console.log(
+      `➖ 🗑️ 🎾 UserDockerJobQueue ${getQueueColorizedString(this.address)}`,
+    );
   }
 
   // Mark methods that could be overridden as protected
@@ -815,7 +810,7 @@ export class BaseDockerJobQueue {
 
     if (change && change.state) {
       console.log(
-        `[${jobId.substring(0, 6)}] stateChange ${
+        `${getJobColorizedString(jobId)} stateChange ${
           this.state.jobs[jobId] ? this.state!.jobs![jobId]!.state + " " : ""
         }=> ${change.state} (existing job: ${!!this.state.jobs[jobId]})`,
       );
@@ -1062,11 +1057,8 @@ export class BaseDockerJobQueue {
             case DockerJobState.Finished:
               // it can NEVER go from Finished to Running
               console.log(
-                `[${
-                  jobId.substring(
-                    0,
-                    6,
-                  )
+                `${
+                  getJobColorizedString(jobId)
                 }] ignoring request state change ${change.state} !=> ${DockerJobState.Finished}`,
               );
               break;
@@ -1098,11 +1090,8 @@ export class BaseDockerJobQueue {
                 const preferCurrentWorker =
                   preferredWorker === valueRunningCurrent.worker;
                 console.log(
-                  `[${
-                    jobId.substring(
-                      0,
-                      6,
-                    )
+                  `${
+                    getJobColorizedString(jobId)
                   }] Running -> Running, but different worker, assigning to ${
                     preferredWorker.substring(
                       0,
@@ -1118,12 +1107,9 @@ export class BaseDockerJobQueue {
                 }
               } else {
                 console.log(
-                  `[${
-                    jobId.substring(
-                      0,
-                      6,
-                    )
-                  }] 🇨🇭🇨🇭🇨🇭 Running -> Running, same worker, so doing nothing: [${
+                  `${
+                    getJobColorizedString(jobId)
+                  } 🇨🇭🇨🇭🇨🇭 Running -> Running, same worker, so doing nothing: [${
                     valueRunningCurrent.worker.substring(
                       0,
                       6,
@@ -1164,12 +1150,11 @@ export class BaseDockerJobQueue {
           now - stateChange.time > MAX_TIME_FINISHED_JOB_IN_QUEUE
         ) {
           console.log(
-            `[${
-              this.address.substring(
-                0,
-                15,
-              )
-            }] 🪓 removing finished job from queue id=${jobId.substring(0, 6)}`,
+            `${
+              getQueueColorizedString(this.address)
+            }] 🪓 removing finished job from queue ${
+              getJobColorizedString(jobId)
+            }`,
           );
           delete this.state.jobs[jobId];
           sendBroadcast = true;
@@ -1185,12 +1170,9 @@ export class BaseDockerJobQueue {
 
   async connectWorker(connection: { socket: WebSocket }, queue: string) {
     console.log(
-      `[${
-        this.address.substring(
-          0,
-          15,
-        )
-      }] ➕ w 🔌 Connected a worker to queue [${queue.substring(0, 6)}]`,
+      `${
+        getQueueColorizedString(this.address)
+      } ➕ w 🔌 Connected a worker to queue [${queue.substring(0, 6)}]`,
     );
 
     let workerRegistration: WorkerRegistration;
@@ -1421,8 +1403,8 @@ export class BaseDockerJobQueue {
       // Log health every 5 minutes
       if (uptime % 300000 < 5000) { // Every 5 minutes
         console.log(
-          `📊 Worker ${
-            workerRegistration?.id?.substring(0, 6) || "unknown"
+          `${
+            getWorkerColorizedString(workerRegistration?.id || "unknown")
           } health: ` +
             `uptime=${Math.round(uptime / 1000)}s, ` +
             `lastPing=${Math.round(timeSinceLastPing / 1000)}s ago, ` +
@@ -1439,7 +1421,7 @@ export class BaseDockerJobQueue {
 
   async connectClient(connection: { socket: WebSocket }) {
     console.log(
-      `[${this.address.substring(0, 15)}] ➕ c ⏯️ Connected a client`,
+      `${getQueueColorizedString(this.address)} ➕ c ⏯️ Connected a client`,
     );
     this.clients.push(connection.socket);
     connection.socket.addEventListener("close", () => {
@@ -1475,11 +1457,11 @@ export class BaseDockerJobQueue {
         }
         if (!messageString.startsWith("{")) {
           console.log(
-            `[${this.address.substring(0, 15)}] browser message not JSON`,
+            `${getQueueColorizedString(this.address)} browser message not JSON`,
             messageString,
           );
           console.log(
-            `[${this.address.substring(0, 15)}] browser message not JSON`,
+            `${getQueueColorizedString(this.address)} browser message not JSON`,
             typeof messageString,
           );
           // .substr(0, 100)
@@ -1494,7 +1476,7 @@ export class BaseDockerJobQueue {
             if (!change) {
               console.log({
                 error: "Missing payload in message from browser",
-                message: messageString.substr(0, 100),
+                message: messageString.substring(0, 100),
               });
               break;
             }
@@ -1644,7 +1626,7 @@ export class BaseDockerJobQueue {
         } else {
           console.log(
             `🚨 Worker ${
-              worker.registration.id.substring(0, 6)
+              getQueueColorizedString(worker.registration.id)
             } websocket not open (state: ${worker.connection.readyState})`,
           );
           failedWorkers.push(worker.registration.id);
@@ -1652,7 +1634,7 @@ export class BaseDockerJobQueue {
       } catch (err) {
         console.log(
           `🚨 Failed to send message to worker ${
-            worker.registration.id.substring(0, 6)
+            getQueueColorizedString(worker.registration.id)
           }: ${err}`,
         );
         failedWorkers.push(worker.registration.id);
@@ -1663,7 +1645,7 @@ export class BaseDockerJobQueue {
     if (failedWorkers.length > 0) {
       console.log(
         `🚨 Removing ${failedWorkers.length} failed workers: ${
-          failedWorkers.map((id) => id.substring(0, 6)).join(", ")
+          failedWorkers.map((id) => getQueueColorizedString(id)).join(", ")
         }`,
       );
       this.workers.myWorkers = this.workers.myWorkers.filter(
@@ -1813,16 +1795,8 @@ export class BaseDockerJobQueue {
           INTERVAL_UNTIL_WORKERS_ASSUMED_LOST
       ) {
         console.log(
-          `[${
-            this.address.substring(
-              0,
-              15,
-            )
-          }] 🪓 removing worker ${
-            workerId.substring(
-              0,
-              6,
-            )
+          `${getQueueColorizedString(this.address)} 🪓 removing worker ${
+            getWorkerColorizedString(workerId)
           } because it's missing`,
         );
 
@@ -1904,12 +1878,7 @@ export class BaseDockerJobQueue {
         const valueRunning = job.value as StateChangeValueRunning;
         if (!workerIds.has(valueRunning.worker)) {
           console.log(
-            `🚨 [${
-              this.address.substring(
-                0,
-                15,
-              )
-            }] Requeuing job ${
+            `${getQueueColorizedString(this.address)} 🚨  Requeuing job ${
               jobId.substring(
                 0,
                 6,
@@ -1937,7 +1906,9 @@ export class BaseDockerJobQueue {
 
     if (requeuedCount > 0) {
       console.log(
-        `🚨 Requeued ${requeuedCount} jobs from missing workers in queue ${this.address}`,
+        `${
+          getQueueColorizedString(this.address)
+        } 🚨 Requeued ${requeuedCount} jobs from missing workers in queue`,
       );
     }
   }
@@ -2071,7 +2042,9 @@ export class BaseDockerJobQueue {
           // TODO: plot twist: but not if it's in other queues, but this queue
           // should definitely remove it from its own queue
           console.log(
-            `[${jobId}] 🚨 source conflict for ${namespace}: DockerJobFinishedReason.JobReplacedByClient`,
+            `${
+              getJobColorizedString(jobId)
+            } 🚨 source conflict for ${namespace}: DockerJobFinishedReason.JobReplacedByClient`,
           );
           this.stateChange({
             state: DockerJobState.Finished,
