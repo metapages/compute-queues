@@ -3,7 +3,6 @@ import { assert, assertEquals, assertGreaterOrEqual } from "std/assert";
 import { closed, open } from "@korkje/wsi";
 import {
   createNewContainerJobMessage,
-  FakeJobImageSleepPrefix,
   type JobMessagePayload,
 } from "@metapages/compute-queues-shared";
 import {

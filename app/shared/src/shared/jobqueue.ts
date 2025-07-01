@@ -2009,7 +2009,7 @@ export class BaseDockerJobQueue {
           ).time;
           return aJobTime - bJobTime;
         });
-        const jobIdToKeep = sortedJobIds.pop();
+        sortedJobIds.pop(); // only keep the newest job in the namespace
         for (const jobId of sortedJobIds) {
           const job = this.state.jobs[jobId];
           const jobTime = (job.history[0].value as StateChangeValueQueued).time;
