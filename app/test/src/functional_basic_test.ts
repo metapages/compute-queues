@@ -4,7 +4,9 @@ import { closed, open } from "@korkje/wsi";
 import {
   type BroadcastJobStates,
   createNewContainerJobMessage,
+  DockerJobDefinitionRow,
   DockerJobState,
+  getJobColorizedString,
   type StateChangeValueFinished,
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
@@ -42,6 +44,7 @@ Deno.test(
     } = Promise.withResolvers<string>();
 
     let jobSuccessfullySubmitted = false;
+    let finalJobState: DockerJobDefinitionRow | undefined;
     socket.onmessage = (message: MessageEvent) => {
       const messageString = message.data.toString();
       const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(
@@ -64,7 +67,8 @@ Deno.test(
             // console.log("🐸 [test] 📡 job finished", finishedState);
             const lines: string = finishedState.result?.logs?.map(
               (l) => l[0],
-            )[0]!;
+            ).join("")!;
+            finalJobState = jobState;
             resolve(lines);
           }
           break;
@@ -89,9 +93,17 @@ Deno.test(
 
     // console.log(`...awaiting job to finish`);
     const result = await jobCompleteDeferred;
+    const expectedResult =
+      ".\n..\n.dockerenv\nbin\ndev\netc\nhome\ninputs\njob-cache\nlib\nmedia\nmnt\nopt\noutputs\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n";
+    if (result !== expectedResult) {
+      console.log(
+        `${getJobColorizedString(jobId)} unexpected result 💥`,
+        finalJobState,
+      );
+    }
     assertEquals(
       result,
-      ".\n..\n.dockerenv\nbin\ndev\netc\nhome\ninputs\njob-cache\nlib\nmedia\nmnt\nopt\noutputs\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n",
+      expectedResult,
     );
 
     socket.close();

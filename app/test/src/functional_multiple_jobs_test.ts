@@ -42,6 +42,8 @@ Deno.test("submit multiple jobs and get expected results", async () => {
 
   const promises = messages.map((_) => Promise.withResolvers<string>());
 
+  const jobsSuccessfullySubmitted = new Set<string>();
+
   socket.onmessage = (message: MessageEvent) => {
     const messageString = message.data.toString();
     const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(
@@ -54,19 +56,23 @@ Deno.test("submit multiple jobs and get expected results", async () => {
         if (!someJobsPayload) {
           break;
         }
+        // we only care about our jobs
         jobIds.forEach((jobId) => {
           const jobState = someJobsPayload.state.jobs[jobId];
           if (!jobState) {
             return;
           }
+
+          jobsSuccessfullySubmitted.add(jobId);
+
           if (jobState.state === DockerJobState.Finished) {
             const finishedState = jobState.value as StateChangeValueFinished;
             const lines: string = finishedState.result?.logs?.map(
               (l) => l[0],
-            )[0]!;
+            ).join("").trim()!;
             const i = messages.findIndex((m) => m.jobId === jobId);
             if (i >= 0 && lines && !jobIdsFinished.has(jobId)) {
-              promises[i]?.resolve(lines.trim());
+              promises[i]?.resolve(lines);
               // console.log(
               //   `🐸 [test] 📡 job ${jobId} finished ${jobIdsFinished.size} / ${count}`,
               // );
@@ -80,50 +86,16 @@ Deno.test("submit multiple jobs and get expected results", async () => {
         //ignored
     }
   };
-  socket.onmessage = (message: MessageEvent) => {
-    const messageString = message.data.toString();
-    const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(
-      messageString,
-    );
-    switch (possibleMessage.type) {
-      case WebsocketMessageTypeServerBroadcast.JobStates:
-      case WebsocketMessageTypeServerBroadcast.JobStateUpdates: {
-        const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
-        if (!someJobsPayload) {
-          break;
-        }
-        jobIds.forEach((jobId) => {
-          const jobState = someJobsPayload.state.jobs[jobId];
-          if (!jobState) {
-            return;
-          }
-          if (jobState.state === DockerJobState.Finished) {
-            const finishedState = jobState.value as StateChangeValueFinished;
-            const lines: string = finishedState.result?.logs?.map(
-              (l) => l[0],
-            )[0]!;
-            const i = messages.findIndex((m) => m.jobId === jobId);
-            if (i >= 0 && lines && !jobIdsFinished.has(jobId)) {
-              promises[i]?.resolve(lines.trim());
-              console.log(
-                `🐸 [test] 📡 job ${jobId} finished ${jobIdsFinished.size} / ${count}`,
-              );
-              jobIdsFinished.add(jobId);
-            }
-          }
-        });
-        break;
-      }
-      default:
-        //ignored
-    }
-  };
 
   // console.log(`opening the socket to the API server...`)
   await open(socket);
-  // console.log(`...socket opened. Sending messages...`);
-  for (const { message } of messages) {
-    socket.send(JSON.stringify(message));
+
+  while (jobsSuccessfullySubmitted.size < count) {
+    // console.log(`...socket opened. Sending messages...`);
+    for (const { message } of messages) {
+      socket.send(JSON.stringify(message));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
   // console.log(`...awaiting jobs to finish`);
