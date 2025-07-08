@@ -10,8 +10,8 @@
  * removed. The results are cached tho
  */
 
-import { DB } from '/@/shared/db.ts';
-import { resolvePreferredWorker } from '/@/shared/jobtools.ts';
+import { DB } from "/@/shared/db.ts";
+import { resolvePreferredWorker } from "/@/shared/jobtools.ts";
 import {
   type BroadcastJobStates,
   type BroadcastWorkers,
@@ -38,23 +38,20 @@ import {
   type WebsocketMessageWorkerToServer,
   type WorkerRegistration,
   type WorkerStatusResponse,
-} from '/@/shared/types.ts';
+} from "/@/shared/types.ts";
 import {
   getJobColorizedString,
   getQueueColorizedString,
   getWorkerColorizedString,
   resolveMostCorrectJob,
-} from '/@/shared/util.ts';
-import { ms } from 'ms';
-import {
-  createNanoEvents,
-  type Emitter,
-} from 'nanoevents';
-import { delay } from 'std/async/delay';
+} from "/@/shared/util.ts";
+import { ms } from "ms";
+import { createNanoEvents, type Emitter } from "nanoevents";
+import { delay } from "std/async/delay";
 
 import type {
   BroadcastChannelRedis,
-} from '@metapages/deno-redis-broadcastchannel';
+} from "@metapages/deno-redis-broadcastchannel";
 
 let CustomBroadcastChannel: typeof BroadcastChannel = BroadcastChannel;
 
