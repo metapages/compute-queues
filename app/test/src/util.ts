@@ -34,6 +34,7 @@ export const killAllJobs = async (queue: string) => {
   // remove any existing jobs from the queue
   let existingJobIds = await queuedOrRunningJobIds(queue);
   while (existingJobIds.size > 0) {
+    console.log("🐸 [test] 🔥 killing jobs, existingJobIds", existingJobIds);
     for (const exitingJobId of existingJobIds) {
       await killJobOnQueue(queue, exitingJobId);
     }
