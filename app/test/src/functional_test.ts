@@ -1,6 +1,9 @@
-import { assertEquals } from "std/assert";
+import { assertEquals } from 'std/assert';
 
-import { closed, open } from "@korkje/wsi";
+import {
+  closed,
+  open,
+} from '@korkje/wsi';
 import {
   type BroadcastJobStates,
   createNewContainerJobMessage,
@@ -8,9 +11,9 @@ import {
   type StateChangeValueFinished,
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
-} from "@metapages/compute-queues-shared";
+} from '@metapages/compute-queues-shared';
 
-import { killAllJobs } from "./util.ts";
+import { killAllJobs } from './util.ts';
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -61,7 +64,7 @@ Deno.test(
           jobSuccessfullySubmitted = true;
           if (jobState.state === DockerJobState.Finished) {
             const finishedState = jobState.value as StateChangeValueFinished;
-            console.log("🐸 [test] 📡 job finished", finishedState);
+            // console.log("🐸 [test] 📡 job finished", finishedState);
             const lines: string = finishedState.result?.logs?.map(
               (l) => l[0],
             )[0]!;

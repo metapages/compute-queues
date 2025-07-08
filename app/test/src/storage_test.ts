@@ -1,6 +1,12 @@
-import { assert, assertEquals } from "std/assert";
+import {
+  assert,
+  assertEquals,
+} from 'std/assert';
 
-import { closed, open } from "@korkje/wsi";
+import {
+  closed,
+  open,
+} from '@korkje/wsi';
 
 import {
   type BroadcastJobStates,
@@ -10,13 +16,13 @@ import {
   type StateChangeValueFinished,
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
-} from "../../shared/src/mod.ts";
+} from '../../shared/src/mod.ts';
 import {
   createNewContainerJobMessage,
   fileToDataref,
   hashFileOnDisk,
-} from "../../shared/src/shared/jobtools.ts";
-import { killAllJobs } from "./util.ts";
+} from '../../shared/src/shared/jobtools.ts';
+import { killAllJobs } from './util.ts';
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -345,3 +351,4 @@ Deno.test("S3 retry logic handles connection errors", async () => {
     console.log("ℹ️ S3 may not be available in test environment");
   }
 });
+
