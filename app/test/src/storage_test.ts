@@ -16,6 +16,7 @@ import {
   fileToDataref,
   hashFileOnDisk,
 } from "../../shared/src/shared/jobtools.ts";
+import { killAllJobs } from "./util.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -186,6 +187,7 @@ Deno.test("Test exists API", async () => {
 Deno.test(
   "Run a job that uploads input files and validates the input",
   async () => {
+    await killAllJobs(QUEUE_ID);
     // console.log(
     //   "Starting test: 'Run a job that uploads input files and validates the input'",
     // );
@@ -256,6 +258,7 @@ Deno.test(
 Deno.test(
   "Run a job that creates output files, downloads and checks the file",
   async () => {
+    await killAllJobs(QUEUE_ID);
     // console.log(
     //   "Starting test: 'Run a job that creates output files, downloads and checks the file'",
     // );

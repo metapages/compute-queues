@@ -39,12 +39,19 @@ import {
   type WorkerRegistration,
   type WorkerStatusResponse,
 } from "/@/shared/types.ts";
-import { resolveMostCorrectJob } from "/@/shared/util.ts";
+import {
+  getJobColorizedString,
+  getQueueColorizedString,
+  getWorkerColorizedString,
+  resolveMostCorrectJob,
+} from "/@/shared/util.ts";
 import { ms } from "ms";
 import { createNanoEvents, type Emitter } from "nanoevents";
 import { delay } from "std/async/delay";
 
-import type { BroadcastChannelRedis } from "@metapages/deno-redis-broadcastchannel";
+import type {
+  BroadcastChannelRedis,
+} from "@metapages/deno-redis-broadcastchannel";
 
 let CustomBroadcastChannel: typeof BroadcastChannel = BroadcastChannel;
 
@@ -67,6 +74,7 @@ const INTERVAL_CHECK_FOR_DUPLICATE_JOBS_SAME_SOURCE = ms(
   "10 seconds",
 ) as number;
 
+//https://github.com/metapages/compute-queues/issues/242
 // When multiple jobs with the same namespace exist we delete all except the newest
 // but if we have a long running valuable job we don't want to delete it
 // and the churn on a new metapage as the inputs arrive can resubmit a new job
@@ -76,23 +84,23 @@ const INTERVAL_CHECK_FOR_DUPLICATE_JOBS_SAME_SOURCE = ms(
 // (and we need to show the job age)
 // returns the setInterval to check again
 // let NAMESPACE_MULTIPLE_JOB_DELETION_PAUSE = ms("10 seconds") as number;
-const getDeletionDelayForNamespaceSupersededJob = (
-  jobAge: number,
-): number => {
-  // const isTesting = Deno.env.get("TESTING") === "true";
-  // if (isTesting && Deno.env.get(NAMESPACE_MULTIPLE_JOB_REPLACEMENT_THRESHOLD)) {
-  //   NAMESPACE_MULTIPLE_JOB_REPLACEMENT_THRESHOLD = ms(Deno.env.get(NAMESPACE_MULTIPLE_JOB_REPLACEMENT_THRESHOLD)) as number;
-  // }
+// const getDeletionDelayForNamespaceSupersededJob = (
+//   jobAge: number,
+// ): number => {
+//   // const isTesting = Deno.env.get("TESTING") === "true";
+//   // if (isTesting && Deno.env.get(NAMESPACE_MULTIPLE_JOB_REPLACEMENT_THRESHOLD)) {
+//   //   NAMESPACE_MULTIPLE_JOB_REPLACEMENT_THRESHOLD = ms(Deno.env.get(NAMESPACE_MULTIPLE_JOB_REPLACEMENT_THRESHOLD)) as number;
+//   // }
 
-  // if it's older than a minute let's slow down killing it for the replacement
-  if (jobAge > 60000) {
-    // we can wait 8s bit before killing it
-    return 8000;
-  } else if (jobAge > 20000) { //if it's older than 20s
-    return 4000; // wait 4 seconds
-  }
-  return 0; // default:kill it immediately
-};
+//   // if it's older than a minute let's slow down killing it for the replacement
+//   if (jobAge > 60000) {
+//     // we can wait 8s bit before killing it
+//     return 8000;
+//   } else if (jobAge > 20000) { //if it's older than 20s
+//     return 4000; // wait 4 seconds
+//   }
+//   return 0; // default:kill it immediately
+// };
 
 // const replacementThreshold = parseInt(
 //   Deno.env.get("JOB_REPLACEMENT_THRESHOLD_MS") || "60000",
@@ -124,6 +132,12 @@ type BroadcastChannelDeleteCachedJob = {
   jobId: string;
 };
 
+// https://github.com/metapages/compute-queues/issues/242
+type BroadcastChannelRemoveJob = {
+  jobId: string;
+  namespace?: string;
+};
+
 type BroadcastChannelMessageType =
   | "job-states"
   | "job-states-minimal"
@@ -131,7 +145,8 @@ type BroadcastChannelMessageType =
   | "workers"
   | "status-request"
   | "status-response"
-  | "delete-cached-job";
+  | "delete-cached-job"
+  | "remove-job";
 type BroadcastChannelMessage = {
   type: BroadcastChannelMessageType;
   value:
@@ -141,6 +156,8 @@ type BroadcastChannelMessage = {
     | BroadcastChannelStatusRequest
     | BroadcastChannelStatusResponse
     | BroadcastChannelDeleteCachedJob
+    // https://github.com/metapages/compute-queues/issues/242
+    | BroadcastChannelRemoveJob
     | JobStatusPayload;
 };
 
@@ -180,6 +197,7 @@ export class BaseDockerJobQueue {
   protected readonly workers: CollectedWorkersRegistration;
   protected readonly clients: WebSocket[];
   protected readonly address: string;
+  protected readonly addressShortString: string;
   protected readonly serverId: string;
   protected readonly dataDirectory: string;
   protected readonly channel: BroadcastChannel;
@@ -191,6 +209,7 @@ export class BaseDockerJobQueue {
   protected _intervalWorkerBroadcast: number | undefined;
   protected _intervalJobsStatesMinimalBroadcast: number | undefined;
   protected _intervalJobsBroadcast: number | undefined;
+  protected _intervalFullJobSync: number | undefined;
   protected _intervalCheckForDuplicateJobsSameSource: number | undefined;
   protected _intervalRemoveOldFinishedJobsFromQueue: number | undefined;
 
@@ -201,9 +220,10 @@ export class BaseDockerJobQueue {
     debug?: boolean;
   }) {
     const { serverId, address, dataDirectory, debug } = opts;
-    console.log(`➕ 🎾 UserDockerJobQueue ${address}`);
 
     this.address = address;
+    this.addressShortString = getQueueColorizedString(address);
+    console.log(`${this.addressShortString} ➕ 🎾 UserDockerJobQueue`);
     this.serverId = serverId;
     this.dataDirectory = dataDirectory || "/tmp/worker-metaframe";
     // console.log("⚠️💥 HARDCODING debug=true, REMOVE ME BEFORE MERGE", debug);
@@ -222,8 +242,8 @@ export class BaseDockerJobQueue {
     // When a new message comes in from other instances, add it
     this.channel.onmessage = (event: MessageEvent) => {
       const payload: BroadcastChannelMessage = event.data;
-      let jobStates: JobStates | undefined;
-      let jobs: JobsStateMap | undefined;
+      let jobStatesFromBroadcast: JobStates | undefined;
+      let jobsFromBroadcast: JobsStateMap | undefined;
 
       // console.log(`🌘 recieved broadcast message ${payload.type}`, payload)
       switch (payload.type) {
@@ -243,12 +263,9 @@ export class BaseDockerJobQueue {
               this.state.jobs[jobId].state !== state
             ) {
               console.log(
-                `[${
-                  this.address.substring(
-                    0,
-                    6,
-                  )
-                }] 📡 found job [${jobId.substring(0, 6)}] state mismatch`,
+                `${this.addressShortString} 📡 found job ${
+                  getJobColorizedString(jobId)
+                } state mismatch`,
               );
 
               (async () => {
@@ -266,12 +283,7 @@ export class BaseDockerJobQueue {
                 if (resolvedJob && resolvedJob !== this.state.jobs[jobId]) {
                   this.state.jobs[jobId] = resolvedJob;
                   console.log(
-                    `[${
-                      this.address.substring(
-                        0,
-                        6,
-                      )
-                    }] 📡 recieved job-states-minimal job different, broadcasting...`,
+                    `${this.addressShortString} 📡 recieved job-states-minimal job different, broadcasting...`,
                     jobId,
                   );
                   this.broadcastJobStatesToChannel([jobId]);
@@ -285,25 +297,34 @@ export class BaseDockerJobQueue {
         case "job-states": {
           // console.log('🌘job-state from broadcast, got to resolve and merge...');
           // get the updated job
-          jobStates = payload.value as JobStates;
-          jobs = jobStates?.jobs;
-          if (!jobs) {
+          jobStatesFromBroadcast = payload.value as JobStates;
+          jobsFromBroadcast = jobStatesFromBroadcast?.jobs;
+          if (!jobsFromBroadcast) {
             break;
           }
 
           const jobIds: string[] = [];
           for (
             const [jobId, job] of Object.entries<DockerJobDefinitionRow>(
-              jobs,
+              jobsFromBroadcast,
             )
           ) {
             if (!this.state.jobs[jobId]) {
               console.log(
-                `🌘 ...from merge adding jobId=${jobId.substring(0, 6)}`,
+                `🌘 ...from merge adding jobId=${getJobColorizedString(jobId)}`,
               );
               this.state.jobs[jobId] = job;
               jobIds.push(jobId);
             } else {
+              if (
+                job.state === DockerJobState.Finished &&
+                this.state.jobs[jobId]?.state === job.state
+              ) {
+                // if the job is finished, and the state is finished, we don't need to resolve
+                // because the job is already finished
+                continue;
+              }
+
               const resolvedJob = resolveMostCorrectJob(
                 this.state.jobs[jobId],
                 job,
@@ -349,6 +370,9 @@ export class BaseDockerJobQueue {
 
         case "status-request": {
           (async () => {
+            console.log(
+              `🌘 Received status request, collecting local worker status...`,
+            );
             const localWorkersResponse = await this.getStatusFromLocalWorkers();
             const response: BroadcastChannelStatusResponse = {
               id: this.serverId,
@@ -367,6 +391,11 @@ export class BaseDockerJobQueue {
                 ),
               ),
             };
+            console.log(
+              `🌘 Sending status response: ${
+                Object.keys(localWorkersResponse).length
+              } workers, ${Object.keys(response.jobs).length} jobs`,
+            );
             this.channel.postMessage({
               type: "status-response",
               value: response,
@@ -382,6 +411,15 @@ export class BaseDockerJobQueue {
           // No need to delete from the db, the server that triggered this
           // broadcast has already done that, we just need to remove it from
           // our cache
+          break;
+        }
+
+        // https://github.com/metapages/compute-queues/issues/242
+        case "remove-job": {
+          // const jobId = (payload.value as BroadcastChannelRemoveJob).jobId;
+          // const namespace =
+          //   (payload.value as BroadcastChannelRemoveJob).namespace;
+          // this.removeJobAndBroadcast(jobId, namespace);
           break;
         }
 
@@ -404,6 +442,15 @@ export class BaseDockerJobQueue {
       }
     };
 
+    // Add broadcast channel error handling
+    this.channel.addEventListener("error", (event) => {
+      console.error(`🚨 Broadcast channel error:`, event);
+    });
+
+    this.channel.addEventListener("close", () => {
+      console.log(`🚨 Broadcast channel closed`);
+    });
+
     this._intervalWorkerBroadcast = setInterval(() => {
       this.broadcastWorkersToChannel();
       this.requeueJobsFromMissingWorkers();
@@ -417,6 +464,15 @@ export class BaseDockerJobQueue {
       this.broadcastJobStatesToWebsockets();
       this.broadcastJobStatesToChannel();
     }, INTERVAL_JOBS_BROADCAST);
+
+    // Add periodic full sync to ensure workers don't miss updates
+    this._intervalFullJobSync = setInterval(() => {
+      // Force a full job state broadcast every 2 minutes to catch any missed updates
+      this.broadcastJobStatesToWebsockets(undefined, true);
+      console.log(
+        `📡 Periodic full job state sync sent to ${this.workers.myWorkers.length} workers`,
+      );
+    }, ms("2 minutes") as number);
 
     this._intervalCheckForDuplicateJobsSameSource = setInterval(() => {
       this.checkForSourceConflicts();
@@ -435,6 +491,29 @@ export class BaseDockerJobQueue {
     const remoteServersResponse = await this.getStatusFromRemoteWorkers();
     const localWorkersResponse = await this.getStatusFromLocalWorkers();
 
+    const jobCount = Object.keys(this.state.jobs).length;
+    const localWorkerCount = this.workers.myWorkers.length;
+    const otherWorkerCount =
+      Array.from(this.workers.otherWorkers.values()).flat().length;
+    const clientCount = this.clients.length;
+
+    console.log(
+      `📊 Queue ${this.address} status: ${jobCount} jobs, ${localWorkerCount} local workers, ${otherWorkerCount} other workers, ${clientCount} clients`,
+    );
+
+    // Log job states for debugging
+    const jobStates = Object.entries(this.state.jobs).map(([id, job]) => ({
+      id: id.substring(0, 6),
+      state: job.state,
+      worker: job.state === DockerJobState.Running
+        ? (job.value as StateChangeValueRunning)?.worker?.substring(0, 6)
+        : "none",
+    }));
+    console.log(
+      `${this.addressShortString} job states:`,
+      jobStates,
+    );
+
     return {
       jobs: Object.fromEntries(
         Object.entries<DockerJobDefinitionRow>(this.state.jobs).map(
@@ -452,6 +531,15 @@ export class BaseDockerJobQueue {
       otherServers: remoteServersResponse,
       localWorkers: localWorkersResponse,
       clientCount: this.clients.length,
+      queueInfo: {
+        address: this.address,
+        serverId: this.serverId,
+        jobCount,
+        localWorkerCount,
+        otherWorkerCount,
+        clientCount,
+        jobStates,
+      },
     };
   }
 
@@ -465,12 +553,18 @@ export class BaseDockerJobQueue {
     // Then return the response
 
     const result: Record<string, BroadcastChannelStatusResponse> = {};
+
     // First attach a listener to the broadcast channel
     const unbindChannelListener = this.channelEmitter.on(
       "message",
       (payload: BroadcastChannelMessage) => {
         if (payload.type === "status-response") {
           const status = payload.value as BroadcastChannelStatusResponse;
+          console.log(
+            `🌘 got remote status from server ${status.id} with ${
+              Object.keys(status.workers).length
+            } workers and ${Object.keys(status.jobs).length} jobs`,
+          );
           result[status.id] = status;
           //   for (const [id, worker] of Object.entries(status.workers)) {
           //     result[id] = worker;
@@ -488,6 +582,9 @@ export class BaseDockerJobQueue {
     // Then remove the listener
     unbindChannelListener();
 
+    console.log(
+      `🌘 Collected status from ${Object.keys(result).length} remote servers`,
+    );
     return result;
   }
 
@@ -500,12 +597,9 @@ export class BaseDockerJobQueue {
     const job = this.state.jobs[jobId] || await this.db.jobGet(jobId);
     if (!job) {
       console.log(
-        `[${
-          this.address.substring(
-            0,
-            6,
-          )
-        }]🗑️ NOT broadcastAndDeleteCachedJob no job [${jobId.substring(0, 6)}]`,
+        `${this.addressShortString} 🗑️ NOT broadcastAndDeleteCachedJob no job ${
+          getJobColorizedString(jobId)
+        }`,
       );
       return false;
     }
@@ -513,13 +607,8 @@ export class BaseDockerJobQueue {
     const currentState = job.history[job.history.length - 1];
     if (!isJobCacheAllowedToBeDeleted(currentState)) {
       console.log(
-        `[${
-          this.address.substring(
-            0,
-            6,
-          )
-        }] 🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${job.state} [${
-          jobId.substring(0, 6)
+        `${this.addressShortString} 🗑️ NOT broadcastAndDeleteCachedJob because it is in state ${job.state} [${
+          getJobColorizedString(jobId)
         }]`,
       );
       return false;
@@ -542,7 +631,10 @@ export class BaseDockerJobQueue {
     );
 
     await this.deleteJobFromDb(jobId).catch((err) => {
-      console.log(`💥💥💥 ERROR deleting job: ${err}`, jobId);
+      console.log(
+        `💥💥💥 ERROR deleting job: ${err}`,
+        getJobColorizedString(jobId),
+      );
     });
     this.deleteCachedJob(jobId);
 
@@ -562,24 +654,50 @@ export class BaseDockerJobQueue {
     delete this.state.jobs[jobId];
 
     console.log(
-      `[${this.address.substring(0, 6)}] deletedCachedJob [${
-        jobId.substring(
-          0,
-          6,
+      `${this.addressShortString} deletedCachedJob ${
+        getJobColorizedString(
+          jobId,
         )
-      }]`,
+      }`,
     );
   }
+
+  /**
+   * Does not automatically delete the job
+   * from all queues/namespaces
+   * @param jobId
+   */
+  // removeJobAndBroadcast(jobId: string, namespace?: string) {
+  //   // https://github.com/metapages/compute-queues/issues/242
+  //   return;
+  //   // delete this.state.jobs[jobId];
+  //   // namespace = namespace || DefaultNamespace;
+  //   // const namespaces = await this.db.queueJobGetNamespaces(this.address, jobId);
+  //   // if (namespaces.length > 1) {
+  //   //   // keep the job
+  //   // }
+  //   // for (const ns of namespaces) {
+  //   //   // this.channel.postMessage({
+  //   //   //   type: "remove-job",
+  //   //   //   value: { jobId, namespace: ns } as BroadcastChannelRemoveJob,
+  //   //   // } as BroadcastChannelMessage);
+  //   // }
+  //   // console.log(
+  //   //   `[${this.address.substring(0, 6)}] deletedCachedJob [${
+  //   //     jobId.substring(
+  //   //       0,
+  //   //       6,
+  //   //     )
+  //   //   }]`,
+  //   // );
+  // }
 
   protected async deleteJobFromDb(jobId: string) {
     await this.db.queueJobRemove(this.address, jobId);
     await this.db.resultCacheRemove(jobId);
     console.log(
-      `[${this.address.substring(0, 6)}] deleted from db: [${
-        jobId.substring(
-          0,
-          6,
-        )
+      `${this.addressShortString} deleted from db: [${
+        getJobColorizedString(jobId)
       }]`,
     );
   }
@@ -593,13 +711,13 @@ export class BaseDockerJobQueue {
     await this.sendLogsToLocalClients(logs);
   }
 
-  async sendLogsToLocalClients(logs: JobStatusPayload) {
+  sendLogsToLocalClients(logs: JobStatusPayload) {
     // console.log(`⛈️ sendLogsToLocalClients`);
     const messageString = JSON.stringify({
       type: WebsocketMessageTypeServerBroadcast.JobStatusPayload,
       payload: logs,
     });
-    await this.broadcastToLocalClients(messageString);
+    this.broadcastToLocalClients(messageString);
   }
 
   async getStatusFromLocalWorkers(): Promise<
@@ -625,8 +743,23 @@ export class BaseDockerJobQueue {
           ) {
             const status = message.payload as WorkerStatusResponse;
             console.log(
-              `🌘 got status from worker ${status.id.substring(0, 6)}`,
+              `🌘 got status from worker ${
+                getWorkerColorizedString(status.id)
+              } with ${Object.keys(status.queue).length} running jobs`,
             );
+
+            // Log what jobs the worker reports as running
+            const runningJobs = Object.entries(status.queue).map((
+              [jobId, job],
+            ) => ({
+              jobId: jobId.substring(0, 6),
+              finished: job.finished,
+            }));
+            console.log(
+              `🌘 Worker ${getWorkerColorizedString(status.id)} running jobs:`,
+              runningJobs,
+            );
+
             result[status.id] = status;
           }
         },
@@ -651,6 +784,9 @@ export class BaseDockerJobQueue {
       eventUnbinds.pop()!();
     }
 
+    console.log(
+      `🌘 Collected status from ${Object.keys(result).length} local workers`,
+    );
     return result;
   }
 
@@ -667,7 +803,7 @@ export class BaseDockerJobQueue {
     const allPersistedJobInTheQueue = await this.db.queueGetAll(this.address);
     allPersistedJobInTheQueue.forEach((j) => (this.state.jobs[j.hash] = j));
     console.log(
-      `On startup, from queue [${this.address}] got ${allPersistedJobInTheQueue.length} jobs from the db`,
+      `${this.addressShortString} On startup got ${allPersistedJobInTheQueue.length} jobs from the db`,
     );
     // Why broadcast here? New UserDockerJobQueue instances will get their
     // own state from the db. Probably race conditions, it won't hurt at all
@@ -706,9 +842,12 @@ export class BaseDockerJobQueue {
     clearInterval(this._intervalWorkerBroadcast);
     clearInterval(this._intervalJobsStatesMinimalBroadcast);
     clearInterval(this._intervalJobsBroadcast);
+    clearInterval(this._intervalFullJobSync);
     clearInterval(this._intervalCheckForDuplicateJobsSameSource);
     delete userJobQueues[this.address];
-    console.log(`➖ 🗑️ 🎾 UserDockerJobQueue ${this.address}`);
+    console.log(
+      `${this.addressShortString} ➖ 🗑️ 🎾 UserDockerJobQueue `,
+    );
   }
 
   // Mark methods that could be overridden as protected
@@ -725,7 +864,7 @@ export class BaseDockerJobQueue {
 
     if (change && change.state) {
       console.log(
-        `[${jobId.substring(0, 6)}] stateChange ${
+        `${getJobColorizedString(jobId)} stateChange ${
           this.state.jobs[jobId] ? this.state!.jobs![jobId]!.state + " " : ""
         }=> ${change.state} (existing job: ${!!this.state.jobs[jobId]})`,
       );
@@ -800,8 +939,8 @@ export class BaseDockerJobQueue {
     };
 
     const broadcastCurrentStateBecauseIDoubtStateIsSynced = async () => {
-      this.broadcastJobStatesToChannel([jobId]);
       await this.broadcastJobStatesToWebsockets([jobId]);
+      this.broadcastJobStatesToChannel([jobId]);
     };
 
     try {
@@ -813,12 +952,12 @@ export class BaseDockerJobQueue {
             case DockerJobState.Queued:
             case DockerJobState.ReQueued:
             case DockerJobState.Running:
-              console.log(`[${jobId.substring(0, 6)}] Job finished`);
+              console.log(`${getJobColorizedString(jobId)} Job finished`);
               await updateState();
               break;
             case DockerJobState.Finished:
-              console.log(`[${jobId.substring(0, 6)}] already finished?`);
-              await broadcastCurrentStateBecauseIDoubtStateIsSynced();
+              console.log(`${getJobColorizedString(jobId)} already finished?`);
+              // await broadcastCurrentStateBecauseIDoubtStateIsSynced();
               break;
           }
           break;
@@ -829,29 +968,25 @@ export class BaseDockerJobQueue {
           switch (this.state.jobs[jobId].state) {
             case DockerJobState.Queued:
               console.log(
-                `[${
-                  jobId.substring(
-                    0,
-                    6,
-                  )
-                }] Queued -> ReQueued (this means the worker went missing)`,
+                `${
+                  getJobColorizedString(jobId)
+                } Queued -> ReQueued (this means the worker went missing)`,
               );
               await updateState();
               break;
             case DockerJobState.ReQueued: {
-              console.log(`[${jobId.substring(0, 6)}] ReQueued -> ReQueued`);
+              console.log(
+                `${getJobColorizedString(jobId)} ReQueued -> ReQueued`,
+              );
               const currentStateReQueued = this.state.jobs[jobId]
                 .value as StateChangeValueQueued;
               const incomingStateReQueued = change
                 .value as StateChangeValueQueued;
               if (incomingStateReQueued.time < currentStateReQueued.time) {
                 console.log(
-                  `[${
-                    jobId.substring(
-                      0,
-                      6,
-                    )
-                  }] REPLACING! because incoming time is earlier ReQueued -> ReQueued`,
+                  `${
+                    getJobColorizedString(jobId)
+                  } REPLACING! because incoming time is earlier ReQueued -> ReQueued`,
                 );
                 // update via replacement
                 await updateState(true);
@@ -860,24 +995,18 @@ export class BaseDockerJobQueue {
             }
             case DockerJobState.Running: {
               console.log(
-                `[${
-                  jobId.substring(
-                    0,
-                    6,
-                  )
-                }] Running -> ReQueued? ❗❗ I hope this is because the worker went missing ❗`,
+                `${
+                  getJobColorizedString(jobId)
+                } Running -> ReQueued? ❗❗ I hope this is because the worker went missing ❗`,
               );
               await updateState(true);
               break;
             }
             case DockerJobState.Finished: {
               console.log(
-                `[${
-                  jobId.substring(
-                    0,
-                    6,
-                  )
-                }] Finished -> ReQueued? What ❓❓❓. Rebroadcasting state`,
+                `${
+                  getJobColorizedString(jobId)
+                } Finished -> ReQueued? What ❓❓❓. Rebroadcasting state`,
               );
               await broadcastCurrentStateBecauseIDoubtStateIsSynced();
               break;
@@ -897,7 +1026,7 @@ export class BaseDockerJobQueue {
               case DockerJobState.Queued:
               case DockerJobState.Running:
                 console.log(
-                  `[${jobId.substring(0, 6)}] Queued -> ${
+                  `${getJobColorizedString(jobId)} Queued -> ${
                     this.state.jobs[jobId].state
                   } ignoring queue request, job already queued or running`,
                 );
@@ -918,17 +1047,14 @@ export class BaseDockerJobQueue {
                 switch (previousFinishedState.reason) {
                   case DockerJobFinishedReason.Cancelled:
                     console.log(
-                      `[${jobId.substring(0, 6)}] restarting from user`,
+                      `${getJobColorizedString(jobId)} restarting from user`,
                     );
                     await updateState(true);
                     break;
                   case DockerJobFinishedReason.WorkerLost:
                     console.log(
                       `!!!! BAD LOGIC ${
-                        jobId.substring(
-                          0,
-                          6,
-                        )
+                        getJobColorizedString(jobId)
                       } restarting from worker lost`,
                     );
                     await updateState();
@@ -937,12 +1063,9 @@ export class BaseDockerJobQueue {
                   case DockerJobFinishedReason.Error:
                   case DockerJobFinishedReason.TimedOut:
                     console.log(
-                      `[${
-                        jobId.substring(
-                          0,
-                          6,
-                        )
-                      }] ignoring Queued request current state=[${
+                      `${
+                        getJobColorizedString(jobId)
+                      } ignoring Queued request current state=[${
                         this.state.jobs[jobId].state
                       }] reason=[${previousFinishedState.reason}], job finished and not restartable`,
                     );
@@ -956,12 +1079,9 @@ export class BaseDockerJobQueue {
           } else {
             // TODO: check for finished jobs in the db
             console.log(
-              `[${
-                jobId.substring(
-                  0,
-                  6,
-                )
-              }] adding new job row to local state as Queued`,
+              `${
+                getJobColorizedString(jobId)
+              } adding new job row to local state as Queued`,
             );
 
             jobRow = {
@@ -978,27 +1098,26 @@ export class BaseDockerJobQueue {
 
           break;
         }
+
         // incoming state
-        case DockerJobState.Running:
+        case DockerJobState.Running: {
           console.log(
-            `[${jobId.substring(0, 6)}] Job Running, previous job ${
+            `${getJobColorizedString(jobId)} Job Running, previous job ${
               this.state.jobs[jobId].state
             }`,
           );
 
           // previous state
           switch (this.state.jobs[jobId].state) {
-            case DockerJobState.Finished:
+            case DockerJobState.Finished: {
               // it can NEVER go from Finished to Running
               console.log(
-                `[${
-                  jobId.substring(
-                    0,
-                    6,
-                  )
+                `${
+                  getJobColorizedString(jobId)
                 }] ignoring request state change ${change.state} !=> ${DockerJobState.Finished}`,
               );
               break;
+            }
             // yeah running can be set again, e.g. updated the value to include sub-states
             case DockerJobState.Running: {
               // ok some other worker, or the same one, is saying it's running again
@@ -1027,11 +1146,8 @@ export class BaseDockerJobQueue {
                 const preferCurrentWorker =
                   preferredWorker === valueRunningCurrent.worker;
                 console.log(
-                  `[${
-                    jobId.substring(
-                      0,
-                      6,
-                    )
+                  `${
+                    getJobColorizedString(jobId)
                   }] Running -> Running, but different worker, assigning to ${
                     preferredWorker.substring(
                       0,
@@ -1047,12 +1163,9 @@ export class BaseDockerJobQueue {
                 }
               } else {
                 console.log(
-                  `[${
-                    jobId.substring(
-                      0,
-                      6,
-                    )
-                  }] 🇨🇭🇨🇭🇨🇭 Running -> Running, same worker, so doing nothing: [${
+                  `${
+                    getJobColorizedString(jobId)
+                  } 🇨🇭🇨🇭🇨🇭 Running -> Running, same worker, so doing nothing: [${
                     valueRunningCurrent.worker.substring(
                       0,
                       6,
@@ -1064,12 +1177,14 @@ export class BaseDockerJobQueue {
               break;
             }
             case DockerJobState.Queued:
-            case DockerJobState.ReQueued:
+            case DockerJobState.ReQueued: {
               // queued to running is great
               await updateState();
               break;
+            }
           }
           break;
+        }
       }
     } catch (err) {
       console.log(`💥💥💥 ERROR ${err}`, (err as Error).stack);
@@ -1093,12 +1208,9 @@ export class BaseDockerJobQueue {
           now - stateChange.time > MAX_TIME_FINISHED_JOB_IN_QUEUE
         ) {
           console.log(
-            `[${
-              this.address.substring(
-                0,
-                15,
-              )
-            }] 🪓 removing finished job from queue id=${jobId.substring(0, 6)}`,
+            `${this.addressShortString}] 🪓 removing finished job from queue ${
+              getJobColorizedString(jobId)
+            }`,
           );
           delete this.state.jobs[jobId];
           sendBroadcast = true;
@@ -1114,21 +1226,22 @@ export class BaseDockerJobQueue {
 
   async connectWorker(connection: { socket: WebSocket }, queue: string) {
     console.log(
-      `[${
-        this.address.substring(
-          0,
-          15,
-        )
-      }] ➕ w 🔌 Connected a worker to queue [${queue.substring(0, 6)}]`,
+      `${this.addressShortString} ➕ w 🔌 Connected a worker to queue [${
+        queue.substring(0, 6)
+      }]`,
     );
 
     let workerRegistration: WorkerRegistration;
     const emitter = createNanoEvents<NanoEventWorkerMessageEvents>();
+    let lastPingTime = Date.now();
+    const messageCount = 0;
+    const connectionStartTime = Date.now();
 
     connection.socket.addEventListener("close", () => {
       if (!this.address) {
         return;
       }
+      const uptime = Date.now() - connectionStartTime;
       console.log(
         `[${this.address.substring(0, 15)}] [${
           queue.substring(
@@ -1139,7 +1252,9 @@ export class BaseDockerJobQueue {
           workerRegistration
             ? workerRegistration.id.substring(0, 6)
             : "unknown worker"
-        }`,
+        } after ${
+          Math.round(uptime / 1000)
+        }s uptime, ${messageCount} messages sent`,
       );
       // https://github.com/ai/nanoevents?tab=readme-ov-file#remove-all-listeners
       emitter.events = {};
@@ -1181,6 +1296,7 @@ export class BaseDockerJobQueue {
         }
 
         if (messageString === "PING") {
+          lastPingTime = Date.now();
           // console.log(
           //   `🌳 PING FROM ${
           //     workerRegistration
@@ -1266,12 +1382,7 @@ export class BaseDockerJobQueue {
                 emitter,
               });
               console.log(
-                `[${
-                  this.address.substring(
-                    0,
-                    15,
-                  )
-                }] 🔌 🔗 Worker registered (so broadcasting) ${
+                `${this.addressShortString} 🔌 🔗 Worker registered (so broadcasting) ${
                   newWorkerRegistration.id.substring(
                     0,
                     6,
@@ -1324,11 +1435,44 @@ export class BaseDockerJobQueue {
       console.log(`⬅️ 📧 w sendJobStatesToWebsocket worker`);
     }
     await this.sendJobStatesToWebsocket(connection.socket);
+
+    // Monitor worker connection health
+    const healthCheckInterval = setInterval(() => {
+      const timeSinceLastPing = Date.now() - lastPingTime;
+      const uptime = Date.now() - connectionStartTime;
+
+      if (timeSinceLastPing > 30000) { // 30 seconds
+        console.log(
+          `🚨 Worker ${
+            workerRegistration?.id?.substring(0, 6) || "unknown"
+          } hasn't pinged for ${
+            Math.round(timeSinceLastPing / 1000)
+          }s (uptime: ${Math.round(uptime / 1000)}s)`,
+        );
+      }
+
+      // Log health every 5 minutes
+      if (uptime % 300000 < 5000) { // Every 5 minutes
+        console.log(
+          `${
+            getWorkerColorizedString(workerRegistration?.id || "unknown")
+          } health: ` +
+            `uptime=${Math.round(uptime / 1000)}s, ` +
+            `lastPing=${Math.round(timeSinceLastPing / 1000)}s ago, ` +
+            `messages=${messageCount}`,
+        );
+      }
+    }, 10000); // Check every 10 seconds
+
+    // Clean up interval when connection closes
+    connection.socket.addEventListener("close", () => {
+      clearInterval(healthCheckInterval);
+    });
   }
 
   async connectClient(connection: { socket: WebSocket }) {
     console.log(
-      `[${this.address.substring(0, 15)}] ➕ c ⏯️ Connected a client`,
+      `${this.addressShortString} ➕ c ⏯️ Connected a client`,
     );
     this.clients.push(connection.socket);
     connection.socket.addEventListener("close", () => {
@@ -1364,11 +1508,11 @@ export class BaseDockerJobQueue {
         }
         if (!messageString.startsWith("{")) {
           console.log(
-            `[${this.address.substring(0, 15)}] browser message not JSON`,
+            `${this.addressShortString} browser message not JSON`,
             messageString,
           );
           console.log(
-            `[${this.address.substring(0, 15)}] browser message not JSON`,
+            `${this.addressShortString} browser message not JSON`,
             typeof messageString,
           );
           // .substr(0, 100)
@@ -1383,7 +1527,7 @@ export class BaseDockerJobQueue {
             if (!change) {
               console.log({
                 error: "Missing payload in message from browser",
-                message: messageString.substr(0, 100),
+                message: messageString.substring(0, 100),
               });
               break;
             }
@@ -1524,29 +1668,66 @@ export class BaseDockerJobQueue {
     if (!messageString) {
       return;
     }
+    const failedWorkers: string[] = [];
+
     this.workers.myWorkers.forEach((worker) => {
       try {
-        worker.connection.send(messageString);
+        if (worker.connection.readyState === WebSocket.OPEN) {
+          worker.connection.send(messageString);
+        } else {
+          console.log(
+            `🚨 Worker ${
+              getWorkerColorizedString(worker.registration.id)
+            } websocket not open (state: ${worker.connection.readyState})`,
+          );
+          failedWorkers.push(worker.registration.id);
+        }
       } catch (err) {
         console.log(
-          `Failed to send broadcast to worker ${err}\nmessage=${messageString}`,
+          `🚨 Failed to send message to worker ${
+            getWorkerColorizedString(worker.registration.id)
+          }: ${err}`,
         );
+        failedWorkers.push(worker.registration.id);
       }
     });
+
+    // Remove failed workers
+    if (failedWorkers.length > 0) {
+      console.log(
+        `🚨 Removing ${failedWorkers.length} failed workers: ${
+          failedWorkers.map((id) => getWorkerColorizedString(id)).join(", ")
+        }`,
+      );
+      this.workers.myWorkers = this.workers.myWorkers.filter(
+        (worker) => !failedWorkers.includes(worker.registration.id),
+      );
+      this.myWorkersHaveChanged();
+    }
   }
 
   protected broadcastToLocalClients(messageString: string) {
     if (!messageString) {
       return;
     }
-    this.clients.forEach((connection) => {
+    const failedClients: number[] = [];
+
+    this.clients.forEach((connection, index) => {
       try {
-        connection.send(messageString);
+        if (connection.readyState === WebSocket.OPEN) {
+          connection.send(messageString);
+        } else {
+          failedClients.push(index);
+        }
       } catch (err) {
-        console.log(
-          `Failed to send broadcast to client ${err}\nmessage=${messageString}`,
-        );
+        console.log(`Failed to send broadcast to browser ${err}`);
+        failedClients.push(index);
       }
+    });
+
+    // Remove failed clients (in reverse order to maintain indices)
+    failedClients.reverse().forEach((index) => {
+      this.clients.splice(index, 1);
     });
   }
 
@@ -1560,6 +1741,17 @@ export class BaseDockerJobQueue {
     if (!messageString) {
       return;
     }
+
+    // const message = JSON.parse(messageString);
+    // const jobCount = Object.keys(message.payload?.state?.jobs || {}).length;
+    // const workerCount = this.workers.myWorkers.length;
+
+    // console.log(
+    //   `📡 Broadcasting ${jobCount} jobs to ${workerCount} workers (${
+    //     isAll ? "full sync" : "incremental"
+    //   })`,
+    // );
+
     this.broadcastToLocalWorkers(messageString);
     this.broadcastToLocalClients(messageString);
   }
@@ -1574,9 +1766,30 @@ export class BaseDockerJobQueue {
     try {
       if (connection.readyState === WebSocket.OPEN) {
         connection.send(messageString);
+        if (this.debug) {
+          console.log(
+            `📤 Sent job states to websocket (${jobIds?.length || "all"} jobs)`,
+          );
+        }
+      } else {
+        console.log(
+          `🚨 Cannot send job states: websocket not open (state: ${connection.readyState})`,
+        );
       }
     } catch (err) {
-      console.log(`Failed sendJobStatesToWebsocket to connection ${err}`);
+      console.log(`🚨 Failed sendJobStatesToWebsocket to connection ${err}`);
+
+      // Retry once after a short delay
+      setTimeout(() => {
+        try {
+          if (connection.readyState === WebSocket.OPEN) {
+            connection.send(messageString);
+            console.log(`📤 Retry successful: sent job states to websocket`);
+          }
+        } catch (retryErr) {
+          console.log(`🚨 Retry failed sendJobStatesToWebsocket: ${retryErr}`);
+        }
+      }, 1000);
     }
   }
 
@@ -1633,16 +1846,8 @@ export class BaseDockerJobQueue {
           INTERVAL_UNTIL_WORKERS_ASSUMED_LOST
       ) {
         console.log(
-          `[${
-            this.address.substring(
-              0,
-              15,
-            )
-          }] 🪓 removing worker ${
-            workerId.substring(
-              0,
-              6,
-            )
+          `${this.addressShortString} 🪓 removing worker ${
+            getWorkerColorizedString(workerId)
           } because it's missing`,
         );
 
@@ -1714,6 +1919,7 @@ export class BaseDockerJobQueue {
     this.workers.myWorkers.forEach((w) => workerIds.add(w.registration.id));
 
     // check all the jobs
+    let requeuedCount = 0;
     for (
       const [jobId, job] of Object.entries<DockerJobDefinitionRow>(
         this.state.jobs,
@@ -1723,17 +1929,16 @@ export class BaseDockerJobQueue {
         const valueRunning = job.value as StateChangeValueRunning;
         if (!workerIds.has(valueRunning.worker)) {
           console.log(
-            `[${
-              this.address.substring(
-                0,
-                15,
-              )
-            }] 🪓 requeueing job ${
+            `${this.addressShortString} 🚨  Requeuing job ${
               jobId.substring(
                 0,
                 6,
               )
-            } because worker ${valueRunning.worker.substring(0, 6)} is missing`,
+            } because worker ${
+              valueRunning.worker.substring(0, 6)
+            } is missing (last seen: ${
+              Math.round((now - valueRunning.time) / 1000)
+            }s ago)`,
           );
 
           const reQueueStateChange: StateChange = {
@@ -1745,8 +1950,15 @@ export class BaseDockerJobQueue {
             } as StateChangeValueReQueued,
           };
           this.stateChange(reQueueStateChange);
+          requeuedCount++;
         }
       }
+    }
+
+    if (requeuedCount > 0) {
+      console.log(
+        `${this.addressShortString} 🚨 Requeued ${requeuedCount} jobs from missing workers in queue`,
+      );
     }
   }
 
@@ -1814,83 +2026,90 @@ export class BaseDockerJobQueue {
    *     inputs and thus unique jobId
    */
   checkForSourceConflicts() {
+    // https://github.com/metapages/compute-queues/issues/242
+    return;
     // check all the jobs
-    const namespacedJobs = new Map<string, string[]>(); // source -> [jobId, ...]
-    for (
-      const [jobId, job] of Object.entries<DockerJobDefinitionRow>(
-        this.state.jobs,
-      )
-    ) {
-      if (job.state === DockerJobState.Finished) {
-        continue;
-      }
-      const namespace = (job.history[0].value as StateChangeValueQueued)
-        .namespace;
-      if (namespace) {
-        namespacedJobs.set(namespace, [
-          ...(namespacedJobs.get(namespace) || []),
-          jobId,
-        ]);
-      }
-    }
-    const now = Date.now();
-    for (const [namespace, jobIds] of namespacedJobs.entries()) {
-      if (jobIds.length > 1) {
-        console.log(
-          `🚨 source conflict for ${namespace}: ${
-            jobIds.map((id) => id.substring(0, 6)).join(", ")
-          }`,
-        );
-        // what do I do? keep the newest job, and kill the others.
-        // we should hesitate to kill long running jobs, but we also
-        // don't want to end up with a lot of them, so we have to strike
-        // a balance.
-        // If a) the older jobs are less than a minute old, or b) the difference
-        // between the newest job running time and the others is over a minute,
-        // then we kill the older jobs.
-        // Otherwise, we keep the newest job.
-        // latest last
-        // Plot twist: the same job can be started by multiple userspaces and be in different queues
-        // so finishing the job in one queue doesn't mean it's finished in all queues
-        const sortedJobIds = jobIds.toSorted((a, b) => {
-          const aJobTime = (
-            this.state.jobs[a]?.history[0].value as StateChangeValueQueued
-          ).time;
-          const bJobTime = (
-            this.state.jobs[b]?.history[0].value as StateChangeValueQueued
-          ).time;
-          return aJobTime - bJobTime;
-        });
-        for (const jobId of sortedJobIds) {
-          const job = this.state.jobs[jobId];
-          const jobTime = (job.history[0].value as StateChangeValueQueued).time;
-          const jobAge = now - jobTime;
-          const deletionDelay = getDeletionDelayForNamespaceSupersededJob(
-            jobAge,
-          );
-          if (deletionDelay > 0) {
-            // check again in a bit
-            setTimeout(() => {
-              this.checkForSourceConflicts();
-            }, deletionDelay);
-            continue;
-          }
-          // kill it
-          // TODO: plot twist: but not if it's in other queues, but this queue
-          // should definitely remove it from its own queue
-          console.log(
-            `[${jobId}] 🚨 source conflict for ${namespace}: DockerJobFinishedReason.JobReplacedByClient`,
-          );
-          this.stateChange({
-            state: DockerJobState.Finished,
-            job: jobId,
-            value: {
-              reason: DockerJobFinishedReason.JobReplacedByClient,
-              time: Date.now(),
-            },
-          } as StateChange);
-        }
-      }
-    }
+
+    // const namespacedJobs = new Map<string, string[]>(); // source -> [jobId, ...]
+    // for (
+    //   const [jobId, job] of Object.entries<DockerJobDefinitionRow>(
+    //     this.state.jobs,
+    //   )
+    // ) {
+    //   if (job.state === DockerJobState.Finished) {
+    //     continue;
+    //   }
+
+    //   const namespace = (job.history[0].value as StateChangeValueQueued)
+    //     .namespace;
+    //   if (namespace) {
+    //     namespacedJobs.set(namespace, [
+    //       ...(namespacedJobs.get(namespace) || []),
+    //       jobId,
+    //     ]);
+    //   }
+    // }
+    // const now = Date.now();
+    // for (const [namespace, jobIds] of namespacedJobs.entries()) {
+    //   if (jobIds.length > 1) {
+    //     console.log(
+    //       `🚨 source conflict for ${namespace}: ${
+    //         jobIds.map((id) => id.substring(0, 6)).join(", ")
+    //       }`,
+    //     );
+    //     // what do I do? keep the newest job, and kill the others.
+    //     // we should hesitate to kill long running jobs, but we also
+    //     // don't want to end up with a lot of them, so we have to strike
+    //     // a balance.
+    //     // If a) the older jobs are less than a minute old, or b) the difference
+    //     // between the newest job running time and the others is over a minute,
+    //     // then we kill the older jobs.
+    //     // Otherwise, we keep the newest job.
+    //     // latest last
+    //     // Plot twist: the same job can be started by multiple userspaces and be in different queues
+    //     // so finishing the job in one queue doesn't mean it's finished in all queues
+    //     const sortedJobIds = jobIds.toSorted((a, b) => {
+    //       const aJobTime = (
+    //         this.state.jobs[a]?.history[0].value as StateChangeValueQueued
+    //       ).time;
+    //       const bJobTime = (
+    //         this.state.jobs[b]?.history[0].value as StateChangeValueQueued
+    //       ).time;
+    //       return aJobTime - bJobTime;
+    //     });
+    //     for (const jobId of sortedJobIds) {
+    //       const job = this.state.jobs[jobId];
+    //       const jobTime = (job.history[0].value as StateChangeValueQueued).time;
+    //       const jobAge = now - jobTime;
+    //       const deletionDelay = getDeletionDelayForNamespaceSupersededJob(
+    //         jobAge,
+    //       );
+    //       if (deletionDelay > 0) {
+    //         // check again in a bit
+    //         setTimeout(() => {
+    //           this.checkForSourceConflicts();
+    //         }, deletionDelay);
+    //         continue;
+    //       }
+    //       // kill it
+    //       // TODO: plot twist: but not if it's in other queues, but this queue
+    //       // should definitely remove it from its own queue
+    //       console.log(
+    //         `${
+    //           getJobColorizedString(jobId)
+    //         } 🚨 source conflict for ${namespace}: DockerJobFinishedReason.JobReplacedByClient`,
+    //       );
+    //       // do not send a change because this job might be on a different queue
+    //       this.stateChange({
+    //         state: DockerJobState.Finished,
+    //         job: jobId,
+    //         value: {
+    //           reason: DockerJobFinishedReason.JobReplacedByClient,
+    //           time: Date.now(),
+    //         },
+    //       } as StateChange);
+    //     }
+    //   }
+    // }
   }
 }

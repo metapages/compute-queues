@@ -90,7 +90,6 @@ Deno.test(
 
     const port = Math.floor(Math.random() * (65535 - 1024) + 1024);
 
-    // https://github.com/metapages/compute-queues/issues/124
     const { message, jobId } = await createNewContainerJobMessage({
       definition: {
         image: "alpine:3.18.5",

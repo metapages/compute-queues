@@ -1,13 +1,13 @@
 import { assert, assertEquals } from "std/assert";
 
 import { closed, open } from "@korkje/wsi";
-
-import { createWebhookServer } from "./webhooks_test.ts";
-
 import {
   createNewContainerJobMessage,
   type DockerJobState,
 } from "@metapages/compute-queues-shared";
+
+import { killAllJobs } from "./util.ts";
+import { createWebhookServer } from "./webhooks_test.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -19,6 +19,7 @@ Deno.test(
     if (QUEUE_ID === "local") {
       return;
     }
+    await killAllJobs(QUEUE_ID);
 
     // Create a server to receive the webhook
     // then have a job that calls it on submission
@@ -29,9 +30,8 @@ Deno.test(
       we: "are good",
     };
 
-    const namespace = `test${Math.floor(Math.random() * 1000000)}`;
+    const namespace = `namespace${Math.floor(Math.random() * 1000000)}`;
 
-    // https://github.com/metapages/compute-queues/issues/124
     const { message, jobId } = await createNewContainerJobMessage({
       definition: {
         image: "alpine:3.18.5",

@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useState } from "react";
 
 import { useJobSubmissionHook } from "/@/hooks/useJobSubmissionHook";
+import { useQueue } from "/@/hooks/useQueue";
 import { DockerJobFinishedReason, DockerJobState, StateChangeValueFinished } from "/@shared/client";
 
 import { Button, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { Lock, Play, Queue as QueueIcon, Repeat, Stop } from "@phosphor-icons/react";
 
 import { useStore } from "../../store";
-import { useQueue } from "/@/hooks/useQueue";
 
 export const JobControlButton: React.FC = () => {
   const serverJobState = useStore(state => state.jobState);
@@ -175,6 +175,7 @@ export const JobControlButton: React.FC = () => {
 
   switch (state) {
     case DockerJobState.Queued:
+    case DockerJobState.ReQueued:
     case DockerJobState.Running:
       return cancelButton;
     case DockerJobState.Finished: {
