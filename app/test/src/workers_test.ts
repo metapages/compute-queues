@@ -108,7 +108,9 @@ Deno.test(
 
     await open(socket);
 
-    // Submit the job
+    // Submit the job. Job submissson should confirm the job is submitted.
+    // Browser clients kinda do this already by resubmitting if the job is
+    // not on the results.
     while (!jobSuccessfullySubmitted) {
       socket.send(JSON.stringify(message));
       await new Promise((resolve) => setTimeout(resolve, 1000));
