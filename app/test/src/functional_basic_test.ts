@@ -21,7 +21,9 @@ const API_URL = Deno.env.get("API_URL") ||
 Deno.test(
   "pretend to be a client: submit job and get expected results",
   async () => {
+    console.log(`🐸 [test] 📡 starting test, killAllJobs`);
     await killAllJobs(QUEUE_ID);
+    console.log(`🐸 [test] 📡 killed jobs`);
     const socket = new WebSocket(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
@@ -78,20 +80,20 @@ Deno.test(
       }
     };
 
-    // console.log(`opening the socket to the API server...`);
+    console.log(`opening the socket to the API server...`);
     await open(socket);
-    // console.log(`...socket opened. Sending message...`, message);
+    console.log(`...socket opened. Sending message...`, message);
 
     // Job submisison should confirm the job is submitted.
     // Browser clients kinda do this already by resubmitting if the job is
     // not on the results.
     while (!jobSuccessfullySubmitted) {
-      // console.log(`...submitting job...`);
+      console.log(`...submitting job...`);
       socket.send(JSON.stringify(message));
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
-    // console.log(`...awaiting job to finish`);
+    console.log(`...awaiting job to finish`);
     const result = await jobCompleteDeferred;
     const expectedResult =
       ".\n..\n.dockerenv\nbin\ndev\netc\nhome\ninputs\njob-cache\nlib\nmedia\nmnt\nopt\noutputs\nproc\nroot\nrun\nsbin\nsrv\nsys\ntmp\nusr\nvar\n";
