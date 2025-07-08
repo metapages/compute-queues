@@ -6,5 +6,8 @@
   },
   "imports": {
     "/@/": "./src/"
+  },
+  "compilerOptions": {
+    "strict": true
   }
 }

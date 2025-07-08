@@ -1,18 +1,22 @@
-import { serveStatic } from "hono/middleware";
-import { cors } from "hono/middleware/cors";
-import { type Context, Hono } from "hono";
-
-import { downloadHandler } from "/@/routes/api/v1/download.ts";
-import { statusHandler } from "/@/routes/status.ts";
-import { metricsHandler } from "/@/routes/metrics.ts";
-import { uploadHandler } from "/@/routes/api/v1/upload.ts";
-import { uploadHandler as uploadHandlerDeprecated } from "/@/routes/deprecated/upload.ts";
-import { downloadHandler as downloadHandlerDeprecated } from "/@/routes/deprecated/download.ts";
 import { copyJobToQueueHandler } from "/@/routes/api/v1/copy.ts";
-import { submitJobToQueueHandler } from "/@/routes/api/v1/submit.ts";
-import { getJobIdsHandler } from "/@/routes/api/v1/jobIds.ts";
+import { downloadHandler } from "/@/routes/api/v1/download.ts";
 import { existsHandler } from "/@/routes/api/v1/exists.ts";
 import { getJobHandler } from "/@/routes/api/v1/job.ts";
+import { getJobIdsHandler } from "/@/routes/api/v1/jobIds.ts";
+import { submitJobToQueueHandler } from "/@/routes/api/v1/submit.ts";
+import { uploadHandler } from "/@/routes/api/v1/upload.ts";
+import {
+  downloadHandler as downloadHandlerDeprecated,
+} from "/@/routes/deprecated/download.ts";
+import {
+  uploadHandler as uploadHandlerDeprecated,
+} from "/@/routes/deprecated/upload.ts";
+import { metricsHandler } from "/@/routes/metrics.ts";
+import { cancelJobHandler } from "/@/routes/queue/job/cancel.ts";
+import { statusHandler } from "/@/routes/status.ts";
+import { type Context, Hono } from "hono";
+import { serveStatic } from "hono/middleware";
+import { cors } from "hono/middleware/cors";
 
 const app = new Hono();
 
@@ -43,6 +47,7 @@ app.post("/api/v1/copy", copyJobToQueueHandler);
 app.get("/api/v1/job/:jobId", getJobHandler);
 app.get("/job/:jobId", getJobHandler);
 app.post("/:queue/job", submitJobToQueueHandler);
+app.post("/:queue/job/:jobId/cancel", cancelJobHandler);
 app.get("/:queue/jobs", getJobIdsHandler);
 
 // @deprecated

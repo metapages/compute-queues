@@ -9,6 +9,7 @@ import {
   DockerJobState,
   type StateChangeValueFinished,
   type WebsocketMessageServerBroadcast,
+  WebsocketMessageTypeClientToServer,
   WebsocketMessageTypeServerBroadcast,
 } from "../../shared/src/mod.ts";
 import {
@@ -16,6 +17,7 @@ import {
   fileToDataref,
   hashFileOnDisk,
 } from "../../shared/src/shared/jobtools.ts";
+import { killAllJobs } from "./util.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -61,6 +63,13 @@ function waitForJobToFinish(
   referenceContent: string,
   onComplete: () => void,
 ) {
+  const intervalRequestJobStates = setInterval(() => {
+    socket.send(
+      JSON.stringify({
+        type: WebsocketMessageTypeClientToServer.QueryJobStates,
+      }),
+    );
+  }, 1000);
   socket.onmessage = async (event: MessageEvent) => {
     try {
       // console.log("Received message from server", event.type);
@@ -120,7 +129,7 @@ function waitForJobToFinish(
             // Trim because shell commands may include a trailing newline
             assertEquals(referenceContent, contentFromJob.trim());
             // console.log("Assertions passed. Resolving test...");
-
+            clearInterval(intervalRequestJobStates);
             onComplete();
           }
 
@@ -131,6 +140,7 @@ function waitForJobToFinish(
       }
     } catch (err) {
       console.error("Error handling message from server:", err);
+      clearInterval(intervalRequestJobStates);
       throw err;
     }
   };
@@ -166,9 +176,7 @@ Deno.test("Test exists API", async () => {
   const hash = await hashFileOnDisk(fileName);
 
   // check that the file DOES NOT exist
-  const existsResponse1 = await fetch(
-    `${API_URL}/api/v1/exists/${hash}`,
-  );
+  const existsResponse1 = await fetch(`${API_URL}/api/v1/exists/${hash}`);
   assertEquals(existsResponse1.status, 404);
   const existsResponseBody1 = await existsResponse1.json();
   assertEquals(existsResponseBody1.exists, false);
@@ -186,6 +194,7 @@ Deno.test("Test exists API", async () => {
 Deno.test(
   "Run a job that uploads input files and validates the input",
   async () => {
+    await killAllJobs(QUEUE_ID);
     // console.log(
     //   "Starting test: 'Run a job that uploads input files and validates the input'",
     // );
@@ -256,6 +265,7 @@ Deno.test(
 Deno.test(
   "Run a job that creates output files, downloads and checks the file",
   async () => {
+    await killAllJobs(QUEUE_ID);
     // console.log(
     //   "Starting test: 'Run a job that creates output files, downloads and checks the file'",
     // );
@@ -288,11 +298,12 @@ Deno.test(
     await open(socket);
     // console.log("Socket opened. Sending job creation message...");
 
+    // Send the job creation message
+    socket.send(JSON.stringify(message));
+
     // Wait for job to finish
     waitForJobToFinish(socket, jobId, "hello.txt", content, resolve);
 
-    // Send the job creation message
-    socket.send(JSON.stringify(message));
     // console.log("Job creation message sent. Waiting for job to finish...");
 
     // Wait for the job

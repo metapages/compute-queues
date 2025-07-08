@@ -25,8 +25,8 @@ export const submitJobToQueueHandler = async (c: Context) => {
     }
     const jobToQueue = await c.req.json<StateChangeValueQueued>();
     jobToQueue.control = jobToQueue.control || {};
-    jobToQueue.control.queueHistory = jobToQueue.control.queueHistory || [];
-    jobToQueue.control.queueHistory.push(queue);
+    // jobToQueue.control.queueHistory = jobToQueue.control.queueHistory || [];
+    // jobToQueue.control.queueHistory.push(queue);
     const jobId = await shaDockerJob(jobToQueue.definition);
 
     const jobQueue = await getApiDockerJobQueue(queue);

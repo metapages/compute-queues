@@ -170,7 +170,8 @@ export type DockerJobControlConfig = {
       path: string;
     };
   };
-  queueHistory?: string[];
+  // I don't remember why we need this, so disabling for now
+  // queueHistory?: string[];
 };
 
 /**

@@ -231,7 +231,14 @@ _mkcert: _ensure_mkcert
     #!/usr/bin/env bash
     rm -rf .cache/traefik/certs
     mkdir -p .cache/traefik/certs/ ;
-    mkcert -cert-file .cache/traefik/certs/local-cert.pem -key-file .cache/traefik/certs/local-key.pem {{ APP_FQDN }} minio.{{ APP_FQDN }} worker-metaframe.localhost worker-metaframe-api2.dev minio.worker-metaframe.localhost localhost ;
+    mkcert -cert-file .cache/traefik/certs/local-cert.pem -key-file .cache/traefik/certs/local-key.pem \
+        {{ APP_FQDN }} \
+        minio.{{ APP_FQDN }} \
+        worker-metaframe.localhost \
+        worker-metaframe-api2.dev \
+        worker-metaframe-api3.dev \
+        minio.worker-metaframe.localhost \
+        localhost ;
     if grep -q "{{ APP_FQDN }}" /etc/hosts; then
         echo -e "✅ Hostname {{ APP_FQDN }} found in /etc/hosts"
     else

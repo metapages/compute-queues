@@ -222,8 +222,8 @@ const submitJobToQueueHandler = async (c: Context) => {
     }
     const jobToQueue = await c.req.json<StateChangeValueQueued>();
     jobToQueue.control = jobToQueue.control || {};
-    jobToQueue.control.queueHistory = jobToQueue.control.queueHistory || [];
-    jobToQueue.control.queueHistory.push(queue);
+    // jobToQueue.control.queueHistory = jobToQueue.control.queueHistory || [];
+    // jobToQueue.control.queueHistory.push(queue);
     const jobId = await shaDockerJob(jobToQueue.definition);
 
     const jobQueue = await ensureQueue(queue);
@@ -316,13 +316,21 @@ queue_length ${unfinishedQueueLength}
   });
 });
 
-app.get("/:queue/status", (c) => {
+app.get("/:queue/status", async (c) => {
   const queue = c.req.param("queue");
   if (!queue) {
     c.status(400);
     return c.text("Missing queue");
   }
-  return c.json({ queue: jobList });
+
+  try {
+    const jobQueue = await ensureQueue(queue);
+    const status = await jobQueue.status();
+    return c.json(status as unknown);
+  } catch (err) {
+    console.error("Error getting queue status:", err);
+    return c.text((err as Error).message, 500);
+  }
 });
 
 app.get("/:queue/metrics", (c) => {

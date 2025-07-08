@@ -3,6 +3,7 @@ import {
   type DataRef,
   DataRefType,
   type DockerJobDefinitionRow,
+  DockerJobState,
   type StateChangeValueQueued,
 } from "/@/shared/types.ts";
 import { addJobProcessSubmissionWebhook } from "/@/shared/webhooks.ts";
@@ -17,6 +18,8 @@ let putJsonToS3: (key: string, data: unknown) => Promise<DataRef>;
 let resolveDataRefFromS3: <T>(ref: DataRef<T>) => Promise<T | undefined>;
 
 const expireIn1Week = ms("1 week") as number;
+
+export const DefaultNamespace = "_";
 
 export class DB {
   private kv: Deno.Kv;
@@ -123,10 +126,16 @@ export class DB {
         delete (job.history[0].value as StateChangeValueQueued)?.control;
       }
       control = control || {};
-      control.queueHistory = control.queueHistory || [];
-      control.queueHistory.push(queue);
+      // control.queueHistory = control.queueHistory || [];
+      // control.queueHistory.push(queue);
       const namespace =
-        (job.history[0].value as StateChangeValueQueued)?.namespace || "_";
+        (job.history[0].value as StateChangeValueQueued)?.namespace ||
+        DefaultNamespace;
+      delete (job.history[0].value as StateChangeValueQueued)?.namespace;
+      // ^ we delete the namespace and control from the definition
+      // because the same job from different namespaces and queues can be
+      // submitted, and we don't want control config to be leaked or be
+      // applied to identical jobs but from different namespaces/queues
 
       const dataRef = await putJsonToS3(id, job);
       // console.log(
@@ -144,8 +153,14 @@ export class DB {
         .set(["queue", queue, id], dataRef, {
           expireIn: expireIn1Week,
         })
+        .set(["job-queues", id, queue], true, {
+          expireIn: expireIn1Week,
+        })
         // Jobs on the same queue and the same namespace conflict, only one can run
         .set(["queue-namespace-job", queue, namespace, id], true, {
+          expireIn: expireIn1Week,
+        })
+        .set(["queue-namespace-job-control", queue, namespace, id], control, {
           expireIn: expireIn1Week,
         })
         // .set(["job-namespace", queue, id], dataRef, {
@@ -169,9 +184,13 @@ export class DB {
 
       if (control) {
         // partition jobs that might be shared by the same namespace
-        await this.kv.set(["job-namespace-control", id, namespace], control, {
-          expireIn: expireIn1Week,
-        });
+        await this.kv.set(
+          ["job-namespace-control", id, queue, namespace],
+          control,
+          {
+            expireIn: expireIn1Week,
+          },
+        );
         await addJobProcessSubmissionWebhook({
           queue,
           namespace,
@@ -228,6 +247,33 @@ export class DB {
     }
   }
 
+  // async queueJobGetNamespaces(
+  //   queue: string,
+  //   id: string,
+  // ): Promise<string[]> {
+  //   const result: Set<string> = new Set();
+  //   try {
+  //     const entries = this.kv.list<string>({
+  //       prefix: ["queue-namespace-job", queue],
+  //     });
+  //     for await (const entry of entries) {
+  //       // ["queue-namespace-job", queue, namespace, id]
+  //       const entryJobId = entry.key[3];
+  //       if (entryJobId === id) {
+  //         const entryNamespace = entry.key[2] as string;
+  //         result.add(entryNamespace);
+  //       }
+  //     }
+  //   } catch (err) {
+  //     console.error(
+  //       `Error in queueJobGetNamespaces for queue ${queue}, job ${id}:`,
+  //       err,
+  //     );
+  //     throw err;
+  //   }
+  //   return [...result.values()];
+  // }
+
   async jobGet(
     id: string,
   ): Promise<DockerJobDefinitionRow | null> {
@@ -275,6 +321,7 @@ export class DB {
   async queueJobRemove(queue: string, hash: string): Promise<void> {
     const id = hash;
     await this.kv.delete(["queue", queue, id]);
+    await this.kv.delete(["job-queues", id, queue]);
   }
 
   async queueGetAll(queue: string): Promise<DockerJobDefinitionRow[]> {
@@ -321,7 +368,9 @@ export class DB {
     });
     const results: string[] = [];
     for await (const entry of entries) {
-      console.log(entry.key);
+      if (entry.value.value.state === DockerJobState.Finished) {
+        continue;
+      }
       results.push(entry.key[entry.key.length - 1] as string);
     }
     return results;

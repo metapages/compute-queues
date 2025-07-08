@@ -1,5 +1,25 @@
 # Project Asman: Public Compute Queues for everyone everywhere all at once
 
+## Quickstart
+
+### Run a worker locally
+
+Limit to 2 cpus and max job time of 20 minutes
+
+**Local mode: jobs will always run directly on this computer**
+
+```sh
+docker run -p 8000:8000 --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.54.31 run --max-job-duration=20m --data-directory=/tmp/worker-metapage-io-local --cpus=2 --mode=local
+```
+
+**Remote mode: this worker will pick up jobs on your own queue **
+
+Replace `my-random-queue` with your unique queue name (can be anything)
+
+```sh
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /tmp:/tmp metapage/metaframe-docker-worker:0.54.31 run --max-job-duration=20m --data-directory=/tmp/worker-metapage-io-remote --cpus=2 my-random-queue
+```
+
 - client: https://container.mtfm.io/
 - [basic demo](https://metapage.io/m/87ae11673508447e883b598bf7da9c5d)
 
