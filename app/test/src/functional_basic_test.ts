@@ -4,7 +4,7 @@ import { closed, open } from "@korkje/wsi";
 import {
   type BroadcastJobStates,
   createNewContainerJobMessage,
-  DockerJobDefinitionRow,
+  type DockerJobDefinitionRow,
   DockerJobState,
   getJobColorizedString,
   type StateChangeValueFinished,
