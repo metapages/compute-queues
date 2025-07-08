@@ -1,3 +1,4 @@
+import { db } from "/@/db/db.ts";
 import type { Context } from "hono";
 
 import {
@@ -5,6 +6,7 @@ import {
   DockerJobState,
   type StateChange,
 } from "@metapages/compute-queues-shared";
+
 import { getApiDockerJobQueue } from "../../websocket.ts";
 
 export const cancelJobHandler = async (c: Context) => {
@@ -34,6 +36,8 @@ export const cancelJobHandler = async (c: Context) => {
 
     await jobQueue.stateChange(stateChange);
     c.status(200);
+    // TODO: this should be part of the above stateChange operation.
+    await db.queueJobRemove(queue, jobId);
     return c.json({ success: true, jobId });
   } catch (err) {
     console.error("Error getting job", err);

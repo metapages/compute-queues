@@ -321,6 +321,7 @@ export class DB {
   async queueJobRemove(queue: string, hash: string): Promise<void> {
     const id = hash;
     await this.kv.delete(["queue", queue, id]);
+    await this.kv.delete(["job-queues", id, queue]);
   }
 
   async queueGetAll(queue: string): Promise<DockerJobDefinitionRow[]> {
