@@ -10,6 +10,8 @@ import {
   type DockerJobDefinitionInputRefs,
   type DockerJobDefinitionRow,
   fileToDataref,
+  getJobColorizedString,
+  getWorkerColorizedString,
   hashFileOnDisk,
   type InputsRefs,
   sanitizeFilename,
@@ -155,7 +157,9 @@ export const getOutputs = async (
   }
 
   console.log(
-    `[${workerId.substring(0, 6)}] [${job.hash.substring(0, 6)}] outputs:[${
+    `${getWorkerColorizedString(workerId)} ${
+      getJobColorizedString(job.hash)
+    } outputs:[${
       Object.keys(outputs).join(",").substring(
         0,
         100,

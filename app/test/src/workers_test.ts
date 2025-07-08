@@ -22,7 +22,7 @@ Deno.test(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
 
-    const outputText = `Job completed by worker ${
+    const outputText = `Job completed by worker. Random text: ${
       Math.floor(Math.random() * 1000000)
     }`;
     // Create a simple job that should work reliably

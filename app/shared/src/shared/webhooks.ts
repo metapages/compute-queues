@@ -1,6 +1,9 @@
 import { ms } from "ms";
 import { getKv } from "/@/shared/kv.ts";
-import { getJobColorizedString } from "/@/shared/util.ts";
+import {
+  getJobColorizedString,
+  getQueueColorizedString,
+} from "/@/shared/util.ts";
 import type { DockerJobControlConfig } from "/@/shared/types.ts";
 
 const kv = await getKv();
@@ -16,14 +19,19 @@ export const callJobWebhook = async (
   jobId: string,
   config: DockerJobControlConfig,
 ) => {
-  console.log(
-    `🔥🔥 callJobWebhook ${getJobColorizedString(jobId)} `,
-    queue,
-    namespace,
-  );
+  // console.log(
+  //   `🔥🔥 callJobWebhook ${getJobColorizedString(jobId)} `,
+  //   queue,
+  //   namespace,
+  // );
   const webhookUrl = config.callbacks?.queued?.url;
   if (!webhookUrl) {
-    // console.log(`🔥💦 callJobWebhook [${jobId.substring(0, 6)}] !webhookUrl`);
+    console.log(
+      `${getQueueColorizedString(queue)} ${
+        getJobColorizedString(jobId)
+      } [namespace=${namespace}] callJobWebhook but ‼️ no webhook url, unregistering`,
+    );
+    await deleteJobProcessSubmissionWebhook(queue, namespace, jobId);
     return;
   }
   const payload = config.callbacks?.queued?.payload || {};
@@ -49,22 +57,26 @@ export const callJobWebhook = async (
 
     if (!response.ok) {
       console.log(
-        `Webhook ${webhookUrl} failed with status ${response.status}`,
+        `${getQueueColorizedString(queue)} ${
+          getJobColorizedString(jobId)
+        } [namespace=${namespace}] callJobWebhook but ‼️ webhook=[${webhookUrl}] failed with status=[${response.status}]`,
       );
-      // if (!webhookUrl.includes(".ngrok.app/")) {
-      // }
+      response?.body?.cancel();
       return;
-      // } else {
-      //   const body = await response.text();
-      //   console.log(`Webhook ${webhookUrl} succeeded`, body);
     }
+    await response?.text();
     //record as done
     await deleteJobProcessSubmissionWebhook(queue, namespace, jobId);
+    console.log(
+      `${getQueueColorizedString(queue)} ${
+        getJobColorizedString(jobId)
+      } [namespace=${namespace}] callJobWebhook ✅`,
+    );
   } catch (err) {
     console.error(
-      `Error calling ${
+      `${getQueueColorizedString(queue)} ${
         getJobColorizedString(jobId)
-      } webhook, will retry in a minute ${webhookUrl}:`,
+      } [namespace=${namespace}] callJobWebhook webhook=[$${webhookUrl}}] error, will retry in a minute :`,
       (err?.toString())?.includes("Name or service not known")
         ? "Name or service not known"
         : err?.toString(),
@@ -97,26 +109,20 @@ export const addJobProcessSubmissionWebhook = async (opts: {
   const { jobId, namespace, queue, control } = opts;
 
   if (!control?.callbacks?.queued) {
-    console.log(
-      `👀  addJobProcessSubmissionWebhook ${
-        getJobColorizedString(jobId)
-      } no config`,
-    );
+    // console.log(
+    //   `👀  addJobProcessSubmissionWebhook ${
+    //     getJobColorizedString(jobId)
+    //   } no config`,
+    // );
     return;
   } else {
     console.log(
-      `${getJobColorizedString(jobId)} 🚀 addJobProcessSubmissionWebhook `,
+      `${getQueueColorizedString(queue)} ${
+        getJobColorizedString(jobId)
+      } [namespace=${namespace}] 👀 registering onQueue callback`,
     );
   }
 
-  // console.log(
-  //   `🔥 addJobProcessSubmissionWebhook [${
-  //     jobId.substring(0, 6)
-  //   }] submission-hook`,
-  //   queue,
-  //   namespace,
-  //   jobId,
-  // );
   await kv.set(["submission-hook", queue, namespace, jobId], control, {
     expireIn: expireIn1Week,
   });

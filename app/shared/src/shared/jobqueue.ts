@@ -149,6 +149,7 @@ type BroadcastChannelMessageType =
   | "remove-job";
 type BroadcastChannelMessage = {
   type: BroadcastChannelMessageType;
+  origin: string;
   value:
     | string[] // [jobId1, state1, jobId2, state2, ...]
     | JobStates
@@ -248,6 +249,12 @@ export class BaseDockerJobQueue {
       // console.log(`🌘 recieved broadcast message ${payload.type}`, payload)
       switch (payload.type) {
         case "job-states-minimal": {
+          if (payload.origin === this.serverId) {
+            console.log(
+              `🌘 ...from merge ignoring job-states-minimal from ourselves:${payload.origin}`,
+            );
+            break;
+          }
           // If any of the jobs are different, update them
           // console.log(`[${this.address.substring(0, 6)}] 📡 recieved job-states-minimal`, payload.value)
           const jobStatesMinimal: string[] = payload.value as string[];
@@ -297,6 +304,12 @@ export class BaseDockerJobQueue {
         case "job-states": {
           // console.log('🌘job-state from broadcast, got to resolve and merge...');
           // get the updated job
+          if (payload.origin === this.serverId) {
+            console.log(
+              `🌘 ...from merge ignoring job-states from ourselves:${payload.origin}`,
+            );
+            break;
+          }
           jobStatesFromBroadcast = payload.value as JobStates;
           jobsFromBroadcast = jobStatesFromBroadcast?.jobs;
           if (!jobsFromBroadcast) {
@@ -824,6 +837,7 @@ export class BaseDockerJobQueue {
       ),
     };
     const message: BroadcastChannelMessage = {
+      origin: this.serverId,
       type: "job-states",
       value: jobStates,
     };
@@ -1208,9 +1222,9 @@ export class BaseDockerJobQueue {
           now - stateChange.time > MAX_TIME_FINISHED_JOB_IN_QUEUE
         ) {
           console.log(
-            `${this.addressShortString}] 🪓 removing finished job from queue ${
+            `${this.addressShortString}] ${
               getJobColorizedString(jobId)
-            }`,
+            } 🪓 removing finished job from queue `,
           );
           delete this.state.jobs[jobId];
           sendBroadcast = true;
@@ -1226,9 +1240,7 @@ export class BaseDockerJobQueue {
 
   async connectWorker(connection: { socket: WebSocket }, queue: string) {
     console.log(
-      `${this.addressShortString} ➕ w 🔌 Connected a worker to queue [${
-        queue.substring(0, 6)
-      }]`,
+      `${this.addressShortString} ➕ w 🔌 Connected a worker to queue, waiting for registration`,
     );
 
     let workerRegistration: WorkerRegistration;
@@ -1236,6 +1248,7 @@ export class BaseDockerJobQueue {
     let lastPingTime = Date.now();
     const messageCount = 0;
     const connectionStartTime = Date.now();
+    let workerIdColorized: string | undefined;
 
     connection.socket.addEventListener("close", () => {
       if (!this.address) {
@@ -1248,11 +1261,7 @@ export class BaseDockerJobQueue {
             0,
             6,
           )
-        }] ➖ w 🔌 ⏹️ Removing ${
-          workerRegistration
-            ? workerRegistration.id.substring(0, 6)
-            : "unknown worker"
-        } after ${
+        }] ➖ w 🔌 ⏹️ Removing ${workerIdColorized || "unknown"} after ${
           Math.round(uptime / 1000)
         }s uptime, ${messageCount} messages sent`,
       );
@@ -1277,13 +1286,15 @@ export class BaseDockerJobQueue {
       try {
         const { data: message } = event;
         if (this.debug) {
-          console.log(`➡️ 📧 from worker`, message);
+          console.log(`➡️ 📧 from worker `, message);
         }
         if (typeof message !== "string" || !message) {
           // we currently do not support binary
           if (this.debug) {
             console.log(
-              `➡️ 📧 from worker is not a string rather:`,
+              `➡️ 📧 from worker ${
+                workerIdColorized || "unknown"
+              } is not a string rather:`,
               typeof message,
             );
           }
@@ -1330,7 +1341,7 @@ export class BaseDockerJobQueue {
         if (!messageString.startsWith("{")) {
           console.log(
             "worker message message not JSON",
-            messageString.substr(0, 100),
+            messageString.substring(0, 100),
           );
           return;
         }
@@ -1350,7 +1361,9 @@ export class BaseDockerJobQueue {
             const change: StateChange = possibleMessage.payload as StateChange;
             if (!change) {
               console.log({
-                error: "Missing payload in message from worker",
+                error: `Missing payload in message from worker ${
+                  workerIdColorized || "unknown"
+                }`,
                 message: messageString.substring(0, 100),
               });
               break;
@@ -1371,6 +1384,10 @@ export class BaseDockerJobQueue {
               break;
             }
 
+            workerIdColorized = getWorkerColorizedString(
+              newWorkerRegistration.id,
+            );
+
             const indexOfCurrent = this.workers.myWorkers.findIndex(
               (w) => w.registration.id === newWorkerRegistration.id,
             );
@@ -1383,10 +1400,7 @@ export class BaseDockerJobQueue {
               });
               console.log(
                 `${this.addressShortString} 🔌 🔗 Worker registered (so broadcasting) ${
-                  newWorkerRegistration.id.substring(
-                    0,
-                    6,
-                  )
+                  workerIdColorized || "unknown"
                 }`,
               );
             } else {
@@ -1397,10 +1411,7 @@ export class BaseDockerJobQueue {
                     15,
                   )
                 }] ✨ 🔗 Worker RE-registering (so broadcasting) ${
-                  newWorkerRegistration.id.substring(
-                    0,
-                    6,
-                  )
+                  workerIdColorized || "unknown"
                 }`,
               );
               this.workers.myWorkers[indexOfCurrent].registration =
@@ -1432,7 +1443,11 @@ export class BaseDockerJobQueue {
     });
 
     if (this.debug) {
-      console.log(`⬅️ 📧 w sendJobStatesToWebsocket worker`);
+      console.log(
+        `⬅️ 📧 w sendJobStatesToWebsocket worker ${
+          workerIdColorized || "unknown"
+        }`,
+      );
     }
     await this.sendJobStatesToWebsocket(connection.socket);
 
@@ -1443,9 +1458,7 @@ export class BaseDockerJobQueue {
 
       if (timeSinceLastPing > 30000) { // 30 seconds
         console.log(
-          `🚨 Worker ${
-            workerRegistration?.id?.substring(0, 6) || "unknown"
-          } hasn't pinged for ${
+          `🚨 Worker ${workerIdColorized || "unknown"} hasn't pinged for ${
             Math.round(timeSinceLastPing / 1000)
           }s (uptime: ${Math.round(uptime / 1000)}s)`,
         );
@@ -1454,9 +1467,7 @@ export class BaseDockerJobQueue {
       // Log health every 5 minutes
       if (uptime % 300000 < 5000) { // Every 5 minutes
         console.log(
-          `${
-            getWorkerColorizedString(workerRegistration?.id || "unknown")
-          } health: ` +
+          `${workerIdColorized || "unknown"} health: ` +
             `uptime=${Math.round(uptime / 1000)}s, ` +
             `lastPing=${Math.round(timeSinceLastPing / 1000)}s ago, ` +
             `messages=${messageCount}`,
@@ -1869,6 +1880,7 @@ export class BaseDockerJobQueue {
     // create a message for broadcasting to other servers
     const time = Date.now() + INTERVAL_UNTIL_WORKERS_ASSUMED_LOST;
     const message: BroadcastChannelMessage = {
+      origin: this.serverId,
       type: "workers",
       value: {
         workers: {
@@ -1884,6 +1896,7 @@ export class BaseDockerJobQueue {
   /** Just the job and the state enum */
   broadcastMinimalJobsStatesToChannel() {
     const message: BroadcastChannelMessage = {
+      origin: this.serverId,
       type: "job-states-minimal",
       value: Object.keys(this.state.jobs)
         .filter(

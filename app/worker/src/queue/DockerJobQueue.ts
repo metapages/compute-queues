@@ -310,7 +310,7 @@ export class DockerJobQueue {
 
       if (config.debug) {
         console.log(
-          `🎳 _checkRunningJobs new ${
+          `${this.workerIdShort} 🎳 _checkRunningJobs new ${
             getJobColorizedString(locallyRunningJobId)
           }`,
           serverJobState,
@@ -656,6 +656,7 @@ export class DockerJobQueue {
       // TODO hook up the durationMax to a timeout
       // TODO add input mounts
       const executionArgs: DockerJobArgs = {
+        workerId: this.workerId,
         sender: this.sender,
         queue: this.queueKey,
         id: jobBlob.hash,
@@ -717,14 +718,16 @@ export class DockerJobQueue {
         async (result: computeQueuesShared.DockerRunResult | undefined) => {
           if (!result) {
             console.log(
-              `${getJobColorizedString(jobBlob.hash)} no result because killed`,
+              `${this.workerIdShort} ${
+                getJobColorizedString(jobBlob.hash)
+              } no result because killed`,
             );
             return;
           }
           console.log(
-            `${getJobColorizedString(jobBlob.hash)} result ${
-              JSON.stringify(result).substring(0, 100)
-            }`,
+            `${this.workerIdShort} ${
+              getJobColorizedString(jobBlob.hash)
+            } result ${JSON.stringify(result).substring(0, 100)}`,
           );
           result.logs = result.logs || [];
           if (result.StatusCode !== 0) {
@@ -910,9 +913,10 @@ export class DockerJobQueue {
    */
   _killJobAndIgnore(locallyRunningJobId: string) {
     console.log(
-      `${this.workerIdShort} Killing job ${
+      `${this.workerIdShort} ${
         getJobColorizedString(locallyRunningJobId)
-      } (exists in our queue? ${!!this.queue[locallyRunningJobId]})`,
+      } Killing job (exists in our queue? ${!!this
+        .queue[locallyRunningJobId]})`,
     );
     const localJob = this.queue[locallyRunningJobId];
     if (localJob?.execution) {

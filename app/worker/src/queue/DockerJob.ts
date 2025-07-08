@@ -14,6 +14,7 @@ import {
   ContainerLabelId,
   ContainerLabelQueue,
   ContainerLabelTestMode,
+  ContainerLabelWorker,
 } from "/@/queue/constants.ts";
 
 import {
@@ -22,6 +23,8 @@ import {
   DockerJobState,
   type DockerRunResult,
   FakeJobImageSleepPrefix,
+  getJobColorizedString,
+  getWorkerColorizedString,
   type JobStatusPayload,
   type WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
@@ -48,6 +51,7 @@ export interface Volume {
 
 // this goes in
 export interface DockerJobArgs {
+  workerId: string;
   sender: WebsocketMessageSenderWorker;
   queue: string;
   id: string;
@@ -77,6 +81,7 @@ export const JobCacheDirectory = "/job-cache";
 
 export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   const {
+    workerId,
     sender,
     id,
     queue,
@@ -142,10 +147,12 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       result.duration = finishTime - startTime;
     }
     if (container) {
-      await killAndRemove(container);
+      await killAndRemove(workerId, id, container);
     } else {
       console.log(
-        `[${id.substring(0, 6)}] 💥💥💥 container object missing, cannot kill`,
+        `${getWorkerColorizedString(workerId)} ${
+          getJobColorizedString(id)
+        } 💥💥💥 container object missing, cannot kill`,
       );
     }
     isKilled.value = true;
@@ -159,7 +166,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       const duration = Date.now() - startTime;
       if (duration > maxJobDuration) {
         console.log(
-          `💥💥💥 max duration exceeded [${duration} > ${maxJobDuration}]`,
+          `${getWorkerColorizedString(workerId)} ${
+            getJobColorizedString(id)
+          } 💥💥💥 max duration exceeded [${duration} > ${maxJobDuration}]`,
           id,
         );
         result.isTimedOut = true;
@@ -183,15 +192,21 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     AttachStdout: true,
     AttachStderr: true,
     Labels: {
+      [ContainerLabelWorker]: workerId,
       [ContainerLabelId]: args.id,
       [ContainerLabelQueue]: queue,
       [ContainerLabel]: "true",
-    },
+    } as Record<string, string>,
     User: `${Deno.uid()}:${Deno.gid()}`,
   };
 
   if (config.testMode) {
     createOptions.Labels[ContainerLabelTestMode] = "true";
+    console.log(
+      `${getWorkerColorizedString(workerId)} ${
+        getJobColorizedString(id)
+      } ‼️ ${ContainerLabelTestMode} = true`,
+    );
   }
 
   // Connect container to our network
@@ -296,7 +311,12 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         result.logs.push([`${err.message}`, Date.now(), true]);
         return result;
       } else {
-        console.error("💥 ensureDockerImage error", err);
+        console.error(
+          `${getWorkerColorizedString(workerId)} ${
+            getJobColorizedString(id)
+          } 💥 ensureDockerImage error`,
+          err,
+        );
         result.logs.push([
           `Failure to pull or build the docker image:  ${message}`,
           Date.now(),
@@ -316,6 +336,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         [ContainerLabelId]: args.id,
       },
     });
+
     if (isKilled.value) {
       return;
     }
@@ -327,12 +348,20 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         typeof container.Labels === "object" &&
         container.Labels != null &&
         ContainerLabelId in container.Labels &&
-        container.Labels[ContainerLabelId] === args.id,
+        container.Labels[ContainerLabelId] === args.id &&
+        ContainerLabelWorker in container.Labels &&
+        container.Labels[ContainerLabelWorker] === workerId,
     );
 
     if (existingJobContainer) {
       container = docker.getContainer(existingJobContainer.Id);
       if (container) {
+        console.log(
+          `${getWorkerColorizedString(workerId)} ${
+            getJobColorizedString(id)
+          } 👀 found existing container`,
+        );
+
         // First get existing logs from files
         const existsStdOut = stdoutLogFileName
           ? existsSync(stdoutLogFileName)
@@ -435,6 +464,12 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
 
     if (!container) {
       container = await docker.createContainer(createOptions);
+      console.log(
+        `${getWorkerColorizedString(workerId)} ${
+          getJobColorizedString(id)
+        } 👉 created new container`,
+        container.id,
+      );
     }
 
     const stream = await container!.attach({
@@ -452,7 +487,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       // is buffer
       const startData: Buffer = await container!.start();
       console.log(
-        "🚀 container started, startData",
+        `${getWorkerColorizedString(workerId)} ${
+          getJobColorizedString(id)
+        } 🚀 container started, startData`,
         new TextDecoder().decode(startData),
       );
     }
@@ -471,7 +508,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     result.StatusCode = dataWait != null ? dataWait.StatusCode : null;
 
     // remove the container out-of-band (return quickly)
-    killAndRemove(container);
+    killAndRemove(workerId, id, container);
 
     return result;
   };
@@ -484,6 +521,8 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
 };
 
 const killAndRemove = async (
+  workerId: string,
+  jobId: string,
   container?: Docker.Container,
 ): Promise<unknown> => {
   if (container) {
@@ -497,7 +536,11 @@ const killAndRemove = async (
       try {
         await container.remove();
       } catch (err) {
-        console.log(`Failed to remove but ignoring error: ${err}`);
+        console.log(
+          `${getWorkerColorizedString(workerId)} ${
+            getJobColorizedString(jobId)
+          } Failed to remove but ignoring error: ${err}`,
+        );
       }
     })();
     // console.log(`❗❗❗ WARNING: container NOT removed: ${container.id}`);
