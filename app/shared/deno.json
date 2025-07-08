@@ -9,8 +9,5 @@
   },
   "compilerOptions": {
     "strict": true
-  },
-  "unstable": [
-    "sloppy-imports"
-  ]
+  }
 }
