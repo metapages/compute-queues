@@ -1,8 +1,8 @@
-import { Command } from "@cliffy/command";
-
 import { runCommand } from "/@/commands/run.ts";
 import { testCommand } from "/@/commands/test.ts";
 import { processes } from "/@/processes.ts";
+
+import { Command } from "@cliffy/command";
 
 const args = Deno.args;
 

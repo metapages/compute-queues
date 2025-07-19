@@ -1,13 +1,9 @@
 import { assertEquals } from "std/assert";
 
-import {
-  convertStringToDockerCommand,
-  generateDockerImageTag,
-} from "/@/queue/utils.ts";
+import { convertStringToDockerCommand, generateDockerImageTag } from "/@/queue/utils.ts";
 
 Deno.test("git url to docker image without url fragments", () => {
-  const url =
-    "https://github.com/metapages/metapage-docker-job-test-run-from-repo.git";
+  const url = "https://github.com/metapages/metapage-docker-job-test-run-from-repo.git";
   const dockerTag = generateDockerImageTag(url);
   // TODO: automatically get the git hash
   assertEquals(
@@ -17,8 +13,7 @@ Deno.test("git url to docker image without url fragments", () => {
 });
 
 Deno.test("git url to docker image WITH url fragments", () => {
-  const url =
-    "https://github.com/metapages/metapage-docker-job-test-run-from-repo.git#3c2df0dd05c0";
+  const url = "https://github.com/metapages/metapage-docker-job-test-run-from-repo.git#3c2df0dd05c0";
   const dockerTag = generateDockerImageTag(url);
   // TODO: automatically get the git hash
   assertEquals(

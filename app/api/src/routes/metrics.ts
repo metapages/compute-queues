@@ -1,8 +1,6 @@
 import type { Context } from "hono";
 
-import { DB } from "@metapages/compute-queues-shared";
-
-const db = await DB.initialize();
+import { db } from "../db/db.ts";
 
 export const metricsHandler = async (c: Context) => {
   const queue: string | undefined = c.req.param("queue");

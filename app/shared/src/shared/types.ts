@@ -14,9 +14,7 @@ export enum DataRefType {
   key = "key",
 }
 
-const DataRefTypeKeys: string[] = Object.keys(DataRefType).filter((key) =>
-  isNaN(Number(key))
-);
+const DataRefTypeKeys: string[] = Object.keys(DataRefType).filter((key) => isNaN(Number(key)));
 export const DataRefTypesSet: Set<string> = new Set(DataRefTypeKeys);
 export const DataRefTypeDefault = DataRefType.utf8;
 
@@ -76,9 +74,21 @@ export type DockerJobDefinitionInputsBase64V1 = {
   inputs?: InputsBase64String;
   // these are fixed and part of the job sha
   configFiles?: InputsBase64String;
+  // eg "1h", "20m", "10s"
   maxDuration?: string;
-  gpu?: boolean;
+  // gpu?: boolean;
+  // these restrict to workers with the same tags
+  tags?: string[];
+
+  requirements?: {
+    cpus?: number;
+    gpus?: number;
+    maxDuration?: string;
+    memory?: string;
+  };
 };
+
+export const DefaultNamespace = "_";
 
 // as soon as the DockerJobDefinition hits the server, it is converted
 // immediately to this version, otherwise big lumps in the inputs will
@@ -112,9 +122,13 @@ export interface DockerRunResultWithOutputs extends DockerRunResult {
  */
 export enum DockerJobState {
   Queued = "Queued",
-  ReQueued = "ReQueued",
   Running = "Running",
   Finished = "Finished",
+  // Placeholder, to remove ambiguity so it's clear
+  // it's not simply not loaded from the db, rather it's been removed
+  // from the queue. This state stays for a few seconds to ensure state
+  // is correctly propagated, then is simply deleted
+  Removed = "Removed",
 }
 
 /**
@@ -122,16 +136,16 @@ export enum DockerJobState {
  */
 export enum DockerJobFinishedReason {
   Cancelled = "Cancelled",
-  TimedOut = "TimedOut",
-  Success = "Success",
+  Deleted = "Deleted",
   Error = "Error",
-  WorkerLost = "WorkerLost",
   JobReplacedByClient = "JobReplacedByClient",
+  Success = "Success",
+  TimedOut = "TimedOut",
+  WorkerLost = "WorkerLost",
 }
 
 export type DockerJobStateValue =
   | StateChangeValueQueued
-  | StateChangeValueReQueued
   | StateChangeValueRunning
   | StateChangeValueFinished;
 
@@ -146,12 +160,14 @@ export interface StateChange {
 }
 
 export type DockerJobControlConfig = {
-  // userspace is a string that is used to identify the user
+  // namespace is a string that is used to identify the user/client
   // there can only be ONE job per userspace. it's like the user
   // plus document, or whatever is needed to uniquely limit a job
   // to a single userspace. It's not quite just a user since users
-  // can run multiple jobs at once
-  userspace?: string;
+  // can run multiple jobs at once, but it's a subspace of a queue
+  // that only tolerates a single job, all previous jobs in that
+  // namespace are removed (but only killed if no-one is also running that job)
+  namespace?: string;
   callbacks?: {
     queued?: {
       url: string;
@@ -170,44 +186,70 @@ export type DockerJobControlConfig = {
       path: string;
     };
   };
-  queueHistory?: string[];
 };
+
+export interface StateChangeValue {
+  type: DockerJobState;
+  time: number;
+}
 
 /**
  * This state change contains the job definition.
  * This means history is recoverable.
  */
-export interface StateChangeValueQueued {
-  definition: DockerJobDefinitionInputRefs;
-  time: number;
-  debug?: boolean;
-  maxJobDuration?: string;
-  // the client that submitted the job
-  // if there are multiple jobs from the same namespace,
-  // only the most recent one is kept, all others are killed
-  // TODO: handle the edge case where two different sources
-  // submit the exact same job definition. In that case, just
-  // don't kill the job unless you add a record of claimed jobs
-  // A ttl simple record would do here.
+export interface StateChangeValueQueued extends StateChangeValue {
+  enqueued: EnqueueJob;
+}
+
+export interface StateChangeValueRunning extends StateChangeValue {
+  worker: string;
+}
+
+export interface StateChangeValueFinished extends StateChangeValue {
+  result?: DockerRunResultWithOutputs;
+  reason: DockerJobFinishedReason;
+  message?: string;
+  worker?: string;
   namespace?: string;
+}
+
+export interface InMemoryDockerJob {
+  queuedTime: number;
+  debug?: boolean;
+  state: DockerJobState;
+  time: number;
+  worker: string; // blank means no worker
+  finished?: StateChangeValueFinished;
+  finishedReason?: DockerJobFinishedReason;
+  // these restrict to workers with the same tags
+  tags?: string[];
+  namespaces: string[];
+  requirements?: {
+    cpus?: number;
+    gpus?: number;
+    maxDuration?: string;
+    memory?: string;
+  };
+}
+
+export interface EnqueueJob {
+  id: string;
+  definition: DockerJobDefinitionInputRefs;
+  debug?: boolean;
   control?: DockerJobControlConfig;
 }
 
-export interface StateChangeValueReQueued {
-  time: number;
-}
-
-export interface StateChangeValueRunning {
-  worker: string;
-  time: number;
-}
-
-export interface StateChangeValueFinished {
-  result?: DockerRunResultWithOutputs;
-  reason: DockerJobFinishedReason;
-  worker?: string;
-  time: number;
-}
+export const enqueuedToInMemoryDockerJob = (enqueued: EnqueueJob): InMemoryDockerJob => {
+  const queuedTime = Date.now();
+  return {
+    queuedTime: queuedTime,
+    state: DockerJobState.Queued,
+    time: queuedTime,
+    worker: "",
+    namespaces: enqueued.control?.namespace ? [enqueued.control.namespace] : [],
+    tags: enqueued.definition.tags,
+  };
+};
 
 export interface DockerJobDefinitionRow {
   // hash of the definition.
@@ -231,8 +273,8 @@ export const getFinishedJobState = (
   }
 };
 
-// export type JobsStateMap = { [id in string]: DockerJobDefinitionRow };
-export type JobsStateMap = Record<string, DockerJobDefinitionRow>;
+// export type JobsStateMap = { [id in string]: InMemoryDockerJob };
+export type JobsStateMap = Record<string, InMemoryDockerJob>;
 
 export interface JobStates {
   jobs: JobsStateMap;
@@ -281,14 +323,21 @@ export enum WebsocketMessageTypeWorkerToServer {
   WorkerRegistration = "WorkerRegistration",
   WorkerStatusResponse = "WorkerStatusResponse",
   JobStatusLogs = "JobStatusLogs",
+  RequestJobDefinitions = "RequestJobDefinitions",
 }
+
+export interface RequestJobDefinitions {
+  jobIds: string[];
+}
+
 export interface WebsocketMessageWorkerToServer {
   type: WebsocketMessageTypeWorkerToServer;
   payload:
     | StateChange
     | WorkerRegistration
     | WorkerStatusResponse
-    | JobStatusPayload;
+    | JobStatusPayload
+    | RequestJobDefinitions;
 }
 export type WebsocketMessageSenderWorker = (
   message: WebsocketMessageWorkerToServer,
@@ -299,28 +348,16 @@ export type WebsocketMessageSenderWorker = (
  */
 export enum WebsocketMessageTypeClientToServer {
   StateChange = "StateChange",
-  ClearJobCache = "ClearJobCache",
-  ResubmitJob = "ResubmitJob",
   QueryJob = "QueryJob",
   QueryJobStates = "QueryJobStates",
 }
 export interface PayloadClearJobCache {
   jobId: string;
-  // why do we need the definition here?
-  // because the definition defines the cached docker image
-  definition?: DockerJobDefinitionInputRefs;
+  namespace: string;
 }
 
 export interface PayloadResubmitJob {
-  jobId: string;
-  // send the definition again, so we can update the state
-  // with the new definition (that may have changed the content (presigned URLS)
-  // that do not alter the hash (job id) )
-  definition: DockerJobDefinitionInputRefs;
-}
-
-export interface PayloadClearJobCacheConfirm {
-  jobId: string;
+  enqueued: EnqueueJob;
 }
 
 export interface PayloadClearJobOnWorker {
@@ -335,7 +372,6 @@ export interface WebsocketMessageClientToServer {
   type: WebsocketMessageTypeClientToServer;
   payload:
     | StateChange
-    | PayloadClearJobCache
     | PayloadResubmitJob
     | PayloadQueryJob;
 }
@@ -359,18 +395,21 @@ export enum WebsocketMessageTypeServerBroadcast {
   StatusRequest = "StatusRequest",
   // Only the worker listens to this
   ClearJobCache = "ClearJobCache",
-  ClearJobCacheConfirm = "ClearJobCacheConfirm",
+  BroadcastJobDefinitions = "BroadcastJobDefinitions",
 }
 export interface WebsocketMessageServerBroadcast {
   type: WebsocketMessageTypeServerBroadcast;
   payload:
     | BroadcastJobStates
-    | BroadcastJobs
     | BroadcastWorkers
     | BroadcastStatusRequest
-    | PayloadClearJobCacheConfirm
     | PayloadClearJobCache
-    | JobStatusPayload;
+    | JobStatusPayload
+    | BroadcastJobDefinitions;
+}
+
+export interface BroadcastJobDefinitions {
+  definitions: Record<string, DockerJobDefinitionInputRefs>;
 }
 /**
  * The job states, not the jobs themselves
@@ -379,14 +418,7 @@ export interface BroadcastJobStates {
   isSubset?: boolean;
   state: JobStates;
 }
-/**
- * This doesn't contain the states, just the job definitions
- * These are just stored, the states are handled separately
- * to minimize the amount of data sent over the wire
- */
-export interface BroadcastJobs {
-  jobs: { [key: string]: DockerJobDefinitionInputRefs };
-}
+
 /**
  * Let everyone know how many workers and their resources
  */
@@ -424,11 +456,12 @@ export interface DockerJobDefinitionMetadata {
  * @param state
  * @returns
  */
-export const isJobCacheAllowedToBeDeleted = (state: StateChange): boolean => {
+export const isJobCacheAllowedToBeDeleted = (
+  state: DockerJobState,
+): boolean => {
   // This is duplicated (search for it, turn into function)
-  switch (state.state) {
+  switch (state) {
     case DockerJobState.Queued:
-    case DockerJobState.ReQueued:
     case DockerJobState.Running:
       // not touching the job since it's active. Finish it first.
       return false;
@@ -449,6 +482,5 @@ export type DockerApiDeviceRequest = {
 export type DockerApiCopyJobToQueuePayload = {
   jobId: string;
   queue: string;
-  namespace?: string;
   control?: DockerJobControlConfig;
 };

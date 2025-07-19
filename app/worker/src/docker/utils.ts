@@ -1,4 +1,6 @@
-import { removeAllJobsFromOtherQueues } from "/@/queue/cleanup.ts";
+import { removeAllDeadContainersFromQueue } from "/@/queue/cleanup.ts";
+
+import { config } from "../config.ts";
 import { ensureIsolateNetwork } from "./network.ts";
 import { ensureSharedVolume } from "./volume.ts";
 
@@ -7,7 +9,7 @@ export async function ensureResourcesAndCleanseUnknownJobContainers(
 ) {
   await ensureSharedVolume();
   await ensureIsolateNetwork();
-  await removeAllJobsFromOtherQueues(queue);
+  await removeAllDeadContainersFromQueue({ queue, workerId: config.id });
 }
 
 export const prepGpus = async (gpus: number | undefined) => {

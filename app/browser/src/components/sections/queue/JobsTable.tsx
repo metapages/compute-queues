@@ -1,8 +1,10 @@
 import React from "react";
-import { DockerJobState, JobsStateMap, StateChangeValueQueued } from "/@shared/client";
-import { Box, Table, TableContainer, Tbody, Td, Th, Thead, Tr } from "@chakra-ui/react";
-import { useStore } from "/@/store";
+
 import { ButtonJobCancel } from "/@/components/generic/ButtonJobCancel";
+import { useStore } from "/@/store";
+import { DockerJobState, JobsStateMap } from "/@shared/client";
+
+import { Box, Table, TableContainer, Tbody, Td, Th, Thead, Tr } from "@chakra-ui/react";
 
 export const JobsTable: React.FC = () => {
   const jobs = useStore(state => state.jobStates);
@@ -18,8 +20,8 @@ export const JobsTable: React.FC = () => {
       return 1;
     }
 
-    const timeA = jobs[jobA].value.time;
-    const timeB = jobs[jobB].value.time;
+    const timeA = jobs[jobA].time;
+    const timeB = jobs[jobB].time;
     return new Date(timeB).getTime() - new Date(timeA).getTime();
   });
 
@@ -54,17 +56,19 @@ const JobComponent: React.FC<{
 }> = ({ jobId, jobs }) => {
   // How many jobs is this worker running
   const jobBlob = jobs[jobId];
-  const definition = (jobBlob!.history[0]!.value as StateChangeValueQueued).definition;
+  // const definition = (jobBlob!.history[0]!.value as StateChangeValueQueued).definition;
 
   return (
     <Tr>
       <Td>{jobId.substring(0, 6)}</Td>
-      <Td style={{ wordBreak: "break-word" }}>{definition.image}</Td>
-      <Td>{definition.command}</Td>
-      <Td>TBD</Td>
+      {/* <Td style={{ wordBreak: "break-word" }}>{definition.image}</Td>
+      <Td>{definition.command}</Td> */}
+      <Td style={{ wordBreak: "break-word" }}></Td>
+      <Td></Td>
+      <Td>{jobBlob.time ? new Date(jobBlob.time).toLocaleTimeString() : "--"}</Td>
       <Td>{jobBlob.state}</Td>
       <Td>
-        <ButtonJobCancel job={jobBlob} />
+        <ButtonJobCancel job={jobBlob} jobId={jobId} />
       </Td>
     </Tr>
   );

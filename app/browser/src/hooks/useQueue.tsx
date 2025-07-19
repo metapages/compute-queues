@@ -1,5 +1,16 @@
-import { useHashParam, useHashParamBoolean } from "@metapages/hash-query/react-hooks";
 import { useCallback } from "react";
+
+import { getHashParamsFromWindow } from "@metapages/hash-query";
+import { useHashParam, useHashParamBoolean } from "@metapages/hash-query/react-hooks";
+
+export const getQueueFromUrl = () => {
+  const [_, hashParams] = getHashParamsFromWindow();
+  const queue = hashParams["queue"];
+  const queueOverride = hashParams["queueOverride"];
+  const ignoreQueueOverride = hashParams["ignoreQueueOverride"] === "true";
+  const resolvedQueue = !ignoreQueueOverride && queueOverride ? queueOverride : queue;
+  return resolvedQueue;
+};
 
 export const useQueue = () => {
   // set and stored locally

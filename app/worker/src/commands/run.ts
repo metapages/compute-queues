@@ -1,19 +1,21 @@
 import { config } from "/@/config.ts";
-
-import { ms } from "ms";
-import parseDuration from "parse-duration";
-import humanizeDuration from "humanize-duration";
-import ReconnectingWebSocket from "reconnecting-websocket";
-import { ensureDir, existsSync } from "std/fs";
-import { join } from "std/path";
+import { prepGpus, runChecksOnInterval } from "/@/docker/utils.ts";
 import { localHandler } from "/@/lib/local-handler.ts";
 import { processes, waitForDocker } from "/@/processes.ts";
 import { clearCache } from "/@/queue/dockerImage.ts";
 import { DockerJobQueue, type DockerJobQueueArgs } from "/@/queue/index.ts";
+import humanizeDuration from "humanize-duration";
+import { ms } from "ms";
+import parseDuration from "parse-duration";
+import ReconnectingWebSocket from "reconnecting-websocket";
+import { ensureDir, existsSync } from "std/fs";
+import { join } from "std/path";
 
 import { Command } from "@cliffy/command";
 import {
   type BroadcastJobStates,
+  getJobColorizedString,
+  getWorkerColorizedString,
   type PayloadClearJobCache,
   type WebsocketMessageSenderWorker,
   type WebsocketMessageServerBroadcast,
@@ -24,7 +26,8 @@ import {
 
 import { getKv } from "../../../shared/src/shared/kv.ts";
 import mod from "../../mod.json" with { type: "json" };
-import { prepGpus, runChecksOnInterval } from "/@/docker/utils.ts";
+import { killAndRemoveContainerForJob } from "../queue/cleanup.ts";
+import { JobDefinitionCache } from "../queue/JobDefinitionCache.ts";
 
 const VERSION: string = mod.version;
 
@@ -55,30 +58,18 @@ export const runCommand = new Command()
     "Maximum duration of a job. Default: 5m",
   )
   .option("--debug [debug:boolean]", "Debug mode", { default: undefined })
-  .option(
-    "--test-mode [testMode:boolean]",
-    "Test mode: jobs are ignored by existing workers on the same host",
-  )
   .action(async (options, queue?: string) => {
     const METAPAGE_IO_CPUS = Deno.env.get(`${EnvPrefix}CPUS`);
-    config.cpus = typeof options.cpus === "number"
-      ? options.cpus
-      : (METAPAGE_IO_CPUS ? parseInt(METAPAGE_IO_CPUS) : 1);
+    config.cpus = typeof options.cpus === "number" ? options.cpus : (METAPAGE_IO_CPUS ? parseInt(METAPAGE_IO_CPUS) : 1);
 
     const METAPAGE_IO_GPUS = Deno.env.get(`${EnvPrefix}GPUS`);
-    config.gpus = typeof options.gpus === "number"
-      ? options.gpus
-      : (METAPAGE_IO_GPUS ? parseInt(METAPAGE_IO_GPUS) : 0);
+    config.gpus = typeof options.gpus === "number" ? options.gpus : (METAPAGE_IO_GPUS ? parseInt(METAPAGE_IO_GPUS) : 0);
 
     const METAPAGE_IO_MODE = Deno.env.get(`${EnvPrefix}MODE`);
-    config.mode = options.mode === "remote" || options.mode === "local"
-      ? options.mode
-      : (METAPAGE_IO_MODE || "remote");
+    config.mode = options.mode === "remote" || options.mode === "local" ? options.mode : (METAPAGE_IO_MODE || "remote");
 
     const METAPAGE_IO_QUEUE = Deno.env.get(`${EnvPrefix}QUEUE`);
-    config.queue = config.mode === "local"
-      ? "local"
-      : queue || METAPAGE_IO_QUEUE || "";
+    config.queue = config.mode === "local" ? "local" : queue || METAPAGE_IO_QUEUE || "";
     if (!queue && !METAPAGE_IO_QUEUE && config.mode === "remote") {
       throw new Error("Remote mode: must supply the queue id");
     }
@@ -95,9 +86,7 @@ export const runCommand = new Command()
     );
 
     const METAPAGE_IO_DEBUG = Deno.env.get(`${EnvPrefix}DEBUG`);
-    config.debug = !!(typeof (options.debug) === "boolean"
-      ? options.debug
-      : METAPAGE_IO_DEBUG === "true");
+    config.debug = !!(typeof (options.debug) === "boolean" ? options.debug : METAPAGE_IO_DEBUG === "true");
 
     if (config.mode === "local") {
       Deno.env.set("DENO_KV_URL", join(config.dataDirectory, "kv"));
@@ -118,8 +107,6 @@ export const runCommand = new Command()
       ? options.maxJobDuration
       : (METAPAGE_IO_JOB_MAX_DURATION || "5m");
     config.maxJobDuration = parseDuration(stringDuration) as number;
-
-    config.testMode = !!options.testMode;
 
     if (options.id && typeof options.id === "string") {
       config.id = options.id;
@@ -175,10 +162,8 @@ export const runCommand = new Command()
     await prepGpus(config.gpus);
     await runChecksOnInterval(config.queue);
 
-    console.log("config.id", config.id);
-
     if (config.mode === "local") {
-      const cacheDir = join(config.dataDirectory, "cache");
+      const cacheDir = join(config.dataDirectory, "f");
       await ensureDir(config.dataDirectory);
       await ensureDir(cacheDir);
       await Deno.chmod(config.dataDirectory, 0o777);
@@ -234,7 +219,7 @@ export const runCommand = new Command()
  * Connect via websocket to the API server, and attach the DockerJobQueue object
  * TODO: listen to multiple job queues?
  */
-export function connectToServer(
+export async function connectToServer(
   args: {
     server: string;
     queueId: string;
@@ -248,11 +233,11 @@ export function connectToServer(
   const { server, queueId, cpus, gpus, workerId, port, maxJobDuration } = args;
 
   const url = config.mode === "local"
-    ? `ws://localhost:${port}/${queueId}/worker`
-    : `${server.replace("http", "ws")}/${queueId}/worker`;
+    ? `ws://localhost:${port}/q/${queueId}/worker`
+    : `${server.replace("http", "ws")}/q/${queueId}/worker`;
 
   // @ts-ignore: frustrating cannot get compiler "default" import setup working
-  console.log(`🪐 connecting... ${url}`);
+  console.log(`${getWorkerColorizedString(workerId)} 🪐 connecting... ${url}`);
   // @ts-ignore: frustrating cannot get compiler "default" import setup working
   const rws = new ReconnectingWebSocket(url, [], {
     maxReconnectionDelay: 6000,
@@ -273,6 +258,16 @@ export function connectToServer(
 
   let timeLastPong = Date.now();
   let _timeLastPing = Date.now();
+  let consecutivePingFailures = 0;
+  let lastMessageReceived = Date.now();
+  let connectionUptime = Date.now();
+
+  const kv = await getKv();
+
+  const jobDefinitionCache = new JobDefinitionCache({
+    kv,
+    sender,
+  });
 
   const dockerJobQueueArgs: DockerJobQueueArgs = {
     sender,
@@ -283,17 +278,33 @@ export function connectToServer(
     time: Date.now(),
     maxJobDuration,
     queue: queueId,
+    jobDefinitions: jobDefinitionCache,
   };
   const dockerJobQueue = new DockerJobQueue(dockerJobQueueArgs);
 
   rws.addEventListener("error", (error: Error) => {
     console.log(`Websocket error=${error.message}`);
+    consecutivePingFailures++;
+    if (consecutivePingFailures > 3) {
+      console.log(
+        `${
+          getWorkerColorizedString(workerId)
+        } 🚨 Multiple websocket errors (${consecutivePingFailures}), forcing reconnect`,
+      );
+      new Promise((resolve) => setTimeout(resolve, 1000)).then(() => {
+        rws.reconnect();
+      });
+    }
   });
 
   rws.addEventListener("open", () => {
-    console.log(`🚀 connected! ${url} `);
+    console.log(`${getWorkerColorizedString(workerId)} 🚀 connected! ${url} `);
     // This isn't a PING, but it's when we start measuring
     _timeLastPing = Date.now();
+    timeLastPong = Date.now();
+    lastMessageReceived = Date.now();
+    connectionUptime = Date.now();
+    consecutivePingFailures = 0;
     dockerJobQueue.register();
   });
 
@@ -302,40 +313,68 @@ export function connectToServer(
   setInterval(() => {
     if (rws.readyState === rws.OPEN) {
       // console.log("🌳 pinging");
-      rws.send("PING");
-      _timeLastPing = Date.now();
-      timeLastPong = Date.now();
+      try {
+        rws.send("PING");
+        _timeLastPing = Date.now();
+        // Reset failure counter on successful ping
+        consecutivePingFailures = 0;
+      } catch (err) {
+        console.log(`🚨 Failed to send PING: ${err}`);
+        consecutivePingFailures++;
+      }
     } else {
-      console.log("🌳 🚩 pinging but not open");
+      console.log("🌳 🚩 pinging but not open, state:", rws.readyState);
+      consecutivePingFailures++;
     }
   }, 5000);
 
   rws.addEventListener("close", () => {
     // closed = true;
     // wsPool.remove(rws);
-    console.log(`💥🚀💥 disconnected! ${url}`);
+    console.log(
+      `💥🚀💥 disconnected! ${url} after ${Date.now() - connectionUptime}ms uptime`,
+    );
     // clearInterval(pingInterval);
   });
+
   const intervalSinceNoTrafficToTriggerReconnect = ms("10s") as number;
   const reconnectCheckInterval = ms("3s") as number;
   const reconnectCheck = () => {
+    const timeSinceLastPong = Date.now() - timeLastPong;
+    const timeSinceLastMessage = Date.now() - lastMessageReceived;
+
     if (
-      (Date.now() - timeLastPong) >= intervalSinceNoTrafficToTriggerReconnect &&
+      timeSinceLastPong >= intervalSinceNoTrafficToTriggerReconnect &&
       rws.readyState === rws.OPEN
     ) {
       console.log(
-        `Reconnecting because no PONG since ${
-          humanizeDuration(Date.now() - timeLastPong)
-        } >= ${humanizeDuration(intervalSinceNoTrafficToTriggerReconnect)}`,
+        `🚨 Reconnecting because no PONG since ${humanizeDuration(timeSinceLastPong)} >= ${
+          humanizeDuration(intervalSinceNoTrafficToTriggerReconnect)
+        }`,
       );
       rws.reconnect();
-      // } else {
-      //   console.log(
-      //     `Not reconnecting because no PONG since ${
-      //       humanizeDuration(Date.now() - timeLastPong)
-      //     } < ${humanizeDuration(intervalSinceNoTrafficToTriggerReconnect)}`,
-      //   );
+    } else if (
+      timeSinceLastMessage >= (ms("30s") as number) &&
+      rws.readyState === rws.OPEN
+    ) {
+      console.log(
+        `🚨 No messages received for ${humanizeDuration(timeSinceLastMessage)}, reconnecting`,
+      );
+      rws.reconnect();
     }
+
+    // Log connection health every minute
+    // if ((Date.now() % 60000) < 3000) { // Every minute
+    //   console.log(
+    //     `📊 Connection health: uptime=${
+    //       humanizeDuration(Date.now() - connectionUptime)
+    //     }, ` +
+    //       `lastPong=${humanizeDuration(timeSinceLastPong)}, ` +
+    //       `lastMessage=${humanizeDuration(timeSinceLastMessage)}, ` +
+    //       `pingFailures=${consecutivePingFailures}`,
+    //   );
+    // }
+
     setTimeout(reconnectCheck, reconnectCheckInterval);
   };
   setTimeout(reconnectCheck, reconnectCheckInterval);
@@ -347,13 +386,14 @@ export function connectToServer(
   rws.addEventListener("message", (message: MessageEvent) => {
     try {
       const messageString = message.data.toString();
+      lastMessageReceived = Date.now(); // Update last message time
 
       if (messageString.startsWith("PONG")) {
         timeLastPong = Date.now();
         const pongedWorkerId = messageString.split(" ")[1];
         if (pongedWorkerId !== workerId) {
           console.log(
-            `Server does not recognize us, registering again , sees [${pongedWorkerId}] expected [${workerId}]`,
+            `🚨 Server does not recognize us, registering again , sees [${pongedWorkerId}] expected [${workerId}]`,
           );
           dockerJobQueue.register();
           // } else {
@@ -377,18 +417,34 @@ export function connectToServer(
       const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(
         messageString,
       );
+
+      jobDefinitionCache.onWebsocketMessage(possibleMessage);
+
       switch (possibleMessage.type) {
-        // definitive list of jobs
+        case WebsocketMessageTypeServerBroadcast.BroadcastJobDefinitions: {
+          // handled by jobDefinitionCache.onWebsocketMessage
+          break;
+        }
+
         case WebsocketMessageTypeServerBroadcast.JobStates: {
           const allJobsStatesPayload = possibleMessage
             .payload as BroadcastJobStates;
           currentGotJobStates++;
+
+          // const jobCount =
+          //   Object.keys(allJobsStatesPayload?.state?.jobs || {}).length;
+          // console.log(
+          //   `📥 Worker ${
+          //     workerId?.substring(0, 6)
+          //   } received JobStates with ${jobCount} jobs`,
+          // );
+
           if (currentGotJobStates > logGotJobStatesEvery) {
-            console.log(
-              `[${workerId?.substring(0, 6)}] got JobStates(${
-                allJobsStatesPayload?.state?.jobs?.length || 0
-              }) (only logging every ${logGotJobStatesEvery} messages)`,
-            );
+            // console.log(
+            //   `[${workerId?.substring(0, 6)}] got JobStates(${
+            //     allJobsStatesPayload?.state?.jobs?.length || 0
+            //   }) (only logging every ${logGotJobStatesEvery} messages)`,
+            // );
             currentGotJobStates = 0;
           }
 
@@ -412,11 +468,17 @@ export function connectToServer(
             break;
           }
 
+          // const jobCount =
+          //   Object.keys(someJobsPayload?.state?.jobs || {}).length;
+          // console.log(
+          //   `📥 Worker ${
+          //     workerId?.substring(0, 6)
+          //   } received JobStateUpdates with ${jobCount} jobs`,
+          // );
+
           if (currentGotJobStateUpdates > logGotJobStateUpdatesEvery) {
             console.log(
-              `[${workerId?.substring(0, 6)}] got JobStateUpdates(${
-                someJobsPayload?.state?.jobs?.length || 0
-              })`,
+              `[${workerId?.substring(0, 6)}] got JobStateUpdates(${someJobsPayload?.state?.jobs?.length || 0})`,
             );
             currentGotJobStateUpdates = 0;
           }
@@ -426,6 +488,11 @@ export function connectToServer(
         }
         case WebsocketMessageTypeServerBroadcast.StatusRequest: {
           const status = dockerJobQueue.status();
+          console.log(
+            `📤 Worker ${workerId?.substring(0, 6)} responding to status request with ${
+              Object.keys(status.queue).length
+            } running jobs`,
+          );
           sender({
             type: WebsocketMessageTypeWorkerToServer.WorkerStatusResponse,
             payload: status,
@@ -435,44 +502,52 @@ export function connectToServer(
         case WebsocketMessageTypeServerBroadcast.ClearJobCache: {
           const clearJobCacheConfirm = possibleMessage
             .payload as PayloadClearJobCache;
-          console.log(
-            `[${
-              clearJobCacheConfirm.jobId?.substring(0, 6)
-            }] 🗑️ deleting docker images`,
-          );
-          if (clearJobCacheConfirm?.definition?.build) {
-            clearCache({ build: clearJobCacheConfirm.definition.build });
+          const jobIdToClear = clearJobCacheConfirm.jobId;
+          if (!jobIdToClear) {
+            break;
           }
+          console.log(
+            `${getJobColorizedString(jobIdToClear)} 🗑️ deleting docker images`,
+          );
+          (async () => {
+            const definition = await jobDefinitionCache.get(clearJobCacheConfirm.jobId);
+            if (definition?.build) {
+              clearCache({ build: definition.build });
+            }
+            await killAndRemoveContainerForJob({ jobId: jobIdToClear, workerId: config.id, queue: config.queue });
+          })();
+          // if (clearJobCacheConfirm?.definition?.build) {
+          //   clearCache({ build: clearJobCacheConfirm.definition.build });
+          // }
 
-          if (clearJobCacheConfirm?.jobId) {
-            const jobCacheDir = join(
-              config.dataDirectory,
-              clearJobCacheConfirm.jobId,
-            );
-            if (existsSync(jobCacheDir)) {
-              try {
-                console.log(
-                  `[${
-                    clearJobCacheConfirm.jobId?.substring(0, 6)
-                  }] 🔥 deleting job cache dir ${jobCacheDir}`,
-                );
-                Deno.removeSync(jobCacheDir, { recursive: true });
-              } catch (err) {
-                console.log(
-                  `Error deleting job cache dir ${jobCacheDir}: ${err}`,
-                );
-              }
+          const jobCacheDir = join(
+            config.dataDirectory,
+            clearJobCacheConfirm.jobId,
+          );
+          if (existsSync(jobCacheDir)) {
+            try {
+              console.log(
+                `${getJobColorizedString(clearJobCacheConfirm?.jobId || "")} 🔥 deleting job cache dir ${jobCacheDir}`,
+              );
+              Deno.removeSync(jobCacheDir, { recursive: true });
+            } catch (err) {
+              console.log(
+                `Error deleting job cache dir ${jobCacheDir}: ${err}`,
+              );
             }
           }
+
           break;
         }
-        default: {
-          //ignored
-          break;
-        }
+        default:
+          if (config.debug) {
+            console.log(
+              `${getWorkerColorizedString(workerId || "")} unhandled message type: ${possibleMessage.type}`,
+            );
+          }
       }
     } catch (err) {
-      console.log(err);
+      console.log(`🚨 Error processing message: ${err}`);
     }
   });
 }

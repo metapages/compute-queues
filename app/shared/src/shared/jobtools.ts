@@ -1,15 +1,5 @@
-import { crypto } from "@std/crypto";
-import { encodeHex } from "@std/encoding";
-import { retryAsync } from "retry";
-import { ensureDir, ensureDirSync, exists, existsSync } from "std/fs";
-import { dirname } from "std/path";
-
-import { join } from "std/path";
 import { decodeBase64 } from "/@/shared/base64.ts";
-import {
-  ENV_VAR_DATA_ITEM_LENGTH_MAX,
-  fetchBlobFromHash,
-} from "/@/shared/dataref.ts";
+import { ENV_VAR_DATA_ITEM_LENGTH_MAX, fetchBlobFromHash } from "/@/shared/dataref.ts";
 import {
   type DataRef,
   DataRefType,
@@ -23,9 +13,14 @@ import {
   WebsocketMessageTypeClientToServer,
 } from "/@/shared/types.ts";
 import { sanitizeFilename, shaDockerJob } from "/@/shared/util.ts";
+import { retryAsync } from "retry";
+import { ensureDir, ensureDirSync, exists, existsSync } from "std/fs";
+import { dirname, join } from "std/path";
 
-const IGNORE_CERTIFICATE_ERRORS: boolean =
-  Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
+import { crypto } from "@std/crypto";
+import { encodeHex } from "@std/encoding";
+
+const IGNORE_CERTIFICATE_ERRORS: boolean = Deno.env.get("IGNORE_CERTIFICATE_ERRORS") === "true";
 
 /**
  * If two workers claim a job, this function will resolve which worker should take the job.
@@ -51,19 +46,23 @@ export const createNewContainerJobMessage = async (opts: {
   definition: DockerJobDefinitionInputRefs;
   debug?: boolean;
   jobId?: string;
-  namespace?: string;
   control?: DockerJobControlConfig;
 }): Promise<JobMessagePayload> => {
-  let { definition, debug, jobId, namespace, control } = opts;
+  let { definition, debug, jobId, control } = opts;
   const value: StateChangeValueQueued = {
-    definition,
-    debug,
+    type: DockerJobState.Queued,
     time: Date.now(),
-    namespace,
-    control,
+    enqueued: {
+      id: jobId || "",
+      // queue : queue,
+      definition,
+      debug,
+      control,
+    },
   };
   if (!jobId) {
     jobId = await shaDockerJob(definition);
+    value.enqueued.id = jobId;
   }
   const payload: StateChange = {
     state: DockerJobState.Queued,
@@ -141,17 +140,24 @@ export const fileToDataref = async (
 ): Promise<DataRef> => {
   const { size } = await Deno.stat(file);
   const hash = await hashFileOnDisk(file);
+  const actualAddress = Deno.env.get("DEV_ONLY_EXTERNAL_SERVER_ADDRESS") ||
+    address;
 
   if (size > ENV_VAR_DATA_ITEM_LENGTH_MAX) {
     try {
-      const existsUrl = `${address}/api/v1/exists/${hash}`;
-      const existsResponse = await fetch(existsUrl);
+      const existsUrl = `${address}/f/${hash}/exists`;
+      const existsResponse = await fetch(existsUrl, { redirect: "follow" });
       if (existsResponse.status === 200) {
         existsResponse?.body?.cancel();
         const existsRef: DataRef = {
-          value: hash,
-          type: DataRefType.key,
+          value: `${actualAddress}/f/${hash}`,
+          type: DataRefType.url,
         };
+
+        // const existsRef: DataRef = {
+        //   value: hash,
+        //   type: DataRefType.key,
+        // };
         return existsRef;
       } else {
         // Consume the response body even when status is not 200
@@ -163,7 +169,7 @@ export const fileToDataref = async (
       );
     }
 
-    const uploadUrl = `${address}/api/v1/upload/${hash}`;
+    const uploadUrl = `${address}/f/${hash}`;
 
     // https://github.com/metapages/compute-queues/issues/46
     // Hack to stream upload files, since fetch doesn't seem
@@ -175,7 +181,7 @@ export const fileToDataref = async (
 
     await retryAsync(
       async () => {
-        console.log(`🐸🐪 fileToDataref: curl ${args.join(" ")}`);
+        // console.log(`🐸🐪 fileToDataref: curl ${args.join(" ")}`);
         const command = new Deno.Command("curl", {
           args,
         });
@@ -191,24 +197,22 @@ export const fileToDataref = async (
               new TextDecoder().decode(
                 stdout,
               ).substring(0, 1000)
-            } stderr=${
-              new TextDecoder().decode(stderr).substring(0, 1000)
-            } command='curl ${args.join(" ")}'`,
+            } stderr=${new TextDecoder().decode(stderr).substring(0, 1000)} command='curl ${args.join(" ")}'`,
           );
-        } else {
-          console.log(
-            `✅🐪 file upload [size=${size}] ${file} to ${uploadUrl}`,
-          );
+          // } else {
+          //   console.log(
+          //     `✅🐪 file upload [size=${size}] ${file} to ${uploadUrl}`,
+          //   );
         }
       },
       { delay: 2000, maxTry: 20 },
     );
 
-    const actualAddress = Deno.env.get("DEV_ONLY_EXTERNAL_SERVER_ADDRESS") ||
-      address;
+    // const actualAddress = Deno.env.get("DEV_ONLY_EXTERNAL_SERVER_ADDRESS") ||
+    //   address;
 
     const dataRef: DataRef = {
-      value: `${actualAddress}/api/v1/download/${hash}`,
+      value: `${actualAddress}/f/${hash}`,
       type: DataRefType.url,
     };
     return dataRef;
@@ -283,7 +287,7 @@ export const dataRefToFile = async (
       if (hash) {
         const sanitizedHash = sanitizeFilename(hash);
         // console.log(`🐸🐪 dataRefToFile sanitizedHash`, sanitizedHash);
-        const cachedFilePath = join(dataDirectory, "cache", sanitizedHash);
+        const cachedFilePath = join(dataDirectory, "f", sanitizedHash);
         // console.log(`🐸🐪 dataRefToFile cachedFilePath`, cachedFilePath);
         const cacheExists = existsSync(cachedFilePath);
 
@@ -368,30 +372,29 @@ export const dataRefToFile = async (
 
         if (hash) {
           const sanitizedHash = sanitizeFilename(hash);
-          const cachedFilePath = join(dataDirectory, "cache", sanitizedHash);
+          const cachedFilePath = join(dataDirectory, "f", sanitizedHash);
           const cacheExists = await exists(cachedFilePath);
 
           if (cacheExists) {
             // Delete the downloaded file and create a hard link from cache
             await Deno.remove(filename);
             await Deno.link(cachedFilePath, filename);
-            console.log(
-              `Deleted downloaded file. Created hard link from cache for hash ${hash} to ${filename}.`,
-            );
+            // console.log(
+            //   `Deleted downloaded file. Created hard link from cache for hash ${hash} to ${filename}.`,
+            // );
           } else {
             // Create a hard link from the downloaded file to cache
-            await ensureDir(join(dataDirectory, "cache"));
+            await ensureDir(join(dataDirectory, "f"));
             await Deno.link(filename, cachedFilePath);
-            console.log(
-              `Created hard link from ${filename} to cache at ${cachedFilePath}.`,
-            );
+            // console.log(
+            //   `Created hard link from ${filename} to cache at ${cachedFilePath}.`,
+            // );
           }
         }
 
         return;
       } catch (downloadError) {
-        errString =
-          `Failed to download and cache data from URL ${ref.value}: ${downloadError}`;
+        errString = `Failed to download and cache data from URL ${ref.value}: ${downloadError}`;
         console.error(errString);
         throw new Error(errString);
       }
@@ -407,8 +410,7 @@ export const dataRefToFile = async (
         });
         return;
       } catch (keyError) {
-        errString =
-          `Failed to fetch blob from hash for key ${ref.value}: ${keyError}`;
+        errString = `Failed to fetch blob from hash for key ${ref.value}: ${keyError}`;
         console.error(errString);
         throw new Error(errString);
       }

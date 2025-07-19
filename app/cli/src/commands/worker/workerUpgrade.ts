@@ -173,8 +173,7 @@ async function getLatestVersionFromDockerHub(
   imageName: string,
 ): Promise<string | null> {
   // DockerHub API URL for listing tags
-  const url =
-    `https://registry.hub.docker.com/v2/repositories/${imageName}/tags?page_size=100`;
+  const url = `https://registry.hub.docker.com/v2/repositories/${imageName}/tags?page_size=100`;
 
   try {
     // Fetch the tag information from DockerHub
@@ -203,9 +202,7 @@ async function getLatestVersionFromDockerHub(
   } catch (error) {
     console.error(
       `Error fetching tags from DockerHub: ${
-        error instanceof Error
-          ? error.message
-          : `Unknown error: ${String(error)}`
+        error instanceof Error ? error.message : `Unknown error: ${String(error)}`
       }`,
     );
     return null;

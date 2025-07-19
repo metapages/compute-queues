@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import {
   copyLargeBlobsToCloud,
   DataRefType,
+  DefaultNamespace,
   DockerJobControlConfig,
   DockerJobDefinitionInputRefs,
   DockerJobDefinitionMetadata,
@@ -23,8 +24,8 @@ import { useMetaframeAndInput } from "@metapages/metapage-react";
 
 import { getIOBaseUrl } from "../config";
 import { useStore } from "../store";
-import { useQueue } from "./useQueue";
 import { useOptionAllowSetJob } from "./useOptionAllowSetJob";
+import { useQueue } from "./useQueue";
 
 const HashParamKeysSystem = new Set([
   "autostart",
@@ -227,12 +228,13 @@ export const useDockerJobDefinition = () => {
       if (cancelled) {
         return;
       }
+
       const newJobDefinition: DockerJobDefinitionMetadata = {
         hash: jobHashCurrent,
         definition,
         debug,
         maxJobDuration,
-        control: namespaceConfig,
+        control: { ...namespaceConfig, namespace: namespaceConfig?.namespace || DefaultNamespace },
       };
       if (debug) {
         console.log("container.mtfm.io DEBUG: newJobDefinition", newJobDefinition);

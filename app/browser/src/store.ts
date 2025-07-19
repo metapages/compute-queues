@@ -2,15 +2,15 @@ import {
   BroadcastWorkers,
   ConsoleLogLine,
   DockerJobDefinitionMetadata,
-  DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
-  getFinishedJobState,
+  getJobColorizedString,
+  InMemoryDockerJob,
   JobsStateMap,
   JobStatusPayload,
   PayloadQueryJob,
+  setJobStateFinished,
   StateChange,
-  StateChangeValueFinished,
   StateChangeValueQueued,
   WebsocketMessageClientToServer,
   WebsocketMessageSenderClient,
@@ -22,7 +22,7 @@ import { create } from "zustand";
 
 import { getHashParamValueJsonFromWindow, setHashParamValueJsonInWindow } from "@metapages/hash-query";
 
-import { deleteFinishedJob, getFinishedJob } from "./cache";
+import { cache } from "./cache";
 import { LogsMode } from "./components/sections/logs/DisplayLogs";
 
 let _cachedMostRecentSubmit: WebsocketMessageClientToServer | undefined;
@@ -36,6 +36,9 @@ export const cacheInsteadOfSendMessages = (message: WebsocketMessageClientToServ
   }
 };
 
+export type JobStateTuple = [string | undefined, InMemoryDockerJob | undefined];
+const EmptyJobStateTuple: JobStateTuple = [undefined, undefined];
+
 interface MainStore {
   /**
    * When the client creates a new job, it goes here.
@@ -44,22 +47,22 @@ interface MainStore {
   newJobDefinition: DockerJobDefinitionMetadata | undefined;
   setNewJobDefinition: (job: DockerJobDefinitionMetadata) => void;
   submitJob: () => void;
-  queryJob: () => void;
+  queryJob: () => Promise<void>;
 
   /**
    * This is the state of our current job, sent from the server.
    */
-  jobState: DockerJobDefinitionRow | undefined;
-  setJobState: (job: DockerJobDefinitionRow | undefined) => void;
+  jobState: [string, InMemoryDockerJob] | null;
+  setJobState: (job: [string, InMemoryDockerJob] | null) => void;
 
   /* We send the new job this way */
   sendClientStateChange: (payload: StateChange) => Promise<void>;
 
   /* The server sends job states, we get our current job state from this */
   jobStates: JobsStateMap;
-  setJobStates: (jobStates: JobsStateMap) => void;
+  setJobStates: (jobStates: JobsStateMap, subset?: boolean) => void;
   cancelJob: () => void;
-  deleteJobCache: () => boolean;
+  deleteJobCache: () => Promise<boolean>;
   resubmitJob: () => void;
 
   /* To display all the workers */
@@ -135,7 +138,7 @@ export const useStore = create<MainStore>((set, get) => ({
     if (!job) {
       set(() => ({
         newJobDefinition: undefined,
-        jobState: undefined,
+        jobState: EmptyJobStateTuple,
         jobId: undefined,
         buildLogs: null,
         runLogs: null,
@@ -146,18 +149,16 @@ export const useStore = create<MainStore>((set, get) => ({
       // no change.
       // But we update the state anyway, in case the job state changed
       set(() => ({
-        jobState: get().jobStates[job.hash],
+        jobState: get().jobStates[job.hash] ? [job.hash, get().jobStates[job.hash]] : EmptyJobStateTuple,
       }));
       return;
     }
 
-    // new job definition!: update the jobId, and reset the logs
-    const finishedState = get().jobStates[job.hash] ? getFinishedJobState(get().jobStates[job.hash]) : undefined;
     set(() => ({
       newJobDefinition: job,
-      jobState: get().jobStates[job.hash],
+      jobState: get().jobStates[job.hash] ? [job.hash, get().jobStates[job.hash]] : EmptyJobStateTuple,
       buildLogs: null,
-      runLogs: finishedState?.result?.logs || null,
+      runLogs: null,
     }));
   },
 
@@ -168,13 +169,16 @@ export const useStore = create<MainStore>((set, get) => ({
     }
     // inputs are already minified (fat blobs uploaded to the cloud)
     const value: StateChangeValueQueued = {
-      definition: definitionBlob.definition,
+      type: DockerJobState.Queued,
       time: Date.now(),
-      control: definitionBlob.control,
-      maxJobDuration: definitionBlob.maxJobDuration,
+      enqueued: {
+        id: definitionBlob.hash,
+        definition: definitionBlob.definition,
+        control: definitionBlob.control,
+      },
     };
     if (definitionBlob.debug) {
-      value.debug = true;
+      value.enqueued.debug = true;
     }
     const payload: StateChange = {
       state: DockerJobState.Queued,
@@ -185,7 +189,7 @@ export const useStore = create<MainStore>((set, get) => ({
     get().sendClientStateChange(payload);
   }, 200),
 
-  queryJob: pDebounce(() => {
+  queryJob: pDebounce(async () => {
     const definitionBlob = get().newJobDefinition;
     if (!definitionBlob) {
       return;
@@ -199,29 +203,58 @@ export const useStore = create<MainStore>((set, get) => ({
       type: WebsocketMessageTypeClientToServer.QueryJob,
       payload,
     });
+
+    // check if the job is already finished
+    const finishedState = await cache.getFinishedJob(definitionBlob.hash);
+    if (finishedState) {
+      const jobStates = { ...get().jobStates };
+      jobStates[definitionBlob.hash] = {
+        // id: definitionBlob.hash,
+        time: Date.now(),
+        queuedTime: Date.now(),
+        worker: "local",
+        namespaces: definitionBlob.control?.namespace ? [definitionBlob.control?.namespace] : [],
+        finished: finishedState,
+        state: DockerJobState.Finished,
+        finishedReason: finishedState.reason,
+      };
+      get().setJobStates(jobStates);
+    }
   }, 200),
 
-  jobState: undefined,
-  setJobState: (jobState: DockerJobDefinitionRow | undefined) => {
-    if (!jobState) {
+  jobState: EmptyJobStateTuple,
+  setJobState: async (args: JobStateTuple) => {
+    if (!args) {
       set(() => ({
-        jobState: undefined,
+        jobState: EmptyJobStateTuple,
         buildLogs: null,
         runLogs: null,
       }));
       return;
     }
-    const existingJobState = get().jobState;
+    const [jobId, jobState] = args;
     if (
-      existingJobState &&
-      existingJobState.hash === jobState.hash &&
-      existingJobState.history.length === jobState.history.length
+      !jobState ||
+      jobState.state === DockerJobState.Removed ||
+      (jobState.state === DockerJobState.Finished && jobState.finishedReason === DockerJobFinishedReason.Deleted)
     ) {
+      set(() => ({
+        jobState: EmptyJobStateTuple,
+        buildLogs: null,
+        runLogs: null,
+      }));
       return;
     }
 
-    set(() => ({ jobState }));
-    if (jobState?.state === DockerJobState.Queued || jobState?.state === DockerJobState.ReQueued) {
+    if (jobState.state === DockerJobState.Finished && !jobState.finished) {
+      const finishedState = await cache.getFinishedJob(jobId);
+      if (finishedState) {
+        jobState.finished = finishedState;
+      }
+    }
+
+    set(() => ({ jobState: [jobId, jobState] }));
+    if (jobState?.state === DockerJobState.Queued) {
       set(() => ({
         buildLogs: null,
         runLogs: null,
@@ -229,9 +262,8 @@ export const useStore = create<MainStore>((set, get) => ({
     } else if (jobState?.state === DockerJobState.Finished) {
       // if the job is finished, logs come from the result
       // not the cached streaming logs
-      const resultFinished = jobState?.value as StateChangeValueFinished;
       set(() => ({
-        runLogs: resultFinished.result?.logs,
+        runLogs: jobState?.finished?.result?.logs,
       }));
     }
   },
@@ -243,18 +275,36 @@ export const useStore = create<MainStore>((set, get) => ({
     // If so, set the job state to finished, with the cached finished state
     // This means the state change doesn't reach the server+worker
     if (clientStateChange.state === DockerJobState.Queued) {
-      const existingFinishedJob = await getFinishedJob(clientStateChange.job);
-      if (existingFinishedJob) {
+      const existingFinishedJob = await cache.getFinishedJob(clientStateChange.job);
+      if (existingFinishedJob?.reason) {
         // console.log(
-        //   `✅ 🐼 Found existing finished job for ${clientStateChange.job}`
+        //   `${getJobColorizedString(clientStateChange.job)} ✅ 🐼 Found existing finished job for ${clientStateChange.job}`,
         // );
-        const currentJobStates = get().jobStates;
-        const newJobStates = {
-          ...currentJobStates,
-          [clientStateChange.job]: existingFinishedJob,
-        };
-        get().setJobStates(newJobStates);
-        return;
+        let okToUseExistingFinishedJob = true;
+        switch (existingFinishedJob.reason) {
+          case DockerJobFinishedReason.Deleted:
+          case DockerJobFinishedReason.Cancelled:
+          case DockerJobFinishedReason.JobReplacedByClient:
+            okToUseExistingFinishedJob = false;
+            break;
+          default:
+            okToUseExistingFinishedJob = false;
+        }
+        if (okToUseExistingFinishedJob) {
+          const enqueuedJob = (clientStateChange.value as StateChangeValueQueued).enqueued;
+          const job = setJobStateFinished(enqueuedJob, {
+            finished: existingFinishedJob,
+          });
+
+          const currentJobStates = get().jobStates;
+          const newJobStates = {
+            ...currentJobStates,
+            [clientStateChange.job]: job,
+          };
+          get().setJobStates(newJobStates);
+          console.log(`🌋 💥 ‼️ NOT sending DockerJobState.Queued because existing finished job found`);
+          return;
+        }
       }
     }
     // otherwise, just send the state change
@@ -265,77 +315,102 @@ export const useStore = create<MainStore>((set, get) => ({
   },
 
   cancelJob: () => {
-    const jobState = get().jobState;
-    if (!jobState) {
+    const jobStateTuple = get().jobState;
+    if (!jobStateTuple) {
       return;
     }
+    const [jobId] = jobStateTuple;
     const stateChange: StateChange = {
       tag: "",
       state: DockerJobState.Finished,
-      job: jobState.hash,
+      job: jobId,
       value: {
+        type: DockerJobState.Finished,
         reason: DockerJobFinishedReason.Cancelled,
+        message: "Job cancelled by client",
         time: Date.now(),
       },
     };
     get().sendClientStateChange(stateChange);
   },
 
-  resubmitJob: () => {
+  resubmitJob: async () => {
     const jobState = get().jobState;
     if (!jobState) {
       return;
     }
+    await get().deleteJobCache();
+
     if (!get().newJobDefinition?.definition) {
       return;
     }
-    get().setJobState(undefined);
-    // delete the finished job from the local cache
-    deleteFinishedJob(jobState.hash);
-    const messageClientToServer: WebsocketMessageClientToServer = {
-      type: WebsocketMessageTypeClientToServer.ResubmitJob,
-      payload: {
-        jobId: jobState.hash,
-        definition: get().newJobDefinition.definition,
-      },
-    };
-    get().sendMessage(messageClientToServer);
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    get().submitJob();
   },
 
-  deleteJobCache: () => {
+  deleteJobCache: async () => {
     const client = get().newJobDefinition;
     if (!client?.hash) {
       return false;
     }
+    // delete the finished job from the local cache
+    await cache.deleteFinishedJob(client.hash);
 
-    // send a cancel message to the server
+    const newJobStates = {
+      ...get().jobStates,
+    };
+
+    if (newJobStates[client.hash]) {
+      newJobStates[client.hash].state = DockerJobState.Finished;
+      newJobStates[client.hash].finishedReason = DockerJobFinishedReason.Deleted;
+    }
+
+    get().setJobStates(newJobStates);
+    // get().setJobState(undefined);
+    // console.log(`🌋 ‼️ setJobState deleteJobCache:`, null);
+    set(() => ({
+      jobState: EmptyJobStateTuple,
+      buildLogs: null,
+      runLogs: null,
+    }));
+
+    // send a delete message to the server
     const stateChange: StateChange = {
       tag: "",
       state: DockerJobState.Finished,
       job: client.hash,
       value: {
-        reason: DockerJobFinishedReason.Cancelled,
+        type: DockerJobState.Finished,
+        reason: DockerJobFinishedReason.Deleted,
         time: Date.now(),
+        namespace: get().newJobDefinition?.control?.namespace,
       },
     };
     get().sendClientStateChange(stateChange);
-    // delete the finished job from the local cache
-    deleteFinishedJob(client.hash);
+
     return true;
   },
 
   jobStates: {},
-  setJobStates: (jobStates: JobsStateMap) => {
-    // blind merge update
-    const currentJobStates = get().jobStates;
-    const newJobStates = { ...currentJobStates, ...jobStates };
+  setJobStates: async (incomingJobStates: JobsStateMap, subset = false) => {
+    // the finished state can be large, so it's stored in s3
+    const newJobStates = subset ? { ...get().jobStates, ...incomingJobStates } : incomingJobStates;
+    for (const [jobId, job] of Object.entries(newJobStates)) {
+      if (job.state === DockerJobState.Finished && !job.finished) {
+        const finishedState = await cache.getFinishedJob(jobId);
+        if (finishedState) {
+          job.finished = finishedState;
+        }
+      }
+    }
 
     const jobHash = get().newJobDefinition?.hash;
     const serverJobState = newJobStates[jobHash];
     set(() => ({ jobStates: newJobStates }));
-    get().setJobState(serverJobState);
-
     // Set the job state(s) from the server
+    get().setJobState([jobHash, serverJobState]);
   },
 
   workers: undefined,
@@ -389,7 +464,7 @@ export const useStore = create<MainStore>((set, get) => ({
   },
 
   handleJobStatusPayload: (status: JobStatusPayload) => {
-    if (!get().jobState?.hash || get().jobState?.hash !== status?.jobId) {
+    if (!get().jobState?.[0] || get().jobState?.[0] !== status?.jobId) {
       return;
     }
     switch (status.step) {
@@ -405,7 +480,7 @@ export const useStore = create<MainStore>((set, get) => ({
         get().appendRunLogs(status.logs);
         break;
       default:
-        console.error(`❌ Unknown job step:`, status.step);
+        console.error(`${getJobColorizedString(status.jobId)} ❌ Unknown job step:`, status.step);
         break;
     }
   },

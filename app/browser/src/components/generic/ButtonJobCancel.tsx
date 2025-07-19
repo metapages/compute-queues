@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
+
+import { useStore } from "/@/store";
+import { DockerJobFinishedReason, DockerJobState, InMemoryDockerJob, StateChange } from "/@shared/client";
+
 import { CloseIcon } from "@chakra-ui/icons";
 import { IconButton } from "@chakra-ui/react";
-import { DockerJobDefinitionRow, DockerJobFinishedReason, DockerJobState, StateChange } from "/@shared/client";
-import { useStore } from "/@/store";
 
-export const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({ job }) => {
+export const ButtonJobCancel: React.FC<{ jobId: string; job: InMemoryDockerJob }> = ({ jobId, job }) => {
   const [clicked, setClicked] = useState<boolean>(false);
   const sendClientStateChange = useStore(state => state.sendClientStateChange);
 
@@ -20,10 +22,11 @@ export const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({ job
       sendClientStateChange({
         tag: "",
         state: DockerJobState.Finished,
-        job: job.hash,
+        job: jobId,
         value: {
           reason: DockerJobFinishedReason.Cancelled,
           time: Date.now(),
+          message: "Job cancelled by client",
         },
       } as StateChange);
     }
@@ -31,7 +34,6 @@ export const ButtonJobCancel: React.FC<{ job: DockerJobDefinitionRow }> = ({ job
 
   switch (state) {
     case DockerJobState.Queued:
-    case DockerJobState.ReQueued:
     case DockerJobState.Running:
       return (
         <IconButton

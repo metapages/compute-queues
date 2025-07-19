@@ -23,20 +23,18 @@ const config = {
     secretAccessKey: AWS_SECRET_ACCESS_KEY,
   },
   region: AWS_REGION,
-  endpoint: AWS_ACCESS_KEY_ID?.includes("minio")
-    ? "http://minio:9000"
-    : undefined,
+  endpoint: AWS_ACCESS_KEY_ID?.includes("minio") ? "http://minio:9000" : undefined,
   forcePathStyle: AWS_ENDPOINT ? true : undefined,
   signatureVersion: "v4",
 };
 
 export const s3Client = new S3Client(config);
 try {
-  const data = await s3Client.send(new ListBucketsCommand({ ...bucketParams }));
-  console.log(
-    "ListBucketsCommand Buckets:",
-    data?.Buckets?.map((b) => b.Name),
-  );
+  const _data = await s3Client.send(new ListBucketsCommand({ ...bucketParams }));
+  // console.log(
+  //   "ListBucketsCommand Buckets:",
+  //   _data?.Buckets?.map((b) => b.Name),
+  // );
 } catch (err) {
   console.error(`Failed to ListBucketsCommand: ${err}`);
 }

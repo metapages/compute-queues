@@ -1,20 +1,21 @@
+import { exists } from "std/fs";
+import { readAll, writeAllSync } from "std/io";
+import { basename } from "std/path";
+
+import { Command } from "@cliffy/command";
+import { closed, open } from "@korkje/wsi";
 import {
   type BroadcastJobStates,
   createNewContainerJobMessage,
   type DockerJobDefinitionInputRefs,
-  type DockerJobDefinitionRow,
   DockerJobState,
   fileToDataref,
   finishedJobOutputsToFiles,
+  type InMemoryDockerJob,
   type StateChangeValueFinished,
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
-import { exists } from "std/fs";
-import { basename } from "std/path";
-import { Command } from "@cliffy/command";
-import { closed, open } from "@korkje/wsi";
-import { readAll, writeAllSync } from "std/io";
 
 export const jobAdd = new Command()
   .arguments("<queue:string> [stdin:string]")
@@ -105,17 +106,16 @@ export const jobAdd = new Command()
           }
         }
 
-        const { message, jobId /*, stageChange */ } =
-          await createNewContainerJobMessage({
-            definition,
-            debug: !!debug,
-          });
+        const { message, jobId /*, stageChange */ } = await createNewContainerJobMessage({
+          definition,
+          debug: !!debug,
+        });
 
         const {
           promise: jobQueuedOrCompleteDeferred,
           resolve,
           reject,
-        } = Promise.withResolvers<DockerJobDefinitionRow>();
+        } = Promise.withResolvers<InMemoryDockerJob>();
 
         const socket = new WebSocket(`${url.replace("http", "ws")}`);
 
@@ -149,8 +149,7 @@ export const jobAdd = new Command()
               if (!someJobsPayload) {
                 break;
               }
-              const jobDefinitionRow: DockerJobDefinitionRow =
-                someJobsPayload.state.jobs[jobId];
+              const jobDefinitionRow = someJobsPayload.state.jobs[jobId];
               if (!jobDefinitionRow) {
                 break;
               }
@@ -164,9 +163,12 @@ export const jobAdd = new Command()
                 return;
               }
               if (jobDefinitionRow.state === DockerJobState.Finished) {
-                const finishedState = jobDefinitionRow
-                  .value as StateChangeValueFinished;
+                // const finishedState = jobDefinitionRow
+                //   .value as StateChangeValueFinished;
                 (async () => {
+                  const finishedState =
+                    await (await fetch(`${address}/${queue}/j/${jobId}/result.json`, { redirect: "follow" }))
+                      .json() as StateChangeValueFinished;
                   await finishedJobOutputsToFiles(
                     finishedState,
                     outputs as string,

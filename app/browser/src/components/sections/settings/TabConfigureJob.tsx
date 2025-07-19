@@ -75,7 +75,11 @@ export const TabConfigureJob: React.FC = () => {
       newJobDefinitionBlob.workdir = values.workdir;
       newJobDefinitionBlob.command = values.command;
       newJobDefinitionBlob.entrypoint = values.entrypoint;
-      newJobDefinitionBlob.gpu = values.gpu;
+      if (values.gpu) {
+        newJobDefinitionBlob.requirements = {
+          gpus: 1,
+        };
+      }
       newJobDefinitionBlob.shmSize = values.shmSize;
 
       setJobDefinitionBlob(newJobDefinitionBlob);
@@ -117,7 +121,7 @@ export const TabConfigureJob: React.FC = () => {
       command: jobDefinitionBlob?.command,
       debug: !!debug,
       entrypoint: jobDefinitionBlob?.entrypoint,
-      gpu: jobDefinitionBlob?.gpu,
+      gpu: jobDefinitionBlob?.requirements?.gpus && jobDefinitionBlob?.requirements?.gpus > 0,
       workdir: jobDefinitionBlob?.workdir,
       jobStartAutomatically,
       shmSize: jobDefinitionBlob?.shmSize,

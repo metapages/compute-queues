@@ -19,8 +19,8 @@ export interface Arguments {
   dataDirectory: string;
   debug: boolean;
   maxJobDuration: number;
-  // If true, jobs are ignored by existing workers on the same host
-  testMode: boolean;
+  // If true, containers are not deleted after they finish.
+  DebugDisableContainerDeletion: boolean;
 }
 
 /**
@@ -39,7 +39,7 @@ export const config: Arguments = {
   dataDirectory: "/tmp/worker-metapage-io", //{ type: String, alias: 'd', description: `Data directory (default: /tmp/worker-metapage-io)`, optional: true },
   debug: false, //{ type: Boolean, alias: 'd', description: `Debug mode (default: false)`, optional: true },
   maxJobDuration: parseDuration("5m") as number, //{ type: number, alias: 't', description: `Maximum duration of a job (default: 5m)`, optional: true },
-  testMode: false, //{ type: Boolean, alias: 't', description: `Test mode (default: false)`, optional: true },
+  DebugDisableContainerDeletion: false, // for debugging and testing.
 };
 
 export const getConfig = (): Arguments => {

@@ -1,12 +1,14 @@
 import { assert, assertEquals } from "std/assert";
 
-import { createWebhookServer } from "./webhooks_test.ts";
+import { createNewContainerJobMessage, fetchRobust } from "@metapages/compute-queues-shared";
 
-import { createNewContainerJobMessage } from "@metapages/compute-queues-shared";
+import { createWebhookServer } from "./webhooks_test.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
   (QUEUE_ID === "local" ? "http://worker:8000" : "http://api1:8081");
+
+const fetch = fetchRobust;
 
 Deno.test(
   "Submit a job via POST to the API",
@@ -26,14 +28,13 @@ Deno.test(
 
     const namespace = `test${Math.floor(Math.random() * 1000000)}`;
 
-    // https://github.com/metapages/compute-queues/issues/124
     const { jobId, queuedJob } = await createNewContainerJobMessage({
       definition: {
         image: "alpine:3.18.5",
         command: `echo ${Math.floor(Math.random() * 1000000)}`,
       },
-      namespace,
       control: {
+        namespace,
         callbacks: {
           queued: {
             url: `http://test:${port}/test`,
@@ -69,9 +70,9 @@ Deno.test(
     });
 
     // Submit the job via POST
-    const response = await fetch(`${API_URL}/${QUEUE_ID}/job`, {
+    const response = await fetch(`${API_URL}/q/${QUEUE_ID}`, {
       method: "POST",
-      body: JSON.stringify(queuedJob),
+      body: JSON.stringify(queuedJob!.enqueued),
       headers: {
         "Content-Type": "application/json",
       },

@@ -1,27 +1,28 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   convertJobOutputDataRefsToExpectedFormat,
   DataRef,
   DataRefType,
   DockerJobState,
+  DockerRunResultWithOutputs,
   StateChangeValueFinished,
 } from "/@shared/client";
 
 import { isIframe, MetaframeInputMap } from "@metapages/metapage";
 import { useMetaframeAndInput } from "@metapages/metapage-react";
 
+import { cache } from "../cache";
 import { getIOBaseUrl } from "../config";
 import { useStore } from "../store";
+import { useOptionAllowSetJob } from "./useOptionAllowSetJob";
 import { useOptionResolveDataRefs } from "./useOptionResolveDataRefs";
 import { useQueue } from "./useQueue";
-import { DockerRunResultWithOutputs } from "/@shared/client";
-import { useOptionAllowSetJob } from "./useOptionAllowSetJob";
 
 const datarefKeyToUrl = async (ref: DataRef, baseUrl: string): Promise<DataRef> => {
   if (ref.type === DataRefType.key) {
     return {
-      value: `${baseUrl}/api/v1/download/${ref.value}`,
+      value: `${baseUrl}/f/${ref.value}`,
       type: DataRefType.url,
     };
   } else {
@@ -31,7 +32,7 @@ const datarefKeyToUrl = async (ref: DataRef, baseUrl: string): Promise<DataRef> 
 
 export const getJobUrl = (queue: string, jobId: string): string => {
   const ioBaseUrl = getIOBaseUrl(queue);
-  return `${ioBaseUrl}/api/v1/job/${jobId}`;
+  return `${ioBaseUrl}/q/${queue}/j/${jobId}`;
 };
 
 const convertMetaframeOutputKeysToUrls = async (
@@ -55,11 +56,29 @@ export const useSendJobOutputs = () => {
   // You usually don't want this on, that means big blobs
   // are going to move around your system
   const [resolveDataRefs] = useOptionResolveDataRefs();
-  const dockerJobServer = useStore(state => state.jobState);
+  const dockerJobServerTuple = useStore(state => state.jobState);
+  const dockerJobServer = dockerJobServerTuple?.[1];
+  const jobId = dockerJobServerTuple?.[0];
   // track if we have sent the outputs for this job hash
   // this will be reset if the state isn't finished
   // e.g. if the job is restarted
   const jobHashOutputsLastSent = useRef<string | undefined>(undefined);
+
+  const [stateFinished, setStateFinished] = useState<StateChangeValueFinished | undefined>(undefined);
+  useEffect(() => {
+    if (dockerJobServerTuple?.[0]) {
+      let cancelled = false;
+      (async () => {
+        const retrievedFinishedJob = await cache.getFinishedJob(dockerJobServerTuple?.[0]);
+        if (!cancelled && retrievedFinishedJob) {
+          setStateFinished(retrievedFinishedJob);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [dockerJobServerTuple]);
 
   const metaframeBlob = useMetaframeAndInput();
   useEffect(() => {
@@ -85,14 +104,19 @@ export const useSendJobOutputs = () => {
       // console.log(`💔 useEffect not sending outputs because of conditions metaframeObj?.setOutputs=${metaframeObj?.setOutputs} dockerJobServer=${dockerJobServer} dockerJobServer?.state=${dockerJobServer?.state} isIframe=${isIframe()} `);
       return;
     }
-    const stateFinished = dockerJobServer.value as StateChangeValueFinished;
+    // const stateFinished = dockerJobServer.value as StateChangeValueFinished;
+    // const stateFinished = await cache.getFinishedJob(dockerJobServer.id);
+    if (!stateFinished) {
+      return;
+    }
+    // .dockerJobServer.value as StateChangeValueFinished;
     const result: DockerRunResultWithOutputs = stateFinished.result;
     if (!result) {
       // console.log(`💔 useEffect not sending outputs because result is undefined`);
       return;
     }
 
-    if (jobHashOutputsLastSent.current === dockerJobServer.hash) {
+    if (jobHashOutputsLastSent.current === jobId) {
       // console.log(`💔 NOT sending outputs to metaframe, did it already`);
       return;
     }
@@ -118,7 +142,7 @@ export const useSendJobOutputs = () => {
         jobStatusJson["error"] = stateFinished?.result?.error;
         jobStatusJson["duration"] = stateFinished?.result?.duration;
         jobStatusJson["isTimedOut"] = stateFinished?.result?.isTimedOut;
-        jobStatusJson["url"] = getJobUrl(resolvedQueue, dockerJobServer.hash);
+        jobStatusJson["url"] = getJobUrl(resolvedQueue, jobId);
       }
 
       if (resolveDataRefs) {
@@ -145,7 +169,7 @@ export const useSendJobOutputs = () => {
         } catch (err) {
           console.error("Failed to send metaframe outputs", err);
         }
-        jobHashOutputsLastSent.current = dockerJobServer.hash;
+        jobHashOutputsLastSent.current = jobId;
       } else {
         // console.log(`💚 Sending outputs to metaframe`, outputs);
         const keysToUrlsOutputs = outputs ? await convertMetaframeOutputKeysToUrls(outputs, resolvedQueue) : outputs;
@@ -155,8 +179,8 @@ export const useSendJobOutputs = () => {
         } else {
           metaframeObj.setOutputs!({ ...keysToUrlsOutputs });
         }
-        jobHashOutputsLastSent.current = dockerJobServer.hash;
+        jobHashOutputsLastSent.current = jobId;
       }
     })();
-  }, [allowSetJob, resolvedQueue, dockerJobServer, metaframeBlob?.metaframe]);
+  }, [allowSetJob, resolvedQueue, dockerJobServer, metaframeBlob?.metaframe, stateFinished]);
 };

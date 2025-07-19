@@ -1,5 +1,16 @@
 import { parse, type ParseEntry } from "shell-quote";
 
+import { ContainerLabel, ContainerLabelId, ContainerLabelQueue } from "./constants.ts";
+
+export const getDockerFiltersForJob = (
+  args: { jobId: string; workerId: string; queue?: string; status?: string },
+): string => {
+  const { jobId, workerId, status, queue } = args;
+  const statusFilter = status ? `, "status": ["${status}"]` : "";
+  const queueFilter = queue ? `, "${ContainerLabelQueue}=${queue}"` : "";
+  return `{"label": ["${ContainerLabel}=true", "${ContainerLabelId}=${jobId}", "${ContainerLabel}=${workerId}"${queueFilter}]${statusFilter}}`;
+};
+
 const sanitizeForDockerTag = (input: string): string => {
   return input.replace(/[^a-zA-Z0-9_.-]/g, "-").toLowerCase();
 };
@@ -47,9 +58,7 @@ export const convertStringToDockerCommand = (
     return command;
   }
   const parsed = parse(command, env);
-  const containsOperations = parsed.some((item: ParseEntry) =>
-    typeof item === "object"
-  );
+  const containsOperations = parsed.some((item: ParseEntry) => typeof item === "object");
   if (containsOperations) {
     return [command];
   }

@@ -1,6 +1,5 @@
-import type { Context } from "hono";
-
 import { db } from "/@/db/db.ts";
+import type { Context } from "hono";
 
 export const getJobHandler = async (c: Context) => {
   try {
@@ -9,8 +8,13 @@ export const getJobHandler = async (c: Context) => {
       c.status(404);
       return c.json({ error: "No job provided" });
     }
+    const queue: string | undefined = c.req.param("queue");
+    if (!queue) {
+      c.status(404);
+      return c.json({ error: "No queue provided" });
+    }
 
-    const job = await db.jobGet(jobId);
+    const job = await db.queueJobGet({ queue, jobId });
     if (!job) {
       c.status(404);
       return c.json({ error: "Job not found" });

@@ -1,7 +1,4 @@
-import {
-  ApiDockerJobQueue,
-  userJobQueues,
-} from "/@/docker-jobs/ApiDockerJobQueue.ts";
+import { ApiDockerJobQueue, userJobQueues } from "/@/docker-jobs/ApiDockerJobQueue.ts";
 import { SERVER_INSTANCE_ID } from "/@/util/id.ts";
 
 export interface WebsocketUrlParameters {

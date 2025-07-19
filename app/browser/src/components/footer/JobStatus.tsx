@@ -1,20 +1,21 @@
 import React from "react";
 
+import { ApiOrigin } from "/@/config";
 import { useQueue } from "/@/hooks/useQueue";
 import { useStore } from "/@/store";
 import {
   ConsoleLogLine,
-  DockerJobDefinitionRow,
   DockerJobFinishedReason,
   DockerJobState,
+  InMemoryDockerJob,
   StateChangeValueFinished,
 } from "/@shared/client";
 import humanizeDuration from "humanize-duration";
 
 import { Box, HStack, Icon, Link, Spinner, Text, useToast, VStack } from "@chakra-ui/react";
 import { Check, HourglassMedium, Prohibit, WarningCircle } from "@phosphor-icons/react";
+
 import { useMinimalHeader } from "../../hooks/useMinimalHeader";
-import { ApiOrigin } from "/@/config";
 
 const humanizeDurationOptions = {
   // round: true,
@@ -28,10 +29,11 @@ export const JobStatus: React.FC = () => {
   const isMinimalHeader = useMinimalHeader();
 
   const workers = useStore(state => state.workers);
-  const job = useStore(state => state.jobState);
+  const [jobId, job] = useStore(state => state.jobState);
   const buildLogs = useStore(state => state.buildLogs);
 
   const state = job?.state;
+  const resultsFinished = job?.finished;
 
   if (!state) {
     return <></>;
@@ -39,12 +41,14 @@ export const JobStatus: React.FC = () => {
 
   if (!resolvedQueue) return <></>;
 
-  const { icon, text, exitCode, desc, jobId, showExitCodeRed } = getJobStateValues(
+  const { icon, text, exitCode, showExitCodeRed, ...rest } = getJobStateValues(
+    jobId,
     job,
-    state,
+    resultsFinished,
     workers?.workers?.length || 0,
     buildLogs,
   );
+  let { desc } = rest;
 
   const copyJobId = () => {
     // Note: this does not currently work
@@ -66,6 +70,12 @@ export const JobStatus: React.FC = () => {
     }
   };
 
+  if (desc && desc.includes(" exec: ")) {
+    desc = desc.split(" exec: ")[1];
+  } else if (desc) {
+    desc = "..." + desc?.substring(desc.length - 60);
+  }
+
   return (
     <HStack h={"100%"} gap={5} alignItems="center" justifyContent={"center"}>
       {icon}
@@ -74,13 +84,8 @@ export const JobStatus: React.FC = () => {
           {text}
         </Text>
         <HStack gap={2}>
-          {desc && (
-            <Text display={{ base: "none", md: "block" }} fontSize={"0.7rem"}>
-              {desc}
-            </Text>
-          )}
           {!isMinimalHeader && jobId && (
-            <Link href={`${ApiOrigin}/job/${jobId}`} isExternal>
+            <Link href={`${resolvedQueue === "local" ? "http://localhost:8000" : ApiOrigin}/j/${jobId}`} isExternal>
               <Text display={{ base: "none", md: "block" }} cursor={"copy"} onClick={copyJobId} fontSize={"0.7rem"}>
                 Job Id: {jobId.slice(0, 5)}
               </Text>
@@ -93,6 +98,11 @@ export const JobStatus: React.FC = () => {
               </Text>
             </Link>
           )}
+          {desc && (
+            <Text display={{ base: "none", md: "block" }} fontSize={"0.7rem"}>
+              {desc}
+            </Text>
+          )}
         </HStack>
       </VStack>
     </HStack>
@@ -100,8 +110,9 @@ export const JobStatus: React.FC = () => {
 };
 
 const getJobStateValues = (
-  job: DockerJobDefinitionRow | undefined,
-  state: DockerJobState,
+  jobId: string | undefined,
+  job: InMemoryDockerJob | undefined,
+  resultFinished: StateChangeValueFinished | undefined,
   workerCount: number,
   buildLogs: ConsoleLogLine[] | null,
 ) => {
@@ -110,8 +121,8 @@ const getJobStateValues = (
   let desc = null;
   let exitCode = null;
   let showExitCodeRed = false;
-  const jobId = job?.hash;
-  const resultFinished = job?.value as StateChangeValueFinished;
+  const state = job?.state;
+
   const errorBlob = resultFinished?.result?.error as { statusCode: number; json: { message: string } } | undefined;
 
   if (!job) {
@@ -162,10 +173,6 @@ const getJobStateValues = (
     case DockerJobState.Queued:
       icon = <Icon as={HourglassMedium} boxSize={STATUS_ICON_SIZE} />;
       text = "Job Queued";
-      break;
-    case DockerJobState.ReQueued:
-      icon = <Icon color={"orange"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-      text = "Job Requeued";
       break;
     case DockerJobState.Running:
       text = buildLogs && buildLogs.length > 0 ? "Job Building" : "Job Running";

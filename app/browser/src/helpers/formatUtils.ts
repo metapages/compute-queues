@@ -1,11 +1,7 @@
-import {
-  DockerJobDefinitionMetadata,
-  DockerJobDefinitionRow,
-  DockerJobState,
-  InputsRefs,
-  StateChangeValueFinished,
-} from "/@shared/client";
+import { DockerJobDefinitionMetadata, DockerJobState, InMemoryDockerJob, InputsRefs } from "/@shared/client";
 import stringify from "safe-stable-stringify";
+
+import { cache } from "../cache";
 
 // eslint-disable-next-line
 export const encodeOptions = (options: any): string => {
@@ -27,13 +23,12 @@ export const getDynamicInputs = (currentJobDefinition: DockerJobDefinitionMetada
   return currentJobDefinition?.definition?.inputs || {};
 };
 
-export const getOutputs = (job?: DockerJobDefinitionRow) => {
+export const getOutputs = async (jobId: string, job: InMemoryDockerJob): Promise<InputsRefs> => {
   if (!job?.state || job.state !== DockerJobState.Finished) {
-    return {};
+    return Promise.resolve(EmptyOutputs);
   }
-  const result = (job.value as StateChangeValueFinished).result;
-  if (result && result.outputs) {
-    return result.outputs;
-  }
-  return {};
+  const finishedJob = await cache.getFinishedJob(jobId);
+  return finishedJob?.result?.outputs || EmptyOutputs;
 };
+
+const EmptyOutputs: InputsRefs = {};

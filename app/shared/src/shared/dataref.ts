@@ -1,18 +1,10 @@
-import {
-  type DataRef,
-  DataRefType,
-  DataRefTypeDefault,
-  type InputsRefs,
-} from "/@/shared/types.ts";
+import { type DataRef, DataRefType, DataRefTypeDefault, type InputsRefs } from "/@/shared/types.ts";
 
 import { fetchRobust as fetch, sha256Buffer } from "/@/shared/util.ts";
 
 import { decodeBase64 } from "/@/shared/base64.ts";
 
-import type {
-  DataRefSerializedBlob,
-  MetaframeInputMap,
-} from "@metapages/metapage";
+import type { DataRefSerializedBlob, MetaframeInputMap } from "@metapages/metapage";
 
 export const ENV_VAR_DATA_ITEM_LENGTH_MAX = 200;
 
@@ -123,7 +115,7 @@ export const copyLargeBlobsToCloud = async (
         // upload and replace the dataref
 
         const hash = await sha256Buffer(uint8ArrayIfBig);
-        const urlUpload = `${address}/api/v1/upload/${hash}`;
+        const urlUpload = `${address}/f/${hash}`;
         // but not if we already have, since these files are immutable
         if (!AlreadyUploaded[address]) {
           AlreadyUploaded[address] = {};
@@ -143,7 +135,7 @@ export const copyLargeBlobsToCloud = async (
           }
 
           const ref: DataRef = {
-            value: `${address}/api/v1/download/${hash}`,
+            value: `${address}/f/${hash}`,
             type: DataRefType.url,
             hash: hash,
           };
@@ -151,7 +143,7 @@ export const copyLargeBlobsToCloud = async (
           AlreadyUploaded[address][hash] = true;
         } else {
           result[name] = {
-            value: `${address}/api/v1/download/${hash}`,
+            value: `${address}/f/${hash}`,
             type: DataRefType.url,
             hash: hash,
           };
@@ -271,7 +263,7 @@ export const fetchBlobFromHash: (
   hash: string,
   address: string,
 ) => Promise<ArrayBuffer> = (hash, address) => {
-  return fetchBlobFromUrl(`${address}/api/v1/download/${hash}`);
+  return fetchBlobFromUrl(`${address}/f/${hash}`);
 };
 
 const _encoder = new TextEncoder();
