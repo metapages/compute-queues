@@ -1194,8 +1194,10 @@ export class BaseDockerJobQueue {
         //     )
         //   } 🪓 removing finished job from queue`,
         // );
-        for (const namespace of job.namespaces) {
-          this.db.queueJobRemove({ queue: this.address, jobId, namespace });
+        if (job?.namespaces) {
+          for (const namespace of job?.namespaces) {
+            this.db.queueJobRemove({ queue: this.address, jobId, namespace });
+          }
         }
         delete this.state.jobs[jobId];
         sendBroadcast = true;
@@ -1936,7 +1938,7 @@ export class BaseDockerJobQueue {
     /* namespace -> jobId[] */
     const namespaces: Record<string, string[]> = {};
     for (const [jobId, job] of Object.entries<InMemoryDockerJob>(this.state.jobs)) {
-      if (job.namespaces.length === 0) {
+      if (!job.namespaces || job.namespaces.length === 0) {
         const namespaces = await this.db.queueJobGetNamespaces({ queue: this.address, jobId });
         job.namespaces = namespaces;
       }

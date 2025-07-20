@@ -223,7 +223,7 @@ export interface InMemoryDockerJob {
   finishedReason?: DockerJobFinishedReason;
   // these restrict to workers with the same tags
   tags?: string[];
-  namespaces: string[];
+  namespaces?: string[];
   requirements?: {
     cpus?: number;
     gpus?: number;

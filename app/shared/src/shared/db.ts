@@ -533,7 +533,7 @@ export class DB {
           !applyToAllNamespaces && namespaceChange !== DefaultNamespace && currentNamespaces.length > 1 &&
           !currentNamespaces.includes(namespaceChange)
         ) {
-          if (!job.namespaces.includes(namespaceChange)) {
+          if (!job?.namespaces?.includes(namespaceChange)) {
             // this job already has this namespace removed, so this is a no-op
             return {};
           }
