@@ -30,7 +30,6 @@ export const DisplayLogs: React.FC<{
   const myref = useRef(null);
   const [storeJobId, job] = useStore(state => state.jobState);
   const [isAtBottom, setIsAtBottom] = useState(true);
-  const [scrollPosition, setScrollPosition] = useState(0);
 
   useEffect(() => {
     if (!storeJobId || !job?.state || job.state !== DockerJobState.Finished) return;
@@ -76,11 +75,9 @@ export const DisplayLogs: React.FC<{
     if (!myref.current) return;
 
     const { scrollTop, scrollHeight, clientHeight } = myref.current._outerRef;
-    const currentScrollPosition = scrollTop;
     const isBottom = scrollTop + clientHeight >= scrollHeight - 5; // 5px tolerance
 
     setIsAtBottom(isBottom);
-    setScrollPosition(currentScrollPosition);
   };
 
   // Add scroll event listener
