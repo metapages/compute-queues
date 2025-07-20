@@ -159,3 +159,6 @@ alias shared := _shared
 
 @_shared +args="":
     just app/shared/{{ args }}
+
+@logs mode service:
+    just app/logs {{mode}} {{service}}

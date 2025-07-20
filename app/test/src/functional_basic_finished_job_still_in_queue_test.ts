@@ -52,6 +52,18 @@ Deno.test(
     // now wait for it to finish properly
     while (true) {
       const jobs = await queueJobs(QUEUE_ID);
+
+      const job = jobs[jobId];
+      if (job) {
+        console.log(
+          `${getJobColorizedString(jobId)} waiting for job results: ${
+            job.state === DockerJobState.Finished ? job.finishedReason : job.state
+          }`,
+        );
+      } else {
+        console.log(`${getJobColorizedString(jobId)} waiting for job results: no job found`);
+      }
+
       // if (jobs[jobId]) {
       //   console.log(`👺 jobs[jobId]: `, jobs[jobId]);
       // }

@@ -246,11 +246,11 @@ export class BaseDockerJobQueue {
     this._intervalJobsBroadcast = setInterval(() => {
       this.broadcastJobStatesToWebsockets();
       this.broadcastJobStatesToChannel();
-      console.log(
-        `📡 Periodic full job state sync sent to ${this.workers.myWorkers.length} workers | ${
-          Object.keys(this.state.jobs).filter((jobId) => isJobOkForSending(this.state.jobs[jobId])).length
-        } jobs`,
-      );
+      // console.log(
+      //   `📡 Periodic full job state sync sent to ${this.workers.myWorkers.length} workers | ${
+      //     Object.keys(this.state.jobs).filter((jobId) => isJobOkForSending(this.state.jobs[jobId])).length
+      //   } jobs`,
+      // );
     }, INTERVAL_JOBS_BROADCAST);
 
     this._intervalCheckForDuplicateJobsSameSource = setInterval(() => {
@@ -684,19 +684,21 @@ export class BaseDockerJobQueue {
           .map((jobId) => [jobId, this.state.jobs[jobId]]),
       ),
     };
-    const message: BroadcastChannelMessage = {
-      origin: this.serverId,
-      type: "job-states",
-      value: jobStates,
-    };
-    console.log(
-      `${this.addressShortString} 📡 Broadcasting to channel:[ ${
-        Object.entries(jobStates.jobs).map(([jobId, job]) =>
-          `${getJobColorizedString(jobId)}=${job.state === DockerJobState.Finished ? job.finishedReason : job.state}`
-        ).join(",")
-      } ]`,
-    );
-    this.channel.postMessage(message);
+    if (Object.keys(jobStates.jobs).length > 0) {
+      const message: BroadcastChannelMessage = {
+        origin: this.serverId,
+        type: "job-states",
+        value: jobStates,
+      };
+      console.log(
+        `${this.addressShortString} 📡 Broadcasting to channel:[ ${
+          Object.entries(jobStates.jobs).map(([jobId, job]) =>
+            `${getJobColorizedString(jobId)}=${job.state === DockerJobState.Finished ? job.finishedReason : job.state}`
+          ).join(",")
+        } ]`,
+      );
+      this.channel.postMessage(message);
+    }
   }
 
   dispose() {
