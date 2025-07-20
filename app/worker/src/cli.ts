@@ -1,8 +1,17 @@
+import type { DockerJobQueue } from "./queue/DockerJobQueue.ts";
 import { runCommand } from "/@/commands/run.ts";
 import { testCommand } from "/@/commands/test.ts";
 import { processes } from "/@/processes.ts";
 
 import { Command } from "@cliffy/command";
+
+// Global reference to the DockerJobQueue for cleanup
+let globalDockerJobQueue: DockerJobQueue | null = null;
+
+// Function to set the global reference
+export const setGlobalDockerJobQueue = (queue: DockerJobQueue) => {
+  globalDockerJobQueue = queue;
+};
 
 const args = Deno.args;
 
@@ -10,6 +19,9 @@ const args = Deno.args;
 // https://github.com/nodejs/node/issues/4182
 Deno.addSignalListener("SIGINT", () => {
   console.log("SIGINT Cleaning up processes...");
+  if (globalDockerJobQueue) {
+    globalDockerJobQueue.stopPeriodicRegistration();
+  }
   if (processes.dockerd) {
     processes.dockerd.kill("SIGINT");
   }
@@ -18,6 +30,9 @@ Deno.addSignalListener("SIGINT", () => {
 
 Deno.addSignalListener("SIGTERM", () => {
   console.log("SIGTERM Cleaning up processes...");
+  if (globalDockerJobQueue) {
+    globalDockerJobQueue.stopPeriodicRegistration();
+  }
   if (processes.dockerd) {
     processes.dockerd.kill("SIGTERM");
   }
