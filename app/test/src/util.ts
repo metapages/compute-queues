@@ -1,8 +1,12 @@
 import { delay } from "std/async/delay";
 
-import { fetchRobust, getJobColorizedString, type InMemoryDockerJob } from "@metapages/compute-queues-shared";
-
-import { DefaultNamespace, DockerJobState } from "../../shared/src/shared/types.ts";
+import {
+  DefaultNamespace,
+  DockerJobState,
+  fetchRobust,
+  getJobColorizedString,
+  type InMemoryDockerJob,
+} from "@metapages/compute-queues-shared";
 
 const fetch = fetchRobust;
 

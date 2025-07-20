@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { getKv } from "/@/shared/kv.ts";
 import {
+  type DataRef,
   DefaultNamespace,
   type DockerJobDefinitionInputRefs,
   DockerJobFinishedReason,
@@ -20,7 +21,6 @@ import { ensureDir } from "std/fs";
 import { join } from "std/path";
 
 import { JobDataCacheDurationMilliseconds } from "./constants.ts";
-import { DataRef } from "./types";
 import {
   getDefinitionS3Key,
   getJobColorizedString,
