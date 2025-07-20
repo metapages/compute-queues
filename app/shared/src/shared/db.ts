@@ -20,6 +20,7 @@ import { ensureDir } from "std/fs";
 import { join } from "std/path";
 
 import { JobDataCacheDurationMilliseconds } from "./constants.ts";
+import { DataRef } from "./types";
 import {
   getDefinitionS3Key,
   getJobColorizedString,
@@ -266,11 +267,12 @@ export class DB {
   }
 
   async getJobDefinition(jobId: string): Promise<DockerJobDefinitionInputRefs | undefined> {
-    const definitionKey = await this.kv.get<string>(["job", jobId]);
-    if (!definitionKey?.value) {
+    const definitionKey = await this.kv.get<string | DataRef>(["job", jobId]);
+    const value = definitionKey?.value;
+    if (!value) {
       return undefined;
     }
-    return getJsonFromS3(definitionKey.value);
+    return getJsonFromS3(typeof value === "string" ? value : (value as DataRef)?.value);
   }
 
   async queueJobAddNamespace(args: {
