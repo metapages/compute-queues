@@ -5,8 +5,8 @@ import {
   PutObjectCommand,
   S3Client,
 } from "aws-sdk/client-s3";
-import fetchRetry from "fetch-retry";
 import { getSignedUrl } from "aws-sdk/s3-request-presigner";
+import fetchRetry from "fetch-retry";
 import { ms } from "ms";
 
 const fetch = fetchRetry(globalThis.fetch);
@@ -154,7 +154,7 @@ export const getJsonFromS3 = async <T>(key: string): Promise<T | undefined> => {
       message: error.message,
       stack: error.stack,
       name: error.name,
-      key: key,
+      key: JSON.stringify(key),
     });
 
     // Re-throw the error to allow callers to handle it appropriately
