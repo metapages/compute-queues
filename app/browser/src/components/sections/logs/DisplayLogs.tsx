@@ -29,6 +29,7 @@ export const DisplayLogs: React.FC<{
   const [outputCount, setOutputCount] = useState(0);
   const myref = useRef(null);
   const [storeJobId, job] = useStore(state => state.jobState);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
   useEffect(() => {
     if (!storeJobId || !job?.state || job.state !== DockerJobState.Finished) return;
@@ -69,10 +70,34 @@ export const DisplayLogs: React.FC<{
     }
   };
 
-  // if the logs change, or if the ref changes, scroll to the bottom
+  // Check if user is at bottom and handle scroll events
+  const handleScroll = () => {
+    if (!myref.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = myref.current._outerRef;
+    const isBottom = scrollTop + clientHeight >= scrollHeight - 5; // 5px tolerance
+
+    setIsAtBottom(isBottom);
+  };
+
+  // Add scroll event listener
   useEffect(() => {
-    if (myref.current) showRef();
-  }, [myref.current, logsRef.current]);
+    if (!myref.current) return;
+
+    const listElement = myref.current._outerRef;
+    listElement.addEventListener("scroll", handleScroll);
+
+    return () => {
+      listElement.removeEventListener("scroll", handleScroll);
+    };
+  }, [myref.current]);
+
+  // Only scroll to bottom if user was already at bottom
+  useEffect(() => {
+    if (myref.current && isAtBottom) {
+      showRef();
+    }
+  }, [logsRef.current, isAtBottom]);
 
   // new jobId? reset the local logs ref
   useEffect(() => {
