@@ -24,7 +24,7 @@ dev +args="": _build_shared
     deno run --watch --allow-all --unstable-kv --unstable-broadcast-channel --unstable-cron app/api/src/server.ts {{ args }}
 
 # Quick compile checks
-@check:
+@check: _build_shared
     deno check src/server.ts
     echo "✅ api typescript compilation"
 
