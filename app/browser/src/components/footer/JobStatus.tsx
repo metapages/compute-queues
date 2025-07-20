@@ -1,5 +1,6 @@
 import React from "react";
 
+import humanizeDuration from "humanize-duration";
 import { ApiOrigin } from "/@/config";
 import { useQueue } from "/@/hooks/useQueue";
 import { useStore } from "/@/store";
@@ -10,10 +11,9 @@ import {
   InMemoryDockerJob,
   StateChangeValueFinished,
 } from "/@shared/client";
-import humanizeDuration from "humanize-duration";
 
-import { Box, HStack, Icon, Link, Spinner, Text, useToast, VStack } from "@chakra-ui/react";
-import { Check, HourglassMedium, Prohibit, WarningCircle } from "@phosphor-icons/react";
+import { Box, HStack, Icon, Link, Text, useToast, VStack } from "@chakra-ui/react";
+import { Check, Circle, HourglassMedium, Prohibit, WarningCircle } from "@phosphor-icons/react";
 
 import { useMinimalHeader } from "../../hooks/useMinimalHeader";
 
@@ -161,11 +161,11 @@ const getJobStateValues = (
           }
           break;
         case DockerJobFinishedReason.TimedOut:
-          icon = <Icon color={"orange"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
+          icon = <Icon color={"red"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
           text = `Job Timed Out ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration, humanizeDurationOptions)})` : ""}`;
           break;
         case DockerJobFinishedReason.WorkerLost:
-          icon = <Icon color={"orange"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
+          icon = <Icon color={"red"} as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
           text = "Connection with worker lost, waiting to requeue";
           break;
       }
@@ -176,7 +176,7 @@ const getJobStateValues = (
       break;
     case DockerJobState.Running:
       text = buildLogs && buildLogs.length > 0 ? "Job Building" : "Job Running";
-      icon = <Spinner color={"orange"} boxSize={STATUS_ICON_SIZE} />;
+      icon = <Icon as={Circle} color={"orange"} boxSize={STATUS_ICON_SIZE} />;
       desc = `${workerCount} Worker${workerCount > 1 ? "s" : ""}`;
       break;
   }
