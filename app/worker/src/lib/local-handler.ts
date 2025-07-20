@@ -488,7 +488,7 @@ const handleWebsocket = async (socket: WebSocket, request: Request) => {
   if (isClient) {
     queue.connectClient({ socket });
   } else if (isWorker) {
-    queue.connectWorker({ socket }, queueKey);
+    queue.connectWorker({ socket });
   } else {
     console.log(`💥 Unknown type=[${pathTokens[1]}], closing websocket`);
     socket.close();

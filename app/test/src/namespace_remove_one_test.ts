@@ -45,6 +45,9 @@ Deno.test(
     );
 
     const timeoutInterval = setTimeout(async () => {
+      const jobs = await queueJobs(QUEUE_ID);
+      console.log("Test timed out: 👺 jobs: ", jobs);
+
       await Promise.all(
         Array.from(messages).map((message) =>
           cancelJobOnQueue({
