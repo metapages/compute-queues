@@ -478,7 +478,7 @@ export async function connectToServer(
 
           if (currentGotJobStateUpdates > logGotJobStateUpdatesEvery) {
             console.log(
-              `[${workerId?.substring(0, 6)}] got JobStateUpdates(${someJobsPayload?.state?.jobs?.length || 0})`,
+              `${getWorkerColorizedString(workerId)} got JobStateUpdates(${someJobsPayload?.state?.jobs?.length || 0})`,
             );
             currentGotJobStateUpdates = 0;
           }
@@ -489,7 +489,7 @@ export async function connectToServer(
         case WebsocketMessageTypeServerBroadcast.StatusRequest: {
           const status = dockerJobQueue.status();
           console.log(
-            `📤 Worker ${workerId?.substring(0, 6)} responding to status request with ${
+            `${getWorkerColorizedString(workerId)} responding to status request with ${
               Object.keys(status.queue).length
             } running jobs`,
           );

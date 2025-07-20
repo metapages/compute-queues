@@ -369,6 +369,9 @@ const jobColorCache = new LRUMap<string, string>(1000);
  * @returns A string with ANSI color codes that can be used in console.log
  */
 export const getJobColorizedString = (jobId: string): string => {
+  if (!jobId) {
+    return jobId;
+  }
   const cachedColor = jobColorCache.get(jobId);
   if (cachedColor) {
     return cachedColor;
@@ -453,6 +456,9 @@ const queueColorCache = new LRUMap<string, string>(1000);
  * @returns A string with ANSI color codes that can be used in console.log
  */
 export const getQueueColorizedString = (queue: string): string => {
+  if (!queue) {
+    return queue;
+  }
   const cachedColor = queueColorCache.get(queue);
   if (cachedColor) {
     return cachedColor;
@@ -531,6 +537,9 @@ export const getQueueColorizedString = (queue: string): string => {
 const workerColorCache = new LRUMap<string, string>(1000);
 
 export const getWorkerColorizedString = (worker: string): string => {
+  if (!worker) {
+    return worker;
+  }
   const cachedColor = workerColorCache.get(worker);
   if (cachedColor) {
     return cachedColor;

@@ -411,13 +411,13 @@ const checkForDockerImage = async (args: {
     await new Promise<void>((resolve, reject) => {
       docker.pull(image, {
         platform,
-      }, function (stream: NodeJS.ReadableStream) {
+      }, function (stream?: NodeJS.ReadableStream) {
         // if (err) {
         //   reject(err);
         //   return;
         // }
 
-        if (stream) {
+        if (stream?.on) {
           docker.modem.followProgress(stream, onFinished, onProgress);
         }
 
