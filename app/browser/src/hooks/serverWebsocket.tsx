@@ -55,7 +55,7 @@ export const serverWebsocket = (): void => {
 
     let url = `${
       queue === "local" && !origin ? websocketConnectionUrlLocalmode : origin ? origin : websocketConnectionUrl
-    }/${queue}/client`;
+    }/q/${queue}/client`;
     if (url.startsWith("http")) {
       const urlBlob = new URL(url);
       urlBlob.pathname = urlBlob.pathname.replace("//", "/");

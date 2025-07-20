@@ -7,6 +7,7 @@ import {
   DockerJobFinishedReason,
   DockerJobState,
   fetchRobust,
+  getJobColorizedString,
   MAX_TIME_FINISHED_JOB_IN_QUEUE,
   type StateChangeValueFinished,
 } from "@metapages/compute-queues-shared";
@@ -26,10 +27,6 @@ Deno.test(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
 
-    const timeoutInterval = setTimeout(() => {
-      throw "Test timed out";
-    }, 10000);
-
     const definition = {
       image: "alpine:3.18.5",
       // ensure job is new
@@ -40,6 +37,12 @@ Deno.test(
       definition,
     });
 
+    const timeoutInterval = setTimeout(async () => {
+      const jobs = await queueJobs(QUEUE_ID);
+      console.log(`${getJobColorizedString(jobId)} Test timed out: 👺 job: `, jobs[jobId]);
+      throw "Test timed out";
+    }, 10000);
+
     await open(socket);
 
     // submit all the jobs
@@ -49,6 +52,18 @@ Deno.test(
     // now wait for it to finish properly
     while (true) {
       const jobs = await queueJobs(QUEUE_ID);
+
+      const job = jobs[jobId];
+      if (job) {
+        console.log(
+          `${getJobColorizedString(jobId)} waiting for job results: ${
+            job.state === DockerJobState.Finished ? job.finishedReason : job.state
+          }`,
+        );
+      } else {
+        console.log(`${getJobColorizedString(jobId)} waiting for job results: no job found`);
+      }
+
       // if (jobs[jobId]) {
       //   console.log(`👺 jobs[jobId]: `, jobs[jobId]);
       // }

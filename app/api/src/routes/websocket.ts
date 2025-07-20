@@ -65,7 +65,7 @@ export async function wsHandlerWorker(
       });
       await userJobQueues[token].setup();
     }
-    userJobQueues[token].connectWorker({ socket }, token);
+    userJobQueues[token].connectWorker({ socket });
   } catch (err) {
     console.error(err);
   }

@@ -331,3 +331,6 @@ alias api := _api
 # Add new helper recipe for building shared dependencies
 @_build_shared:
     just shared/build
+
+@logs mode service:
+    docker compose --project-name=dev -f ../docker-compose.yml -f ../docker-compose-{{ mode }}.yml -f ../docker-compose-test-{{ mode }}.yml logs -f {{ service }}

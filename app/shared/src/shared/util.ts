@@ -6,11 +6,20 @@ import {
   type InMemoryDockerJob,
   type StateChangeValueFinished,
 } from "/@/shared/types.ts";
-import equal from "fast-deep-equal/es6";
 import fetchRetry from "fetch-retry";
 import { LRUMap } from "mnemonist";
 import { create } from "mutative";
 import stringify from "safe-stable-stringify";
+
+export const isJobOkForSending = (job?: InMemoryDockerJob | undefined | null): boolean => {
+  if (!job) {
+    return false;
+  }
+  if (job.state === DockerJobState.Removed) {
+    return false;
+  }
+  return true;
+};
 
 export const setJobStateRunning = (
   job: InMemoryDockerJob,
@@ -268,10 +277,6 @@ export const resolveMostCorrectJob = (
   jobA: InMemoryDockerJob,
   jobB: InMemoryDockerJob,
 ): InMemoryDockerJob | null => {
-  if (equal(jobA, jobB)) {
-    return jobA;
-  }
-
   if (jobA && !jobB) {
     return jobA;
   }
@@ -280,83 +285,88 @@ export const resolveMostCorrectJob = (
     return jobB;
   }
 
-  // Check worker priority if different
-  if (
-    jobA.state === DockerJobState.Running &&
-    jobB.state === DockerJobState.Running &&
-    (jobA.worker !== jobB.worker)
-  ) {
-    const workerA = jobA.worker;
-    const workerB = jobB.worker;
-
-    const preferredWorker = resolvePreferredWorker(
-      workerA,
-      workerB,
-    );
-    if (preferredWorker === workerA) {
-      return jobA;
-    } else {
-      return jobB;
-    }
-  }
-
-  const isJobAFinished = jobA.state === DockerJobState.Finished;
-  const isJobBFinished = jobB.state === DockerJobState.Finished;
-
-  if (isJobAFinished && isJobBFinished) {
-    if (jobA.finishedReason === jobB.finishedReason) {
-      return jobA.time < jobB.time ? jobA : jobB;
-    }
-
-    if (jobA.finishedReason === DockerJobFinishedReason.Deleted) {
-      return jobA;
-    } else if (jobB.finishedReason === DockerJobFinishedReason.Deleted) {
-      return jobB;
-    }
-
-    return jobA.time < jobB.time ? jobA : jobB;
-  }
-
-  if (isJobAFinished) {
-    if (jobB.state === DockerJobState.Queued) {
-      return jobB;
-    }
-    return jobA;
-  }
-
-  if (isJobBFinished) {
-    if (jobA.state === DockerJobState.Queued) {
-      return jobA;
-    }
-    return jobB;
-  }
-
-  if (jobA.state === jobB.state) {
-    // If the states are equal, it depends on the state
-    switch (jobA.state) {
-      case DockerJobState.Running: {
-        const workerA = jobA.worker;
-        const workerB = jobB.worker;
-        return resolvePreferredWorker(workerA, workerB) === workerA ? jobA : jobB;
+  switch (jobA.state) {
+    case DockerJobState.Queued:
+      switch (jobB.state) {
+        case DockerJobState.Queued:
+          return jobA.time < jobB.time ? jobA : jobB;
+        case DockerJobState.Running:
+          return jobB;
+        case DockerJobState.Finished:
+          return jobB;
+        case DockerJobState.Removed:
+          return jobA;
+        default:
+          return jobA;
       }
-      case DockerJobState.Queued:
-      case DockerJobState.Finished:
-      case DockerJobState.Removed:
-      default:
-        // this is just about dates now, take the first
-        return jobA.time < jobB.time ? jobA : jobB;
-    }
-  } else {
-    // They have different states? This is more complex
-    console.log(
-      `🇨🇭🇨🇭🇨🇭 🌘 resolving but jobA=${jobA.state} jobB=${jobB.state}`,
-    );
-    if (jobA.state === DockerJobState.Running) {
+    case DockerJobState.Running:
+      switch (jobB.state) {
+        case DockerJobState.Running: {
+          if (jobA.worker === jobB.worker) {
+            return jobA;
+          }
+
+          const workerA = jobA.worker;
+          const workerB = jobB.worker;
+
+          const preferredWorker = resolvePreferredWorker(
+            workerA,
+            workerB,
+          );
+          if (preferredWorker === workerA) {
+            return jobA;
+          } else {
+            return jobB;
+          }
+        }
+
+        case DockerJobState.Finished:
+          return jobB;
+        case DockerJobState.Removed:
+          return jobB;
+        default:
+          return jobA;
+      }
+    case DockerJobState.Finished:
+      switch (jobB.state) {
+        case DockerJobState.Queued:
+          return jobA.time < jobB.time ? jobA : jobB;
+        case DockerJobState.Running:
+          return jobB;
+        case DockerJobState.Finished:
+          if (jobA.finishedReason === jobB.finishedReason) {
+            return jobA.time < jobB.time ? jobA : jobB;
+          }
+
+          if (jobA.finishedReason === DockerJobFinishedReason.Deleted) {
+            return jobA;
+          } else if (jobB.finishedReason === DockerJobFinishedReason.Deleted) {
+            return jobB;
+          }
+
+          return jobA.time < jobB.time ? jobA : jobB;
+
+        case DockerJobState.Removed:
+          return jobB; // Finished -> Removed
+        default:
+          return jobA;
+      }
+
+    case DockerJobState.Removed:
+      switch (jobB.state) {
+        case DockerJobState.Queued:
+          return jobB;
+        case DockerJobState.Running:
+          return jobA;
+        case DockerJobState.Finished:
+          return jobA;
+        case DockerJobState.Removed:
+          return jobA;
+        default:
+          return jobA;
+      }
+    default:
       return jobA;
-    } else if (jobB.state === DockerJobState.Running) {
-      return jobB;
-    }
-    return jobA.time < jobB.time ? jobA : jobB;
   }
 };
 

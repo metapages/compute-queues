@@ -80,6 +80,14 @@ Deno.test(
       let jobs = await queueJobs(QUEUE_ID);
       jobs = Object.fromEntries(Object.entries(jobs).filter(([jobId, _]) => jobIdsAll.has(jobId)));
 
+      // console.log(
+      //   `On wait in test our jobs: [ ${
+      //     Object.entries(jobs).map(([jobId, job]) =>
+      //       `${getJobColorizedString(jobId)}=${job.state === DockerJobState.Finished ? job.finishedReason : job.state}`
+      //     ).join(",")
+      //   } ]`,
+      // );
+
       if (
         jobs[jobIdToSupercedeAllPrior]?.state === DockerJobState.Running ||
         jobs[jobIdToSupercedeAllPrior]?.state === DockerJobState.Queued
