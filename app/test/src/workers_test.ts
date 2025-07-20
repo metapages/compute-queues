@@ -4,12 +4,15 @@ import { closed, open } from "@korkje/wsi";
 import {
   type BroadcastJobStates,
   createNewContainerJobMessage,
+  DockerJobFinishedReason,
   DockerJobState,
+  fetchRobust,
   type StateChangeValueFinished,
-  type StateChangeValueRunning,
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
+
+const fetch = fetchRobust;
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -22,13 +25,13 @@ Deno.test(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
 
-    const outputText = `Job completed by worker ${
-      Math.floor(Math.random() * 1000000)
-    }`;
+    const outputText = `text-${Math.floor(Math.random() * 1000000)}`;
     // Create a simple job that should work reliably
     const definition = {
       image: "alpine:3.18.5",
-      command: `echo '${outputText}'`,
+      // sleep should be long enough for workers to fight over it and
+      // the correct worker to eventually claim it
+      command: `sh -c 'sleep 3 && echo "${outputText}"'`,
     };
     const { message, jobId } = await createNewContainerJobMessage({
       definition,
@@ -45,11 +48,11 @@ Deno.test(
     }>();
 
     let jobSuccessfullySubmitted = false;
-    let stateTransitions: Array<{ state: DockerJobState; worker?: string }> =
-      [];
+    let stateTransitions: Array<{ state: DockerJobState; worker?: string }> = [];
     let finalWorker = "";
 
-    socket.onmessage = (message: MessageEvent) => {
+    let jobFinished = false;
+    socket.onmessage = async (message: MessageEvent) => {
       const messageString = message.data.toString();
       const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(
         messageString,
@@ -67,13 +70,15 @@ Deno.test(
             break;
           }
 
+          // console.log(`👺 ${getJobColorizedString(jobId)}: `, jobState);
+
           jobSuccessfullySubmitted = true;
 
           // Track state transitions
           const worker = jobState.state === DockerJobState.Running
-            ? (jobState.value as StateChangeValueRunning)?.worker
+            ? jobState?.worker
             : jobState.state === DockerJobState.Finished
-            ? (jobState.value as StateChangeValueFinished)?.worker
+            ? jobState?.worker
             : undefined;
 
           // remove previous state transitions that are the same
@@ -87,8 +92,19 @@ Deno.test(
             worker,
           });
 
+          if (jobFinished) {
+            break;
+          }
           if (jobState.state === DockerJobState.Finished) {
-            const finishedState = jobState.value as StateChangeValueFinished;
+            assertEquals(jobState.finishedReason, DockerJobFinishedReason.Success);
+            jobFinished = true;
+
+            const { data: finishedState }: { data: StateChangeValueFinished } =
+              await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`))
+                .json();
+            assertEquals(finishedState?.result?.StatusCode, 0);
+
+            // jobState.value as StateChangeValueFinished;
             const lines: string = finishedState.result?.logs?.map(
               (l) => l[0],
             )[0]!;
@@ -108,7 +124,9 @@ Deno.test(
 
     await open(socket);
 
-    // Submit the job
+    // Submit the job. Job submissson should confirm the job is submitted.
+    // Browser clients kinda do this already by resubmitting if the job is
+    // not on the results.
     while (!jobSuccessfullySubmitted) {
       socket.send(JSON.stringify(message));
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -125,19 +143,14 @@ Deno.test(
 
     // Verify that the job went through the expected state transitions
     assert(
-      stateTransitions.length >= 2,
-      "Should have at least Queued and Finished states",
+      stateTransitions.length === 3,
+      "Should have at Queued, Running, and Finished states",
     );
 
-    // Should start with Queued state
+    // Should start with Queued state, go to Running, and then to Finished
     assertEquals(stateTransitions[0].state, DockerJobState.Queued);
-
-    // Should have a Running state with a worker
-    const runningState = stateTransitions.find((s) =>
-      s.state === DockerJobState.Running
-    );
-    assert(runningState, "Should have a Running state");
-    assert(runningState.worker, "Running state should have a worker");
+    assertEquals(stateTransitions[1].state, DockerJobState.Running);
+    assertEquals(stateTransitions[2].state, DockerJobState.Finished);
 
     // Should end with Finished state
     assertEquals(
@@ -145,25 +158,28 @@ Deno.test(
       DockerJobState.Finished,
     );
 
+    // ⚠️ These tests are not correct, and it's worth leaving them here
+    // to remind us: it IS possible for two workers to start Running a job,
+    // and for the queue to decide who gets it, but the "wrong" worker finishes
+    // it first. The queue prioritizes speed so let's take the finished work, even
+    // if the Running.worker is different from the Finished.worker.
     // Verify that the job state shows the correct worker information
     // The job should have been claimed by one worker and finished by that same worker
-    const finishedState = stateTransitions.find((s) =>
-      s.state === DockerJobState.Finished
-    );
-    assert(finishedState?.worker, "Finished state should have a worker");
-    assertEquals(
-      finishedState.worker,
-      result.finalWorker,
-      "Final worker should match the worker in finished state",
-    );
+    // const finishedState = stateTransitions.find((s) => s.state === DockerJobState.Finished);
+    // assert(finishedState?.worker, "Finished state should have a worker");
+    // assertEquals(
+    //   finishedState.worker,
+    //   result.finalWorker,
+    //   "Final worker should match the worker in finished state",
+    // );
 
-    // Verify that the same worker that started the job also finished it
-    // (in a single-worker environment, this should always be true)
-    assertEquals(
-      runningState.worker,
-      result.finalWorker,
-      "The worker that started the job should be the same one that finished it",
-    );
+    // // Verify that the same worker that started the job also finished it
+    // // (in a single-worker environment, this should always be true)
+    // assertEquals(
+    //   runningState.worker,
+    //   result.finalWorker,
+    //   "The worker that started the job should be the same one that finished it",
+    // );
 
     socket.close();
     await closed(socket);

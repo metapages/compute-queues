@@ -1,14 +1,13 @@
+import { Command } from "@cliffy/command";
+import { closed, open } from "@korkje/wsi";
 import {
   type BroadcastJobStates,
-  type DockerJobDefinitionRow,
   DockerJobState,
   finishedJobOutputsToFiles,
   type StateChangeValueFinished,
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
-import { Command } from "@cliffy/command";
-import { closed, open } from "@korkje/wsi";
 
 export const jobAwait = new Command()
   .arguments("<queue:string> <jobId:string>")
@@ -43,7 +42,7 @@ export const jobAwait = new Command()
       const socket = new WebSocket(`${url.replace("http", "ws")}`);
 
       let resolved = false;
-      socket.onmessage = (message: MessageEvent) => {
+      socket.onmessage = async (message: MessageEvent) => {
         if (resolved) {
           return;
         }
@@ -61,14 +60,16 @@ export const jobAwait = new Command()
             if (!someJobsPayload) {
               break;
             }
-            const jobState: DockerJobDefinitionRow =
-              someJobsPayload.state.jobs[jobId];
+            const jobState = someJobsPayload.state.jobs[jobId];
             if (!jobState) {
               break;
             }
 
             if (jobState.state === DockerJobState.Finished) {
-              const finishedState = jobState.value as StateChangeValueFinished;
+              const finishedState =
+                await (await fetch(`${address}/${queue}/j/${jobId}/result.json`, { redirect: "follow" }))
+                  .json() as StateChangeValueFinished;
+              // const finishedState = jobState.value as StateChangeValueFinished;
               (async () => {
                 await finishedJobOutputsToFiles(
                   finishedState,

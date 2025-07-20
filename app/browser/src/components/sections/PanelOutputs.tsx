@@ -1,17 +1,20 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import { PanelContainer } from "/@/components/generic/PanelContainer";
 import { PanelHeader } from "/@/components/generic/PanelHeader";
+import { downloadFile, getOutputs, zipAndDownloadDatarefs } from "/@/helpers";
 import { useStore } from "/@/store";
+import { InputsRefs } from "/@shared/client";
 
 import { Container, HStack, Icon, Spacer, Table, Tbody, Td, Text, Tr } from "@chakra-ui/react";
 import { ArrowDown } from "@phosphor-icons/react";
 
-import { downloadFile, getOutputs, zipAndDownloadDatarefs } from "/@/helpers";
-
 export const PanelOutputs: React.FC = () => {
-  const job = useStore(state => state.jobState);
-  const outputs = getOutputs(job);
+  const [jobId, job] = useStore(state => state.jobState);
+  const [outputs, setOutputs] = useState<InputsRefs | undefined>(undefined);
+  useEffect(() => {
+    getOutputs(jobId, job).then(setOutputs);
+  }, [jobId, job]);
   const downloadAll = useCallback(async () => {
     await zipAndDownloadDatarefs(outputs, "all-outputs");
   }, [outputs]);

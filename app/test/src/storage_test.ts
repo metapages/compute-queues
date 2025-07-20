@@ -9,13 +9,10 @@ import {
   DockerJobState,
   type StateChangeValueFinished,
   type WebsocketMessageServerBroadcast,
+  WebsocketMessageTypeClientToServer,
   WebsocketMessageTypeServerBroadcast,
 } from "../../shared/src/mod.ts";
-import {
-  createNewContainerJobMessage,
-  fileToDataref,
-  hashFileOnDisk,
-} from "../../shared/src/shared/jobtools.ts";
+import { createNewContainerJobMessage, fileToDataref, hashFileOnDisk } from "../../shared/src/shared/jobtools.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -61,6 +58,14 @@ function waitForJobToFinish(
   referenceContent: string,
   onComplete: () => void,
 ) {
+  const intervalRequestJobStates = setInterval(() => {
+    socket.send(
+      JSON.stringify({
+        type: WebsocketMessageTypeClientToServer.QueryJobStates,
+      }),
+    );
+  }, 1000);
+  let jobFinished = false;
   socket.onmessage = async (event: MessageEvent) => {
     try {
       // console.log("Received message from server", event.type);
@@ -84,20 +89,26 @@ function waitForJobToFinish(
             break;
           }
 
+          if (jobFinished) {
+            break;
+          }
+
           // console.log(`JobId: ${jobId} is in state: ${jobState.state}`);
 
           if (jobState.state === DockerJobState.Finished) {
-            const finishedState = jobState.value as StateChangeValueFinished;
+            jobFinished = true;
 
-            // console.log(
-            //   "=== Detailed job state ===",
-            //   JSON.stringify(jobState, null, 2),
-            // );
+            const { data: finishedState }: { data: StateChangeValueFinished } =
+              await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`))
+                .json();
 
-            // console.log("Finished reason: ", finishedState.reason);
-            // console.log("Finished error: ", finishedState.result?.error);
-
-            assertEquals(finishedState.reason, "Success");
+            assertEquals(
+              finishedState?.reason,
+              "Success",
+              `finishedState !== Success: jobState=${JSON.stringify(jobState)} finishedState=${
+                JSON.stringify(finishedState)
+              }`,
+            );
             // console.log("Job is finished. Performing assertions...");
             assertEquals(finishedState?.reason, "Success");
             assertEquals(finishedState?.result?.error, undefined);
@@ -120,7 +131,7 @@ function waitForJobToFinish(
             // Trim because shell commands may include a trailing newline
             assertEquals(referenceContent, contentFromJob.trim());
             // console.log("Assertions passed. Resolving test...");
-
+            clearInterval(intervalRequestJobStates);
             onComplete();
           }
 
@@ -131,6 +142,7 @@ function waitForJobToFinish(
       }
     } catch (err) {
       console.error("Error handling message from server:", err);
+      clearInterval(intervalRequestJobStates);
       throw err;
     }
   };
@@ -151,24 +163,23 @@ Deno.test("Test upload and download", async () => {
     "http://localhost:",
     "http://worker:",
   );
+  // console.log("downloadUrl: ", downloadUrl);
   const downloadResponse = await fetch(downloadUrl);
   const downloadResponseBody = await downloadResponse.text();
   assertEquals(downloadResponseBody, content);
 });
 
 Deno.test("Test exists API", async () => {
-  const word = `hello${Math.floor(Math.random() * 10000)}`;
+  const word = `hello${Math.floor(Math.random() * 100000)}`;
   const content = `${Array(50).fill(word).join("")}`;
-  const rootName = `hello${Math.floor(Math.random() * 10000)}.txt`;
+  const rootName = `hello${Math.floor(Math.random() * 100000)}.txt`;
   const fileName = `/tmp/${rootName}`;
 
   await Deno.writeTextFile(fileName, content);
   const hash = await hashFileOnDisk(fileName);
 
   // check that the file DOES NOT exist
-  const existsResponse1 = await fetch(
-    `${API_URL}/api/v1/exists/${hash}`,
-  );
+  const existsResponse1 = await fetch(`${API_URL}/f/${hash}/exists`);
   assertEquals(existsResponse1.status, 404);
   const existsResponseBody1 = await existsResponse1.json();
   assertEquals(existsResponseBody1.exists, false);
@@ -181,15 +192,17 @@ Deno.test("Test exists API", async () => {
   const contentDownloaded = await existsResponse2.text();
   assertEquals(existsResponse2.status, 200);
   assertEquals(contentDownloaded, content);
+
+  try {
+    Deno.removeSync(fileName);
+  } catch (error) {
+    console.error("Error removing file:", error);
+  }
 });
 
 Deno.test(
   "Run a job that uploads input files and validates the input",
   async () => {
-    // console.log(
-    //   "Starting test: 'Run a job that uploads input files and validates the input'",
-    // );
-
     // Generate random filenames and content
     const randomId1 = Math.floor(Math.random() * 10000);
     const word = `hello${randomId1}`;
@@ -199,13 +212,10 @@ Deno.test(
     const rootName = `hello${randomId2}.txt`;
     const fileName = `/tmp/${rootName}`;
 
-    // console.log(`Creating local file: ${fileName}`);
     await Deno.writeTextFile(fileName, content);
 
     // Upload file and get dataref
-    // console.log(`Uploading file '${fileName}' to dataref...`);
     const dataref = await fileToDataref(fileName, API_URL);
-    // console.log("Upload complete. Dataref:", dataref);
 
     const definition: DockerJobDefinitionInputRefs = {
       image: "alpine:3.18.5",
@@ -218,7 +228,6 @@ Deno.test(
     const { message, jobId } = await createNewContainerJobMessage({
       definition,
     });
-    // console.log("Created new container job message:");
 
     // Create a deferred so we can await the job finishing
     const { promise: jobCompleteDeferred, resolve } = Promise.withResolvers<
@@ -226,40 +235,34 @@ Deno.test(
     >();
 
     // Open the socket
-    // console.log("Opening websocket to server...");
     const socket = new WebSocket(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
     await open(socket);
-    // console.log("Socket opened. Sending job creation message...");
 
     // Wait for job to finish
     waitForJobToFinish(socket, jobId, rootName, content, resolve);
 
     // Send the job creation message
     socket.send(JSON.stringify(message));
-    // console.log("Job creation message sent. Waiting for job to finish...");
 
     // Wait for the job
     await jobCompleteDeferred;
 
-    // console.log("Job completed. Closing socket...");
     socket.close();
     await closed(socket);
 
-    // console.log(
-    //   "Test 'Run a job that uploads input files and validates the input' completed.\n",
-    // );
+    try {
+      Deno.removeSync(fileName);
+    } catch (error) {
+      console.error("Error removing file:", error);
+    }
   },
 );
 
 Deno.test(
   "Run a job that creates output files, downloads and checks the file",
   async () => {
-    // console.log(
-    //   "Starting test: 'Run a job that creates output files, downloads and checks the file'",
-    // );
-
     // Generate random content
     const randomId = Math.floor(Math.random() * 10000);
     const word = `hello${randomId}`;
@@ -273,7 +276,6 @@ Deno.test(
     const { message, jobId } = await createNewContainerJobMessage({
       definition,
     });
-    // console.log("Created new container job message:");
 
     // Create a deferred so we can await the job finishing
     const { promise: jobCompleteDeferred, resolve } = Promise.withResolvers<
@@ -281,19 +283,16 @@ Deno.test(
     >();
 
     // Open the socket
-    // console.log("Opening websocket to server...");
     const socket = new WebSocket(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
     await open(socket);
-    // console.log("Socket opened. Sending job creation message...");
-
-    // Wait for job to finish
-    waitForJobToFinish(socket, jobId, "hello.txt", content, resolve);
 
     // Send the job creation message
     socket.send(JSON.stringify(message));
-    // console.log("Job creation message sent. Waiting for job to finish...");
+
+    // Wait for job to finish
+    waitForJobToFinish(socket, jobId, "hello.txt", content, resolve);
 
     // Wait for the job
     await jobCompleteDeferred;
@@ -301,10 +300,6 @@ Deno.test(
     // console.log("Job completed. Closing socket...");
     socket.close();
     await closed(socket);
-
-    // console.log(
-    //   "Test 'Run a job that creates output files, downloads and checks the file' completed.\n",
-    // );
   },
 );
 
@@ -323,21 +318,22 @@ Deno.test("S3 retry logic handles connection errors", async () => {
 
   try {
     // Try to upload test data
-    const dataRef = await putJsonToS3(testKey, testData);
-    console.log("✅ S3 upload successful:", dataRef);
+    await putJsonToS3(testKey, testData);
+    // const dataRef =
+    // console.log("✅ S3 upload successful:", dataRef);
 
     // Try to retrieve the data
     const retrievedData = await getJsonFromS3(testKey);
-    console.log("✅ S3 retrieval successful:", retrievedData);
+    // console.log("✅ S3 retrieval successful:", retrievedData);
 
     // Verify the data matches
     assertEquals(retrievedData, testData);
 
     // Clean up
     // Note: We don't have a delete function exposed, but the data will expire
-    console.log("✅ S3 retry logic test completed successfully");
-  } catch (error) {
-    console.error("❌ S3 retry logic test failed:", error);
+    // console.log("✅ S3 retry logic test completed successfully");
+  } catch (_) {
+    // console.error("❌ S3 retry logic test failed:", error);
     // Don't fail the test if S3 is not available, just log the error
     console.log("ℹ️ S3 may not be available in test environment");
   }

@@ -1,19 +1,20 @@
+import klaw from "klaw";
 import { emptyDir, ensureDir, exists, existsSync } from "std/fs";
 import { dirname, join } from "std/path";
-import klaw from "klaw";
 
-import { getConfig } from "/@/config.ts";
 import {
   type DataRef,
   dataRefToFile,
   DataRefType,
   type DockerJobDefinitionInputRefs,
-  type DockerJobDefinitionRow,
   fileToDataref,
+  getJobColorizedString,
+  getWorkerColorizedString,
   hashFileOnDisk,
   type InputsRefs,
   sanitizeFilename,
 } from "@metapages/compute-queues-shared";
+import { getConfig } from "/@/config.ts";
 import type { Volume } from "/@/queue/DockerJob.ts";
 
 /**
@@ -25,8 +26,8 @@ export const convertIOToVolumeMounts = async (
 ): Promise<{ volumes: Volume[]; outputsDir: string }> => {
   const config = getConfig();
   const { id, definition } = job;
-  const baseDir = join(config.dataDirectory, id);
-  const cacheDir = join(config.dataDirectory, "cache");
+  const baseDir = join(config.dataDirectory, "j", id);
+  const cacheDir = join(config.dataDirectory, "f");
   const configFilesDir = join(baseDir, "configFiles");
   const inputsDir = join(baseDir, "inputs");
   const outputsDir = join(baseDir, "outputs");
@@ -83,9 +84,7 @@ export const convertIOToVolumeMounts = async (
   if (definition?.configFiles) {
     for (const [name, ref] of Object.entries(definition.configFiles)) {
       const isAbsolutePath = name.startsWith("/");
-      const hostFilePath = isAbsolutePath
-        ? join(configFilesDir, name)
-        : join(inputsDir, name);
+      const hostFilePath = isAbsolutePath ? join(configFilesDir, name) : join(inputsDir, name);
       await dataRefToFile(ref, hostFilePath, address, config.dataDirectory);
       // /inputs are already mounted in
       if (isAbsolutePath) {
@@ -104,7 +103,7 @@ const getLocalDataRef = async (file: string, address: string) => {
   const hash = await hashFileOnDisk(file);
   const sanitizedHash = sanitizeFilename(hash);
   const config = getConfig();
-  const cachedFilePath = join(config.dataDirectory, "cache", sanitizedHash);
+  const cachedFilePath = join(config.dataDirectory, "f", sanitizedHash);
   await ensureDir(dirname(cachedFilePath));
 
   try {
@@ -119,7 +118,7 @@ const getLocalDataRef = async (file: string, address: string) => {
   }
 
   const dataRef: DataRef = {
-    value: `${address}/api/v1/download/${sanitizedHash}`,
+    value: `${address}/f/${sanitizedHash}`,
     type: DataRefType.url,
     hash,
   };
@@ -133,12 +132,12 @@ const getLocalDataRef = async (file: string, address: string) => {
  * @returns
  */
 export const getOutputs = async (
-  job: DockerJobDefinitionRow,
+  jobId: string,
   workerId: string,
 ): Promise<InputsRefs> => {
   // TODO: duplicate code
   const config = getConfig();
-  const baseDir = join(config.dataDirectory, sanitizeFilename(job.hash));
+  const baseDir = join(config.dataDirectory, "j", sanitizeFilename(jobId));
   const outputsDir = join(baseDir, "outputs");
 
   // copy the inputs (if any)
@@ -148,14 +147,13 @@ export const getOutputs = async (
 
   for (const file of files) {
     // This will send big blobs to the cloud unless local mode
-    const ref = await (config.mode === "local"
-      ? getLocalDataRef(file, config.server)
-      : fileToDataref(file, config.server));
+    const ref =
+      await (config.mode === "local" ? getLocalDataRef(file, config.server) : fileToDataref(file, config.server));
     outputs[file.replace(`${outputsDir}/`, "")] = ref;
   }
 
   console.log(
-    `[${workerId.substring(0, 6)}] [${job.hash.substring(0, 6)}] outputs:[${
+    `${getWorkerColorizedString(workerId)} ${getJobColorizedString(jobId)} outputs:[${
       Object.keys(outputs).join(",").substring(
         0,
         100,

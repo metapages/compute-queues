@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
+import { cache } from "/@/cache";
+import { useStore } from "/@/store";
+import { ConsoleLogLine, DockerJobState } from "/@shared/client";
 import { AnsiUp } from "ansi_up";
 import linkifyHtml from "linkify-html";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { VariableSizeList as List } from "react-window";
-import { useStore } from "/@/store";
-import { ConsoleLogLine, DockerJobState, StateChangeValueFinished } from "/@shared/client";
 
 import { Code, HStack, VStack } from "@chakra-ui/react";
 
@@ -27,17 +28,36 @@ export const DisplayLogs: React.FC<{
   const [showOutputTable, _setShowOutputTable] = useState(false);
   const [outputCount, setOutputCount] = useState(0);
   const myref = useRef(null);
-  const job = useStore(state => state.jobState);
+  const [storeJobId, job] = useStore(state => state.jobState);
 
   useEffect(() => {
-    if (!job?.state || job.state !== DockerJobState.Finished) return;
+    if (!storeJobId || !job?.state || job.state !== DockerJobState.Finished) return;
 
-    const result = (job.value as StateChangeValueFinished).result;
-    if (result && result.outputs && mode.includes("stdout")) {
-      // setShowOutputTable(true);
-      setOutputCount(Object.keys(result.outputs).length);
-    }
-  }, [job, mode]);
+    let cancelled = false;
+    (async () => {
+      const finishedJob = await cache.getFinishedJob(storeJobId);
+      if (cancelled) {
+        return;
+      }
+      if (finishedJob?.result?.outputs) {
+        setOutputCount(Object.keys(finishedJob.result.outputs).length);
+      }
+
+      // if (result && result.outputs && mode.includes("stdout")) {
+      //   // setShowOutputTable(true);
+      //   setOutputCount(Object.keys(result.outputs).length);
+      // }
+
+      // const outputs = await getOutputs(job);
+      // if (cancelled) return;
+      // setOutputCount(Object.keys(outputs).length);
+    })();
+    return () => {
+      cancelled = true;
+    };
+
+    // const result = (job.value as StateChangeValueFinished).result;
+  }, [storeJobId, job, mode]);
 
   const showRef = () => {
     if (myref.current) {
@@ -60,16 +80,16 @@ export const DisplayLogs: React.FC<{
     setLogs(logsRef.current);
   }, [jobId]);
 
-  const jobState = useStore(state => state.jobState);
+  const [jobIdFromStore, jobState] = useStore(state => state.jobState);
   const buildLogs = useStore(state => state.buildLogs);
   const runLogs = useStore(state => state.runLogs);
 
   // update the job id
   useEffect(() => {
-    setJobId(jobState?.hash);
+    setJobId(jobIdFromStore);
     logsRef.current = [];
     setLogs(logsRef.current);
-  }, [jobState]);
+  }, [jobIdFromStore, jobState]);
 
   // Actually update logs
   useEffect(() => {

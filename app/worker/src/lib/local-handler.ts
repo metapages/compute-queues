@@ -1,23 +1,21 @@
+import { config, getConfig } from "/@/config.ts";
 import { type Context, Hono } from "hono";
 import { serveStatic } from "hono/middleware";
-import {
-  type DockerApiCopyJobToQueuePayload,
-  type DockerJobDefinitionRow,
-  DockerJobState,
-  type JobStates,
-  shaDockerJob,
-  type StateChange,
-  type StateChangeValueQueued,
-} from "@metapages/compute-queues-shared";
 import { createHandler } from "metapages/worker/routing/handlerDeno";
+import { join } from "std/path";
 
 import {
   BaseDockerJobQueue,
+  DefaultNamespace,
+  DockerJobFinishedReason,
+  DockerJobState,
+  type EnqueueJob,
+  getJobColorizedString,
+  type InMemoryDockerJob,
+  shaDockerJob,
+  type StateChange,
   userJobQueues,
 } from "@metapages/compute-queues-shared";
-
-import { config, getConfig } from "/@/config.ts";
-import { join } from "std/path";
 
 export class LocalDockerJobQueue extends BaseDockerJobQueue {
   constructor(opts: {
@@ -30,9 +28,6 @@ export class LocalDockerJobQueue extends BaseDockerJobQueue {
   }
 }
 
-// TODO: this does not store anything actually. It might
-// be fixed in a pending PR
-const jobList: JobStates = { jobs: {} };
 const app = new Hono();
 
 const downloadHandler = async (c: Context) => {
@@ -44,7 +39,7 @@ const downloadHandler = async (c: Context) => {
   }
 
   const config = getConfig();
-  const filePath = join(config.dataDirectory, "cache", key);
+  const filePath = join(config.dataDirectory, "f", key);
 
   try {
     // Check if the file exists
@@ -59,7 +54,7 @@ const downloadHandler = async (c: Context) => {
 
     // Set headers
     c.header("Content-Disposition", `attachment; filename="${key}"`);
-    c.header("Content-Type", "application/octet-stream");
+    c.header("Content-Type", key.endsWith(".json") ? "application/json" : "application/octet-stream");
     c.header("Content-Length", fileInfo.size.toString());
 
     // Create a response with the file's readable stream
@@ -83,7 +78,7 @@ const existsHandler = async (c: Context) => {
   }
 
   const config = getConfig();
-  const filePath = join(config.dataDirectory, "cache", key);
+  const filePath = join(config.dataDirectory, "f", key);
 
   try {
     // Check if the file exists
@@ -114,7 +109,7 @@ const uploadHandler = async (c: Context) => {
   }
 
   const config = getConfig();
-  const filePath = join(config.dataDirectory, "cache");
+  const filePath = join(config.dataDirectory, "f");
   const fullFilePath = join(filePath, key);
 
   try {
@@ -152,55 +147,23 @@ const uploadHandler = async (c: Context) => {
   }
 };
 
-const copyJobToQueueHandler = async (c: Context) => {
-  try {
-    const post = await c.req.json<DockerApiCopyJobToQueuePayload>();
-    const { jobId, queue, namespace, control } = post;
-
-    const existingJob: DockerJobDefinitionRow | null = jobList.jobs[jobId];
-
-    if (!existingJob) {
-      c.status(404);
-      return c.json({ error: "Job not found" });
-    }
-
-    // Initialize queue if it doesn't exist
-    const jobQueue = await ensureQueue(queue);
-
-    const stateChangeValue: StateChangeValueQueued = {
-      definition:
-        (existingJob.history[0].value as StateChangeValueQueued).definition,
-      time: Date.now(),
-      debug: false,
-      namespace,
-      control,
-    };
-    const stateChange: StateChange = {
-      job: jobId,
-      tag: "",
-      state: DockerJobState.Queued,
-      value: stateChangeValue,
-    };
-
-    await jobQueue.stateChange(stateChange);
-
-    c.status(200);
-    return c.json({ success: true });
-  } catch (err) {
-    console.error("Error downloading file:", err);
-    return c.text((err as Error).message, 500);
-  }
+const copyJobToQueueHandler = (c: Context) => {
+  c.status(400);
+  return c.json({ message: "The local handler for copyJob is not implemented because there is only one queue: local" });
 };
 
-const getJobHandler = (c: Context) => {
+const getJobHandler = async (c: Context) => {
   try {
     const jobId: string | undefined = c.req.param("jobId");
     if (!jobId) {
       c.status(404);
       return c.json({ error: "No job provided" });
     }
+    const queue: string | undefined = c.req.param("queue") || "local";
 
-    const job: DockerJobDefinitionRow | null = jobList.jobs[jobId];
+    const jobQueue = await ensureQueue(queue);
+
+    const job = await jobQueue.db.queueJobGet({ queue, jobId });
     if (!job) {
       c.status(404);
       return c.json({ error: "Job not found" });
@@ -220,45 +183,151 @@ const submitJobToQueueHandler = async (c: Context) => {
       c.status(404);
       return c.json({ error: "No queue specified" });
     }
-    const jobToQueue = await c.req.json<StateChangeValueQueued>();
+
+    const jobToQueue = await c.req.json<EnqueueJob>();
     jobToQueue.control = jobToQueue.control || {};
-    jobToQueue.control.queueHistory = jobToQueue.control.queueHistory || [];
-    jobToQueue.control.queueHistory.push(queue);
-    const jobId = await shaDockerJob(jobToQueue.definition);
+    jobToQueue.id = jobToQueue.id || (await shaDockerJob(jobToQueue.definition));
 
     const jobQueue = await ensureQueue(queue);
 
-    const stateChange: StateChange = {
-      job: jobId,
-      tag: "",
-      state: DockerJobState.Queued,
-      value: jobToQueue,
-    };
-
     // This needs to assume that a job submitted with a stateChange
     // like this will have an expectation of persistance
-    await jobQueue.stateChange(stateChange);
+    await jobQueue.stateChangeJobEnqueue(jobToQueue);
 
     c.status(200);
-    return c.json({ success: true, jobId });
+    return c.json({ success: true, jobId: jobToQueue.id });
   } catch (err) {
     console.error("Error submitting job:", err);
     return c.text((err as Error).message, 500);
   }
 };
 
-export const getJobIdsHandler = async (c: Context) => {
+export const getJobsHandler = async (c: Context) => {
   try {
     const queue: string | undefined = c.req.param("queue");
     if (!queue) {
       c.status(404);
       return c.json({ error: "No queue specified" });
     }
+
     const jobQueue = await ensureQueue(queue);
-    const jobIds = await jobQueue.db.queueGetJobIds(queue);
-    return c.json({ success: true, jobIds });
+
+    const data: Record<string, InMemoryDockerJob> = await jobQueue.db.queueGetJobs(queue);
+
+    return c.json({ data });
   } catch (err) {
     console.error("Error getting job ids:", err);
+    return c.text((err as Error).message, 500);
+  }
+};
+
+export const getDefinitionHandler = async (c: Context) => {
+  try {
+    const jobId: string | undefined = c.req.param("jobId");
+    const queue: string = c.req.param("queue") || "local";
+    if (!jobId) {
+      c.status(404);
+      return c.json({ error: "No jobId specified" });
+    }
+
+    const jobQueue = await ensureQueue(queue);
+    const definition = await jobQueue.db.getJobDefinition(jobId);
+
+    return c.json({ data: definition || null });
+  } catch (err) {
+    console.error("Error getting job definition:", err);
+    return c.text((err as Error).message, 500);
+  }
+};
+
+export const getJobResultsHandler = async (c: Context) => {
+  try {
+    const jobId: string | undefined = c.req.param("jobId");
+    const queue: string = c.req.param("queue") || "local";
+    if (!jobId) {
+      c.status(404);
+      return c.json({ error: "No jobId specified" });
+    }
+
+    const jobQueue = await ensureQueue(queue);
+    const result = await jobQueue.db.getJobFinishedResults(jobId);
+    return c.json({ data: result || null });
+  } catch (err) {
+    console.error("Error getting job results:", err);
+    return c.text((err as Error).message, 500);
+  }
+};
+
+export const cancelJobHandler = async (c: Context) => {
+  try {
+    const jobId: string | undefined = c.req.param("jobId");
+    const queue: string | undefined = c.req.param("queue");
+    let { namespace, message } = c.req.query();
+    if (!namespace) {
+      namespace = DefaultNamespace;
+    } else {
+      namespace = decodeURIComponent(namespace);
+    }
+
+    if (!jobId) {
+      c.status(404);
+      return c.json({ error: "No job provided" });
+    }
+    if (!queue) {
+      c.status(404);
+      return c.json({ error: "No queue provided" });
+    }
+
+    const jobQueue = await ensureQueue(queue);
+
+    // while (true) {
+    const job = await jobQueue.db.queueJobGet({ queue, jobId });
+    console.log(`🐸💀 ${getJobColorizedString(jobId)} [cancelJobHandler]`, job);
+    if (!job) {
+      c.status(200);
+      return c.json({ message: "Job not found" });
+    }
+    if (job.state === DockerJobState.Finished || job.state === DockerJobState.Removed) {
+      c.status(200);
+      return c.json({ success: true });
+    }
+    const stateChange: StateChange = {
+      job: jobId,
+      tag: "api",
+      state: DockerJobState.Finished,
+      value: {
+        type: DockerJobState.Finished,
+        reason: DockerJobFinishedReason.Cancelled,
+        message: message || "Job cancelled by API",
+        time: Date.now(),
+        namespace: namespace,
+      },
+    };
+    await jobQueue.stateChange(stateChange);
+    // await new Promise((resolve) => setTimeout(resolve, 1000));
+    // }
+
+    // const jobQueue = await ensureQueue(queue);
+
+    // const stateChange: StateChange = {
+    //   job: jobId,
+    //   tag: "api",
+    //   state: DockerJobState.Finished,
+    //   value: {
+    //     type: DockerJobState.Finished,
+    //     reason: DockerJobFinishedReason.Cancelled,
+    //     time: Date.now(),
+    //     message: "Job cancelled by API",
+    //     namespace,
+    //   },
+    // };
+
+    // await jobQueue.stateChange(stateChange);
+
+    c.status(200);
+    return c.json({ success: true, jobId, namespace });
+  } catch (err) {
+    console.error("Error getting job", err);
     return c.text((err as Error).message, 500);
   }
 };
@@ -287,20 +356,48 @@ app.use("*", async (c, next) => {
 app.get("/health", (c: Context) => c.text("OK"));
 app.get("/healthz", (c: Context) => c.text("OK"));
 
-app.get("/api/v1/download/:key", downloadHandler);
-app.get("/api/v1/exists/:key", existsHandler);
-app.put("/api/v1/upload/:key", uploadHandler);
-app.post("/api/v1/copy", copyJobToQueueHandler);
+// app.get("/f/:key", downloadHandler);
+// app.get("/f/:key/exists", existsHandler);
+// app.put("/f/:key", uploadHandler);
+// app.post("/api/v1/copy", copyJobToQueueHandler);
 // app.get("/api/v1/job/:jobId", getJobHandler);
-app.get("/job/:jobId", getJobHandler);
-app.post("/:queue/job", submitJobToQueueHandler);
-app.get("/:queue/jobs", getJobIdsHandler);
+// app.get("/j/:jobId", getJobHandler);
+// app.post("/q/:queue/job", submitJobToQueueHandler);
+// app.get("/q/:queue/jobs", getJobIdsHandler);
 
-app.get("/metrics", () => {
-  const unfinishedJobs = Object.values(jobList.jobs).filter(
-    (job) => job.state !== DockerJobState.Finished,
-  );
-  const unfinishedQueueLength = unfinishedJobs.length;
+app.get("/f/:key", downloadHandler);
+app.get("/f/:key/exists", existsHandler);
+app.put("/f/:key", uploadHandler);
+app.get("/j/:jobId", getDefinitionHandler);
+app.get("/j/:jobId/definition.json", getDefinitionHandler);
+app.get("/j/:jobId/result.json", getJobResultsHandler);
+app.get("/j/:jobId/results.json", getJobResultsHandler);
+app.post("/j/:jobId/copy", copyJobToQueueHandler);
+app.post("/q/:queue", submitJobToQueueHandler);
+app.post("/q/:queue/j", submitJobToQueueHandler);
+app.get("/q/:queue/j", getJobsHandler);
+app.get("/q/:queue", getJobsHandler);
+app.get("/q/:queue/j/:jobId", getJobHandler);
+// app.get("/q/:queue/j/:jobId/inputs/:filename", toImplementPlaceholder);
+// app.get("/q/:queue/j/:jobId/outputs/:filename", toImplementPlaceholder);
+// app.get("/q/:queue/j/:jobId/namespaces.json", getJobNamespacesHandler);
+app.get("/q/:queue/j/:jobId/definition.json", getDefinitionHandler);
+app.get("/q/:queue/j/:jobId/result.json", getJobResultsHandler);
+app.get("/q/:queue/j/:jobId/results.json", getJobResultsHandler);
+// app.get("/q/:queue/j/:jobId/history.json", toImplementPlaceholder);
+app.post("/q/:queue/j/:jobId/cancel", cancelJobHandler);
+app.post("/q/:queue/j/:jobId/:namespace/cancel", cancelJobHandler);
+// app.get("/q/:queue/namespaces", getJobHandler);
+
+const metricsHandler = async (c: Context) => {
+  const queue = c.req.param("queue") || "local";
+  if (!queue) {
+    c.status(400);
+    return c.text("Missing queue");
+  }
+  const jobQueue = await ensureQueue(queue);
+  const jobs = await jobQueue.db.queueGetJobs("local");
+  const unfinishedQueueLength = Object.keys(jobs).length;
 
   const response = `
 # HELP queue_length The number of outstanding jobs in the queue
@@ -314,40 +411,29 @@ queue_length ${unfinishedQueueLength}
       "content-type": "text/plain",
     },
   });
-});
+};
 
-app.get("/:queue/status", (c) => {
-  const queue = c.req.param("queue");
-  if (!queue) {
-    c.status(400);
-    return c.text("Missing queue");
-  }
-  return c.json({ queue: jobList });
-});
+app.get("/metrics", metricsHandler);
+app.get("/q/:queue/metrics", metricsHandler);
 
-app.get("/:queue/metrics", (c) => {
+app.get("/q/:queue/status", async (c) => {
   const queue = c.req.param("queue");
   if (!queue) {
     c.status(400);
     return c.text("Missing queue");
   }
 
-  const unfinishedJobs = Object.values(jobList.jobs).filter(
-    (job) => job.state !== DockerJobState.Finished,
-  );
-  const response = `
-# HELP queue_length The number of outstanding jobs in the queue
-# TYPE queue_length gauge
-queue_length ${unfinishedJobs.length}
-`;
-
-  return new Response(response, {
-    status: 200,
-    headers: {
-      "content-type": "text/plain",
-    },
-  });
+  try {
+    const jobQueue = await ensureQueue(queue);
+    const status = await jobQueue.status();
+    return c.json(status as unknown);
+  } catch (err) {
+    console.error("Error getting queue status:", err);
+    return c.text((err as Error).message, 500);
+  }
 });
+
+app.get("/:queue/metrics", metricsHandler);
 
 app.get("/*", serveStatic({ root: "../browser/dist" }));
 app.get("/", serveStatic({ path: "../browser/dist/index.html" }));
@@ -370,8 +456,20 @@ const ensureQueue = async (queue: string): Promise<BaseDockerJobQueue> => {
 const handleWebsocket = async (socket: WebSocket, request: Request) => {
   const url = new URL(request.url);
   const pathTokens = url.pathname.split("/").filter((x) => x !== "");
-  const queueKey = pathTokens[0];
-  const type = pathTokens[1];
+
+  // previous deprecated routes, now queues always start with /q/<:queueId>
+  let queueKey = pathTokens[0];
+  let isClient = pathTokens[1] === "browser" || pathTokens[1] === "client";
+  let isWorker = pathTokens[1] === "worker";
+
+  if (pathTokens[0] === "q") {
+    queueKey = pathTokens[1];
+    isClient = pathTokens[2] === "browser" || pathTokens[2] === "client";
+    isWorker = pathTokens[2] === "worker";
+  }
+
+  // const queueKey = pathTokens[0];
+  // const type = pathTokens[1];
 
   if (!queueKey) {
     console.log("No queue key, closing socket");
@@ -380,19 +478,19 @@ const handleWebsocket = async (socket: WebSocket, request: Request) => {
   }
 
   if (config.debug) {
-    console.log(`➕ websocket connection type=${type} queue=${queueKey}`);
+    console.log(`➕ websocket connection type=${pathTokens[1]} queue=${queueKey}`);
   }
 
   // Initialize queue if it doesn't exist
   const queue = await ensureQueue(queueKey);
 
   // Handle client or worker connections
-  if (type === "browser" || type === "client") {
+  if (isClient) {
     queue.connectClient({ socket });
-  } else if (type === "worker") {
+  } else if (isWorker) {
     queue.connectWorker({ socket }, queueKey);
   } else {
-    console.log(`💥 Unknown type=[${type}], closing websocket`);
+    console.log(`💥 Unknown type=[${pathTokens[1]}], closing websocket`);
     socket.close();
     return;
   }

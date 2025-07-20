@@ -1,13 +1,10 @@
 import { assert, assertEquals } from "std/assert";
 
 import { closed, open } from "@korkje/wsi";
+import { createNewContainerJobMessage, type DockerJobState } from "@metapages/compute-queues-shared";
 
+import { killAllJobs } from "./util.ts";
 import { createWebhookServer } from "./webhooks_test.ts";
-
-import {
-  createNewContainerJobMessage,
-  type DockerJobState,
-} from "@metapages/compute-queues-shared";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -19,6 +16,7 @@ Deno.test(
     if (QUEUE_ID === "local") {
       return;
     }
+    await killAllJobs(QUEUE_ID);
 
     // Create a server to receive the webhook
     // then have a job that calls it on submission
@@ -29,16 +27,15 @@ Deno.test(
       we: "are good",
     };
 
-    const namespace = `test${Math.floor(Math.random() * 1000000)}`;
+    const namespace = `namespace${Math.floor(Math.random() * 1000000)}`;
 
-    // https://github.com/metapages/compute-queues/issues/124
     const { message, jobId } = await createNewContainerJobMessage({
       definition: {
         image: "alpine:3.18.5",
         command: `echo ${Math.floor(Math.random() * 1000000)}`,
       },
-      namespace,
       control: {
+        namespace,
         callbacks: {
           queued: {
             url: `http://test:${port}/test`,
@@ -61,21 +58,21 @@ Deno.test(
         try {
           // Resolve the promise when we get the expected payload
           const body: {
-            jobId: string;
+            // jobId: string;
             queue: string;
             namespace?: string;
             config?: unknown;
           } = await req.json();
           assertEquals(body.config, webhookPayload);
-          assertEquals(body.jobId, jobId);
-          assertEquals(body.namespace, namespace);
+          // assertEquals(body.jobId, jobId);
+          // assertEquals(body.namespace, namespace);
           assertEquals(body.queue, QUEUE_ID);
 
           // Make sure to await and consume the response
-          const response = await fetch(`${API_URL}/api/v1/copy`, {
+          const response = await fetch(`${API_URL}/j/${jobId}/copy`, {
             method: "POST",
             body: JSON.stringify({
-              jobId,
+              // jobId,
               queue: queueTarget,
               namespace,
               config: webhookPayload,
@@ -91,7 +88,7 @@ Deno.test(
 
           // Make sure to await and consume the response
           const responseStatus = await fetch(
-            `${API_URL}/${queueTarget}/status`,
+            `${API_URL}/q/${queueTarget}/status`,
           );
           const jobStatus: {
             jobs: { [jobId: string]: { state: DockerJobState } };
@@ -112,7 +109,7 @@ Deno.test(
     try {
       // Open the socket
       const socket = new WebSocket(
-        `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
+        `${API_URL.replace("http", "ws")}/q/${QUEUE_ID}/client`,
       );
       await open(socket);
 

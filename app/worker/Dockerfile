@@ -60,7 +60,7 @@ COPY ./app/shared/deno.json ./app/shared/deno.json
 # Copy assets
 # COPY ./app/browser/dist ./app/browser/dist
 
-RUN deno cache --reload .
+RUN deno cache .
 
 WORKDIR /app/app/worker
 

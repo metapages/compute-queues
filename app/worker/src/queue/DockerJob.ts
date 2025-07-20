@@ -1,31 +1,30 @@
-import bytes from "bytes";
-import type Docker from "dockerode";
-import { ensureDirSync, existsSync } from "std/fs";
-import type { Buffer } from "std/node/buffer";
-import { dirname, join } from "std/path";
 import { DockerNetworkForJobs } from "/@/docker/network.ts";
 import * as StreamTools from "/@/docker/streamtools.ts";
 import { DockerJobSharedVolumeName } from "/@/docker/volume.ts";
+import { ContainerLabel, ContainerLabelId, ContainerLabelQueue, ContainerLabelWorker } from "/@/queue/constants.ts";
 import { docker } from "/@/queue/dockerClient.ts";
 import { DockerBuildError, ensureDockerImage } from "/@/queue/dockerImage.ts";
-
-import {
-  ContainerLabel,
-  ContainerLabelId,
-  ContainerLabelQueue,
-  ContainerLabelTestMode,
-} from "/@/queue/constants.ts";
+import bytes from "bytes";
+import type { Container, ContainerCreateOptions } from "dockerode";
+import { ensureDirSync } from "std/fs";
+import type { Buffer } from "std/node/buffer";
+import { dirname, join } from "std/path";
 
 import {
   type DockerApiDeviceRequest,
   type DockerJobImageBuild,
   DockerJobState,
   type DockerRunResult,
+  getJobColorizedString,
+  getWorkerColorizedString,
   type JobStatusPayload,
   type WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
 } from "@metapages/compute-queues-shared";
-import { config } from "/@/config.ts";
+
+import { config } from "../config.ts";
+import { killAndRemove } from "./cleanup.ts";
+import { getDockerFiltersForJob } from "./utils.ts";
 
 // Minimal interface for interacting with docker jobs:
 //  inputs:
@@ -47,6 +46,7 @@ export interface Volume {
 
 // this goes in
 export interface DockerJobArgs {
+  workerId: string;
   sender: WebsocketMessageSenderWorker;
   queue: string;
   id: string;
@@ -58,7 +58,7 @@ export interface DockerJobArgs {
   workdir?: string;
   shmSize?: string;
   volumes?: Array<Volume>;
-  outputsDir?: string;
+  outputsDir: string;
   deviceRequests?: DockerApiDeviceRequest[];
   // always defined, no jobs run forever
   maxJobDuration: number;
@@ -68,7 +68,7 @@ export interface DockerJobArgs {
 // this comes out
 export interface DockerJobExecution {
   finish: Promise<DockerRunResult | undefined>;
-  kill: () => Promise<void>;
+  kill: (reason: string) => void | Promise<void>;
   isKilled: { value: boolean };
 }
 
@@ -76,6 +76,7 @@ export const JobCacheDirectory = "/job-cache";
 
 export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   const {
+    workerId,
     sender,
     id,
     queue,
@@ -97,11 +98,11 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     isTimedOut: false,
   };
 
-  let container: Docker.Container | undefined;
+  let container: Container | undefined;
 
   let durationHandler: number | undefined;
 
-  const kill = async () => {
+  const kill = async (reason: string) => {
     if (durationHandler) {
       clearInterval(durationHandler);
       durationHandler = undefined;
@@ -112,14 +113,15 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     if (!result.duration && startTime && finishTime) {
       result.duration = finishTime - startTime;
     }
-    if (container) {
-      await killAndRemove(container);
-    } else {
-      console.log(
-        `[${id.substring(0, 6)}] 💥💥💥 container object missing, cannot kill`,
-      );
-    }
+
     isKilled.value = true;
+    if (container) {
+      console.log(
+        `${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} 🗑️  kill(${reason}) killing container`,
+        container.id,
+      );
+      await killAndRemove(id, container, reason);
+    }
   };
 
   let startTime: number | undefined;
@@ -130,11 +132,13 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       const duration = Date.now() - startTime;
       if (duration > maxJobDuration) {
         console.log(
-          `💥💥💥 max duration exceeded [${duration} > ${maxJobDuration}]`,
+          `${getWorkerColorizedString(workerId)} ${
+            getJobColorizedString(id)
+          } 💥💥💥 max duration exceeded [${duration} > ${maxJobDuration}]`,
           id,
         );
         result.isTimedOut = true;
-        kill();
+        kill("max duration exceeded");
       }
     }
     if (!finishTime && !isKilled.value) {
@@ -143,7 +147,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   };
   maxDurationCheck();
 
-  const createOptions: Docker.ContainerCreateOptions = {
+  const createOptions: ContainerCreateOptions = {
     Image: image,
     Cmd: command,
     WorkingDir: workdir,
@@ -154,23 +158,20 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     AttachStdout: true,
     AttachStderr: true,
     Labels: {
+      [ContainerLabelWorker]: workerId,
       [ContainerLabelId]: args.id,
       [ContainerLabelQueue]: queue,
       [ContainerLabel]: "true",
-    },
+    } as Record<string, string>,
     User: `${Deno.uid()}:${Deno.gid()}`,
   };
-
-  if (config.testMode) {
-    createOptions.Labels[ContainerLabelTestMode] = "true";
-  }
 
   // Connect container to our network
   createOptions.HostConfig!.NetworkMode = DockerNetworkForJobs;
 
-  createOptions.Env.push("JOB_INPUTS=/inputs");
-  createOptions.Env.push("JOB_OUTPUTS=/outputs");
-  createOptions.Env.push(`JOB_CACHE=${JobCacheDirectory}`);
+  createOptions.Env!.push("JOB_INPUTS=/inputs");
+  createOptions.Env!.push("JOB_OUTPUTS=/outputs");
+  createOptions.Env!.push(`JOB_CACHE=${JobCacheDirectory}`);
 
   if (deviceRequests) {
     // https://github.com/apocas/dockerode/issues/628
@@ -200,13 +201,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
 
   let logFileStdout: Deno.FsFile | null = null;
   let logFileStderr: Deno.FsFile | null = null;
-  const stdoutLogFileName = outputsDir
-    ? join(outputsDir, "job", "stdout")
-    : undefined;
+  const stdoutLogFileName = join(outputsDir, "job", "stdout");
   stdoutLogFileName && ensureDirSync(dirname(stdoutLogFileName));
-  const stderrLogFileName = outputsDir
-    ? join(outputsDir, "job", "stderr")
-    : undefined;
+  const stderrLogFileName = join(outputsDir, "job", "stderr");
   stderrLogFileName && ensureDirSync(dirname(stderrLogFileName));
 
   const encoder = new TextEncoder();
@@ -246,13 +243,17 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       return;
     }
     try {
-      createOptions.image = await ensureDockerImage({
+      createOptions.Image = await ensureDockerImage({
         jobId: id,
         image,
         build: args.build,
         sender,
       });
     } catch (err: unknown) {
+      console.error(
+        `${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} 💥 ensureDockerImage error`,
+        (err as Error)?.stack,
+      );
       const message = err && typeof err === "object" && "message" in err
         ? err.message
         : `Unknown error: ${String(err)}`;
@@ -267,7 +268,6 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         result.logs.push([`${err.message}`, Date.now(), true]);
         return result;
       } else {
-        console.error("💥 ensureDockerImage error", err);
         result.logs.push([
           `Failure to pull or build the docker image:  ${message}`,
           Date.now(),
@@ -282,88 +282,22 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     }
 
     // Check for existing job container
-    const runningContainers = await docker.listContainers({
-      Labels: {
-        [ContainerLabelId]: args.id,
-      },
-    });
+    const existingRunningContainer = await getRunningContainerForJob({ jobId: id, workerId });
+
     if (isKilled.value) {
       return;
     }
-    const existingJobContainer = runningContainers.find(
-      (container: unknown) =>
-        container &&
-        typeof container === "object" &&
-        "Labels" in container &&
-        typeof container.Labels === "object" &&
-        container.Labels != null &&
-        ContainerLabelId in container.Labels &&
-        container.Labels[ContainerLabelId] === args.id,
-    );
 
-    if (existingJobContainer) {
-      container = docker.getContainer(existingJobContainer.Id);
-      if (container) {
-        // First get existing logs from files
-        const existsStdOut = stdoutLogFileName
-          ? existsSync(stdoutLogFileName)
-          : false;
-        const textStdOut = existsStdOut && stdoutLogFileName
-          ? await Deno.readTextFile(stdoutLogFileName)
-          : "";
-        if (isKilled.value) {
-          return;
-        }
-        if (textStdOut) {
-          const logs = textStdOut
-            .split("\n")
-            .map((line) => [line, Date.now(), false]);
-          sender({
-            type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
-            payload: {
-              jobId: id,
-              step: `${DockerJobState.Running}`,
-              logs,
-            } as JobStatusPayload,
-          });
-        }
-
-        const existsStderr = stderrLogFileName
-          ? existsSync(stderrLogFileName)
-          : false;
-        const textStderr = existsStderr && stderrLogFileName
-          ? await Deno.readTextFile(stderrLogFileName)
-          : "";
-        if (isKilled.value) {
-          return;
-        }
-        if (textStderr) {
-          const logs = textStderr
-            .split("\n")
-            .map((line) => [line, Date.now(), true]);
-          sender({
-            type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
-            payload: {
-              jobId: id,
-              step: `${DockerJobState.Running}`,
-              logs,
-            } as JobStatusPayload,
-          });
-        }
-
-        // Attach to container streams immediately to capture new logs
-        const stream = await container.attach({
-          stream: true,
-          stdout: true,
-          stderr: true,
-        });
-        container.modem.demuxStream(stream, grabberOutStream, grabberErrStream);
+    if (existingRunningContainer) {
+      const containerInfo = await existingRunningContainer.inspect();
+      if (containerInfo.State?.Status === "running") {
+        container = existingRunningContainer;
       }
     }
 
     // create the log file, depending on if the container was already running
     // if it was running, we don't want to overwrite the log file
-    if (!existingJobContainer) {
+    if (!existingRunningContainer) {
       if (stdoutLogFileName) {
         try {
           Deno.removeSync(stdoutLogFileName);
@@ -406,43 +340,107 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
 
     if (!container) {
       container = await docker.createContainer(createOptions);
+
+      if (config.debug) {
+        console.log(
+          `${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} 👉 created new container`,
+          container.id,
+        );
+      }
     }
 
+    // attach to container
     const stream = await container!.attach({
       stream: true,
       stdout: true,
       stderr: true,
+      logs: existingRunningContainer ? true : false,
     });
+    // console.log(`🤡 after attach`, containerInfo);
     container!.modem.demuxStream(stream, grabberOutStream, grabberErrStream);
 
     if (isKilled.value) {
       return;
     }
 
-    if (!existingJobContainer) {
+    if (!existingRunningContainer) {
       // is buffer
-      const startData: Buffer = await container!.start();
+      const _: Buffer = await container!.start();
       console.log(
-        "🚀 container started, startData",
-        new TextDecoder().decode(startData),
+        `${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} 🏎️ container started`,
       );
     }
 
     startTime = Date.now();
 
+    // Wait for container to finish with enhanced logging
+    console.log(
+      `${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} ⏳ Waiting for container to finish...`,
+    );
     const dataWait = await container!.wait();
+    result.StatusCode = dataWait != null ? dataWait.StatusCode : null;
+
+    console.log(`${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} ✅ container finished`, dataWait);
+
+    // Enhanced status code analysis
+    if (dataWait?.StatusCode === 137) {
+      // console.log(
+      //   `${getWorkerColorizedString(workerId)} ${
+      //     getJobColorizedString(id)
+      //   } 💥 CONTAINER KILLED (137) - Likely out of memory!`,
+      // );
+      // console.log(`${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} 🔍 Debug info:`, {
+      //   containerId: container!.id,
+      //   jobId: id,
+      //   workerId: workerId,
+      //   queue: queue,
+      //   duration: startTime ? Date.now() - startTime : "unknown",
+      //   maxJobDuration: maxJobDuration,
+      //   isKilled: isKilled.value,
+      // });
+
+      // Add detailed error information to logs
+      result.logs.push([
+        `💥 Container killed with status code 137 (out of memory or killed by system)`,
+        Date.now(),
+        true,
+      ]);
+
+      result.logs.push([
+        `🔍 Container ID: ${container!.id}`,
+        Date.now(),
+        true,
+      ]);
+      result.logs.push([
+        `⏱️ Job duration: ${startTime ? Math.round((Date.now() - startTime) / 1000) + "s" : "unknown"}`,
+        Date.now(),
+        true,
+      ]);
+    } else if (dataWait?.StatusCode !== 0) {
+      console.log(
+        `${getWorkerColorizedString(workerId)} ${
+          getJobColorizedString(id)
+        } ⚠️ Container exited with non-zero status: ${dataWait?.StatusCode}`,
+      );
+      result.logs.push([
+        `⚠️ Container exited with status code: ${dataWait?.StatusCode}`,
+        Date.now(),
+        true,
+      ]);
+    }
+
     finishTime = finishTime || Date.now();
     if (!result.duration && finishTime && startTime) {
       result.duration = finishTime - startTime;
     }
 
-    logFileStdout?.close();
-    logFileStderr?.close();
-
-    result.StatusCode = dataWait != null ? dataWait.StatusCode : null;
+    (logFileStdout as Deno.FsFile | null)?.close();
+    (logFileStderr as Deno.FsFile | null)?.close();
 
     // remove the container out-of-band (return quickly)
-    killAndRemove(container);
+    if (container) {
+      killAndRemove(id, container, "DockerJob.finish normally");
+    }
 
     return result;
   };
@@ -454,89 +452,24 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   };
 };
 
-const killAndRemove = async (
-  container?: Docker.Container,
-): Promise<unknown> => {
-  if (container) {
-    let killResult: unknown;
+export const getRunningContainerForJob = async (args: {
+  jobId: string;
+  workerId: string;
+}): Promise<Container | undefined> => {
+  const runningContainers = await docker.listContainers({
+    filters: getDockerFiltersForJob({ ...args, status: "running" }),
+  });
+  for (const containerData of runningContainers) {
     try {
-      killResult = await container.kill();
+      const container = docker.getContainer(containerData.Id);
+      if (container) {
+        return container;
+      }
     } catch (_err) {
       /* do nothing */
+      console.log(
+        `${getJobColorizedString(args.jobId)} :: Failed to remove stopped container but ignoring error: ${_err}`,
+      );
     }
-    (async () => {
-      try {
-        await container.remove();
-      } catch (err) {
-        console.log(`Failed to remove but ignoring error: ${err}`);
-      }
-    })();
-    // console.log(`❗❗❗ WARNING: container NOT removed: ${container.id}`);
-    return killResult;
   }
 };
-
-// const dockerUrlMatches = (a: DockerUrlBlob, b: DockerUrlBlob) => {
-//   if (a.repository == b.repository) {
-//     const tagA = a.tag;
-//     const tagB = b.tag;
-//     return !tagA || !tagB ? true : tagA === tagB;
-//   } else {
-//     return false;
-//   }
-// };
-
-// interface DockerUrlBlob {
-//   repository: string;
-//   registry?: string;
-//   tag?: string;
-// }
-
-// const parseDockerUrl = (s: string): DockerUrlBlob => {
-//   s = s.trim();
-//   const r = /(.*\/)?([a-z0-9_-]+)(:[a-z0-9_\.-]+)?/i;
-//   const result = r.exec(s);
-//   if (!result) {
-//     throw `Not a docker URL: ${s}`;
-//   }
-//   let registryAndNamespace: string | undefined = result[1];
-//   const repository = result[2];
-//   let tag = result[3];
-//   if (tag) {
-//     tag = tag.substring(1);
-//   }
-//   registryAndNamespace = registryAndNamespace
-//     ? registryAndNamespace.substring(0, registryAndNamespace.length - 1)
-//     : undefined;
-//   let namespace: string | undefined;
-//   let registry: string | undefined;
-//   if (registryAndNamespace) {
-//     const tokens = registryAndNamespace.split("/");
-//     if (tokens.length > 1) {
-//       namespace = tokens.pop();
-//       registry = tokens.length > 0 ? tokens.join("/") : undefined;
-//     } else {
-//       //If the registry and namespace does not contain /
-//       //and there's no '.'/':' then there's no registry
-//       if (
-//         registryAndNamespace.indexOf(".") > -1 ||
-//         registryAndNamespace.indexOf(":") > -1
-//       ) {
-//         registry = registryAndNamespace;
-//       } else {
-//         namespace = registryAndNamespace;
-//       }
-//     }
-//   }
-
-//   const url: DockerUrlBlob = {
-//     repository: namespace == null ? repository : `${namespace}/${repository}`,
-//   };
-//   if (tag != null) {
-//     url.tag = tag;
-//   }
-//   if (registry != null) {
-//     url.registry = registry;
-//   }
-//   return url;
-// };

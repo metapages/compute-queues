@@ -15,6 +15,12 @@
       "**/dist": true,
       "**/node_modules": true
     },
-    "editor.defaultFormatter": "denoland.vscode-deno"
+    "editor.defaultFormatter": "denoland.vscode-deno",
+    "files.watcherExclude": {
+      "**/dist": true
+    },
+    "search.exclude": {
+      "**/dist": true
+    }
   }
 }

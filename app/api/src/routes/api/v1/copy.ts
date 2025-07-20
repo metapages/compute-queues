@@ -1,36 +1,37 @@
+import { db } from "/@/db/db.ts";
+import { getApiDockerJobQueue } from "/@/routes/websocket.ts";
 import type { Context } from "hono";
 
 import {
   type DockerApiCopyJobToQueuePayload,
-  type DockerJobDefinitionRow,
   DockerJobState,
   type StateChange,
   type StateChangeValueQueued,
 } from "@metapages/compute-queues-shared";
-import { getApiDockerJobQueue } from "/@/routes/websocket.ts";
-import { db } from "/@/db/db.ts";
 
 export const copyJobToQueueHandler = async (c: Context) => {
   try {
+    const jobId: string | undefined = c.req.param("jobId");
     const post = await c.req.json<DockerApiCopyJobToQueuePayload>();
-    const { jobId, queue, namespace, control } = post;
+    const { queue, control } = post;
 
-    const existingJob: DockerJobDefinitionRow | null = await db.jobGet(jobId);
-
-    if (!existingJob) {
+    const definition = await db.getJobDefinition(jobId);
+    if (!definition) {
       c.status(404);
-      return c.json({ error: "Job not found" });
+      return c.json({ error: "Job definition not found" });
     }
 
     const jobQueue = await getApiDockerJobQueue(queue);
 
     const stateChangeValue: StateChangeValueQueued = {
-      definition:
-        (existingJob.history[0].value as StateChangeValueQueued).definition,
+      type: DockerJobState.Queued,
       time: Date.now(),
-      debug: false,
-      namespace,
-      control,
+      enqueued: {
+        id: jobId,
+        definition,
+        debug: false,
+        control,
+      },
     };
     const stateChange: StateChange = {
       job: jobId,

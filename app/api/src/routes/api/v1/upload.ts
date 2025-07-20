@@ -56,9 +56,7 @@ export async function getSignedUrlWithRetry(
       }
 
       // Wait with exponential backoff + jitter
-      await new Promise((resolve) =>
-        setTimeout(resolve, delay + Math.random() * 1000)
-      );
+      await new Promise((resolve) => setTimeout(resolve, delay + Math.random() * 1000));
       delay *= 2;
     }
   }

@@ -1,16 +1,17 @@
 import React, { useCallback, useEffect, useState } from "react";
 
 import { useJobSubmissionHook } from "/@/hooks/useJobSubmissionHook";
-import { DockerJobFinishedReason, DockerJobState, StateChangeValueFinished } from "/@shared/client";
+import { useOptionJobStartAutomatically } from "/@/hooks/useOptionJobStartAutomatically";
+import { useQueue } from "/@/hooks/useQueue";
+import { DockerJobFinishedReason, DockerJobState } from "/@shared/client";
 
 import { Button, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
-import { Lock, Play, Queue as QueueIcon, Repeat, Stop } from "@phosphor-icons/react";
+import { Backspace, Play, Queue as QueueIcon, Stop } from "@phosphor-icons/react";
 
 import { useStore } from "../../store";
-import { useQueue } from "/@/hooks/useQueue";
 
 export const JobControlButton: React.FC = () => {
-  const serverJobState = useStore(state => state.jobState);
+  const [_, serverJobState] = useStore(state => state.jobState);
   const clientJobDefinition = useStore(state => state.newJobDefinition);
 
   const [isLargerThan600] = useMediaQuery("(min-width: 600px)");
@@ -20,6 +21,7 @@ export const JobControlButton: React.FC = () => {
   const mainInputFileContent = useStore(state => state.mainInputFileContent);
   const setUserClickedRun = useStore(state => state.setUserClickedRun);
   const [temporarilyForceShowQueued, setTemporarilyForceShowQueued] = useState(false);
+  const [jobStartAutomatically] = useOptionJobStartAutomatically();
 
   // If we get a new job state, we are not in the process of requeueing
   useEffect(() => {
@@ -32,6 +34,7 @@ export const JobControlButton: React.FC = () => {
   const cancelJob = useStore(state => state.cancelJob);
   const saveInputFileAndRun = useStore(state => state.saveInputFileAndRun);
   const resubmitJob = useStore(state => state.resubmitJob);
+  const deleteJobCache = useStore(state => state.deleteJobCache);
 
   const state = serverJobState?.state;
   const isMissingBuild = !(clientJobDefinition?.definition?.build || clientJobDefinition?.definition?.image);
@@ -40,11 +43,15 @@ export const JobControlButton: React.FC = () => {
     cancelJob();
   }, [cancelJob]);
 
-  const onClickRetry = useCallback(() => {
-    setUserClickedRun(true);
-    setIsJobRequeued(true);
-    resubmitJob();
-  }, [resubmitJob, setUserClickedRun]);
+  const onClickDeleteAndMaybeRetry = useCallback(async () => {
+    await deleteJobCache();
+    if (jobStartAutomatically) {
+      setUserClickedRun(true);
+      setIsJobRequeued(true);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      resubmitJob();
+    }
+  }, [resubmitJob, setUserClickedRun, jobStartAutomatically, deleteJobCache]);
 
   const onClickSaveAndRun = useCallback(() => {
     setUserClickedRun(true);
@@ -69,23 +76,23 @@ export const JobControlButton: React.FC = () => {
     />
   );
 
-  const _noQueueButton = (
-    <HeaderButton
-      tooltip="Add a queue (button below)"
-      ariaLabel="No queue"
-      color={"red"}
-      text={isLargerThan600 ? "No queue 👇" : ""}
-    />
-  );
+  // const _noQueueButton = (
+  //   <HeaderButton
+  //     tooltip="Add a queue (button below)"
+  //     ariaLabel="No queue"
+  //     color={"red"}
+  //     text={isLargerThan600 ? "No queue 👇" : ""}
+  //   />
+  // );
 
-  const disabledButton = (
-    <HeaderButton
-      ariaLabel="Disabled"
-      tooltip="Disabled"
-      text={isLargerThan600 ? "Disabled" : ""}
-      icon={<Icon as={Lock} size={"1.2rem"} />}
-    />
-  );
+  // const disabledButton = (
+  //   <HeaderButton
+  //     ariaLabel="Disabled"
+  //     tooltip="Disabled"
+  //     text={isLargerThan600 ? "Disabled" : ""}
+  //     icon={<Icon as={Lock} size={"1.2rem"} />}
+  //   />
+  // );
 
   const cancelButton = (
     <HeaderButton
@@ -119,14 +126,15 @@ export const JobControlButton: React.FC = () => {
     />
   );
 
-  const requeueButton = (
+  const deleteMaybeRetryButton = (
     <HeaderButton
       ariaLabel="Re-queue"
-      tooltip="Delete cache and re-run"
-      icon={<Icon as={Repeat} color="green" size={"1.2rem"} />}
-      onClick={onClickRetry}
+      tooltip="Delete cache (and re-run if autorun is enabled)"
+      // icon={<Icon as={Repeat} color="green" size={"1.2rem"} />}
+      icon={<Icon as={Backspace} size={"1.2rem"} />}
+      onClick={onClickDeleteAndMaybeRetry}
       loading={isJobRequeued}
-      text={isLargerThan600 ? "Run Again" : ""}
+      text={isLargerThan600 ? "Delete" : ""}
       // color={"green"}
     />
   );
@@ -151,6 +159,10 @@ export const JobControlButton: React.FC = () => {
       color={"gray"}
     />
   );
+
+  // console.log(
+  //   `🐸🅾️ JobControlButton [${serverJobState?.id?.substring(0, 5)}] state=[${serverJobState?.state}] ${serverJobState?.finished?.reason ? serverJobState?.finished?.reason : ""}`,
+  // );
 
   if (isMissingBuild) {
     return noBuildButton;
@@ -178,23 +190,25 @@ export const JobControlButton: React.FC = () => {
     case DockerJobState.Running:
       return cancelButton;
     case DockerJobState.Finished: {
-      const value: StateChangeValueFinished | undefined = serverJobState?.value as StateChangeValueFinished;
-      if (value) {
-        switch (value.reason) {
+      const reason = serverJobState?.finished?.reason;
+      if (reason) {
+        switch (reason) {
+          case DockerJobFinishedReason.Deleted:
+            return runButton;
           case DockerJobFinishedReason.Error:
           case DockerJobFinishedReason.Success:
           case DockerJobFinishedReason.Cancelled:
           case DockerJobFinishedReason.TimedOut:
           case DockerJobFinishedReason.JobReplacedByClient:
-            return requeueButton;
+            return deleteMaybeRetryButton;
           case DockerJobFinishedReason.WorkerLost:
             return cancelButton;
         }
       }
-      return disabledButton;
+      return deleteMaybeRetryButton;
     }
     default:
-      return disabledButton;
+      return deleteMaybeRetryButton;
   }
 };
 

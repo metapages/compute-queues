@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useStore } from "../store";
+import { JobStateTuple, useStore } from "../store";
 import { useOptionJobStartAutomatically } from "./useOptionJobStartAutomatically";
 
 /**
@@ -11,12 +11,12 @@ export const useJobSubmissionHook = () => {
   const [isJobStartingAutomatically] = useOptionJobStartAutomatically();
   const dockerJobClient = useStore(state => state.newJobDefinition);
   const dockerJobClientRef = useRef(dockerJobClient);
-  const dockerJobServer = useStore(state => state.jobState);
-  const dockerJobServerRef = useRef(dockerJobServer);
+  const [jobId, dockerJobServer] = useStore(state => state.jobState);
+  const dockerJobServerRef = useRef<JobStateTuple>([jobId, dockerJobServer]);
   // Check this efficiently
   useEffect(() => {
-    dockerJobServerRef.current = dockerJobServer;
-  }, [dockerJobServer]);
+    dockerJobServerRef.current = [jobId, dockerJobServer];
+  }, [jobId, dockerJobServer]);
 
   const connected = useStore(state => state.isServerConnected);
   const submitJobFromStore = useStore(state => state.submitJob);
@@ -55,7 +55,7 @@ export const useJobSubmissionHook = () => {
       }
 
       // If we have a matching job from the server, we don't need to submit it again
-      if (dockerJobServerRef.current?.hash === jobHashCurrent) {
+      if (dockerJobServerRef.current?.[0] === jobHashCurrent) {
         return;
       }
 
@@ -63,7 +63,7 @@ export const useJobSubmissionHook = () => {
       submitJobFromStore();
 
       loadingCheckInterval = setInterval(() => {
-        if (dockerJobServerRef.current?.hash === jobHashCurrent) {
+        if (dockerJobServerRef.current?.[0] === jobHashCurrent) {
           setLoading(false);
           clearInterval(loadingCheckInterval);
         }
@@ -77,7 +77,7 @@ export const useJobSubmissionHook = () => {
         clearInterval(loadingCheckInterval);
       }
     };
-  }, [submitJobFromStore, connected, dockerJobClient]);
+  }, [submitJobFromStore, connected, jobId, dockerJobClient]);
 
   useEffect(() => {
     if (isJobStartingAutomatically) {

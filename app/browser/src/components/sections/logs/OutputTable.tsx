@@ -1,8 +1,8 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
-import { downloadFile, zipAndDownloadDatarefs } from "/@/helpers";
-import { DockerJobDefinitionRow, DockerJobState, InputsRefs, StateChangeValueFinished } from "/@shared/client";
+import { downloadFile, getOutputs, zipAndDownloadDatarefs } from "/@/helpers";
 import { useStore } from "/@/store";
+import { InputsRefs } from "/@shared/client";
 
 import { Box, Center, HStack, Icon, Text, VStack } from "@chakra-ui/react";
 import { ArrowDown } from "@phosphor-icons/react";
@@ -10,8 +10,11 @@ import { ArrowDown } from "@phosphor-icons/react";
 export const OUTPUT_TABLE_ROW_HEIGHT = 35;
 
 export const OutputTable: React.FC = () => {
-  const job = useStore(state => state.jobState);
-  const outputs = getOutputs(job);
+  const [jobId, job] = useStore(state => state.jobState);
+  const [outputs, setOutputs] = useState<InputsRefs | undefined>(undefined);
+  useEffect(() => {
+    getOutputs(jobId, job).then(setOutputs);
+  }, [jobId, job]);
   const outputCount = Object.keys(outputs).length;
 
   const downloadAll = useCallback(async () => {
@@ -51,15 +54,4 @@ export const OutputTable: React.FC = () => {
       </VStack>
     </Box>
   );
-};
-
-export const getOutputs = (job?: DockerJobDefinitionRow): InputsRefs => {
-  if (!job?.state || job.state !== DockerJobState.Finished) {
-    return {};
-  }
-  const result = (job.value as StateChangeValueFinished).result;
-  if (result && result.outputs) {
-    return result.outputs;
-  }
-  return {};
 };

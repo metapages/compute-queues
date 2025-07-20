@@ -1,4 +1,3 @@
-import { type DataRef, DataRefType } from "/@/shared/types.ts";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -6,8 +5,11 @@ import {
   PutObjectCommand,
   S3Client,
 } from "aws-sdk/client-s3";
-import { ms } from "ms";
+import fetchRetry from "fetch-retry";
 import { getSignedUrl } from "aws-sdk/s3-request-presigner";
+import { ms } from "ms";
+
+const fetch = fetchRetry(globalThis.fetch);
 
 // import { S3Client } from 'https://deno.land/x/s3_lite_client@0.7.0/mod.ts';
 const OneDayInSeconds = (ms("1 day") as number) / 1000;
@@ -30,9 +32,7 @@ const config = {
     secretAccessKey: AWS_SECRET_ACCESS_KEY,
   },
   region: AWS_REGION,
-  endpoint: AWS_ACCESS_KEY_ID?.includes("minio")
-    ? "http://minio:9000"
-    : undefined,
+  endpoint: AWS_ACCESS_KEY_ID?.includes("minio") ? "http://minio:9000" : undefined,
   forcePathStyle: AWS_ENDPOINT ? true : undefined,
   signatureVersion: "v4",
   // Add connection timeout settings for better stability
@@ -47,20 +47,20 @@ const config = {
 
 export const s3Client = new S3Client(config);
 try {
-  const data = await s3Client.send(new ListBucketsCommand({ ...bucketParams }));
-  console.log(
-    "ListBucketsCommand Buckets:",
-    data?.Buckets?.map((b) => b.Name),
-  );
-  console.log("S3 Configuration:", {
-    bucket: Bucket,
-    region: AWS_REGION,
-    endpoint: AWS_ENDPOINT,
-    sslEnabled: config.sslEnabled,
-    forcePathStyle: config.forcePathStyle,
-    maxAttempts: config.maxAttempts,
-    retryMode: config.retryMode,
-  });
+  const _data = await s3Client.send(new ListBucketsCommand({ ...bucketParams }));
+  // console.log(
+  //   "ListBucketsCommand Buckets:",
+  //   _data?.Buckets?.map((b) => b.Name),
+  // );
+  // console.log("S3 Configuration:", {
+  //   bucket: Bucket,
+  //   region: AWS_REGION,
+  //   endpoint: AWS_ENDPOINT,
+  //   sslEnabled: config.sslEnabled,
+  //   forcePathStyle: config.forcePathStyle,
+  //   maxAttempts: config.maxAttempts,
+  //   retryMode: config.retryMode,
+  // });
 } catch (err) {
   console.error(`Failed to ListBucketsCommand: ${err}`);
   console.error("S3 Configuration (failed):", {
@@ -77,7 +77,7 @@ try {
 export const putJsonToS3 = async (
   key: string,
   data: unknown,
-): Promise<DataRef> => {
+): Promise<void> => {
   const command = new PutObjectCommand({
     ...bucketParams,
     Key: key,
@@ -88,63 +88,22 @@ export const putJsonToS3 = async (
     expiresIn: OneDayInSeconds,
   });
 
-  // Retry logic for handling upload failures
-  const maxRetries = 3;
-  let lastError: Error | undefined;
+  const responseUpload = await fetch(urlUpload, {
+    method: "PUT",
+    redirect: "follow",
+    body: JSON.stringify(data),
+    headers: { "Content-Type": "application/json" },
+    // Add timeout to prevent hanging requests
+    signal: AbortSignal.timeout(30000), // 30 second timeout
+  });
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      // Then upload directly to S3/MinIO using the presigned URL
-      const responseUpload = await fetch(urlUpload, {
-        method: "PUT",
-        redirect: "follow",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
-        // Add timeout to prevent hanging requests
-        signal: AbortSignal.timeout(30000), // 30 second timeout
-      });
-
-      if (!responseUpload.ok) {
-        throw new Error(
-          `Failed to upload to S3: status ${responseUpload.status} ${urlUpload}`,
-        );
-      }
-
-      await responseUpload.text();
-
-      const ref: DataRef = {
-        type: DataRefType.key,
-        value: key,
-      };
-      return ref;
-    } catch (err) {
-      lastError = err as Error;
-
-      // Check if this is a retryable error
-      const isRetryable = isRetryableError(err as Error);
-
-      if (!isRetryable || attempt === maxRetries) {
-        console.error(
-          `putJsonToS3 failed for key ${key} after ${attempt} attempts:`,
-          err,
-        );
-        throw err;
-      }
-
-      // Exponential backoff with jitter
-      const delay = Math.min(
-        1000 * Math.pow(2, attempt - 1) + Math.random() * 1000,
-        5000,
-      );
-      console.warn(
-        `putJsonToS3 attempt ${attempt} failed for key ${key}, retrying in ${delay}ms:`,
-        err,
-      );
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
+  if (!responseUpload.ok) {
+    throw new Error(
+      `Failed to upload to S3: status ${responseUpload.status} ${urlUpload}`,
+    );
   }
 
-  throw lastError;
+  await responseUpload.text();
 };
 
 // Helper function to determine if an error is retryable
@@ -172,29 +131,20 @@ const isRetryableError = (error: Error): boolean => {
     "connection closed before message completed",
   ];
 
-  return retryablePatterns.some((pattern) =>
-    errorMessage.includes(pattern) || errorString.includes(pattern)
-  );
+  return retryablePatterns.some((pattern) => errorMessage.includes(pattern) || errorString.includes(pattern));
 };
 
 export const resolveDataRefFromS3 = async <T>(
-  ref: DataRef<T>,
+  key: string,
 ): Promise<T | undefined> => {
-  if (!(ref?.type === DataRefType.key)) {
-    console.error("DataRef type is not a key", ref.type);
-  }
-  if (typeof ref?.value !== "string") {
-    console.error("DataRef value is not a string", ref);
-    throw new Error("DataRef value is not a string");
-  }
-  return await getJsonFromS3(ref.value);
+  return await getJsonFromS3(key);
 };
 
 export const getJsonFromS3 = async <T>(key: string): Promise<T | undefined> => {
   try {
     const result = await getObject(key);
     if (!result) {
-      console.warn(`getJsonFromS3: No data returned for key ${key}`);
+      // console.warn(`getJsonFromS3: No data returned for key ${key}`);
       return undefined;
     }
     return JSON.parse(result) as T;
@@ -254,6 +204,10 @@ const getObject = async (Key: string): Promise<string | undefined> => {
         signal: AbortSignal.timeout(30000), // 30 second timeout
       });
 
+      if (response.status === 404) {
+        return undefined;
+      }
+
       if (!response.ok) {
         throw new Error(
           `Failed to fetch from S3: status ${response.status} ${url}`,
@@ -269,10 +223,10 @@ const getObject = async (Key: string): Promise<string | undefined> => {
       const isRetryable = isRetryableError(err as Error);
 
       if (!isRetryable || attempt === maxRetries) {
-        console.error(
-          `getObject failed for key ${Key} after ${attempt} attempts:`,
-          err,
-        );
+        // console.error(
+        //   `getObject failed for key ${Key} after ${attempt} attempts:`,
+        //   err,
+        // );
         throw err;
       }
 

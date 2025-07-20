@@ -1,6 +1,7 @@
+import { docker } from "/@/queue/dockerClient.ts";
+import { tgz } from "compress";
 import { ensureDir, exists } from "std/fs";
 import { dirname, join } from "std/path";
-import { tgz } from "compress";
 import { decompress } from "zip";
 
 import {
@@ -11,7 +12,7 @@ import {
   type WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
 } from "@metapages/compute-queues-shared";
-import { docker } from "/@/queue/dockerClient.ts";
+
 import { getConfig } from "../config.ts";
 
 // assume that no images are deleted while we are running
@@ -122,8 +123,11 @@ export const ensureDockerImage = async (args: {
       return image;
     }
 
-    const { dockerfile, context, filename, platform, target /*, buildArgs */ } =
-      build;
+    if (!image) {
+      throw new DockerBuildError("Missing image or build configuration");
+    }
+
+    const { dockerfile, context, filename, platform, target /*, buildArgs */ } = build;
 
     if (!dockerfile && !context) {
       throw new DockerBuildError(
@@ -282,7 +286,7 @@ export const ensureDockerImage = async (args: {
                 console.log(`DOCKER PUSHING...`);
 
                 docker.modem.followProgress(
-                  stream,
+                  stream as NodeJS.ReadableStream,
                   (err: unknown, _output: unknown) => {
                     if (err) {
                       console.log(`💥 DOCKER PUSH: ${err}`);
@@ -327,7 +331,7 @@ export const ensureDockerImage = async (args: {
       // the image has gone missing, we check out-of-band, so retries will
       // work, and validate
       (async () => {
-        const imageInfo = docker.getImage(image);
+        const imageInfo = docker.getImage(image!);
         try {
           await imageInfo.inspect();
         } catch (_err) {
@@ -337,11 +341,11 @@ export const ensureDockerImage = async (args: {
           );
         }
       })();
-      console.log("ensureDockerImage I think the image already exists");
+      // console.log("ensureDockerImage I think the image already exists");
       return image!;
     }
-    console.log("ensureDockerImage PULLING bc image and no build");
-    const stream = await docker.pull(image);
+    // console.log("ensureDockerImage PULLING bc image and no build");
+    const stream = await docker.pull(image!);
     await new Promise<void>((resolve, reject) => {
       function onFinished(err: unknown, _output: unknown) {
         if (err) {
@@ -407,11 +411,11 @@ const checkForDockerImage = async (args: {
     await new Promise<void>((resolve, reject) => {
       docker.pull(image, {
         platform,
-      }, function (err: unknown, stream: unknown) {
-        if (err) {
-          reject(err);
-          return;
-        }
+      }, function (stream: NodeJS.ReadableStream) {
+        // if (err) {
+        //   reject(err);
+        //   return;
+        // }
 
         if (stream) {
           docker.modem.followProgress(stream, onFinished, onProgress);
@@ -460,7 +464,7 @@ const hasImage = async (
 ): Promise<boolean> => {
   const { imageUrl } = args;
   const images = await docker.listImages();
-  return images.some((e: { RepoTags: string[] | null }) => {
+  return images.some((e: { RepoTags: string[] | undefined }) => {
     return (
       e.RepoTags != null &&
       e.RepoTags.some((tag: string) => {
@@ -563,19 +567,13 @@ const getDownloadLinkFromContext = async (context: string): Promise<string> => {
     }
 
     const possibleArchiveUrls = [
-      `https://github.com/${owner}/${
-        repo.replace(".git", "")
-      }/archive/refs/heads/${ref}.zip`,
-      `https://github.com/${owner}/${
-        repo.replace(".git", "")
-      }/archive/${ref}.zip`,
+      `https://github.com/${owner}/${repo.replace(".git", "")}/archive/refs/heads/${ref}.zip`,
+      `https://github.com/${owner}/${repo.replace(".git", "")}/archive/${ref}.zip`,
     ];
     if (ref === "main") {
       // check if the repo has a master branch instead of main
       possibleArchiveUrls.push(
-        `https://github.com/${owner}/${
-          repo.replace(".git", "")
-        }/archive/refs/heads/master.zip`,
+        `https://github.com/${owner}/${repo.replace(".git", "")}/archive/refs/heads/master.zip`,
       );
     }
 
@@ -619,13 +617,9 @@ const getDownloadLinkFromContext = async (context: string): Promise<string> => {
 
 const getFilePathForDownload = (url: string): string => {
   if (url.startsWith("https://")) {
-    return `${getDockerImageBuildDownloadDirectory()}/${
-      url.replace("https://", "")
-    }`;
+    return `${getDockerImageBuildDownloadDirectory()}/${url.replace("https://", "")}`;
   } else if (url.startsWith("http://")) {
-    return `${getDockerImageBuildDownloadDirectory()}/${
-      url.replace("http://", "")
-    }`;
+    return `${getDockerImageBuildDownloadDirectory()}/${url.replace("http://", "")}`;
   }
   throw "Unsupported download link";
 };
@@ -794,8 +788,7 @@ const downloadContextIntoDirectory = async (args: {
       });
       // https://github.com/moncefplastin07/deno-zip/issues/16#issue-2777397629
       // @ts-ignore Deno.close is not part of Deno 2
-      (Deno as { close?: () => void }).close =
-        (Deno as { close?: () => void }).close || function () {};
+      (Deno as { close?: () => void }).close = (Deno as { close?: () => void }).close || function () {};
       await decompress(filePathForDownload, destination);
     } else {
       throw new Error(
@@ -814,9 +807,7 @@ const downloadContextIntoDirectory = async (args: {
     // github downloads create a parent folder with the repo name and branch/tag/commit
     // move the contents of that folder to the destination
     const tempDirectory = `/tmp/${Math.random().toString(36).substring(7)}`;
-    const dir = [...Deno.readDirSync(destination)].filter((e) =>
-      e.isDirectory
-    )[0].name;
+    const dir = [...Deno.readDirSync(destination)].filter((e) => e.isDirectory)[0].name;
 
     await Deno.rename(join(destination, dir), tempDirectory);
     await Deno.remove(destination, { recursive: true });

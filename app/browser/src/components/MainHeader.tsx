@@ -2,12 +2,13 @@ import React, { useEffect } from "react";
 
 import { JobControlButton } from "/@/components/header/JobControlButton";
 import { getDynamicInputsCount, getOutputs } from "/@/helpers";
-import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "/@shared/client";
 import { useStore } from "/@/store";
+import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "/@shared/client";
 
 import { Badge, Box, Flex, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { useHashParamJson } from "@metapages/hash-query/react-hooks";
 import { DownloadSimple, Gear, UploadSimple } from "@phosphor-icons/react";
+
 import { JobStatus } from "./footer/JobStatus";
 
 export const MainHeader: React.FC = () => {
@@ -23,7 +24,7 @@ export const MainHeader: React.FC = () => {
   const currentJobDefinition = useStore(state => state.newJobDefinition);
   const incomingInputsCount = getDynamicInputsCount(currentJobDefinition);
   const job = useStore(state => state.jobState);
-  const outputs = getOutputs(job);
+  const outputs = getOutputs(job[0], job[1]);
   const outputsCount = Object.keys(outputs).length;
 
   useEffect(() => {

@@ -3,7 +3,6 @@
  */
 import { useEffect, useRef } from "react";
 
-import ReconnectingWebSocket from "reconnecting-websocket";
 import {
   BroadcastJobStates,
   BroadcastWorkers,
@@ -12,6 +11,7 @@ import {
   WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from "/@shared/client";
+import ReconnectingWebSocket from "reconnecting-websocket";
 
 import { websocketConnectionUrl, websocketConnectionUrlLocalmode } from "../config";
 import { cacheInsteadOfSendMessages, useStore } from "../store";
@@ -94,7 +94,7 @@ export const serverWebsocket = (): void => {
           return;
         }
         const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(messageString);
-        // console.log(`❔ received from server:`, possibleMessage)
+        // console.log(`❔ received from server:`, possibleMessage);
 
         if (!possibleMessage?.payload) {
           console.log({
@@ -119,10 +119,6 @@ export const serverWebsocket = (): void => {
           case WebsocketMessageTypeServerBroadcast.StatusRequest:
             // Clients do not respond to status requests
             break;
-          case WebsocketMessageTypeServerBroadcast.ClearJobCacheConfirm:
-            // We asked for this now we have a response
-            // But we don't currently have a specific use for this
-            break;
           case WebsocketMessageTypeServerBroadcast.JobStatusPayload:
             handleJobStatusPayload(possibleMessage.payload as JobStatusPayload);
             break;
@@ -131,7 +127,7 @@ export const serverWebsocket = (): void => {
             break;
         }
         if (broadcastJobStates?.state?.jobs) {
-          setJobStates(broadcastJobStates?.state?.jobs);
+          setJobStates(broadcastJobStates?.state?.jobs, broadcastJobStates.isSubset);
         }
         setRawMessage(possibleMessage);
       } catch (err) {

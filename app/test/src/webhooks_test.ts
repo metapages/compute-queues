@@ -2,11 +2,13 @@ import { assertEquals } from "std/assert";
 
 import { closed, open } from "@korkje/wsi";
 
-import { createNewContainerJobMessage } from "../../shared/src/mod.ts";
+import { createNewContainerJobMessage, fetchRobust } from "../../shared/src/mod.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
   (QUEUE_ID === "local" ? "http://worker:8000" : "http://api1:8081");
+
+const fetch = fetchRobust;
 
 // Helper functions to manage the webhook server
 export const createWebhookServer = (opts: {
@@ -90,14 +92,13 @@ Deno.test(
 
     const port = Math.floor(Math.random() * (65535 - 1024) + 1024);
 
-    // https://github.com/metapages/compute-queues/issues/124
     const { message, jobId } = await createNewContainerJobMessage({
       definition: {
         image: "alpine:3.18.5",
         command: `echo ${Math.floor(Math.random() * 1000000)}`,
       },
-      namespace,
       control: {
+        namespace,
         callbacks: {
           queued: {
             url: `http://test:${port}/test`,

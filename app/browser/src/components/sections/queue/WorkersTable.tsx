@@ -1,7 +1,7 @@
 import React from "react";
 
 import { useStore } from "/@/store";
-import { DockerJobState, JobsStateMap, StateChangeValueRunning } from "/@shared/client";
+import { DockerJobState, JobsStateMap } from "/@shared/client";
 
 import { Box, Table, TableCaption, Tbody, Td, Th, Thead, Tr } from "@chakra-ui/react";
 
@@ -51,13 +51,13 @@ const WorkerRow: React.FC<{
     ? 0
     : Object.keys(jobs)
         .filter(jobId => jobs[jobId].state === DockerJobState.Running)
-        .reduce<number>((count: number, jobHash: string) => {
-          const running = jobs[jobHash].history.filter(state => state.state === DockerJobState.Running);
-          if (running.length > 0) {
-            const workerRunning = running[running.length - 1].value as StateChangeValueRunning;
-            if (workerRunning.worker === workerId) {
-              return count + 1;
-            }
+        .reduce<number>((count: number, jobId: string) => {
+          const job = jobs[jobId];
+          if (!job) {
+            return count;
+          }
+          if (job.worker === workerId) {
+            return count + 1;
           }
           return count;
         }, 0);
