@@ -277,16 +277,22 @@ export const ensureDockerImage = async (args: {
           CACHED_DOCKER_IMAGES[image!] = true;
           // TODO put this parameter in the cli configuration
           if (info.Size < 536870912) { // 0.5gb
-            dockerimage.push({ tag: "1d" }, (err: unknown, stream: unknown) => {
+            dockerimage.push({ tag: "1d" }, (err: unknown, stream?: NodeJS.ReadableStream) => {
               try {
                 if (err) {
                   console.log(`💥 DOCKER PUSH: ${err}`);
+                  return;
+                }
+
+                if (!stream) {
+                  console.log(`💥 DOCKER PUSH: no stream`);
+                  return;
                 }
 
                 console.log(`DOCKER PUSHING...`);
 
                 docker.modem.followProgress(
-                  stream as NodeJS.ReadableStream,
+                  stream,
                   (err: unknown, _output: unknown) => {
                     if (err) {
                       console.log(`💥 DOCKER PUSH: ${err}`);
@@ -417,8 +423,18 @@ const checkForDockerImage = async (args: {
         //   return;
         // }
 
-        if (stream?.on) {
-          docker.modem.followProgress(stream, onFinished, onProgress);
+        if (stream && typeof stream.on === "function") {
+          try {
+            docker.modem.followProgress(stream, onFinished, onProgress);
+          } catch (followProgressError) {
+            console.error("Error in followProgress:", followProgressError);
+            // If followProgress fails, we'll still try to resolve
+            // The pull might still succeed even if we can't track progress
+            resolve();
+          }
+        } else {
+          console.warn("No valid stream received from docker.pull, resolving anyway");
+          resolve();
         }
 
         function onFinished(err: unknown, output: unknown) {
