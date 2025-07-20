@@ -18,6 +18,7 @@ export const isJobOkForSending = (job?: InMemoryDockerJob | undefined | null): b
   if (job.state === DockerJobState.Removed) {
     return false;
   }
+
   return true;
 };
 

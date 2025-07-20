@@ -280,6 +280,8 @@ export interface JobStates {
   jobs: JobsStateMap;
 }
 
+export type JobStatesCompact = Record<string, [DockerJobState, DockerJobFinishedReason | undefined]>;
+
 export interface WorkerRegistration {
   version: string;
   id: string;
