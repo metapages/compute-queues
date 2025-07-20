@@ -10,6 +10,9 @@
  * removed. The results are cached tho
  */
 
+import { ms } from "ms";
+import { createNanoEvents, type Emitter } from "nanoevents";
+import { delay } from "std/async/delay";
 import { DB } from "/@/shared/db.ts";
 import { resolvePreferredWorker } from "/@/shared/jobtools.ts";
 import {
@@ -22,8 +25,8 @@ import {
   DockerJobState,
   type EnqueueJob,
   type InMemoryDockerJob,
-  type JobsStateMap,
   type JobStates,
+  type JobStatesCompact,
   type JobStatusPayload,
   type PayloadClearJobCache,
   type PayloadQueryJob,
@@ -46,15 +49,9 @@ import {
   getQueueColorizedString,
   getWorkerColorizedString,
   isJobOkForSending,
-  resolveMostCorrectJob,
   setJobStateRemoved,
   setJobStateRunning,
 } from "/@/shared/util.ts";
-import equal from "fast-deep-equal/es6";
-import { diffString } from "json-diff";
-import { ms } from "ms";
-import { createNanoEvents, type Emitter } from "nanoevents";
-import { delay } from "std/async/delay";
 
 import type { BroadcastChannelRedis } from "@metapages/deno-redis-broadcastchannel";
 
@@ -144,7 +141,7 @@ type BroadcastChannelMessage = {
   origin: string;
   value:
     | string[] // [jobId1, state1, jobId2, state2, ...]
-    | JobStates
+    | JobStatesCompact
     | BroadcastChannelWorkersRegistration
     | BroadcastChannelStatusRequest
     | BroadcastChannelStatusResponse
@@ -266,8 +263,6 @@ export class BaseDockerJobQueue {
     // When a new message comes in from other instances, add it
     this.channel.onmessage = async (event: MessageEvent) => {
       const payload: BroadcastChannelMessage = event.data;
-      let jobStatesFromBroadcast: JobStates | undefined;
-      let jobsFromBroadcast: JobsStateMap | undefined;
 
       switch (payload.type) {
         case "job-states": {
@@ -275,9 +270,9 @@ export class BaseDockerJobQueue {
           if (payload.origin === this.serverId) {
             break;
           }
-          jobStatesFromBroadcast = payload.value as JobStates;
-          jobsFromBroadcast = jobStatesFromBroadcast?.jobs;
-          if (!jobsFromBroadcast) {
+          const jobStatesFromBroadcast = payload.value as JobStatesCompact;
+          // jobsFromBroadcast = jobStatesFromBroadcast?.jobs;
+          if (!jobStatesFromBroadcast) {
             break;
           }
 
@@ -293,59 +288,49 @@ export class BaseDockerJobQueue {
 
           const jobIds: string[] = [];
           for (
-            const [jobId, jobFromBroadcast] of Object.entries<InMemoryDockerJob>(
-              jobsFromBroadcast,
+            const [jobId, jobStateFromBroadcast] of Object.entries<
+              [DockerJobState, DockerJobFinishedReason | undefined]
+            >(
+              jobStatesFromBroadcast,
             )
           ) {
-            if (jobFromBroadcast.state === DockerJobState.Removed) {
-              // placeholder, but are we updating ours to be Removed?
-              if (this.state.jobs[jobId].state !== DockerJobState.Removed) {
-                console.log(
-                  `${this.addressShortString} 🌘 ...api broadcast merge: ${jobId} state=${
-                    this.state.jobs[jobId].state
-                  } => Removed`,
-                );
-              }
-              continue;
-            }
-
-            // we don't have this job
-            if (!this.state.jobs[jobId]) {
+            let ourJob = this.state.jobs[jobId];
+            if (!ourJob) {
               // so get it from the db
               const jobFromDb = await this.db.queueJobGet({ queue: this.address, jobId });
               if (jobFromDb) {
-                const isRemovable = isJobRemovableFromQueue(jobFromDb);
-                if (isRemovable) {
+                ourJob = jobFromDb;
+                if (ourJob.state !== DockerJobState.Removed) {
+                  // we don't have this job, so the broadcast is telling us to add it.
+                  this.state.jobs[jobId] = jobFromDb;
+                  jobIds.push(jobId);
                   continue;
                 }
-                // Add to our state, but don't broadcast it to other servers,
-                // we will broadcast it to clients soon enough
-                this.state.jobs[jobId] = jobFromDb;
-                jobIds.push(jobId);
               }
-            } else {
-              const resolvedJob = resolveMostCorrectJob(
-                this.state.jobs[jobId],
-                jobFromBroadcast,
-              );
-              const namespacesDifferent = !equal(jobFromBroadcast?.namespaces, this.state.jobs[jobId]?.namespaces);
-              if (namespacesDifferent || (resolvedJob && resolvedJob !== this.state.jobs[jobId])) {
-                const jobFromDb = await this.db.queueJobGet({ queue: this.address, jobId });
+            }
 
-                if (jobFromDb) {
-                  const isRemovable = isJobRemovableFromQueue(jobFromDb);
-                  if (isRemovable) {
-                    continue;
-                  }
-                  const diff = diffString(this.state.jobs[jobId], jobFromDb);
-                  if (!diff) {
-                    continue;
-                  }
+            if (!ourJob) {
+              // no non-removed job found, so skip this job
+              continue;
+            }
 
+            let isOutOfSync = ourJob.state !== jobStateFromBroadcast[0];
+            if (
+              !isOutOfSync && ourJob.state === DockerJobState.Finished &&
+              ourJob.finishedReason !== jobStateFromBroadcast[1]
+            ) {
+              isOutOfSync = true;
+            }
+
+            if (isOutOfSync) {
+              const jobFromDb = await this.db.queueJobGet({ queue: this.address, jobId });
+              if (jobFromDb) {
+                if (jobFromDb.state !== DockerJobState.Removed) {
+                  // we don't have this job, so the broadcast is telling us to add it.
                   this.state.jobs[jobId] = jobFromDb;
+                  jobIds.push(jobId);
+                  continue;
                 }
-
-                jobIds.push(jobId);
               }
             }
           }
@@ -677,14 +662,12 @@ export class BaseDockerJobQueue {
     if (!jobIds) {
       jobIds = Object.keys(this.state.jobs);
     }
-    const jobStates: JobStates = {
-      jobs: Object.fromEntries(
-        jobIds
-          .filter((jobId) => this.state.jobs[jobId])
-          .map((jobId) => [jobId, this.state.jobs[jobId]]),
-      ),
-    };
-    if (Object.keys(jobStates.jobs).length > 0) {
+    const jobStates: JobStatesCompact = Object.fromEntries(
+      jobIds
+        .filter((jobId) => isJobOkForSending(this.state.jobs[jobId]))
+        .map((jobId) => [jobId, [this.state.jobs[jobId].state, this.state.jobs[jobId].finishedReason]]),
+    );
+    if (Object.keys(jobStates).length > 0) {
       const message: BroadcastChannelMessage = {
         origin: this.serverId,
         type: "job-states",
@@ -692,8 +675,8 @@ export class BaseDockerJobQueue {
       };
       console.log(
         `${this.addressShortString} 📡 Broadcasting to channel:[ ${
-          Object.entries(jobStates.jobs).map(([jobId, job]) =>
-            `${getJobColorizedString(jobId)}=${job.state === DockerJobState.Finished ? job.finishedReason : job.state}`
+          Object.entries(jobStates).map(([jobId, jobState]) =>
+            `${getJobColorizedString(jobId)}=${jobState[0] === DockerJobState.Finished ? jobState[1] : jobState}`
           ).join(",")
         } ]`,
       );
