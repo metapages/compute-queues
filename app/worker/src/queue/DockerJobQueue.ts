@@ -58,6 +58,7 @@ export class DockerJobQueue {
 
   queueKey: string;
   jobDefinitions: JobDefinitionCache;
+  private registrationInterval: number | null = null;
 
   constructor(args: DockerJobQueueArgs) {
     const { sender, cpus, gpus, id, maxJobDuration, queue, jobDefinitions } = args;
@@ -74,6 +75,9 @@ export class DockerJobQueue {
       throw new Error("queueKey is required");
     }
     this.checkForLocallyRunningJobs();
+
+    // Start periodic registration
+    this.startPeriodicRegistration();
   }
 
   async checkForLocallyRunningJobs() {
@@ -229,6 +233,27 @@ export class DockerJobQueue {
           );
         }
       }, 2000);
+    }
+  }
+
+  private startPeriodicRegistration() {
+    // Register every 30 seconds to ensure server always knows about this worker
+    // This is especially important after clean server restarts
+    this.registrationInterval = setInterval(() => {
+      try {
+        this.register();
+      } catch (err) {
+        console.log(
+          `${this.workerIdShort} 🚨 Periodic registration failed: ${err}`,
+        );
+      }
+    }, 30000); // 30 seconds
+  }
+
+  public stopPeriodicRegistration() {
+    if (this.registrationInterval) {
+      clearInterval(this.registrationInterval);
+      this.registrationInterval = null;
     }
   }
 

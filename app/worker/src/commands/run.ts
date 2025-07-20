@@ -28,6 +28,7 @@ import { getKv } from "../../../shared/src/shared/kv.ts";
 import mod from "../../mod.json" with { type: "json" };
 import { killAndRemoveContainerForJob } from "../queue/cleanup.ts";
 import { JobDefinitionCache } from "../queue/JobDefinitionCache.ts";
+import { setGlobalDockerJobQueue } from "../cli.ts";
 
 const VERSION: string = mod.version;
 
@@ -281,6 +282,7 @@ export async function connectToServer(
     jobDefinitions: jobDefinitionCache,
   };
   const dockerJobQueue = new DockerJobQueue(dockerJobQueueArgs);
+  setGlobalDockerJobQueue(dockerJobQueue);
 
   rws.addEventListener("error", (error: Error) => {
     console.log(`Websocket error=${error.message}`);
@@ -335,6 +337,9 @@ export async function connectToServer(
       `💥🚀💥 disconnected! ${url} after ${Date.now() - connectionUptime}ms uptime`,
     );
     // clearInterval(pingInterval);
+
+    // Stop periodic registration when connection closes
+    dockerJobQueue.stopPeriodicRegistration();
   });
 
   const intervalSinceNoTrafficToTriggerReconnect = ms("10s") as number;
