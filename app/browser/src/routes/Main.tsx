@@ -1,9 +1,9 @@
-import { Alert, AlertIcon, Box, Container, HStack, Link, useMediaQuery, VStack } from "@chakra-ui/react";
+import { Box, Container, HStack, useMediaQuery, VStack } from "@chakra-ui/react";
 import React from "react";
 
 import { useStore } from "../store";
 
-import { useQueue } from "../hooks/useQueue";
+import { useMinimalHeader } from "../hooks/useMinimalHeader.tsx";
 import { JobStatus } from "/@/components/footer/JobStatus";
 import { JobControlButton } from "/@/components/header/JobControlButton";
 import { MainFooter } from "/@/components/MainFooter";
@@ -15,11 +15,8 @@ import { PanelLogs } from "/@/components/sections/PanelLogs";
 import { PanelOutputs } from "/@/components/sections/PanelOutputs";
 import { PanelQueue } from "/@/components/sections/PanelQueue";
 import { PanelSettings } from "/@/components/sections/PanelSettings";
-import { useMinimalHeader } from "../hooks/useMinimalHeader.tsx";
 
 export const Main: React.FC = () => {
-  const { resolvedQueue: resolvedQueueOrUrl } = useQueue();
-  const isServerConnected = useStore(state => state.isServerConnected);
   const rightPanelContext = useStore(state => state.rightPanelContext);
   const [isWiderThan1000] = useMediaQuery("(min-width: 1000px)");
   const isMinimalHeader = useMinimalHeader();
@@ -81,29 +78,7 @@ export const Main: React.FC = () => {
       <MainHeader />
       <HStack gap={0} w={"100%"} minW="100%" minH={"contentHeight"}>
         <Box minW={leftWidth} minH={"contentHeight"}>
-          {!isServerConnected ? (
-            <Box minW={leftWidth} minH={"contentHeight"}>
-              {resolvedQueueOrUrl === "local" ? (
-                <Alert status="error">
-                  <AlertIcon />
-                  The local worker agent is not connected 👉 &nbsp;{" "}
-                  <Link isExternal href="https://metapage.io/settings/queues">
-                    /settings/queues
-                  </Link>
-                </Alert>
-              ) : (
-                <Alert status="error">
-                  <AlertIcon />
-                  No queue set 👉 &nbsp;{" "}
-                  <Link isExternal href="https://metapage.io/settings/queues">
-                    /settings/queues
-                  </Link>
-                </Alert>
-              )}
-            </Box>
-          ) : (
-            <PanelLogs mode={stdErrShown ? "stdout" : "stdout+stderr"} />
-          )}
+          <PanelLogs mode={stdErrShown ? "stdout" : "stdout+stderr"} />
         </Box>
         <Box minW={rightWidth} minH={"contentHeight"} borderLeft={rightContent && "1px"} boxSizing="border-box">
           {rightContent}
