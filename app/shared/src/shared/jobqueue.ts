@@ -1017,11 +1017,9 @@ export class BaseDockerJobQueue {
   // Mark methods that could be overridden as protected
   public async stateChangeJobEnqueue(enqueued: EnqueueJob): Promise<void> {
     if (!enqueued?.definition) {
-      console.log(`enqueueJob but bad state ${JSON.stringify(enqueued)}`);
+      console.log(`enqueueJob but bad state ${JSON.stringify(enqueued).substring(0, 100)}`);
       return;
     }
-
-    console.log(`${this.addressShortString} ${getJobColorizedString(enqueued.id)} 🤡 stateChangeJobEnqueue`, enqueued);
 
     const jobId = enqueued.id;
     const namespace = enqueued?.control?.namespace || DefaultNamespace;

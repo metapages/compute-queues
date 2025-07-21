@@ -5,6 +5,7 @@ import { CloudArrowUp, House, Question } from "@phosphor-icons/react";
 
 import { EditInput } from "./footer/EditInput";
 import { useQueue } from "../hooks/useQueue";
+import { ConnectionStatus } from "./footer/ConnectionStatus";
 
 export const MainFooter: React.FC = () => {
   const [isLargerThan400] = useMediaQuery("(min-width: 400px)");
@@ -20,6 +21,7 @@ export const MainFooter: React.FC = () => {
         <Spacer />
         {isLargerThan400 && (
           <HStack gap={3}>
+            <ConnectionStatus />
             <QueueControl />
             <Tooltip label={isLocalMode ? "Local mode help" : "Remote mode help"}>
               <IconButton
