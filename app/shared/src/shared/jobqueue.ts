@@ -1217,15 +1217,6 @@ export class BaseDockerJobQueue {
           connection.socket.send(
             "PONG " + (workerRegistration?.id || "unknown"),
           );
-          // To help with missing workers, send the current state of the unclaimed jobs
-          // to the worker when it pings
-          this.sendJobStatesToWebsocket(
-            connection.socket,
-            Object.keys(this.state.jobs).filter(
-              (jobId) => this.state.jobs[jobId].state !== DockerJobState.Finished,
-            ),
-          );
-
           return;
         }
 
@@ -1314,6 +1305,7 @@ export class BaseDockerJobQueue {
             workerRegistration = newWorkerRegistration;
 
             this.myWorkersHaveChanged();
+            this.broadcastJobStatesToWebsockets();
             break;
           }
           case WebsocketMessageTypeWorkerToServer.WorkerStatusResponse: {
