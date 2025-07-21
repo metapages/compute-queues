@@ -1,5 +1,9 @@
 import path from "node:path";
 
+import { LRUMap } from "mnemonist";
+import { retryAsync } from "retry";
+import { ensureDir } from "std/fs";
+import { join } from "std/path";
 import { getKv } from "/@/shared/kv.ts";
 import {
   type DataRef,
@@ -12,13 +16,8 @@ import {
   type StateChange,
   type StateChangeValue,
   type StateChangeValueFinished,
-  type StateChangeValueRunning,
 } from "/@/shared/types.ts";
 import { addJobProcessSubmissionWebhook } from "/@/shared/webhooks.ts";
-import { LRUMap } from "mnemonist";
-import { retryAsync } from "retry";
-import { ensureDir } from "std/fs";
-import { join } from "std/path";
 
 import { JobDataCacheDurationMilliseconds } from "./constants.ts";
 import {
@@ -211,14 +210,14 @@ export class DB {
           .commit();
 
         // don't await this, it's not critical
-        this.appendToJobHistory({
-          queue,
-          jobId,
-          value: {
-            type: DockerJobState.Queued,
-            time: Date.now(),
-          },
-        });
+        // this.appendToJobHistory({
+        //   queue,
+        //   jobId,
+        //   value: {
+        //     type: DockerJobState.Queued,
+        //     time: Date.now(),
+        //   },
+        // });
       } else {
         await this.kv
           .atomic()
@@ -484,11 +483,11 @@ export class DB {
             expireIn: JobDataCacheDurationMilliseconds,
           });
           // don't await this, it's not critical
-          this.appendToJobHistory({
-            queue,
-            jobId,
-            value: change,
-          });
+          // this.appendToJobHistory({
+          //   queue,
+          //   jobId,
+          //   value: change,
+          // });
         }
 
         return { updatedInMemoryJob: job };
@@ -616,11 +615,11 @@ export class DB {
           job = setJobStateFinished(job, {
             finished: change,
           });
-          this.appendToJobHistory({
-            queue,
-            jobId,
-            value: change,
-          });
+          // this.appendToJobHistory({
+          //   queue,
+          //   jobId,
+          //   value: change,
+          // });
         }
         await this.kv.set(["queue", queue, jobId], job, {
           expireIn: JobDataCacheDurationMilliseconds,
@@ -640,7 +639,7 @@ export class DB {
     worker: string;
     jobId: string;
   }) {
-    const { worker, time, jobId } = args;
+    const { jobId } = args;
 
     // get all job queues and namespaces for this job and update all the histories
     // ["job-queue-namespace", jobId, queue, namespace]
@@ -648,11 +647,11 @@ export class DB {
       prefix: ["job-queue-namespace", jobId],
     });
 
-    const runningStateChange: StateChangeValueRunning = {
-      type: DockerJobState.Running,
-      time,
-      worker,
-    };
+    // const runningStateChange: StateChangeValueRunning = {
+    //   type: DockerJobState.Running,
+    //   time,
+    //   worker,
+    // };
 
     const queueDone = new Set<string>();
 
@@ -675,18 +674,18 @@ export class DB {
         continue;
       }
 
-      job = setJobStateRunning(job, { worker, time });
+      job = setJobStateRunning(job, args);
 
       await this.kv.set(["queue", queue, jobId], job, {
         expireIn: JobDataCacheDurationMilliseconds,
       });
 
       // don't await this, it's not critical
-      this.appendToJobHistory({
-        queue,
-        jobId,
-        value: runningStateChange,
-      });
+      // this.appendToJobHistory({
+      //   queue,
+      //   jobId,
+      //   value: runningStateChange,
+      // });
     }
   }
 
