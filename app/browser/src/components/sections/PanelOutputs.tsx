@@ -33,21 +33,22 @@ export const PanelOutputs: React.FC = () => {
         <Container>
           <Table px={5} variant="simple">
             <Tbody>
-              {Object.keys(outputs).map(name => {
-                return (
-                  <Tr key={name} justifyContent={"space-between"}>
-                    <Td>
-                      <HStack p={2} justifyContent={"space-between"}>
-                        <Text>{name}</Text>
-                        <Icon
-                          onClick={() => downloadFile(name, outputs[name])}
-                          boxSize={"1.4rem"}
-                          as={ArrowDown}></Icon>
-                      </HStack>
-                    </Td>
-                  </Tr>
-                );
-              })}
+              {outputs &&
+                Object.keys(outputs).map(name => {
+                  return (
+                    <Tr key={name} justifyContent={"space-between"}>
+                      <Td>
+                        <HStack p={2} justifyContent={"space-between"}>
+                          <Text>{name}</Text>
+                          <Icon
+                            onClick={() => downloadFile(name, outputs[name])}
+                            boxSize={"1.4rem"}
+                            as={ArrowDown}></Icon>
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  );
+                })}
             </Tbody>
           </Table>
         </Container>
