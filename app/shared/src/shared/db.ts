@@ -431,13 +431,6 @@ export class DB {
           results: change,
         });
 
-        // don't await this, it's not critical
-        this.appendToJobHistory({
-          queue,
-          jobId,
-          value: change,
-        });
-
         // if we are already finished, no change
         if (job.state === DockerJobState.Finished) {
           return {};
