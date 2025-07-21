@@ -13,8 +13,22 @@ export const PanelOutputs: React.FC = () => {
   const [jobId, job] = useStore(state => state.jobState);
   const [outputs, setOutputs] = useState<InputsRefs | undefined>(undefined);
   useEffect(() => {
-    getOutputs(jobId, job).then(setOutputs);
+    let cancelled = false;
+    if (jobId && job) {
+      (async () => {
+        const newOutputs = await getOutputs(jobId, job);
+        if (!cancelled) {
+          setOutputs(newOutputs);
+        }
+      })();
+    } else {
+      setOutputs(EmptyOutputs);
+    }
+    return () => {
+      cancelled = true;
+    };
   }, [jobId, job]);
+
   const downloadAll = useCallback(async () => {
     await zipAndDownloadDatarefs(outputs, "all-outputs");
   }, [outputs]);
@@ -56,3 +70,5 @@ export const PanelOutputs: React.FC = () => {
     </PanelContainer>
   );
 };
+
+const EmptyOutputs: InputsRefs = {};

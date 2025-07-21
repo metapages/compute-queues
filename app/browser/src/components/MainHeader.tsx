@@ -1,9 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 import { JobControlButton } from "/@/components/header/JobControlButton";
 import { getDynamicInputsCount, getOutputs } from "/@/helpers";
 import { useStore } from "/@/store";
-import { DockerJobDefinitionParamsInUrlHash, JobInputs } from "/@shared/client";
+import { DockerJobDefinitionParamsInUrlHash, InputsRefs, JobInputs } from "/@shared/client";
 
 import { Badge, Box, Flex, HStack, Icon, Spacer, Text, Tooltip, useMediaQuery } from "@chakra-ui/react";
 import { useHashParamJson } from "@metapages/hash-query/react-hooks";
@@ -23,8 +23,26 @@ export const MainHeader: React.FC = () => {
 
   const currentJobDefinition = useStore(state => state.newJobDefinition);
   const incomingInputsCount = getDynamicInputsCount(currentJobDefinition);
-  const job = useStore(state => state.jobState);
-  const outputs = getOutputs(job[0], job[1]);
+  const [jobId, job] = useStore(state => state.jobState);
+  const [outputs, setOutputs] = useState<InputsRefs>(EmptyOutputs);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (jobId && job) {
+      (async () => {
+        const newOutputs = await getOutputs(jobId, job);
+        if (!cancelled) {
+          setOutputs(newOutputs);
+        }
+      })();
+    } else {
+      setOutputs(EmptyOutputs);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId, job]);
+
   const outputsCount = Object.keys(outputs).length;
 
   useEffect(() => {
@@ -96,3 +114,5 @@ export const MainHeader: React.FC = () => {
     </Flex>
   );
 };
+
+const EmptyOutputs: InputsRefs = {};
