@@ -436,13 +436,9 @@ export async function connectToServer(
             .payload as BroadcastJobStates;
           currentGotJobStates++;
 
-          // const jobCount =
-          //   Object.keys(allJobsStatesPayload?.state?.jobs || {}).length;
-          // console.log(
-          //   `📥 Worker ${
-          //     workerId?.substring(0, 6)
-          //   } received JobStates with ${jobCount} jobs`,
-          // );
+          console.log(
+            `${getWorkerColorizedString(workerId)} ${Object.keys(allJobsStatesPayload?.state?.jobs || {}).length} jobs`,
+          );
 
           if (currentGotJobStates > logGotJobStatesEvery) {
             // console.log(
