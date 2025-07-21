@@ -47,7 +47,7 @@ local +args="":
 
 # Run the worker locally, pointing to production API
 @prod queue="public1":
-    deno run --watch --allow-all --unstable-kv  --unstable-cron src/cli.ts run --cpus=1 --api-address=https://container.mtfm.io {{ queue }}
+    deno run --watch --allow-all --unstable-kv  --unstable-cron src/cli.ts run --cpus=1 --api-address=https://container.mtfm.io --data-directory $HOME/worker-metapage-io {{ queue }}
 
 # Run the worker locally with debug mode, pointing to production API
 @debug queue="local1":

@@ -1,6 +1,16 @@
-import klaw from "klaw";
-import { emptyDir, ensureDir, exists, existsSync } from "std/fs";
-import { dirname, join } from "std/path";
+import { getConfig } from '/@/config.ts';
+import type { Volume } from '/@/queue/DockerJob.ts';
+import klaw from 'klaw';
+import {
+  emptyDir,
+  ensureDir,
+  exists,
+  existsSync,
+} from 'std/fs';
+import {
+  dirname,
+  join,
+} from 'std/path';
 
 import {
   type DataRef,
@@ -13,9 +23,7 @@ import {
   hashFileOnDisk,
   type InputsRefs,
   sanitizeFilename,
-} from "@metapages/compute-queues-shared";
-import { getConfig } from "/@/config.ts";
-import type { Volume } from "/@/queue/DockerJob.ts";
+} from '@metapages/compute-queues-shared';
 
 /**
  * @param job Returns input and output docker volumes to mount into the container
@@ -48,6 +56,12 @@ export const convertIOToVolumeMounts = async (
   await Deno.chmod(configFilesDir, 0o777);
   await Deno.chmod(inputsDir, 0o777);
   await Deno.chmod(outputsDir, 0o777);
+
+  // make sure directories are owned by root
+  await Deno.chown(baseDir, 0, 0);
+  await Deno.chown(configFilesDir, 0, 0);
+  await Deno.chown(inputsDir, 0, 0);
+  await Deno.chown(outputsDir, 0, 0);
 
   // console.log(
   //   `[${workerId.substring(0, 6)}] [${
