@@ -10,6 +10,9 @@ const LocalModeBaseUrl = "http://localhost:8000";
 export const websocketConnectionUrlLocalmode = LocalModeBaseUrl.replace("http", "ws");
 
 export const getIOBaseUrl = (queue: string): string => {
+  if (!queue) {
+    return ApiOrigin;
+  }
   if (queue === "local") {
     return LocalModeBaseUrl;
   }

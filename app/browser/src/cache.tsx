@@ -4,6 +4,15 @@ import Dexie from "dexie";
 import { getIOBaseUrl } from "./config";
 import { getQueueFromUrl } from "./hooks/useQueue";
 
+import fetchRetry from "fetch-retry";
+
+const originalFetch = globalThis.fetch;
+
+const fetch = fetchRetry(originalFetch, {
+  retries: 5,
+  retryDelay: 800,
+});
+
 interface IJobsFinished {
   id: string;
   job: StateChangeValueFinished;
