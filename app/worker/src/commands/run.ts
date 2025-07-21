@@ -521,14 +521,9 @@ export async function connectToServer(
             }
             await killAndRemoveContainerForJob({ jobId: jobIdToClear, workerId: config.id, queue: config.queue });
           })();
-          // if (clearJobCacheConfirm?.definition?.build) {
-          //   clearCache({ build: clearJobCacheConfirm.definition.build });
-          // }
 
-          const jobCacheDir = join(
-            config.dataDirectory,
-            clearJobCacheConfirm.jobId,
-          );
+          const jobCacheDir = join(config.dataDirectory, "j", clearJobCacheConfirm.jobId);
+
           if (existsSync(jobCacheDir)) {
             try {
               console.log(
