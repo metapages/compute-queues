@@ -79,7 +79,7 @@ class LocalDatabase extends Dexie {
 
     const json: { data: StateChangeValueFinished | null } = await response.json();
     if (json.data) {
-      console.log(`${getJobColorizedString(id)} 🔻 ✅ 👜 getFinishedJob: saveFinishedJob`, json.data);
+      // console.log(`${getJobColorizedString(id)} 🔻 ✅ 👜 getFinishedJob: saveFinishedJob`, json.data);
       this.saveFinishedJob(id, json.data);
     }
 
