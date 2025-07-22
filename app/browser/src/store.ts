@@ -192,7 +192,7 @@ export const useStore = create<MainStore>((set, get) => ({
   submitJob: pDebounce(() => {
     const definitionBlob = get().newJobDefinition;
     if (!definitionBlob) {
-      console.log("submitJob: no definitionBlob");
+      // console.log("submitJob: no definitionBlob");
       return;
     }
     // inputs are already minified (fat blobs uploaded to the cloud)
@@ -205,7 +205,7 @@ export const useStore = create<MainStore>((set, get) => ({
         control: definitionBlob.control,
       },
     };
-    console.log("submitJob: value", value);
+
     if (definitionBlob.debug) {
       value.enqueued.debug = true;
     }
@@ -215,7 +215,7 @@ export const useStore = create<MainStore>((set, get) => ({
       job: definitionBlob.hash,
       tag: "", // document the meaning of this. It's the worker claim. Might be unneccesary due to history
     };
-    console.log(`submitJob ${definitionBlob?.hash?.substring(0, 6)}`, payload);
+
     get().sendClientStateChange(payload);
   }, 200),
 
@@ -254,7 +254,6 @@ export const useStore = create<MainStore>((set, get) => ({
 
   jobState: EmptyJobStateTuple,
   setJobState: async (args: JobStateTuple) => {
-    console.log("setJobState", args);
     if (!args) {
       set(() => ({
         jobState: EmptyJobStateTuple,
@@ -326,7 +325,7 @@ export const useStore = create<MainStore>((set, get) => ({
             [clientStateChange.job]: job,
           };
           get().setJobStates(newJobStates);
-          console.log(`🌋 💥 ‼️ NOT sending DockerJobState.Queued because existing finished job found`);
+
           return;
         }
       }
@@ -395,7 +394,6 @@ export const useStore = create<MainStore>((set, get) => ({
     get().sendClientStateChange(stateChange);
 
     // delete the finished job from the local cache
-    console.log("deleteJobCache deleteFinishedJob", client.hash);
     await cache.deleteFinishedJob(client.hash);
 
     const newJobStates = {
@@ -408,31 +406,20 @@ export const useStore = create<MainStore>((set, get) => ({
     }
 
     // AGAIN delete the finished job from the local cache
-    console.log("deleteJobCache deleteFinishedJob", client.hash);
     await cache.deleteFinishedJob(client.hash);
 
-    console.log(`🌋 ‼️ setJobState deleteJobCache:`);
-
     get().setJobStates(newJobStates);
-    // get().setJobState(undefined);
-    // set(() => ({
-    //   jobState: EmptyJobStateTuple,
-    //   buildLogs: null,
-    //   runLogs: null,
-    // }));
 
     return true;
   },
 
   jobStates: {},
   setJobStates: async (incomingJobStates: JobsStateMap, subset = false) => {
-    console.log("setJobStates", incomingJobStates);
     // the finished state can be large, so it's stored in s3
     const newJobStates = subset ? { ...get().jobStates, ...incomingJobStates } : incomingJobStates;
     for (const [jobId, job] of Object.entries(newJobStates)) {
       if (!job || isJobDeletedOrRemoved(job)) {
         cache.deleteFinishedJob(jobId);
-        // continue;
       } else if (job.state === DockerJobState.Finished && !isJobDeletedOrRemoved(job) && !job.finished) {
         const finishedState = await cache.getFinishedJob(jobId);
         if (finishedState) {
