@@ -1318,8 +1318,10 @@ export class BaseDockerJobQueue {
           }
           case WebsocketMessageTypeWorkerToServer.JobStatusLogs: {
             const logsFromWorker = possibleMessage.payload as JobStatusPayload;
-            // Send to all clients
-            this.broadcastAndSendLogsToLocalClients(logsFromWorker);
+            // Send to all clients IF the worker matches the job the server says is running
+            if (this.state.jobs[logsFromWorker.jobId]?.worker === workerRegistration?.id) {
+              this.broadcastAndSendLogsToLocalClients(logsFromWorker);
+            }
             break;
           }
           case WebsocketMessageTypeWorkerToServer.RequestJobDefinitions: {
