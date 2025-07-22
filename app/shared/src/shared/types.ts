@@ -273,14 +273,11 @@ export const getFinishedJobState = (
   }
 };
 
-// export type JobsStateMap = { [id in string]: InMemoryDockerJob };
 export type JobsStateMap = Record<string, InMemoryDockerJob>;
 
 export interface JobStates {
   jobs: JobsStateMap;
 }
-
-export type JobStatesCompact = Record<string, [DockerJobState, DockerJobFinishedReason | undefined]>;
 
 export interface WorkerRegistration {
   version: string;

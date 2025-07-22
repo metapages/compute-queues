@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { JobStateTuple, useStore } from "../store";
 import { useOptionJobStartAutomatically } from "./useOptionJobStartAutomatically";
+import { isJobDeletedOrRemoved } from "/@shared/client";
 
 /**
  * Get the current client-defined job definition and submit it to the server
@@ -39,6 +40,8 @@ export const useJobSubmissionHook = () => {
   // track the job state that matches our job definition (created by URL query params and inputs)
   // when we get the correct job state, it's straightforward to just show it
   const submitJob = useCallback(() => {
+    console.log("submitJob connected", connected);
+    console.log("submitJob dockerJobClient?.definition", dockerJobClient?.definition);
     if (!connected || !dockerJobClient?.definition) {
       setLoading(false);
       return;
@@ -48,14 +51,19 @@ export const useJobSubmissionHook = () => {
     let loadingCheckInterval = undefined;
 
     (async () => {
-      const jobHashCurrent = dockerJobClient.hash; //await shaObject(dockerJobClient.definition);
+      const jobHashCurrent = dockerJobClient.hash;
 
       if (cancelled) {
+        console.log("submitJob cancelled");
         return;
       }
 
+      const [refJobId, refJob] = dockerJobServerRef.current || [];
+
       // If we have a matching job from the server, we don't need to submit it again
-      if (dockerJobServerRef.current?.[0] === jobHashCurrent) {
+      if (refJobId === jobHashCurrent && !!refJob && !isJobDeletedOrRemoved(refJob)) {
+        console.log("submitJob already running dockerJobServerRef.current", dockerJobServerRef.current);
+        console.log("submitJob jobHashCurrent", jobHashCurrent);
         return;
       }
 

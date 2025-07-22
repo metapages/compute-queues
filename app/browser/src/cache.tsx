@@ -1,4 +1,4 @@
-import { DockerJobDefinitionInputRefs, StateChangeValueFinished } from "/@shared/client";
+import { DockerJobDefinitionInputRefs, getJobColorizedString, StateChangeValueFinished } from "/@shared/client";
 import Dexie from "dexie";
 
 import { getIOBaseUrl } from "./config";
@@ -79,7 +79,7 @@ class LocalDatabase extends Dexie {
 
     const json: { data: StateChangeValueFinished | null } = await response.json();
     if (json.data) {
-      // console.log(`${getJobColorizedString(id)} 🔻 ✅ 👜 saveFinishedJob`, json.data);
+      console.log(`${getJobColorizedString(id)} 🔻 ✅ 👜 getFinishedJob: saveFinishedJob`, json.data);
       this.saveFinishedJob(id, json.data);
     }
 
