@@ -40,8 +40,6 @@ export const useJobSubmissionHook = () => {
   // track the job state that matches our job definition (created by URL query params and inputs)
   // when we get the correct job state, it's straightforward to just show it
   const submitJob = useCallback(() => {
-    console.log("submitJob connected", connected);
-    console.log("submitJob dockerJobClient?.definition", dockerJobClient?.definition);
     if (!connected || !dockerJobClient?.definition) {
       setLoading(false);
       return;
@@ -54,7 +52,6 @@ export const useJobSubmissionHook = () => {
       const jobHashCurrent = dockerJobClient.hash;
 
       if (cancelled) {
-        console.log("submitJob cancelled");
         return;
       }
 
@@ -62,8 +59,6 @@ export const useJobSubmissionHook = () => {
 
       // If we have a matching job from the server, we don't need to submit it again
       if (refJobId === jobHashCurrent && !!refJob && !isJobDeletedOrRemoved(refJob)) {
-        console.log("submitJob already running dockerJobServerRef.current", dockerJobServerRef.current);
-        console.log("submitJob jobHashCurrent", jobHashCurrent);
         return;
       }
 
