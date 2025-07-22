@@ -261,6 +261,13 @@ export class DockerJobQueue {
     message: computeQueuesShared.BroadcastJobStates,
   ) {
     message.isSubset = false;
+    console.log(
+      `${getWorkerColorizedString(this.workerId)} JobStateUpdates [isSubset=${message.isSubset}] from server: ${
+        Object.keys(message?.state?.jobs || {}).map((jobId) =>
+          getJobColorizedString(jobId) + `(${message.state.jobs[jobId].state})`
+        ).join(", ")
+      }`,
+    );
     this._updateApiQueue(message);
     this._checkRunningJobs();
     await this._claimJobs();
@@ -271,7 +278,21 @@ export class DockerJobQueue {
   ) {
     message.isSubset = true;
     this._updateApiQueue(message);
+    console.log(
+      `${getWorkerColorizedString(this.workerId)} after _updateApiQueue apiQueue: ${
+        Object.keys(this.apiQueue || {}).map((jobId) =>
+          getJobColorizedString(jobId) + `(${this.apiQueue[jobId].state})`
+        ).join(", ")
+      }`,
+    );
     this._checkRunningJobs();
+    console.log(
+      `${getWorkerColorizedString(this.workerId)} before _claimJobs this.queue: ${
+        Object.keys(this.queue || {}).map((jobId) =>
+          getJobColorizedString(jobId) + `(${this.queue[jobId]?.execution?.isKilled.value ? "KILLED" : "ALIVE"})`
+        ).join(", ")
+      }`,
+    );
     await this._claimJobs();
   }
 
@@ -328,8 +349,8 @@ export class DockerJobQueue {
             getJobColorizedString(locallyRunningJobId)
           } in server state, killing and removing`,
         );
+        delete this.queue[locallyRunningJobId];
         this._killJobAndIgnore(locallyRunningJobId);
-        // delete this.queue[locallyRunningJobId];
         continue;
         // } else {
         //   // this job isn't in this update, but this update is not all jobs, so the server

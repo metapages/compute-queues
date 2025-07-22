@@ -1,5 +1,5 @@
-import { DockerJobDefinitionInputRefs, getJobColorizedString, StateChangeValueFinished } from "/@shared/client";
 import Dexie from "dexie";
+import { DockerJobDefinitionInputRefs, StateChangeValueFinished } from "/@shared/client";
 
 import { getIOBaseUrl } from "./config";
 import { getQueueFromUrl } from "./hooks/useQueue";

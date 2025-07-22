@@ -471,12 +471,6 @@ export async function connectToServer(
             break;
           }
 
-          console.log(
-            `${getWorkerColorizedString(workerId)} JobStateUpdates from server: ${
-              Object.keys(someJobsPayload?.state?.jobs || {}).map((jobId) => getJobColorizedString(jobId)).join(", ")
-            }`,
-          );
-
           // const jobCount =
           //   Object.keys(someJobsPayload?.state?.jobs || {}).length;
           // console.log(
