@@ -386,6 +386,19 @@ export async function connectToServer(
 
   const logGotJobStatesEvery = 10;
   let currentGotJobStates = 0;
+  let timeSinceLastJobStates = 0;
+
+  const twentySeconds = ms("20s") as number;
+  setInterval(() => {
+    if (Date.now() - timeSinceLastJobStates > twentySeconds) {
+      console.log(
+        `🚨 Reconnecting because no JobStates since ${humanizeDuration(Date.now() - timeSinceLastJobStates)} >= ${
+          humanizeDuration(twentySeconds)
+        }`,
+      );
+      rws.reconnect();
+    }
+  }, ms("10s") as number);
   rws.addEventListener("message", (message: MessageEvent) => {
     try {
       const messageString = message.data.toString();
@@ -430,6 +443,7 @@ export async function connectToServer(
         }
 
         case WebsocketMessageTypeServerBroadcast.JobStates: {
+          timeSinceLastJobStates = Date.now();
           const allJobsStatesPayload = possibleMessage
             .payload as BroadcastJobStates;
           currentGotJobStates++;
@@ -462,6 +476,8 @@ export async function connectToServer(
           break;
         }
         case WebsocketMessageTypeServerBroadcast.JobStateUpdates: {
+          timeSinceLastJobStates = Date.now();
+          timeSinceLastJobStates = Date.now();
           const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
           if (!someJobsPayload) {
             console.log({

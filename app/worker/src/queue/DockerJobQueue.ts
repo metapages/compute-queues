@@ -20,6 +20,7 @@ import { ContainerLabel, ContainerLabelQueue, ContainerLabelWorker } from "./con
 import { docker } from "./dockerClient.ts";
 import type { JobDefinitionCache } from "./JobDefinitionCache.ts";
 import { getRunningContainerForJob } from "./index.ts";
+import { ms } from "ms";
 
 const Version: string = mod.version;
 
@@ -210,7 +211,8 @@ export class DockerJobQueue {
         payload: registration,
       });
 
-      // Send running jobs state
+      // Send running jobs state (the message is created once
+      // and tells the server the running jobs)
       for (const runningQueueObject of Object.values(this.queue)) {
         this.sender(runningQueueObject.runningMessageToServer);
       }
@@ -252,7 +254,7 @@ export class DockerJobQueue {
           `${this.workerIdShort} 🚨 Periodic registration failed: ${err}`,
         );
       }
-    }, 30000); // 30 seconds
+    }, ms("10s") as number);
   }
 
   public stopPeriodicRegistration() {
