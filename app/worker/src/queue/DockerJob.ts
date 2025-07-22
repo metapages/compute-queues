@@ -68,6 +68,7 @@ export interface DockerJobArgs {
 // this comes out
 export interface DockerJobExecution {
   finish: Promise<DockerRunResult | undefined>;
+  container: Container | undefined;
   kill: (reason: string) => void | Promise<void>;
   isKilled: { value: boolean };
 }
@@ -98,7 +99,20 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     isTimedOut: false,
   };
 
-  let container: Container | undefined;
+  const dockerExecution: DockerJobExecution = {
+    kill: (_: string) => {},
+    finish: new Promise(() => {}),
+    isKilled,
+    container: undefined,
+  };
+
+  // export interface DockerJobExecution {
+  // finish: Promise<DockerRunResult | undefined>;
+  // container: Container | undefined;
+  // kill: (reason: string) => void | Promise<void>;
+  // isKilled: { value: boolean };
+
+  // let container: Container | undefined;
 
   let durationHandler: number | undefined;
 
@@ -115,12 +129,12 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     }
 
     isKilled.value = true;
-    if (container) {
+    if (dockerExecution.container) {
       console.log(
         `${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} 🗑️  kill(${reason}) killing container`,
-        container.id,
+        dockerExecution.container.id,
       );
-      await killAndRemove(id, container, reason);
+      await killAndRemove(id, dockerExecution.container, reason);
     }
   };
 
@@ -291,7 +305,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     if (existingRunningContainer) {
       const containerInfo = await existingRunningContainer.inspect();
       if (containerInfo.State?.Status === "running") {
-        container = existingRunningContainer;
+        dockerExecution.container = existingRunningContainer;
       }
     }
 
@@ -338,26 +352,26 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       return;
     }
 
-    if (!container) {
-      container = await docker.createContainer(createOptions);
+    if (!dockerExecution.container) {
+      dockerExecution.container = await docker.createContainer(createOptions);
 
       if (config.debug) {
         console.log(
           `${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} 👉 created new container`,
-          container.id,
+          dockerExecution.container.id,
         );
       }
     }
 
     // attach to container
-    const stream = await container!.attach({
+    const stream = await dockerExecution.container!.attach({
       stream: true,
       stdout: true,
       stderr: true,
       logs: existingRunningContainer ? true : false,
     });
     // console.log(`🤡 after attach`, containerInfo);
-    container!.modem.demuxStream(stream, grabberOutStream, grabberErrStream);
+    dockerExecution.container!.modem.demuxStream(stream, grabberOutStream, grabberErrStream);
 
     if (isKilled.value) {
       return;
@@ -365,7 +379,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
 
     if (!existingRunningContainer) {
       // is buffer
-      const _: Buffer = await container!.start();
+      const _: Buffer = await dockerExecution.container!.start();
       console.log(
         `${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} 🏎️ container started`,
       );
@@ -377,7 +391,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     console.log(
       `${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} ⏳ Waiting for container to finish...`,
     );
-    const dataWait = await container!.wait();
+    const dataWait = await dockerExecution.container!.wait();
     result.StatusCode = dataWait != null ? dataWait.StatusCode : null;
 
     console.log(`${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} ✅ container finished`, dataWait);
@@ -407,7 +421,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       ]);
 
       result.logs.push([
-        `🔍 Container ID: ${container!.id}`,
+        `🔍 Container ID: ${dockerExecution.container!.id}`,
         Date.now(),
         true,
       ]);
@@ -438,18 +452,18 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     (logFileStderr as Deno.FsFile | null)?.close();
 
     // remove the container out-of-band (return quickly)
-    if (container) {
-      killAndRemove(id, container, "DockerJob.finish normally");
+    if (dockerExecution.container) {
+      killAndRemove(id, dockerExecution.container, "DockerJob.finish normally");
     }
 
     return result;
   };
 
-  return {
-    kill,
-    finish: finish(),
-    isKilled,
-  };
+  dockerExecution.kill = kill;
+  dockerExecution.finish = finish();
+  dockerExecution.isKilled = isKilled;
+
+  return dockerExecution;
 };
 
 export const getRunningContainerForJob = async (args: {

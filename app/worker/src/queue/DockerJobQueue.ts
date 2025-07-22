@@ -19,6 +19,7 @@ import mod from "../../mod.json" with { type: "json" };
 import { ContainerLabel, ContainerLabelQueue, ContainerLabelWorker } from "./constants.ts";
 import { docker } from "./dockerClient.ts";
 import type { JobDefinitionCache } from "./JobDefinitionCache.ts";
+import { getRunningContainerForJob } from "./index.ts";
 
 const Version: string = mod.version;
 
@@ -59,6 +60,7 @@ export class DockerJobQueue {
   queueKey: string;
   jobDefinitions: JobDefinitionCache;
   private registrationInterval: number | null = null;
+  private runningJobHealthInterval: number | null = null;
 
   constructor(args: DockerJobQueueArgs) {
     const { sender, cpus, gpus, id, maxJobDuration, queue, jobDefinitions } = args;
@@ -78,6 +80,9 @@ export class DockerJobQueue {
 
     // Start periodic registration
     this.startPeriodicRegistration();
+
+    // Start periodic running job health check
+    this.startRunningJobHealthInterval();
   }
 
   async checkForLocallyRunningJobs() {
@@ -955,5 +960,75 @@ export class DockerJobQueue {
 
     delete this.queue[locallyRunningJobId];
     localJob?.execution?.kill(reason || "killJobAndIgnore()");
+  }
+
+  private startRunningJobHealthInterval() {
+    // Check every 10 seconds
+    this.runningJobHealthInterval = setInterval(async () => {
+      await this.checkRunningJobContainers();
+    }, 10000);
+  }
+
+  public stopRunningJobHealthInterval() {
+    if (this.runningJobHealthInterval) {
+      clearInterval(this.runningJobHealthInterval);
+      this.runningJobHealthInterval = null;
+    }
+  }
+
+  private async checkRunningJobContainers() {
+    for (const jobId of Object.keys(this.queue)) {
+      const localJob = this.queue[jobId];
+      // Only check jobs that are supposed to be running
+      if (!localJob) continue;
+      if ((Date.now() - localJob.time) < 5000) {
+        console.log(
+          `${this.workerIdShort} ${getJobColorizedString(jobId)} 🚨 Job is too new, skipping check.`,
+          localJob,
+        );
+        continue;
+      }
+      // Defensive: only check jobs that are in the apiQueue and marked as running
+      const apiJob = this.apiQueue[jobId];
+      if (!apiJob || apiJob.state !== DockerJobState.Running) continue;
+      try {
+        let container = localJob.execution?.container;
+        if (!container) {
+          container = await getRunningContainerForJob({ jobId, workerId: this.workerId });
+          if (localJob.execution && !localJob.execution.container) {
+            localJob.execution.container = container;
+          }
+        }
+        if (!this.queue[jobId]) {
+          continue;
+        }
+        if (!localJob?.execution?.container) {
+          console.log(
+            `${this.workerIdShort} ${
+              getJobColorizedString(jobId)
+            } 🚨 No running container found for job, killing job as orphaned.`,
+          );
+          this._killJobAndIgnore(jobId, "container missing or dead");
+          continue;
+        } else {
+          try {
+            const containerInfo = await localJob.execution.container.inspect();
+
+            console.log(
+              `${this.workerIdShort} ${
+                getJobColorizedString(jobId)
+              } 🚨  not sure what to do there containerInfo.State?.Status=${containerInfo.State?.Status}`,
+            );
+          } catch (err) {
+            console.log(
+              `${this.workerIdShort} ${getJobColorizedString(jobId)} 🚨 Error inspecting container for job:`,
+              err,
+            );
+          }
+        }
+      } catch (err) {
+        console.log(`${this.workerIdShort} ${getJobColorizedString(jobId)} 🚨 Error checking container for job:`, err);
+      }
+    }
   }
 }
