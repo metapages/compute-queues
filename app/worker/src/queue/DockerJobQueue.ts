@@ -309,19 +309,15 @@ export class DockerJobQueue {
     if (!message.isSubset) {
       // set the value from the server, this is the entire queue
       this.apiQueue = jobStates;
-      // Remove jobs from apiQueue that aren't in the message
-      // Object.keys(this.apiQueue).forEach((jobId) => {
-      //   if (!message.state.jobs[jobId]) {
-      //     delete this.apiQueue[jobId];
-      //   }
-      // });
     } else {
       Object.keys(jobStates).forEach((jobId) => {
         this.apiQueue[jobId] = jobStates[jobId];
       });
     }
     // Remove finished jobs from the apiQueue
-    // WHY?
+    // Why? We might need to send the finished jobs to the server even
+    // if another worker has taken and finished it, because they might
+    // have errored out.
     // Object.entries(this.apiQueue).forEach(([jobId, job]) => {
     //   if (job.state === computeQueuesShared.DockerJobState.Finished) {
     //     delete this.apiQueue[jobId];
@@ -348,22 +344,32 @@ export class DockerJobQueue {
     for (const [locallyRunningJobId, locallyRunningJob] of Object.entries(this.queue)) {
       // do we have local jobs the server doesn't even know about? This should never happen
       // Maybe it could be in the case where the browser disconnected and you want the jobs to keep going
-      if (!this.apiQueue[locallyRunningJobId]) {
+      if (!this.apiQueue[locallyRunningJobId] || this.apiQueue[locallyRunningJobId].state === DockerJobState.Finished) {
         // we can only kill the job if we know it's not running on the server
         // if (isAllJobs) {
         console.log(
-          `${this.workerIdShort} Cannot find local job ${
+          `${this.workerIdShort} ${
             getJobColorizedString(locallyRunningJobId)
-          } in server state, killing and removing`,
+          } cannot find local job (or job Finished) in server state, setInterval to check then maybe kill and remove`,
         );
-        delete this.queue[locallyRunningJobId];
-        this._killJobAndIgnore(locallyRunningJobId);
+
+        // Do not remove immediately, because there might be a race condition
+        setTimeout(() => {
+          if (
+            this.queue[locallyRunningJobId] &&
+            (!this.apiQueue[locallyRunningJobId] ||
+              this.apiQueue[locallyRunningJobId].state === DockerJobState.Finished)
+          ) {
+            console.log(
+              `${this.workerIdShort} ${
+                getJobColorizedString(locallyRunningJobId)
+              } after some time, job is either missing from API or Finished, so killing our version`,
+            );
+            this._killJobAndIgnore(locallyRunningJobId);
+          }
+        }, ms("6s") as number);
+
         continue;
-        // } else {
-        //   // this job isn't in this update, but this update is not all jobs, so the server
-        //   // hasn't changed our job state. so bail out
-        //   continue;
-        // }
       }
 
       const serverJobState = jobStates[locallyRunningJobId];
@@ -378,6 +384,7 @@ export class DockerJobQueue {
       switch (serverJobState.state) {
         // are any jobs running locally actually killed by the server? or running
         case DockerJobState.Finished:
+          // handled above
           // FINE it finished elsewhere, how rude
           // console.log(
           //   `${this.workerIdShort} ${
@@ -404,7 +411,7 @@ export class DockerJobQueue {
           //     } server state=Finished (possibly JobReplacedByClient) but server says running, killing and removing`,
           //   );
           // }
-          this._killJobAndIgnore(locallyRunningJobId, "server state=Finished (possibly JobReplacedByClient)");
+          // this._killJobAndIgnore(locallyRunningJobId, "server state=Finished (possibly JobReplacedByClient)");
           break;
         case DockerJobState.Queued:
           // server says queued, I say running, remind the server
@@ -444,15 +451,41 @@ export class DockerJobQueue {
               console.log(
                 `${this.workerIdShort} ${
                   getJobColorizedString(locallyRunningJobId)
-                } running, but elsewhere apparently. We are keeping ours since we are preferred`,
+                } running, but elsewhere apparently ${
+                  getWorkerColorizedString(serverJobState.worker)
+                }. We are keeping ours since we are preferred`,
               );
             } else {
               console.log(
                 `${this.workerIdShort} ${
                   getJobColorizedString(locallyRunningJobId)
-                } running, but elsewhere also. Killing ours because preferred by ${preferredWorker.substring(0, 12)}`,
+                } running, but elsewhere also, and preferred there: ${
+                  getWorkerColorizedString(serverJobState.worker)
+                }. setInterval to check then maybe kill`,
               );
-              this._killJobAndIgnore(locallyRunningJobId);
+              // Do not remove immediately, because there might be a race condition
+              setTimeout(() => {
+                if (!this.queue[locallyRunningJobId] || !this.apiQueue[locallyRunningJobId]) {
+                  // gone!
+                  return;
+                }
+                const isRunningElsewhereStill = this.apiQueue[locallyRunningJobId].state === DockerJobState.Running &&
+                  this.apiQueue[locallyRunningJobId].worker !== this.workerIdShort;
+                const preferredWorkerAfterSomeTime = resolvePreferredWorker(
+                  this.workerId,
+                  this.apiQueue[locallyRunningJobId].worker,
+                );
+                if (isRunningElsewhereStill && preferredWorkerAfterSomeTime !== this.workerId) {
+                  console.log(
+                    `${this.workerIdShort} ${
+                      getJobColorizedString(locallyRunningJobId)
+                    } after some time, job is still preferred by ${
+                      getWorkerColorizedString(this.apiQueue[locallyRunningJobId].worker)
+                    } , so killing our version`,
+                  );
+                  this._killJobAndIgnore(locallyRunningJobId);
+                }
+              }, ms("6s") as number);
             }
           }
           break;
