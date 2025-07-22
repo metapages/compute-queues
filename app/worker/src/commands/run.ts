@@ -26,9 +26,9 @@ import {
 
 import { getKv } from "../../../shared/src/shared/kv.ts";
 import mod from "../../mod.json" with { type: "json" };
+import { setGlobalDockerJobQueue } from "../cli.ts";
 import { killAndRemoveContainerForJob } from "../queue/cleanup.ts";
 import { JobDefinitionCache } from "../queue/JobDefinitionCache.ts";
-import { setGlobalDockerJobQueue } from "../cli.ts";
 
 const VERSION: string = mod.version;
 
@@ -386,8 +386,6 @@ export async function connectToServer(
 
   const logGotJobStatesEvery = 10;
   let currentGotJobStates = 0;
-  let currentGotJobStateUpdates = 0;
-  const logGotJobStateUpdatesEvery = 10;
   rws.addEventListener("message", (message: MessageEvent) => {
     try {
       const messageString = message.data.toString();
@@ -437,7 +435,11 @@ export async function connectToServer(
           currentGotJobStates++;
 
           console.log(
-            `${getWorkerColorizedString(workerId)} ${Object.keys(allJobsStatesPayload?.state?.jobs || {}).length} jobs`,
+            `${getWorkerColorizedString(workerId)} JobStates from server: ${
+              Object.keys(allJobsStatesPayload?.state?.jobs || {}).map((jobId) => getJobColorizedString(jobId)).join(
+                ", ",
+              )
+            }`,
           );
 
           if (currentGotJobStates > logGotJobStatesEvery) {
@@ -469,6 +471,12 @@ export async function connectToServer(
             break;
           }
 
+          console.log(
+            `${getWorkerColorizedString(workerId)} JobStateUpdates from server: ${
+              Object.keys(someJobsPayload?.state?.jobs || {}).map((jobId) => getJobColorizedString(jobId)).join(", ")
+            }`,
+          );
+
           // const jobCount =
           //   Object.keys(someJobsPayload?.state?.jobs || {}).length;
           // console.log(
@@ -477,12 +485,12 @@ export async function connectToServer(
           //   } received JobStateUpdates with ${jobCount} jobs`,
           // );
 
-          if (currentGotJobStateUpdates > logGotJobStateUpdatesEvery) {
-            console.log(
-              `${getWorkerColorizedString(workerId)} got JobStateUpdates(${someJobsPayload?.state?.jobs?.length || 0})`,
-            );
-            currentGotJobStateUpdates = 0;
-          }
+          // if (currentGotJobStateUpdates > logGotJobStateUpdatesEvery) {
+          //   console.log(
+          //     `${getWorkerColorizedString(workerId)} got JobStateUpdates(${someJobsPayload?.state?.jobs?.length || 0})`,
+          //   );
+          //   currentGotJobStateUpdates = 0;
+          // }
 
           dockerJobQueue.onUpdateUpdateASubsetOfJobs(someJobsPayload);
           break;
@@ -490,9 +498,9 @@ export async function connectToServer(
         case WebsocketMessageTypeServerBroadcast.StatusRequest: {
           const status = dockerJobQueue.status();
           console.log(
-            `${getWorkerColorizedString(workerId)} responding to status request with ${
-              Object.keys(status.queue).length
-            } running jobs`,
+            `${getWorkerColorizedString(workerId)} responding to status request with running jobs ${
+              Object.keys(dockerJobQueue.queue).map((jobId) => getJobColorizedString(jobId)).join(", ")
+            }`,
           );
           sender({
             type: WebsocketMessageTypeWorkerToServer.WorkerStatusResponse,

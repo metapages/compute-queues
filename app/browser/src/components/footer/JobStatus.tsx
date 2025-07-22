@@ -1,6 +1,5 @@
 import React from "react";
 
-import humanizeDuration from "humanize-duration";
 import { ApiOrigin } from "/@/config";
 import { useQueue } from "/@/hooks/useQueue";
 import { useStore } from "/@/store";
@@ -11,6 +10,7 @@ import {
   InMemoryDockerJob,
   StateChangeValueFinished,
 } from "/@shared/client";
+import humanizeDuration from "humanize-duration";
 
 import { Box, HStack, Icon, Link, Text, useToast, VStack } from "@chakra-ui/react";
 import { Check, Circle, HourglassMedium, Prohibit, WarningCircle } from "@phosphor-icons/react";
@@ -29,13 +29,14 @@ export const JobStatus: React.FC = () => {
   const isMinimalHeader = useMinimalHeader();
 
   const workers = useStore(state => state.workers);
-  const [jobId, job] = useStore(state => state.jobState);
+  const [_, job] = useStore(state => state.jobState);
+  const newJobDefinition = useStore(state => state.newJobDefinition);
+  const jobId = newJobDefinition?.hash;
   const buildLogs = useStore(state => state.buildLogs);
 
-  const state = job?.state;
   const resultsFinished = job?.finished;
 
-  if (!state) {
+  if (!jobId) {
     return <></>;
   }
 
@@ -75,6 +76,9 @@ export const JobStatus: React.FC = () => {
   } else if (desc) {
     desc = "..." + desc?.substring(desc.length - 60);
   }
+
+  // console.log("isMinimalHeader", isMinimalHeader);
+  // console.log("jobId", jobId);
 
   return (
     <HStack h={"100%"} gap={5} alignItems="center" justifyContent={"center"}>
@@ -126,8 +130,8 @@ const getJobStateValues = (
   const errorBlob = resultFinished?.result?.error as { statusCode: number; json: { message: string } } | undefined;
 
   if (!job) {
-    text = "No job started";
-    icon = <Icon as={Prohibit} boxSize={STATUS_ICON_SIZE} />;
+    text = "-"; //"No job started";
+    icon = <Icon as={Prohibit} boxSize={STATUS_ICON_SIZE} opacity={0} />;
   }
 
   switch (state) {
@@ -140,8 +144,12 @@ const getJobStateValues = (
       }
       switch (resultFinished.reason) {
         case DockerJobFinishedReason.Cancelled:
-          icon = <Icon as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
-          text = `Job Cancelled ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration, humanizeDurationOptions)})` : ""}`;
+        case DockerJobFinishedReason.Deleted:
+        case DockerJobFinishedReason.JobReplacedByClient:
+          text = "-"; //"No job started";
+          icon = <Icon as={Prohibit} boxSize={STATUS_ICON_SIZE} opacity={0} />;
+          // icon = <Icon as={WarningCircle} boxSize={STATUS_ICON_SIZE} />;
+          // text = `Job Cancelled ${resultFinished?.result?.duration ? `(${humanizeDuration(resultFinished.result.duration, humanizeDurationOptions)})` : ""}`;
           break;
         case DockerJobFinishedReason.Error:
           showExitCodeRed = true;
@@ -178,6 +186,10 @@ const getJobStateValues = (
       text = buildLogs && buildLogs.length > 0 ? "Job Building" : "Job Running";
       icon = <Icon as={Circle} color={"orange"} boxSize={STATUS_ICON_SIZE} />;
       desc = `${workerCount} Worker${workerCount > 1 ? "s" : ""}`;
+      break;
+    case DockerJobState.Removed:
+      text = "-";
+      icon = <Icon as={Prohibit} boxSize={STATUS_ICON_SIZE} opacity={0} />;
       break;
   }
   return { text, icon, desc, exitCode, jobId, showExitCodeRed };

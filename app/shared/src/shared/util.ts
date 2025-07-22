@@ -11,6 +11,10 @@ import { LRUMap } from "mnemonist";
 import { create } from "mutative";
 import stringify from "safe-stable-stringify";
 
+export const isJobDeletedOrRemoved = (job?: InMemoryDockerJob | undefined | null): boolean => {
+  return job?.state === DockerJobState.Removed || job?.finishedReason === DockerJobFinishedReason.Deleted;
+};
+
 export const isJobOkForSending = (job?: InMemoryDockerJob | undefined | null): boolean => {
   if (!job) {
     return false;
@@ -263,7 +267,7 @@ export const fetchRobust: ReturnType<typeof fetchRetry> = fetchRetry(fetch, {
 
 /**
  * The situation here is fluid and dynamic, workers and servers and clients coming
- * and going all the time. The db is the source of truth, ut we
+ * and going all the time. The db is the source of truth, but we
  * resolve conflicts and differences as they come in, and allow jobs to be requeued.
  * This means that resolving which of two jobs is the *most correct* is critical
  * and drives a lot of the rest of the dynamics.
@@ -324,16 +328,16 @@ export const resolveMostCorrectJob = (
         case DockerJobState.Finished:
           return jobB;
         case DockerJobState.Removed:
-          return jobB;
+          return jobA; // Running -> Finished -> Removed, Removed cannot skip over Finished
         default:
           return jobA;
       }
     case DockerJobState.Finished:
       switch (jobB.state) {
         case DockerJobState.Queued:
-          return jobA.time < jobB.time ? jobA : jobB;
+          return jobA;
         case DockerJobState.Running:
-          return jobB;
+          return jobA;
         case DockerJobState.Finished:
           if (jobA.finishedReason === jobB.finishedReason) {
             return jobA.time < jobB.time ? jobA : jobB;
@@ -358,11 +362,11 @@ export const resolveMostCorrectJob = (
         case DockerJobState.Queued:
           return jobB;
         case DockerJobState.Running:
-          return jobA;
+          return jobB;
         case DockerJobState.Finished:
           return jobA;
         case DockerJobState.Removed:
-          return jobA;
+          return jobA.time < jobB.time ? jobA : jobB;
         default:
           return jobA;
       }

@@ -63,6 +63,7 @@ export const JobControlButton: React.FC = () => {
   }, [saveInputFileAndRun, setUserClickedRun]);
 
   const onClickRun = useCallback(() => {
+    console.log("onClickRun");
     submitJob();
     setUserClickedRun(true);
   }, [submitJob, setUserClickedRun]);
