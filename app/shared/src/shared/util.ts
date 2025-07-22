@@ -324,7 +324,6 @@ export const resolveMostCorrectJob = (
             return jobB;
           }
         }
-
         case DockerJobState.Finished:
           return jobB;
         case DockerJobState.Removed:
@@ -332,6 +331,7 @@ export const resolveMostCorrectJob = (
         default:
           return jobA;
       }
+
     case DockerJobState.Finished:
       switch (jobB.state) {
         case DockerJobState.Queued:
@@ -349,7 +349,43 @@ export const resolveMostCorrectJob = (
             return jobB;
           }
 
-          return jobA.time < jobB.time ? jobA : jobB;
+          if (jobA.finishedReason === DockerJobFinishedReason.Success) {
+            switch (jobB.finishedReason as DockerJobFinishedReason) {
+              case DockerJobFinishedReason.Success:
+                return jobA.time < jobB.time ? jobA : jobB;
+              case DockerJobFinishedReason.TimedOut:
+              case DockerJobFinishedReason.Error:
+              case DockerJobFinishedReason.WorkerLost:
+              case DockerJobFinishedReason.JobReplacedByClient:
+                return jobA;
+              case DockerJobFinishedReason.Deleted:
+              case DockerJobFinishedReason.Cancelled:
+                return jobB;
+              default:
+                return jobA;
+            }
+          }
+
+          // duplicate of the above
+          if (jobB.finishedReason === DockerJobFinishedReason.Success) {
+            switch (jobA.finishedReason as DockerJobFinishedReason) {
+              case DockerJobFinishedReason.Success: {
+                return jobA.time < jobB.time ? jobA : jobB;
+              }
+              case DockerJobFinishedReason.TimedOut:
+              case DockerJobFinishedReason.Error:
+              case DockerJobFinishedReason.WorkerLost:
+              case DockerJobFinishedReason.JobReplacedByClient:
+                return jobB;
+              case DockerJobFinishedReason.Cancelled:
+              case DockerJobFinishedReason.Deleted:
+                return jobA;
+              default:
+                return jobB;
+            }
+          }
+
+          return jobA.time < jobB.time ? jobB : jobA;
 
         case DockerJobState.Removed:
           return jobB; // Finished -> Removed

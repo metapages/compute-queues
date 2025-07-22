@@ -136,12 +136,12 @@ export enum DockerJobState {
  */
 export enum DockerJobFinishedReason {
   Cancelled = "Cancelled",
-  Deleted = "Deleted",
   Error = "Error",
   JobReplacedByClient = "JobReplacedByClient",
   Success = "Success",
   TimedOut = "TimedOut",
   WorkerLost = "WorkerLost",
+  Deleted = "Deleted",
 }
 
 export type DockerJobStateValue =

@@ -1,9 +1,9 @@
+import parseDuration from "parse-duration";
 import { config } from "/@/config.ts";
 import { ensureIsolateNetwork } from "/@/docker/network.ts";
 import { type DockerJobArgs, dockerJobExecute, type DockerJobExecution, type Volume } from "/@/queue/DockerJob.ts";
 import { convertIOToVolumeMounts, getOutputs } from "/@/queue/IO.ts";
 import { convertStringToDockerCommand } from "/@/queue/utils.ts";
-import parseDuration from "parse-duration";
 
 import * as computeQueuesShared from "@metapages/compute-queues-shared";
 import {
@@ -15,12 +15,12 @@ import {
   resolvePreferredWorker,
 } from "@metapages/compute-queues-shared";
 
+import { ms } from "ms";
 import mod from "../../mod.json" with { type: "json" };
 import { ContainerLabel, ContainerLabelQueue, ContainerLabelWorker } from "./constants.ts";
 import { docker } from "./dockerClient.ts";
-import type { JobDefinitionCache } from "./JobDefinitionCache.ts";
 import { getRunningContainerForJob } from "./index.ts";
-import { ms } from "ms";
+import type { JobDefinitionCache } from "./JobDefinitionCache.ts";
 
 const Version: string = mod.version;
 
@@ -377,16 +377,36 @@ export class DockerJobQueue {
 
       switch (serverJobState.state) {
         // are any jobs running locally actually killed by the server? or running
-        case computeQueuesShared.DockerJobState.Finished:
+        case DockerJobState.Finished:
           // FINE it finished elsewhere, how rude
           // console.log(
           //   `${this.workerIdShort} ${
           //     getJobColorizedString(locallyRunningJobId)
           //   } finished elsewhere, killing here (likely JobReplacedByClient or cancelled)`,
           // );
+
+          // if (serverJobState.worker !== this.workerId) {
+
+          //   switch (serverJobState.finishedReason) {
+          //     case DockerJobFinishedReason.WorkerLost:
+          //     case DockerJobFinishedReason.JobReplacedByClient:
+          //     case DockerJobFinishedReason.TimedOut:
+          //       // the worker
+          //       break;
+
+          //     case DockerJobFinishedReason.JobFinished:
+          //       break;
+          //     case DockerJobFinishedReason.JobKilled:
+          //   }
+          //   console.log(
+          //     `${this.workerIdShort} ${
+          //       getJobColorizedString(locallyRunningJobId)
+          //     } server state=Finished (possibly JobReplacedByClient) but server says running, killing and removing`,
+          //   );
+          // }
           this._killJobAndIgnore(locallyRunningJobId, "server state=Finished (possibly JobReplacedByClient)");
           break;
-        case computeQueuesShared.DockerJobState.Queued:
+        case DockerJobState.Queued:
           // server says queued, I say running, remind the server
           // this can easily happen if I submit Running, but then
           // the worker gets another update immediately
@@ -410,7 +430,7 @@ export class DockerJobQueue {
             },
           });
           break;
-        case computeQueuesShared.DockerJobState.Running:
+        case DockerJobState.Running:
           // good!
           // except if another worker has taken it, then kill ours (server is dictator)
           if (
