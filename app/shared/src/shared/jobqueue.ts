@@ -929,8 +929,6 @@ export class BaseDockerJobQueue {
       return;
     }
 
-    console.log(`🐣 stateChangeJobEnqueue: enqueued`, enqueued);
-
     const jobId = enqueued.id;
 
     // save to db

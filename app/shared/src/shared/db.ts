@@ -153,7 +153,6 @@ export class DB {
     const namespace = job?.control?.namespace || DefaultNamespace;
     const jobId = job.id;
 
-    console.log(`${getJobColorizedString(jobId)} 🐣 queueJobAdd`, job);
     try {
       const existingNamespaces = await this.queueJobGetNamespaces({ queue, jobId });
       const includesNamespace = existingNamespaces.includes(namespace);
