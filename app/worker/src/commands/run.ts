@@ -448,13 +448,15 @@ export async function connectToServer(
             .payload as BroadcastJobStates;
           currentGotJobStates++;
 
-          console.log(
-            `${getWorkerColorizedString(workerId)} JobStates from server: ${
-              Object.keys(allJobsStatesPayload?.state?.jobs || {}).map((jobId) => getJobColorizedString(jobId)).join(
-                ", ",
-              )
-            }`,
-          );
+          // if (Object.keys(allJobsStatesPayload?.state?.jobs || {}).length > 0) {
+          //   console.log(
+          //     `${getWorkerColorizedString(workerId)} JobStates from server: ${
+          //       Object.keys(allJobsStatesPayload?.state?.jobs || {}).map((jobId) => getJobColorizedString(jobId)).join(
+          //         ", ",
+          //       )
+          //       }`,
+          //     );
+          //   }
 
           if (currentGotJobStates > logGotJobStatesEvery) {
             // console.log(

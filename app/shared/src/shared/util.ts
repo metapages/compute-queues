@@ -11,6 +11,13 @@ import { LRUMap } from "mnemonist";
 import { create } from "mutative";
 import stringify from "safe-stable-stringify";
 
+export const getJobStateString = (job?: InMemoryDockerJob | undefined | null): string => {
+  if (!job) {
+    return "__";
+  }
+  return job.state === DockerJobState.Finished ? `Finished(${job.finishedReason})` : `${job.state}`;
+};
+
 export const isJobDeletedOrRemoved = (job?: InMemoryDockerJob | undefined | null): boolean => {
   return job?.state === DockerJobState.Removed || job?.finishedReason === DockerJobFinishedReason.Deleted;
 };
@@ -21,6 +28,18 @@ export const isJobOkForSending = (job?: InMemoryDockerJob | undefined | null): b
   }
   if (job.state === DockerJobState.Removed) {
     return false;
+  }
+
+  if (job.state === DockerJobState.Finished) {
+    switch (job.finishedReason as DockerJobFinishedReason) {
+      case DockerJobFinishedReason.WorkerLost:
+      case DockerJobFinishedReason.JobReplacedByClient:
+      case DockerJobFinishedReason.Cancelled:
+      case DockerJobFinishedReason.Deleted:
+        return false;
+      default:
+        break;
+    }
   }
 
   return true;
@@ -95,11 +114,11 @@ export const setJobStateRemoved = (
   return newJob;
 };
 
-export const getDefinitionS3Key = (id: string): string => {
+export const formatDefinitionS3Key = (id: string): string => {
   return `j/${id}/definition.json`;
 };
 
-export const getResultsS3Key = (id: string): string => {
+export const formatResultsS3Key = (id: string): string => {
   return `j/${id}/result.json`;
 };
 
@@ -281,7 +300,7 @@ export const resolveMostCorrectJob = (
   // jobA is the DEFAULT, if that matters
   jobA: InMemoryDockerJob,
   jobB: InMemoryDockerJob,
-): InMemoryDockerJob | null => {
+): InMemoryDockerJob => {
   if (jobA && !jobB) {
     return jobA;
   }
@@ -298,7 +317,24 @@ export const resolveMostCorrectJob = (
         case DockerJobState.Running:
           return jobB;
         case DockerJobState.Finished:
-          return jobB;
+          switch (jobB.finishedReason as DockerJobFinishedReason) {
+            case DockerJobFinishedReason.Success:
+              return jobB;
+            case DockerJobFinishedReason.TimedOut:
+              return jobB;
+            case DockerJobFinishedReason.Error:
+              return jobB;
+            case DockerJobFinishedReason.WorkerLost:
+              return jobA;
+            case DockerJobFinishedReason.JobReplacedByClient:
+              return jobB;
+            case DockerJobFinishedReason.Cancelled:
+              return jobB;
+            case DockerJobFinishedReason.Deleted:
+              return jobA;
+            default:
+              return jobA;
+          }
         case DockerJobState.Removed:
           return jobA;
         default:
@@ -335,57 +371,152 @@ export const resolveMostCorrectJob = (
     case DockerJobState.Finished:
       switch (jobB.state) {
         case DockerJobState.Queued:
-          return jobA;
+          switch (jobA.finishedReason as DockerJobFinishedReason) {
+            case DockerJobFinishedReason.Success:
+              return jobA;
+            case DockerJobFinishedReason.TimedOut:
+              return jobA;
+            case DockerJobFinishedReason.Error:
+              return jobA;
+            case DockerJobFinishedReason.WorkerLost:
+              return jobB;
+            case DockerJobFinishedReason.JobReplacedByClient:
+              return jobA;
+            case DockerJobFinishedReason.Cancelled:
+              return jobA;
+            case DockerJobFinishedReason.Deleted:
+              return jobB;
+            default:
+              return jobB;
+          }
         case DockerJobState.Running:
           return jobA;
+
         case DockerJobState.Finished:
-          if (jobA.finishedReason === jobB.finishedReason) {
-            return jobA.time < jobB.time ? jobA : jobB;
-          }
-
-          if (jobA.finishedReason === DockerJobFinishedReason.Deleted) {
-            return jobA;
-          } else if (jobB.finishedReason === DockerJobFinishedReason.Deleted) {
-            return jobB;
-          }
-
-          if (jobA.finishedReason === DockerJobFinishedReason.Success) {
-            switch (jobB.finishedReason as DockerJobFinishedReason) {
-              case DockerJobFinishedReason.Success:
-                return jobA.time < jobB.time ? jobA : jobB;
-              case DockerJobFinishedReason.TimedOut:
-              case DockerJobFinishedReason.Error:
-              case DockerJobFinishedReason.WorkerLost:
-              case DockerJobFinishedReason.JobReplacedByClient:
-                return jobA;
-              case DockerJobFinishedReason.Deleted:
-              case DockerJobFinishedReason.Cancelled:
-                return jobB;
-              default:
-                return jobA;
-            }
-          }
-
-          // duplicate of the above
-          if (jobB.finishedReason === DockerJobFinishedReason.Success) {
-            switch (jobA.finishedReason as DockerJobFinishedReason) {
-              case DockerJobFinishedReason.Success: {
-                return jobA.time < jobB.time ? jobA : jobB;
+          switch (jobA.finishedReason as DockerJobFinishedReason) {
+            case DockerJobFinishedReason.Success:
+              switch (jobB.finishedReason as DockerJobFinishedReason) {
+                case DockerJobFinishedReason.Success:
+                  return jobA.time < jobB.time ? jobA : jobB;
+                case DockerJobFinishedReason.TimedOut:
+                  return jobA;
+                case DockerJobFinishedReason.Error:
+                  return jobA;
+                case DockerJobFinishedReason.WorkerLost:
+                  return jobA;
+                case DockerJobFinishedReason.JobReplacedByClient:
+                  return jobA;
+                case DockerJobFinishedReason.Cancelled:
+                  return jobA;
+                case DockerJobFinishedReason.Deleted:
+                  return jobB;
+                default:
+                  return jobA;
               }
-              case DockerJobFinishedReason.TimedOut:
-              case DockerJobFinishedReason.Error:
-              case DockerJobFinishedReason.WorkerLost:
-              case DockerJobFinishedReason.JobReplacedByClient:
-                return jobB;
-              case DockerJobFinishedReason.Cancelled:
-              case DockerJobFinishedReason.Deleted:
-                return jobA;
-              default:
-                return jobB;
-            }
-          }
 
-          return jobA.time < jobB.time ? jobB : jobA;
+            case DockerJobFinishedReason.TimedOut:
+              switch (jobB.finishedReason as DockerJobFinishedReason) {
+                case DockerJobFinishedReason.Success:
+                  return jobB;
+                case DockerJobFinishedReason.TimedOut:
+                  return jobA.time < jobB.time ? jobA : jobB;
+                case DockerJobFinishedReason.Error:
+                  return jobB;
+                case DockerJobFinishedReason.WorkerLost:
+                  return jobB;
+                case DockerJobFinishedReason.JobReplacedByClient:
+                  return jobA;
+                case DockerJobFinishedReason.Cancelled:
+                  return jobA;
+                case DockerJobFinishedReason.Deleted:
+                  return jobB;
+                default:
+                  return jobA;
+              }
+            case DockerJobFinishedReason.Error:
+              switch (jobB.finishedReason as DockerJobFinishedReason) {
+                case DockerJobFinishedReason.Success:
+                  return jobB;
+                case DockerJobFinishedReason.TimedOut:
+                  return jobA;
+                case DockerJobFinishedReason.Error:
+                  return jobA.time < jobB.time ? jobA : jobB;
+                case DockerJobFinishedReason.WorkerLost:
+                  return jobA;
+                case DockerJobFinishedReason.JobReplacedByClient:
+                  return jobA;
+                case DockerJobFinishedReason.Cancelled:
+                  return jobA;
+                case DockerJobFinishedReason.Deleted:
+                  return jobB;
+                default:
+                  return jobA;
+              }
+
+            case DockerJobFinishedReason.WorkerLost:
+              return jobB;
+
+            case DockerJobFinishedReason.JobReplacedByClient:
+              switch (jobB.finishedReason as DockerJobFinishedReason) {
+                case DockerJobFinishedReason.Success:
+                  return jobB;
+                case DockerJobFinishedReason.TimedOut:
+                  return jobB;
+                case DockerJobFinishedReason.Error:
+                  return jobB;
+                case DockerJobFinishedReason.WorkerLost:
+                  return jobA;
+                case DockerJobFinishedReason.JobReplacedByClient:
+                  return jobA;
+                case DockerJobFinishedReason.Cancelled:
+                  return jobA;
+                case DockerJobFinishedReason.Deleted:
+                  return jobB;
+                default:
+                  return jobB;
+              }
+            case DockerJobFinishedReason.Cancelled:
+              switch (jobB.finishedReason as DockerJobFinishedReason) {
+                case DockerJobFinishedReason.Success:
+                  return jobA;
+                case DockerJobFinishedReason.TimedOut:
+                  return jobB;
+                case DockerJobFinishedReason.Error:
+                  return jobB;
+                case DockerJobFinishedReason.WorkerLost:
+                  return jobA;
+                case DockerJobFinishedReason.JobReplacedByClient:
+                  return jobA;
+                case DockerJobFinishedReason.Cancelled:
+                  return jobA;
+                case DockerJobFinishedReason.Deleted:
+                  return jobB;
+                default:
+                  return jobB;
+              }
+
+            case DockerJobFinishedReason.Deleted:
+              switch (jobB.finishedReason as DockerJobFinishedReason) {
+                case DockerJobFinishedReason.Success:
+                  return jobA;
+                case DockerJobFinishedReason.TimedOut:
+                  return jobA;
+                case DockerJobFinishedReason.Error:
+                  return jobA;
+                case DockerJobFinishedReason.WorkerLost:
+                  return jobA;
+                case DockerJobFinishedReason.JobReplacedByClient:
+                  return jobA;
+                case DockerJobFinishedReason.Cancelled:
+                  return jobA;
+                case DockerJobFinishedReason.Deleted:
+                  return jobA;
+                default:
+                  return jobB;
+              }
+            default:
+              return jobB;
+          }
 
         case DockerJobState.Removed:
           return jobB; // Finished -> Removed

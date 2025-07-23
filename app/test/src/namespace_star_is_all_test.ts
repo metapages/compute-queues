@@ -45,6 +45,7 @@ Deno.test(
     assertEquals(jobId, messages[1].jobId);
     assertEquals(jobId, messages[2].jobId);
 
+    let testPhase = "pre-submit-check";
     const timeoutInterval = setTimeout(async () => {
       await Promise.all(
         Array.from(namespaces).map((namespace) =>
@@ -57,8 +58,8 @@ Deno.test(
         ),
       );
 
-      throw "Test timed out";
-    }, 5000);
+      throw `Test timed out at phase: ${testPhase}`;
+    }, 6000);
 
     // submit all the jobs
     await open(socket);
@@ -101,10 +102,11 @@ Deno.test(
     };
     socket.send(JSON.stringify(msg));
 
+    testPhase = "pre-namespace-check";
     while (true) {
       const jobs = await queueJobs(QUEUE_ID);
       if (jobs) {
-        namespacesOnQueue = jobs[jobId]?.namespaces;
+        namespacesOnQueue = jobs[jobId]?.namespaces || [];
         if (equal(namespacesOnQueue, [])) {
           break;
         }

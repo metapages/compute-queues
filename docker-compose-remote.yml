@@ -34,6 +34,7 @@ services:
       - DENO_KV_URL=http://denokv:4512
       - DENO_BROADCAST_REDIS_URL=redis://redis:6379
       - DENO_BROADCAST_DEBUG=
+      - METAPAGE_IO_SERVER_ID=api1
     volumes:
       - deno:/deno
       - node_modules:/app/node_modules
@@ -87,6 +88,7 @@ services:
       - DENO_KV_URL=http://denokv:4512
       - REDIS_URL=redis://redis:DENO_BROADCAST_REDIS_URL=redis://redis:6379
       - DENO_BROADCAST_DEBUG=
+      - METAPAGE_IO_SERVER_ID=api2
     volumes:
       - deno:/deno
       - node_modules:/app/node_modules
@@ -140,6 +142,7 @@ services:
       - DENO_KV_URL=http://denokv:4512
       - DENO_BROADCAST_REDIS_URL=redis://redis:6379
       - DENO_BROADCAST_DEBUG=
+      - METAPAGE_IO_SERVER_ID=api3
     volumes:
       - deno:/deno
       - node_modules:/app/node_modules
