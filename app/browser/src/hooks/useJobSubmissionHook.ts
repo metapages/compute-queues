@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { JobStateTuple, useStore } from "../store";
 import { useOptionJobStartAutomatically } from "./useOptionJobStartAutomatically";
-import { isJobDeletedOrRemoved } from "/@shared/client";
 
 /**
  * Get the current client-defined job definition and submit it to the server
@@ -44,42 +43,43 @@ export const useJobSubmissionHook = () => {
       setLoading(false);
       return;
     }
+    submitJobFromStore();
 
-    let cancelled = false;
-    let loadingCheckInterval = undefined;
+    // let cancelled = false;
+    // let loadingCheckInterval = undefined;
 
-    (async () => {
-      const jobHashCurrent = dockerJobClient.hash;
+    // (async () => {
+    //   const jobHashCurrent = dockerJobClient.hash;
 
-      if (cancelled) {
-        return;
-      }
+    //   if (cancelled) {
+    //     return;
+    //   }
 
-      const [refJobId, refJob] = dockerJobServerRef.current || [];
+    //   const [refJobId, refJob] = dockerJobServerRef.current || [];
 
-      // If we have a matching job from the server, we don't need to submit it again
-      if (refJobId === jobHashCurrent && !!refJob && !isJobDeletedOrRemoved(refJob)) {
-        return;
-      }
+    //   // If we have a matching job from the server, we don't need to submit it again
+    //   if (refJobId === jobHashCurrent && !!refJob && !isJobDeletedOrRemoved(refJob)) {
+    //     return;
+    //   }
 
-      setLoading(true);
-      submitJobFromStore();
+    //   setLoading(true);
+    //   submitJobFromStore();
 
-      loadingCheckInterval = setInterval(() => {
-        if (dockerJobServerRef.current?.[0] === jobHashCurrent) {
-          setLoading(false);
-          clearInterval(loadingCheckInterval);
-        }
-      }, 1000);
-    })();
+    //   loadingCheckInterval = setInterval(() => {
+    //     if (dockerJobServerRef.current?.[0] === jobHashCurrent) {
+    //       setLoading(false);
+    //       clearInterval(loadingCheckInterval);
+    //     }
+    //   }, 1000);
+    // })();
 
-    return () => {
-      cancelled = true;
-      setLoading(false);
-      if (loadingCheckInterval) {
-        clearInterval(loadingCheckInterval);
-      }
-    };
+    // return () => {
+    //   cancelled = true;
+    //   setLoading(false);
+    //   if (loadingCheckInterval) {
+    //     clearInterval(loadingCheckInterval);
+    //   }
+    // };
   }, [submitJobFromStore, connected, jobId, dockerJobClient]);
 
   useEffect(() => {

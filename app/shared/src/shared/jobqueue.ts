@@ -54,6 +54,7 @@ import {
 } from "/@/shared/util.ts";
 
 import type { BroadcastChannelRedis } from "@metapages/deno-redis-broadcastchannel";
+import { setJobStateFinished } from "../client.ts";
 
 let CustomBroadcastChannel: typeof BroadcastChannel = BroadcastChannel;
 
@@ -318,9 +319,18 @@ export class BaseDockerJobQueue {
               console.log(
                 `${this.addressShortString} ‼️ broadcast merge: ${
                   getJobColorizedString(jobId)
-                } not in db, but not deleted or removed...what to do?`,
+                } not in db, but not deleted or removed...what to do? Going to cancel here and hope it gets resubmitted`,
                 broadcastJob,
               );
+              // set as cancelled, and hope it gets resubmitted
+              this.state.jobs[jobId] = setJobStateFinished(broadcastJob, {
+                finished: {
+                  type: DockerJobState.Finished,
+                  reason: DockerJobFinishedReason.Cancelled,
+                  time: Date.now(),
+                },
+              });
+              jobIds.add(jobId);
               continue;
             }
 
@@ -415,6 +425,7 @@ export class BaseDockerJobQueue {
           // No need to delete from the db, the server that triggered this
           // broadcast has already done that, we just need to remove it from
           // our cache
+          delete this.state.jobs[jobId];
           this.broadcastToLocalWorkers(
             JSON.stringify({
               type: WebsocketMessageTypeServerBroadcast.ClearJobCache,
@@ -820,7 +831,23 @@ export class BaseDockerJobQueue {
       }
     }
 
-    if (!this.state.jobs[jobId]) {
+    let existingJob: InMemoryDockerJob | undefined | null = this.state.jobs[jobId];
+
+    if (!existingJob) {
+      existingJob = await this.db.getFinishedJob(jobId);
+      // console.log(
+      //   `${this.addressShortString} ${
+      //     getJobColorizedString(jobId)
+      //   } ❗ ignoring stateChangeJobFinished because no job in db or memory`,
+      //   change,
+      // );
+      // return;
+    }
+
+    // console.log(`${this.addressShortString} ${getJobColorizedString(jobId)} 🤡 stateChangeJobFinished`, change);
+    // console.log(`${this.addressShortString} ${getJobColorizedString(jobId)} 🤡 currentState`, this.state.jobs[jobId]);
+
+    if (!existingJob) {
       console.log(
         `${this.addressShortString} ${
           getJobColorizedString(jobId)
@@ -829,10 +856,6 @@ export class BaseDockerJobQueue {
       );
       return;
     }
-
-    // console.log(`${this.addressShortString} ${getJobColorizedString(jobId)} 🤡 stateChangeJobFinished`, change);
-    // console.log(`${this.addressShortString} ${getJobColorizedString(jobId)} 🤡 currentState`, this.state.jobs[jobId]);
-
     const { updatedInMemoryJob, subsequentStateChange } = await this.db.setJobFinished({
       queue: this.address,
       jobId,
@@ -924,8 +947,10 @@ export class BaseDockerJobQueue {
 
   // Mark methods that could be overridden as protected
   public async stateChangeJobEnqueue(enqueued: EnqueueJob): Promise<void> {
+    // console.log(`${this.addressShortString} 🌎 stateChangeJobEnqueue`, enqueued);
+
     if (!enqueued?.definition) {
-      console.log(`enqueueJob but bad state ${JSON.stringify(enqueued).substring(0, 100)}`);
+      // console.log(`enqueueJob but bad state ${JSON.stringify(enqueued).substring(0, 100)}`);
       return;
     }
 
@@ -937,6 +962,9 @@ export class BaseDockerJobQueue {
       job: enqueued,
       inMemoryJob: this.state.jobs[jobId],
     });
+
+    // console.log(`${this.addressShortString} 🌎 stateChangeJobEnqueue inMemoryJob:`, inMemoryJob);
+
     if (inMemoryJob) {
       this.state.jobs[jobId] = inMemoryJob;
     } else {
@@ -956,20 +984,27 @@ export class BaseDockerJobQueue {
 
     let sendBroadcast = false;
     for (
-      const [jobId, job] of Object.entries<InMemoryDockerJob>(
+      const [jobId, _] of Object.entries<InMemoryDockerJob>(
         this.state.jobs,
       )
     ) {
-      const isRemovable = isJobRemovableFromQueue(job);
-      if (isRemovable) {
-        if (job?.namespaces) {
-          for (const namespace of job?.namespaces) {
-            await this.db.queueJobRemove({ queue: this.address, jobId, namespace });
+      if (!this.state.jobs[jobId]) {
+        continue;
+      }
+
+      if (isJobRemovableFromQueue(this.state.jobs[jobId])) {
+        if (this.state.jobs[jobId]?.namespaces) {
+          for (const namespace of this.state.jobs[jobId]?.namespaces) {
+            if (isJobRemovableFromQueue(this.state.jobs[jobId])) {
+              await this.db.queueJobRemove({ queue: this.address, jobId, namespace });
+            }
           }
         }
-        delete this.state.jobs[jobId];
-        sendBroadcast = true;
-        console.log(`${this.addressShortString} ${getJobColorizedString(jobId)} 🪓 removed from queue`);
+        if (isJobRemovableFromQueue(this.state.jobs[jobId])) {
+          delete this.state.jobs[jobId];
+          sendBroadcast = true;
+          console.log(`${this.addressShortString} ${getJobColorizedString(jobId)} 🪓 removed from queue`);
+        }
       }
     }
 
@@ -1258,6 +1293,7 @@ export class BaseDockerJobQueue {
           return;
         }
         const possibleMessage: WebsocketMessageClientToServer = JSON.parse(messageString);
+        console.log(`${this.addressShortString} 🌎 BROWSER message`, possibleMessage);
         switch (possibleMessage.type) {
           case WebsocketMessageTypeClientToServer.StateChange: {
             const change: StateChange = possibleMessage.payload as StateChange;
@@ -1332,6 +1368,9 @@ export class BaseDockerJobQueue {
       let job: InMemoryDockerJob | undefined | null = this.state.jobs[jobId];
       if (!job) {
         job = await this.db.queueJobGet({ queue: this.address, jobId });
+      }
+      if (!job) {
+        job = await this.db.getFinishedJob(jobId);
       }
 
       if (!job) {

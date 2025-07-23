@@ -70,8 +70,8 @@ export const useSendJobOutputs = () => {
       let cancelled = false;
       (async () => {
         const retrievedFinishedJob = await cache.getFinishedJob(dockerJobServerTuple?.[0]);
-        if (!cancelled && retrievedFinishedJob) {
-          setStateFinished(retrievedFinishedJob);
+        if (!cancelled && retrievedFinishedJob?.finished) {
+          setStateFinished(retrievedFinishedJob.finished);
         }
       })();
       return () => {

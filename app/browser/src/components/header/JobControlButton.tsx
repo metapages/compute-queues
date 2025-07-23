@@ -63,7 +63,6 @@ export const JobControlButton: React.FC = () => {
   }, [saveInputFileAndRun, setUserClickedRun]);
 
   const onClickRun = useCallback(() => {
-    console.log("onClickRun");
     submitJob();
     setUserClickedRun(true);
   }, [submitJob, setUserClickedRun]);
@@ -196,11 +195,11 @@ export const JobControlButton: React.FC = () => {
         switch (reason) {
           case DockerJobFinishedReason.Deleted:
             return runButton;
+          case DockerJobFinishedReason.Cancelled:
+          case DockerJobFinishedReason.JobReplacedByClient:
           case DockerJobFinishedReason.Error:
           case DockerJobFinishedReason.Success:
-          case DockerJobFinishedReason.Cancelled:
           case DockerJobFinishedReason.TimedOut:
-          case DockerJobFinishedReason.JobReplacedByClient:
             return deleteMaybeRetryButton;
           case DockerJobFinishedReason.WorkerLost:
             return cancelButton;

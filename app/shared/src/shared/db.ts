@@ -24,6 +24,7 @@ import {
   formatDefinitionS3Key,
   formatResultsS3Key,
   getJobColorizedString,
+  getJobStateString,
   getQueueColorizedString,
   isJobOkForSending,
   resolveMostCorrectJob,
@@ -181,12 +182,15 @@ export class DB {
       // ok here means that the job *can* be set to Queued
       // but before that, we need to check if the job is finished
 
-      const existsingFinishedJob = await this.getFinishedJob(jobId);
-
-      if (existsingFinishedJob) {
-        const tentativeEnqueudJob = setJobStateQueued(existsingFinishedJob, { time: now });
-        const mostCorrectJob = resolveMostCorrectJob(existsingFinishedJob, tentativeEnqueudJob);
-        if (mostCorrectJob === existsingFinishedJob) {
+      const existingFinishedJob = await this.getFinishedJob(jobId);
+      // console.log(`🌎 queueJobAdd existsingFinishedJob ${jobId}`, existingFinishedJob);
+      if (existingFinishedJob) {
+        const tentativeEnqueudJob = setJobStateQueued(existingFinishedJob, { time: now });
+        const mostCorrectJob = resolveMostCorrectJob(existingFinishedJob, tentativeEnqueudJob);
+        if (mostCorrectJob === existingFinishedJob) {
+          // console.log(
+          //   `🌎 queueJobAdd existsingFinishedJob same after resolving, adding namespace and returning it ${jobId}`,
+          // );
           // add namespaces, queue, and return
           // no change, but update the namespace
           this.queueJobAddNamespace({
@@ -217,7 +221,7 @@ export class DB {
       const control = job?.control || {};
       const definitionS3Key = formatDefinitionS3Key(jobId);
 
-      if (!existsingFinishedJob && !definitionCache.has(definitionS3Key)) {
+      if (!existingFinishedJob && !definitionCache.has(definitionS3Key)) {
         await putJsonToS3(
           definitionS3Key,
           job.definition,
@@ -225,7 +229,7 @@ export class DB {
         definitionCache.set(definitionS3Key, job.definition);
       }
 
-      if (existingNamespaces.length === 0 && !existsingFinishedJob) {
+      if (existingNamespaces.length === 0 && !existingFinishedJob) {
         await this.kv
           .atomic()
           .set(["job", jobId], definitionS3Key, { expireIn: JobDataCacheDurationMilliseconds })
@@ -368,15 +372,15 @@ export class DB {
     return existingJob.value;
   }
 
-  async getJobFinishedResults(jobId: string): Promise<StateChangeValueFinished | undefined> {
+  async getJobFinishedResults(jobId: string): Promise<InMemoryDockerJob | undefined> {
     const resultsS3Key = formatResultsS3Key(jobId);
-    const results: StateChangeValueFinished | undefined = await getJsonFromS3(resultsS3Key);
+    const results: InMemoryDockerJob | undefined = await getJsonFromS3(resultsS3Key);
     return results;
   }
 
   async persistJobFinishedResults(args: {
     jobId: string;
-    results: StateChangeValueFinished;
+    results: InMemoryDockerJob;
   }) {
     const { jobId, results } = args;
     const key = formatResultsS3Key(jobId);
@@ -406,6 +410,11 @@ export class DB {
 
     // validate we can apply the change
     let mostCorrectJob = resolveMostCorrectJob(existingJob, setJobStateFinished(existingJob, { finished: change }));
+    // console.log(
+    //   `${getQueueColorizedString(queue)} ${getJobColorizedString(jobId)} 🌎 setJobFinished existingJob=${
+    //     getJobStateString(existingJob)
+    //   } mostCorrectJob=${getJobStateString(mostCorrectJob)}:`,
+    // );
 
     // get all job-queues-namespaces for this job and update all the histories
     // ["job-queue-namespace", jobId, queue, namespace]
@@ -512,6 +521,10 @@ export class DB {
           namespaces: currentNamespaces,
         };
         // now if there are no namespaces left, we can actually delete the job
+        console.log(
+          `${getQueueColorizedString(queue)} ${getJobColorizedString(jobId)} 🌎 setJobFinished currentNamespaces:`,
+          currentNamespaces,
+        );
         if (currentNamespaces.length === 0) {
           console.log(`💥💥💥 deleting job ${jobId} from db`);
           await this.deleteFinishedJob(jobId);
@@ -632,13 +645,12 @@ export class DB {
 
   async getFinishedJob(jobId: string): Promise<InMemoryDockerJob | null> {
     const entry = await this.kv.get<InMemoryDockerJob>(["job-finished", jobId]);
+    console.log(`🌎 getFinishedJob ${jobId}`, entry.value);
     return entry.value;
   }
 
   async setFinishedJob(jobId: string, value: InMemoryDockerJob): Promise<InMemoryDockerJob> {
-    if (value.finished) {
-      await this.persistJobFinishedResults({ jobId, results: value.finished });
-    }
+    await this.persistJobFinishedResults({ jobId, results: value });
     // the local job doesn't store the much bigger results
     if (value.finished) {
       value = { ...value };

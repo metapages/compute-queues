@@ -40,8 +40,8 @@ export const DisplayLogs: React.FC<{
       if (cancelled) {
         return;
       }
-      if (finishedJob?.result?.outputs) {
-        setOutputCount(Object.keys(finishedJob.result.outputs).length);
+      if (finishedJob?.finished?.result?.outputs) {
+        setOutputCount(Object.keys(finishedJob?.finished?.result?.outputs).length);
       }
 
       // if (result && result.outputs && mode.includes("stdout")) {

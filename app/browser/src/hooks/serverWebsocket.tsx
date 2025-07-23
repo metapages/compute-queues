@@ -127,6 +127,7 @@ export const serverWebsocket = (): void => {
             break;
         }
         if (broadcastJobStates?.state?.jobs) {
+          // console.log(`🔥 from server:`, broadcastJobStates?.state?.jobs);
           setJobStates(broadcastJobStates?.state?.jobs, broadcastJobStates.isSubset);
         }
         setRawMessage(possibleMessage);

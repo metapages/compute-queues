@@ -1,5 +1,11 @@
 import Dexie from "dexie";
-import { DockerJobDefinitionInputRefs, StateChangeValueFinished } from "/@shared/client";
+import {
+  DockerJobDefinitionInputRefs,
+  DockerJobFinishedReason,
+  DockerJobState,
+  InMemoryDockerJob,
+  isFinishedStateWorthCaching,
+} from "/@shared/client";
 
 import { getIOBaseUrl } from "./config";
 import { getQueueFromUrl } from "./hooks/useQueue";
@@ -15,7 +21,7 @@ const fetch = fetchRetry(originalFetch, {
 
 interface IJobsFinished {
   id: string;
-  job: StateChangeValueFinished;
+  job: InMemoryDockerJob;
   created_at: Date;
 }
 
@@ -53,7 +59,51 @@ class LocalDatabase extends Dexie {
     });
   }
 
-  async saveFinishedJob(id: string, job: StateChangeValueFinished): Promise<void> {
+  /**
+   * The server doesn't send the full finished job because it can be v large.
+   * So we download the finished job if we haven't before
+   */
+  async processJob(jobId: string, job: InMemoryDockerJob): Promise<InMemoryDockerJob> {
+    if (
+      job.state === DockerJobState.Finished &&
+      !job.finished &&
+      job.finishedReason &&
+      isFinishedStateWorthCaching(job.finishedReason)
+    ) {
+      const existingFinishedJob = await this.getFinishedJob(jobId);
+      if (existingFinishedJob) {
+        // console.log(
+        //   `${getJobColorizedString(jobId)} 🔻 ✅ 👜 processJob got ${getJobStateString(existingFinishedJob)}`,
+        // );
+        return existingFinishedJob;
+      }
+
+      const queue = getQueueFromUrl();
+      const finishedUrl = `${getIOBaseUrl(queue)}/j/${jobId}/result.json`;
+      const response = await fetch(finishedUrl, { redirect: "follow" });
+      if (!response.ok) {
+        // console.error(`🔻 ❌  getFinishedJob: ${finishedUrl}`, response);
+        return job;
+      }
+
+      const json: { data: InMemoryDockerJob | null } = await response.json();
+      if (json.data) {
+        // console.log(
+        //   `${getJobColorizedString(jobId)} 🔻 ✅ 👜 getFinishedJob: saveFinishedJob ${getJobStateString(json.data)}`,
+        // );
+        await this.saveFinishedJob(jobId, json.data);
+        return json.data;
+      }
+    }
+
+    if (job.state === DockerJobState.Finished && job.finishedReason === DockerJobFinishedReason.Deleted) {
+      await this.deleteFinishedJob(jobId);
+    }
+
+    return job;
+  }
+
+  async saveFinishedJob(id: string, job: InMemoryDockerJob): Promise<void> {
     // console.log(`🔻🔻 👜  savesMenuDefinition (channel=${channel.substring(0, 24)})`, menusDefinition);
     await this.jobsFinished.put({
       id,
@@ -63,27 +113,16 @@ class LocalDatabase extends Dexie {
     // console.log(`🔻 ✅ 👜 saveFinishedJob`);
   }
 
-  async getFinishedJob(id: string): Promise<StateChangeValueFinished | undefined> {
+  async getFinishedJob(id: string): Promise<InMemoryDockerJob | undefined> {
     const jobsFinished = await this.jobsFinished.where({ id }).toArray();
     if (jobsFinished?.[0]?.job) {
+      // if (jobsFinished[0].job.finishedReason === DockerJobFinishedReason.Deleted) {
+      //   return;
+      // }
       return jobsFinished[0].job;
     }
 
-    const queue = getQueueFromUrl();
-    const finishedUrl = `${getIOBaseUrl(queue)}/j/${id}/result.json`;
-    const response = await fetch(finishedUrl, { redirect: "follow" });
-    if (!response.ok) {
-      // console.error(`🔻 ❌  getFinishedJob: ${finishedUrl}`, response);
-      return;
-    }
-
-    const json: { data: StateChangeValueFinished | null } = await response.json();
-    if (json.data) {
-      // console.log(`${getJobColorizedString(id)} 🔻 ✅ 👜 getFinishedJob: saveFinishedJob`, json.data);
-      this.saveFinishedJob(id, json.data);
-    }
-
-    return json.data;
+    // return json.data;
   }
 
   async deleteFinishedJob(id: string): Promise<void> {
