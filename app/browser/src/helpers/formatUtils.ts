@@ -28,7 +28,7 @@ export const getOutputs = async (jobId: string, job: InMemoryDockerJob): Promise
     return Promise.resolve(EmptyOutputs);
   }
   const finishedJob = await cache.getFinishedJob(jobId);
-  return finishedJob?.result?.outputs || EmptyOutputs;
+  return finishedJob?.finished?.result?.outputs || EmptyOutputs;
 };
 
 const EmptyOutputs: InputsRefs = {};

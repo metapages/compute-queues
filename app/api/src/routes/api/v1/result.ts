@@ -9,9 +9,17 @@ export const getJobResultHandler = async (c: Context) => {
       return c.json({ error: "No job provided" });
     }
 
-    const results = await db.getJobFinishedResults(jobId);
+    // this stores the job, but without the full (large) results
+    const jobWithoutMaybeLargeResults = await db.getFinishedJob(jobId);
+    if (!jobWithoutMaybeLargeResults) {
+      return c.json({ data: null });
+    }
 
-    return c.json({ data: results || null });
+    // if the above exists, then get the full from s3
+    const finishedJobFull = await db.getJobFinishedResults(jobId);
+    // const jobWithResults = { ...jobWithoutMaybeLargeResults, results };
+
+    return c.json({ data: finishedJobFull });
   } catch (err) {
     console.error("Error getting results", err);
     return c.text((err as Error).message, 500);

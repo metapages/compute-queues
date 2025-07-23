@@ -250,6 +250,12 @@ export const getJobResultsHandler = async (c: Context) => {
     }
 
     const jobQueue = await ensureQueue(queue);
+
+    const jobWithoutMaybeLargeResults = await jobQueue.db.getFinishedJob(jobId);
+    if (!jobWithoutMaybeLargeResults) {
+      return c.json({ data: null });
+    }
+
     const result = await jobQueue.db.getJobFinishedResults(jobId);
     return c.json({ data: result || null });
   } catch (err) {

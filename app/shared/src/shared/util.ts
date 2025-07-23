@@ -18,6 +18,17 @@ export const getJobStateString = (job?: InMemoryDockerJob | undefined | null): s
   return job.state === DockerJobState.Finished ? `Finished(${job.finishedReason})` : `${job.state}`;
 };
 
+export const isFinishedStateWorthCaching = (reason: DockerJobFinishedReason): boolean => {
+  switch (reason) {
+    case DockerJobFinishedReason.Success:
+    case DockerJobFinishedReason.TimedOut:
+    case DockerJobFinishedReason.Error:
+      return true;
+    default:
+      return false;
+  }
+};
+
 export const isJobDeletedOrRemoved = (job?: InMemoryDockerJob | undefined | null): boolean => {
   return job?.state === DockerJobState.Removed || job?.finishedReason === DockerJobFinishedReason.Deleted;
 };
@@ -329,7 +340,8 @@ export const resolveMostCorrectJob = (
             case DockerJobFinishedReason.JobReplacedByClient:
               return jobB;
             case DockerJobFinishedReason.Cancelled:
-              return jobB;
+              // if jobA was queued AFTER jobB was cancelled, then jobA is the correct one
+              return jobA.time > jobB.time ? jobA : jobB;
             case DockerJobFinishedReason.Deleted:
               return jobA;
             default:
@@ -383,7 +395,8 @@ export const resolveMostCorrectJob = (
             case DockerJobFinishedReason.JobReplacedByClient:
               return jobA;
             case DockerJobFinishedReason.Cancelled:
-              return jobA;
+              // if jobB was queued AFTER jobA was cancelled, then jobB is the correct one
+              return jobB.time > jobA.time ? jobB : jobA;
             case DockerJobFinishedReason.Deleted:
               return jobB;
             default:
@@ -407,7 +420,8 @@ export const resolveMostCorrectJob = (
                 case DockerJobFinishedReason.JobReplacedByClient:
                   return jobA;
                 case DockerJobFinishedReason.Cancelled:
-                  return jobA;
+                  // it has already been cancelled.
+                  return jobB;
                 case DockerJobFinishedReason.Deleted:
                   return jobB;
                 default:
@@ -478,6 +492,7 @@ export const resolveMostCorrectJob = (
             case DockerJobFinishedReason.Cancelled:
               switch (jobB.finishedReason as DockerJobFinishedReason) {
                 case DockerJobFinishedReason.Success:
+                  // it has already been cancelled.
                   return jobA;
                 case DockerJobFinishedReason.TimedOut:
                   return jobB;

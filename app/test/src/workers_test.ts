@@ -7,7 +7,7 @@ import {
   DockerJobFinishedReason,
   DockerJobState,
   fetchRobust,
-  type StateChangeValueFinished,
+  type InMemoryDockerJob,
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
@@ -94,13 +94,13 @@ Deno.test(
           if (jobState.state === DockerJobState.Finished) {
             assertEquals(jobState.finishedReason, DockerJobFinishedReason.Success);
 
-            const { data: finishedState }: { data: StateChangeValueFinished } =
+            const { data: finishedState }: { data: InMemoryDockerJob } =
               await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`))
                 .json();
-            assertEquals(finishedState?.result?.StatusCode, 0);
+            assertEquals(finishedState?.finished?.result?.StatusCode, 0);
 
             // jobState.value as StateChangeValueFinished;
-            const lines: string = finishedState.result?.logs?.map(
+            const lines: string = finishedState?.finished?.result?.logs?.map(
               (l) => l[0],
             )[0]!;
             finalWorker = finishedState.worker || "";

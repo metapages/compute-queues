@@ -203,19 +203,23 @@ open mode="remote": _ensure-all
 
 # Calls the status endpoint of the local dev stack
 status-dev:
-    curl https://{{ APP_FQDN }}:{{ APP_PORT }}/local1/status | jq .
+    curl https://{{ APP_FQDN }}:{{ APP_PORT }}/local1/status 2>/dev/null | jq .
 
 # Calls the status endpoint of the local test stack
 status-test port:
-    curl https://{{ APP_FQDN }}:{{ port }}/local1/status | jq .
+    curl https://{{ APP_FQDN }}:{{ port }}/local1/status 2>/dev/null | jq .
 
 # Calls the status endpoint of the production API at a given queue
 status-prod queue="public1":
-    curl https://container.mtfm.io/{{ queue }}/status | jq .
+    curl https://container.mtfm.io/{{ queue }}/status 2>/dev/null | jq .
 
 # Calls the status endpoint of the production API at a given queue
 status-local:
-    curl http://localhost:8000/local/status | jq .
+    curl http://localhost:8000/local/status  2>/dev/null | jq .
+
+# Calls the status endpoint of the production API at a given queue
+results-dev-job jobId:
+    curl https://{{ APP_FQDN }}:{{ APP_PORT }}/j/{{ jobId }}/result.json  2>/dev/null | jq .
 
 # Clean up the test stack, if it didn't exit cleanly
 @test-cleanup:

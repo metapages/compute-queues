@@ -1081,6 +1081,7 @@ export class DockerJobQueue {
               `${this.workerIdShort} ${getJobColorizedString(jobId)} 🚨 Error inspecting container for job:`,
               err,
             );
+            this._killJobAndIgnore(jobId, "container missing or dead");
           }
         }
       } catch (err) {

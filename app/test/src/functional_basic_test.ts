@@ -8,6 +8,7 @@ import {
   DockerJobState,
   fetchRobust,
   getJobColorizedString,
+  type InMemoryDockerJob,
   type StateChangeValueFinished,
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
@@ -72,17 +73,17 @@ Deno.test(
               DockerJobFinishedReason.Success,
               `${getJobColorizedString(jobId)} not a success:${JSON.stringify(jobState, null, 2)}`,
             );
-            const { data: finishedState }: { data: StateChangeValueFinished } =
+            const { data: finishedState }: { data: InMemoryDockerJob } =
               await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`, { redirect: "follow" }))
                 .json();
             assertExists(
               finishedState,
               `${getJobColorizedString(jobId)} no finishedState:${JSON.stringify(jobState, null, 2)}`,
             );
-            const lines: string = finishedState.result?.logs?.map(
+            const lines: string = finishedState?.finished?.result?.logs?.map(
               (l) => l[0],
             ).join("")!;
-            finalJobState = finishedState;
+            finalJobState = finishedState?.finished;
             resolve(lines);
           }
           break;
