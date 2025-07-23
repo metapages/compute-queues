@@ -24,7 +24,6 @@ import {
   formatDefinitionS3Key,
   formatResultsS3Key,
   getJobColorizedString,
-  getJobStateString,
   getQueueColorizedString,
   isJobOkForSending,
   resolveMostCorrectJob,
