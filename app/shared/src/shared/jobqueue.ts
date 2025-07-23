@@ -44,6 +44,7 @@ import {
 } from "/@/shared/types.ts";
 import {
   getJobColorizedString,
+  getJobStateString,
   getQueueColorizedString,
   getWorkerColorizedString,
   isJobDeletedOrRemoved,
@@ -1483,6 +1484,13 @@ export class BaseDockerJobQueue {
 
   async broadcastJobStatesToWebsockets(jobIds?: string[]) {
     const messageString = await this.createWebsocketBroadcastMessageJobStates(jobIds);
+    console.log(
+      `broadcastJobStatesToWebsockets (clients=${this.clients.length}) (workers=${this.workers.myWorkers.length}) [${
+        (jobIds || []).map((jobId) => `${getJobColorizedString(jobId)}=${getJobStateString(this.state.jobs[jobId])}`)
+          .join(", ")
+      }]`,
+      messageString?.substring(0, 100),
+    );
     if (!messageString) {
       return;
     }

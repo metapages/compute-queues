@@ -384,8 +384,8 @@ export async function connectToServer(
   };
   setTimeout(reconnectCheck, reconnectCheckInterval);
 
-  const logGotJobStatesEvery = 10;
-  let currentGotJobStates = 0;
+  // const logGotJobStatesEvery = 10;
+  // let currentGotJobStates = 0;
   let timeSinceLastJobStates = 0;
 
   const twentySeconds = ms("20s") as number;
@@ -443,10 +443,17 @@ export async function connectToServer(
         }
 
         case WebsocketMessageTypeServerBroadcast.JobStates: {
-          timeSinceLastJobStates = Date.now();
           const allJobsStatesPayload = possibleMessage
             .payload as BroadcastJobStates;
-          currentGotJobStates++;
+
+          // there's a bug where we get this message, but no job states, is
+          // this a production bug, a failure in broadcasting, or something else?
+          // we are going to only count job states with actual jobs.
+          const jobCount = Object.keys(allJobsStatesPayload?.state?.jobs || {}).length;
+          if (jobCount > 0) {
+            timeSinceLastJobStates = Date.now();
+            // currentGotJobStates++;
+          }
 
           // if (Object.keys(allJobsStatesPayload?.state?.jobs || {}).length > 0) {
           //   console.log(
@@ -458,14 +465,14 @@ export async function connectToServer(
           //     );
           //   }
 
-          if (currentGotJobStates > logGotJobStatesEvery) {
-            // console.log(
-            //   `[${workerId?.substring(0, 6)}] got JobStates(${
-            //     allJobsStatesPayload?.state?.jobs?.length || 0
-            //   }) (only logging every ${logGotJobStatesEvery} messages)`,
-            // );
-            currentGotJobStates = 0;
-          }
+          // if (currentGotJobStates > logGotJobStatesEvery) {
+          //   // console.log(
+          //   //   `[${workerId?.substring(0, 6)}] got JobStates(${
+          //   //     allJobsStatesPayload?.state?.jobs?.length || 0
+          //   //   }) (only logging every ${logGotJobStatesEvery} messages)`,
+          //   // );
+          //   currentGotJobStates = 0;
+          // }
 
           if (!allJobsStatesPayload) {
             console.log({
@@ -478,9 +485,17 @@ export async function connectToServer(
           break;
         }
         case WebsocketMessageTypeServerBroadcast.JobStateUpdates: {
-          timeSinceLastJobStates = Date.now();
-          timeSinceLastJobStates = Date.now();
           const someJobsPayload = possibleMessage.payload as BroadcastJobStates;
+
+          // there's a bug where we get this message, but no job states, is
+          // this a production bug, a failure in broadcasting, or something else?
+          // we are going to only count job states with actual jobs.
+          const jobCount = Object.keys(someJobsPayload?.state?.jobs || {}).length;
+          if (jobCount > 0) {
+            timeSinceLastJobStates = Date.now();
+            // currentGotJobStates++;
+          }
+
           if (!someJobsPayload) {
             console.log({
               error: "Missing payload in message",
