@@ -255,6 +255,11 @@ export const useStore = create<MainStore>((set, get) => ({
           // console.log(`setJobStates.2 ${getJobColorizedString(jobHash)} ${getJobStateString(mostCorrectJob)} 👀 store.setJobStates resolveMostCorrectJob is different`);
           newJobStates[jobHash] = mostCorrectJob;
         }
+      } else if (cachedFinishedState && !serverJobState) {
+        // use the local cache!
+        newJobStates[jobHash] = {
+          ...cachedFinishedState,
+        };
       }
     }
 
@@ -270,6 +275,20 @@ export const useStore = create<MainStore>((set, get) => ({
 
     for (const [jobId, job] of Object.entries(replacementsFromCache)) {
       newJobStates[jobId] = job;
+    }
+
+    if (newJobStates[jobHash]) {
+      // check for data that has changed shape and set the job to error so it can be deleted
+      if ((newJobStates[jobHash] as { reason?: string })["reason"]) {
+        console.log("Found incompatible job, converted to error to allow deletion", newJobStates[jobHash]);
+        // set to errored
+        newJobStates[jobHash] = {
+          ...newJobStates[jobHash],
+          state: DockerJobState.Finished,
+          finishedReason: DockerJobFinishedReason.Error,
+          time: Date.now(),
+        };
+      }
     }
 
     const serverJobState = newJobStates[jobHash];
