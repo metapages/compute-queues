@@ -8,7 +8,7 @@ import {
   DockerJobState,
   fetchRobust,
   getJobColorizedString,
-  type StateChangeValueFinished,
+  type InMemoryDockerJob,
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
@@ -85,13 +85,13 @@ Deno.test("submit multiple jobs and get expected results", async () => {
                 JSON.stringify(jobState, null, 2)
               }`,
             );
-            const { data: finishedState }: { data: StateChangeValueFinished } =
+            const { data: finishedState }: { data: InMemoryDockerJob } =
               await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`))
                 .json();
             // console.log(`${getJobColorizedString(jobId)}:  finishedState`, finishedState);
             assertExists(finishedState);
-            assertEquals(finishedState?.result?.StatusCode, 0);
-            const lines: string = finishedState.result?.logs?.map(
+            assertEquals(finishedState?.finished?.result?.StatusCode, 0);
+            const lines: string = finishedState?.finished?.result?.logs?.map(
               (l) => l[0],
             ).join("").trim()!;
             const i = messages.findIndex((m) => m.jobId === jobId);

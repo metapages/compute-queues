@@ -8,8 +8,8 @@ import {
   DockerJobState,
   fetchRobust,
   getJobColorizedString,
+  type InMemoryDockerJob,
   MAX_TIME_FINISHED_JOB_IN_QUEUE,
-  type StateChangeValueFinished,
 } from "@metapages/compute-queues-shared";
 
 import { cancelJobOnQueue, queueJobs } from "./util.ts";
@@ -83,7 +83,7 @@ Deno.test(
 
       // check the job is finished
       if (job?.state && job.state === DockerJobState.Finished) {
-        const { data: finishedState }: { data: StateChangeValueFinished } =
+        const { data: finishedState }: { data: InMemoryDockerJob } =
           await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`, { redirect: "follow" }))
             .json();
 
@@ -92,7 +92,7 @@ Deno.test(
           DockerJobFinishedReason.Success,
           `Job finishedState not a success? ${JSON.stringify(finishedState)}`,
         );
-        assertEquals(finishedState?.result?.StatusCode, 0);
+        assertEquals(finishedState?.finished?.result?.StatusCode, 0);
         break;
       }
 
