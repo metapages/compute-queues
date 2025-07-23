@@ -992,15 +992,15 @@ export class BaseDockerJobQueue {
         continue;
       }
 
-      if (isJobRemovableFromQueue(this.state.jobs[jobId])) {
+      if (this.state.jobs[jobId] && isJobRemovableFromQueue(this.state.jobs[jobId])) {
         if (this.state.jobs[jobId]?.namespaces) {
           for (const namespace of this.state.jobs[jobId]?.namespaces) {
-            if (isJobRemovableFromQueue(this.state.jobs[jobId])) {
+            if (this.state.jobs[jobId] && isJobRemovableFromQueue(this.state.jobs[jobId])) {
               await this.db.queueJobRemove({ queue: this.address, jobId, namespace });
             }
           }
         }
-        if (isJobRemovableFromQueue(this.state.jobs[jobId])) {
+        if (this.state.jobs[jobId] && isJobRemovableFromQueue(this.state.jobs[jobId])) {
           delete this.state.jobs[jobId];
           sendBroadcast = true;
           console.log(`${this.addressShortString} ${getJobColorizedString(jobId)} 🪓 removed from queue`);
