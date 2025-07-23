@@ -268,13 +268,15 @@ export class DockerJobQueue {
     message: computeQueuesShared.BroadcastJobStates,
   ) {
     message.isSubset = false;
-    console.log(
-      `${getWorkerColorizedString(this.workerId)} JobStateUpdates [isSubset=${message.isSubset}] from server: ${
-        Object.keys(message?.state?.jobs || {}).map((jobId) =>
-          getJobColorizedString(jobId) + `(${message.state.jobs[jobId].state})`
-        ).join(", ")
-      }`,
-    );
+    if (Object.keys(message?.state?.jobs || {}).length > 0 || !message.isSubset) {
+      console.log(
+        `${getWorkerColorizedString(this.workerId)} JobStateUpdates [isSubset=${message.isSubset}] from server: ${
+          Object.keys(message?.state?.jobs || {}).map((jobId) =>
+            getJobColorizedString(jobId) + `(${message.state.jobs[jobId].state})`
+          ).join(", ")
+        }`,
+      );
+    }
     this._updateApiQueue(message);
     this._checkRunningJobs();
     await this._claimJobs();

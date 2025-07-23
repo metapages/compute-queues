@@ -144,6 +144,13 @@ export enum DockerJobFinishedReason {
   Deleted = "Deleted",
 }
 
+// TODO: this tells us that we need two finished states
+export const isFinalDockerJobFinishedReason = (reason?: DockerJobFinishedReason): boolean => {
+  return reason === DockerJobFinishedReason.Error ||
+    reason === DockerJobFinishedReason.Success ||
+    reason === DockerJobFinishedReason.TimedOut;
+};
+
 export type DockerJobStateValue =
   | StateChangeValueQueued
   | StateChangeValueRunning

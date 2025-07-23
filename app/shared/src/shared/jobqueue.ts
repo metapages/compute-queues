@@ -14,7 +14,6 @@ import { ms } from "ms";
 import { createNanoEvents, type Emitter } from "nanoevents";
 import { delay } from "std/async/delay";
 import { DB } from "/@/shared/db.ts";
-import { resolvePreferredWorker } from "/@/shared/jobtools.ts";
 import {
   type BroadcastJobDefinitions,
   type BroadcastJobStates,
@@ -98,7 +97,7 @@ const getDeletionDelayForNamespaceSupersededJob = (
   return 0; // default:kill it immediately
 };
 
-const INTERVAL_REMOVE_OLD_FINISHED_JOBS_FROM_QUEUE = ms("10 seconds") as number;
+const INTERVAL_REMOVE_OLD_FINISHED_JOBS_FROM_QUEUE = ms("20 seconds") as number;
 
 type ServerWorkersObject = { [key: string]: WorkerRegistration[] };
 
@@ -172,7 +171,7 @@ interface WorkerMessageEvents {
  * (and send this collapsed to clients)
  */
 export interface CollectedWorkersRegistration {
-  otherWorkers: Map<string, WorkerRegistration[]>;
+  otherWorkers: Record<string, WorkerRegistration[]>;
   myWorkers: {
     connection: WebSocket;
     registration: WorkerRegistration;
@@ -217,7 +216,7 @@ export class BaseDockerJobQueue {
     // console.log("⚠️💥 HARDCODING debug=true, REMOVE ME BEFORE MERGE", debug);
     this.debug = false;
     this.workers = {
-      otherWorkers: new Map(),
+      otherWorkers: {},
       myWorkers: [],
     };
     this.clients = [];
@@ -244,11 +243,6 @@ export class BaseDockerJobQueue {
     this._intervalJobsBroadcast = setInterval(() => {
       this.broadcastJobStatesToWebsockets();
       this.broadcastJobStatesToChannel();
-      // console.log(
-      //   `📡 Periodic full job state sync sent to ${this.workers.myWorkers.length} workers | ${
-      //     Object.keys(this.state.jobs).filter((jobId) => isJobOkForSending(this.state.jobs[jobId])).length
-      //   } jobs`,
-      // );
     }, INTERVAL_JOBS_BROADCAST);
 
     this._intervalCheckForDuplicateJobsSameSource = setInterval(() => {
@@ -316,6 +310,10 @@ export class BaseDockerJobQueue {
                 jobIds.add(jobId);
                 continue;
               }
+              if (isJobRemovableFromQueue(broadcastJob)) {
+                jobIds.add(jobId);
+                continue;
+              }
               // what to do? nothing in the db, but this job is not deleted or removed
               console.log(
                 `${this.addressShortString} ‼️ broadcast merge: ${
@@ -334,7 +332,7 @@ export class BaseDockerJobQueue {
             }
 
             if (mostCorrectJob && isJobDeletedOrRemoved(mostCorrectJob)) {
-              this.db.deleteJobFinishedResults({ jobId });
+              this.db.deleteJobFinishedResults(jobId);
               this.db.deleteJobHistory({ jobId, queue: this.address });
               ourJob = setJobStateRemoved(ourJob);
               this.state.jobs[jobId] = ourJob;
@@ -354,16 +352,31 @@ export class BaseDockerJobQueue {
 
         case "workers": {
           const workersRegistration = payload.value as BroadcastChannelWorkersRegistration;
+          // console.log(
+          //   `${this.addressShortString} 🔔 received workers from other servers: [${
+          //     Object.values(workersRegistration.workers).map((workerList) =>
+          //       workerList.map((w) => getWorkerColorizedString(w.id)).flat()
+          //     ).join(", ")
+          //   }]`,
+          // );
+          // console.log(
+          //   `${this.addressShortString} before processing we know: [${this.getAllKnownWorkerIds().join(", ")}]`,
+          // );
           this.otherWorkersHaveChanged(workersRegistration.workers);
+          // console.log(
+          //   `${this.addressShortString} 🔔 after processing workers from other servers we know: [${
+          //     this.getAllKnownWorkerIds().join(", ")
+          //   }]`,
+          // );
           // combine with ours. if there is a difference to our known
           break;
         }
 
         case "status-request": {
           (async () => {
-            console.log(
-              `🌘 Received status request, collecting local worker status...`,
-            );
+            // console.log(
+            //   `🌘 Received status request, collecting local worker status...`,
+            // );
             const localWorkersResponse = await this.getStatusFromLocalWorkers();
             const response: BroadcastChannelStatusResponse = {
               id: this.serverId,
@@ -381,11 +394,11 @@ export class BaseDockerJobQueue {
                 ),
               ),
             };
-            console.log(
-              `🌘 Sending status response: ${Object.keys(localWorkersResponse).length} workers, ${
-                Object.keys(response.jobs).length
-              } jobs`,
-            );
+            // console.log(
+            //   `🌘 Sending status response: ${Object.keys(localWorkersResponse).length} workers, ${
+            //     Object.keys(response.jobs).length
+            //   } jobs`,
+            // );
             this.channel.postMessage({
               type: "status-response",
               value: response,
@@ -442,7 +455,7 @@ export class BaseDockerJobQueue {
     const jobCount = Object.keys(this.state.jobs).length;
     const localWorkerCount = this.workers.myWorkers.length;
     const otherWorkerCount = Array.from(
-      this.workers.otherWorkers.values(),
+      Object.values(this.workers.otherWorkers),
     ).flat().length;
     const clientCount = this.clients.length;
 
@@ -758,6 +771,7 @@ export class BaseDockerJobQueue {
     //   `${this.addressShortString} ${getJobColorizedString(change.job)} current state`,
     //   this.state.jobs[change.job],
     // );
+
     if (change.state === DockerJobState.Queued) {
       await this.stateChangeJobEnqueue(
         (change.value as StateChangeValueQueued).enqueued,
@@ -789,53 +803,6 @@ export class BaseDockerJobQueue {
     await this.broadcastJobStatesToWebsockets([jobId]);
     this.broadcastJobStatesToChannel([jobId]);
   }
-
-  // public async stateChangeJobRequeued(
-  //   jobId: string,
-  //   change: StateChangeValueReQueued,
-  // ): Promise<void> {
-  //   if (!this.state.jobs[jobId]) {
-  //     // be robust, assume very little.
-  //     const possibleMissedJob = await this.db.queueJobGet({
-  //       queue: this.address,
-  //       jobId,
-  //     });
-  //     if (possibleMissedJob) {
-  //       this.state.jobs[jobId] = possibleMissedJob;
-  //     }
-  //   }
-
-  //   const jobString = getJobColorizedString(jobId);
-  //   if (!this.state.jobs[jobId]) {
-  //     console.log(`${jobString} ❗ ignoring StateChangeValueReQueued because no job in db or memory`, change);
-  //     return;
-  //   }
-
-  //   // previous state
-  //   switch (this.state.jobs[jobId].state) {
-  //     case DockerJobState.Queued:
-  //       console.log(
-  //         `${jobString} Queued -> ReQueued (maybe worker went missing or job was lost) no change`,
-  //       );
-  //       break;
-  //     case DockerJobState.Running: {
-  //       console.log(
-  //         `${jobString} Running -> ReQueued? ❗❗ I hope this is because the worker went missing ❗`,
-  //       );
-  //       // await updateState(true);
-  //       break;
-  //     }
-  //     case DockerJobState.Finished: {
-  //       console.log(
-  //         `${jobString} Finished -> ReQueued? What ❓❓❓. Rebroadcasting state`,
-  //       );
-
-  //       break;
-  //     }
-  //   }
-
-  //   await this.broadcastCurrentStateBecauseIDoubtStateIsSynced(jobId);
-  // }
 
   public async stateChangeJobFinished(
     jobId: string,
@@ -934,86 +901,25 @@ export class BaseDockerJobQueue {
       return;
     }
 
+    const possiblelyNewJob: InMemoryDockerJob = setJobStateRunning(this.state.jobs[jobId], {
+      worker: change.worker,
+      time: change.time,
+    });
+    const mostCorrectJob = resolveMostCorrectJob(this.state.jobs[jobId], possiblelyNewJob);
+    if (mostCorrectJob === this.state.jobs[jobId]) {
+      return;
+    }
+
     console.log(`${this.addressShortString} ${getJobColorizedString(jobId)} 🤡 stateChangeJobRunning`, change);
 
-    try {
-      let updateState = false;
-      switch (this.state.jobs[jobId].state) { // previous state
-        case DockerJobState.Finished: {
-          // it can NEVER go from Finished to Running, it has to be re-queued
-          console.log(
-            `${jobString} ignoring request state change ${DockerJobState.Running} !=> ${DockerJobState.Finished}\ncurrent job: ${
-              JSON.stringify(this.state.jobs[jobId])
-            }\nchange: ${JSON.stringify(change)}`,
-          );
-          break;
-        }
-        // yeah running can be set again, e.g. updated the value to include sub-states
-        case DockerJobState.Running: {
-          // ok some other worker, or the same one, is saying it's running again
-          // If the worker is the same, then it's just an update
-          // If the worker is different, then possibly two have claimed the
-          // same job. This is possible because claiming a job is not a transaction
-          // so that jobs are worked on as fast as possible, but this means that
-          // a duplicate job might be started. The duplicate job will be very quickly
-          // removed by overwriting, and the worker will see that another worker
-          // claimed the job they are working on and kill it's unneeded job.
-          // We need to blast the job state again to all workers and api servers
-          // so they can overwrite.
+    this.state.jobs[jobId] = possiblelyNewJob;
+    await this.db.setJobRunning({
+      jobId,
+      worker: change.worker,
+      time: change.time,
+    });
 
-          // TODO: check the worker
-          // update the value if changed, that's a sub-state
-          const currentRunningWorker = this.state.jobs[jobId].worker;
-          const incomingWorker = change.worker;
-
-          if (currentRunningWorker !== incomingWorker) {
-            const preferredWorker = resolvePreferredWorker(
-              currentRunningWorker,
-              incomingWorker,
-            );
-            const preferCurrentWorker = preferredWorker === currentRunningWorker;
-            console.log(
-              `${jobString}] Running -> Running, but different worker, assigning to ${
-                getWorkerColorizedString(preferredWorker)
-              }`,
-            );
-            if (!preferCurrentWorker) {
-              // overwrite the current state
-              updateState = true;
-            }
-          } else {
-            console.log(
-              `${jobString} 🇨🇭🇨🇭🇨🇭 Running -> Running, same worker, so doing nothing: ${
-                getWorkerColorizedString(change.worker)
-              }`,
-            );
-          }
-          break;
-        }
-        case DockerJobState.Queued: {
-          // queued to running is great
-          updateState = true;
-          break;
-        }
-        default:
-          break;
-      }
-      if (updateState && this.state.jobs[jobId].state === DockerJobState.Queued) {
-        this.state.jobs[jobId] = setJobStateRunning(this.state.jobs[jobId], {
-          worker: change.worker,
-          time: change.time,
-        });
-
-        await this.db.setJobRunning({
-          jobId,
-          worker: change.worker,
-          time: change.time,
-        });
-      }
-      await this.broadcastCurrentStateBecauseIDoubtStateIsSynced(jobId);
-    } catch (err) {
-      console.log(`💥💥💥 ERROR ${err}`, (err as Error).stack);
-    }
+    await this.broadcastCurrentStateBecauseIDoubtStateIsSynced(jobId);
   }
 
   // Mark methods that could be overridden as protected
@@ -1024,93 +930,12 @@ export class BaseDockerJobQueue {
     }
 
     const jobId = enqueued.id;
-    const namespace = enqueued?.control?.namespace || DefaultNamespace;
-
-    let okToEnqueue = false;
-    if (this.state.jobs[jobId]) {
-      // previous state
-      switch (this.state.jobs[jobId].state) {
-        case DockerJobState.Queued:
-        case DockerJobState.Running: {
-          console.log(
-            `${getJobColorizedString(jobId)} Queued -> ${
-              this.state.jobs[jobId].state
-            } ignoring queue request, job already queued or running`,
-          );
-
-          this.db.queueJobAddNamespace({
-            queue: this.address,
-            jobId,
-            namespace,
-          });
-          const namespaces = await this.db.queueJobGetNamespaces({ queue: this.address, jobId });
-          this.state.jobs[jobId].namespaces = namespaces;
-
-          this.checkForSourceConflicts();
-          await this.broadcastCurrentStateBecauseIDoubtStateIsSynced(jobId);
-          break;
-        }
-        case DockerJobState.Finished: {
-          const finishedReason = this.state.jobs[jobId].finishedReason || DockerJobFinishedReason.Error;
-
-          switch (finishedReason) {
-            case DockerJobFinishedReason.Cancelled:
-            case DockerJobFinishedReason.Deleted:
-            case DockerJobFinishedReason.JobReplacedByClient:
-              console.log(
-                `${getJobColorizedString(jobId)} restarting from user`,
-              );
-              okToEnqueue = true;
-              // await updateState(true);
-              break;
-            case DockerJobFinishedReason.WorkerLost:
-              console.log(
-                `!!!! BAD LOGIC ${
-                  getJobColorizedString(
-                    jobId,
-                  )
-                } restarting from worker lost`,
-              );
-              okToEnqueue = true;
-              // await updateState();
-              break;
-            case DockerJobFinishedReason.Success:
-            case DockerJobFinishedReason.Error:
-            case DockerJobFinishedReason.TimedOut:
-              console.log(
-                `${
-                  getJobColorizedString(
-                    jobId,
-                  )
-                } ignoring Queued request current state=[${
-                  this.state.jobs[jobId].state
-                }] reason=[${finishedReason}], job finished and not restartable`,
-              );
-              await this.broadcastCurrentStateBecauseIDoubtStateIsSynced(jobId);
-              break;
-          }
-          break;
-        }
-      }
-    } else {
-      // TODO: check for finished jobs in the db
-      console.log(
-        `${this.addressShortString} ${
-          getJobColorizedString(
-            jobId,
-          )
-        } adding new job row to local state as Queued`,
-      );
-      okToEnqueue = true;
-    }
-    if (!okToEnqueue) {
-      return;
-    }
 
     // save to db
     const inMemoryJob = await this.db.queueJobAdd({
       queue: this.address,
       job: enqueued,
+      inMemoryJob: this.state.jobs[jobId],
     });
     if (inMemoryJob) {
       this.state.jobs[jobId] = inMemoryJob;
@@ -1121,8 +946,6 @@ export class BaseDockerJobQueue {
     this.checkForSourceConflicts();
 
     // broadcast first
-    // this.broadcastJobStatesToChannel([jobId]);
-    // this.broadcastJobStatesToWebsockets([jobId]);
     // enqueueing a job should broadcast the whole queue
     this.broadcastJobStatesToChannel();
     this.broadcastJobStatesToWebsockets();
@@ -1141,11 +964,12 @@ export class BaseDockerJobQueue {
       if (isRemovable) {
         if (job?.namespaces) {
           for (const namespace of job?.namespaces) {
-            this.db.queueJobRemove({ queue: this.address, jobId, namespace });
+            await this.db.queueJobRemove({ queue: this.address, jobId, namespace });
           }
         }
         delete this.state.jobs[jobId];
         sendBroadcast = true;
+        console.log(`${this.addressShortString} ${getJobColorizedString(jobId)} 🪓 removed from queue`);
       }
     }
 
@@ -1319,7 +1143,8 @@ export class BaseDockerJobQueue {
           case WebsocketMessageTypeWorkerToServer.JobStatusLogs: {
             const logsFromWorker = possibleMessage.payload as JobStatusPayload;
             // Send to all clients IF the worker matches the job the server says is running
-            if (this.state.jobs[logsFromWorker.jobId]?.worker === workerRegistration?.id) {
+            const job = this.state.jobs[logsFromWorker.jobId];
+            if (job && job?.worker === workerRegistration?.id && job.state === DockerJobState.Running) {
               this.broadcastAndSendLogsToLocalClients(logsFromWorker);
             }
             break;
@@ -1762,6 +1587,15 @@ export class BaseDockerJobQueue {
       },
     };
     // use the BroadcastChannel to notify other servers
+    // console.log(
+    //   `🔔 ${this.addressShortString} 🔔 broadcasting workers to other servers ${
+    //     (message.value as BroadcastChannelWorkersRegistration).workers[this.serverId].map((w) =>
+    //       getWorkerColorizedString(w.id)
+    //     ).join(
+    //       ", ",
+    //     )
+    //   }`,
+    // );
     this.channel.postMessage(message);
   }
 
@@ -1779,9 +1613,8 @@ export class BaseDockerJobQueue {
     const now = Date.now();
     // create a set of worker ids
     const workerIds = new Set();
-    for (const serverId of this.workers.otherWorkers.keys()) {
-      this.workers.otherWorkers
-        .get(serverId)
+    for (const serverId of Object.keys(this.workers.otherWorkers)) {
+      this.workers.otherWorkers[serverId]
         ?.forEach((w) => workerIds.add(w.id));
     }
 
@@ -1829,18 +1662,20 @@ export class BaseDockerJobQueue {
     }
   }
 
-  otherWorkersHaveChanged(workers: ServerWorkersObject) {
+  otherWorkersHaveChanged(serverToWorkersList: ServerWorkersObject) {
     // for our local records: filter out workers that no longer exist on other servers
-    // console.log(`otherWorkersHaveChanged`, workers)
+    // console.log(`otherWorkersHaveChanged`, serverToWorkersList);
     let updated = false;
-    for (const [otherServerId, workersList] of Object.entries(workers)) {
+    for (const [otherServerId, workersList] of Object.entries(serverToWorkersList)) {
       if (otherServerId === this.serverId) {
         // ignore, and should not happen
+        // console.log(`‼️ otherWorkersHaveChanged: ignoring ${otherServerId} because it's me`);
       } else {
-        this.workers.otherWorkers.set(otherServerId, workersList);
+        this.workers.otherWorkers[otherServerId] = workersList;
         updated = true;
       }
     }
+    // console.log(`otherWorkersHaveChanged this.workers`, this.workers);
     if (updated) {
       this.broadcastWorkersToClientsAndWorkers();
     }
@@ -1867,7 +1702,7 @@ export class BaseDockerJobQueue {
       const [
         _,
         otherWorkerRegistrations,
-      ] of this.workers.otherWorkers.entries()
+      ] of Object.entries(this.workers.otherWorkers)
     ) {
       otherWorkerRegistrations.forEach((w: WorkerRegistration) => {
         if (alreadyAdded.has(w.id)) {
@@ -2032,6 +1867,18 @@ export class BaseDockerJobQueue {
         }
       }
     }
+  }
+
+  getAllKnownWorkerIds(): string[] {
+    const myWorkerIds: string[] = Object.values(this.workers.myWorkers).map((worker) => worker.registration.id);
+    const otherWorkerIds: string[] = Object.values(this.workers.otherWorkers).map((workersList: WorkerRegistration[]) =>
+      workersList.map((w: WorkerRegistration) => w.id)
+    ).flat();
+
+    console.log("getAllKnownWorkerIds myWorkerIds", myWorkerIds);
+    console.log(`getAllKnownWorkerIds otherWorkerIds ${otherWorkerIds} from`, this.workers.otherWorkers);
+    console.log("Object.values(this.workers.otherWorkers)", Object.values(this.workers.otherWorkers));
+    return myWorkerIds.concat(otherWorkerIds);
   }
 }
 

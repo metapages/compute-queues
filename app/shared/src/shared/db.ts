@@ -21,11 +21,12 @@ import { addJobProcessSubmissionWebhook } from "/@/shared/webhooks.ts";
 
 import { JobDataCacheDurationMilliseconds } from "./constants.ts";
 import {
-  getDefinitionS3Key,
+  formatDefinitionS3Key,
+  formatResultsS3Key,
   getJobColorizedString,
   getQueueColorizedString,
-  getResultsS3Key,
   isJobOkForSending,
+  resolveMostCorrectJob,
   setJobStateFinished,
   setJobStateQueued,
   setJobStateRunning,
@@ -64,8 +65,6 @@ export class DB {
       // Ensure the directory exists and has correct permissions if not using S3
       await ensureDir(effectiveDataDirectory);
       await Deno.chmod(effectiveDataDirectory, 0o777);
-      // await ensureDir(join(effectiveDataDirectory, "q/local"));
-      // await Deno.chmod(join(effectiveDataDirectory, "q/local"), 0o777);
       await ensureDir(join(effectiveDataDirectory, "j"));
       await Deno.chmod(join(effectiveDataDirectory, "j"), 0o777);
       await ensureDir(join(effectiveDataDirectory, "f"));
@@ -107,11 +106,6 @@ export class DB {
           await Deno.mkdir(dirPath, { recursive: true, mode: 0o777 });
           const jsonData = JSON.stringify(data);
           await Deno.writeTextFile(filePath, jsonData, { mode: 0o777 });
-          // return key;
-          // {
-          //   type: DataRefType.key,
-          //   value: key,
-          // };
         } catch (error) {
           console.error(`Error writing file ${filePath}:`, error);
           throw error;
@@ -142,46 +136,71 @@ export class DB {
   // (The remaining methods of the DB class can remain unchanged)
   /**
    * Key spaces:
-   *  - ["job", jobId]
-   *  - ["job-queue-namespace", jobId, queue, namespace]
-   *  - ["queue", queue, jobId]
-   *  - ["queue-namespace-job-control", queue, jobId, namespace]
+   *  - ["job", jobId]: s3 key to definition.json
+   *  - ["job-results", jobId]: s3 key to results.json
+   *  - ["job-queue-namespace", jobId, queue, namespace]: true if job is in queue+namespace
+   *  - ["queue", queue, jobId]: in-memory job
+   *  - ["queue-namespace-job-control", queue, jobId, namespace]: control object for job
    * @param queue
    * @param job
    */
   async queueJobAdd(args: {
     queue: string;
     job: EnqueueJob;
+    inMemoryJob?: InMemoryDockerJob | null;
   }): Promise<InMemoryDockerJob | null> {
-    const { queue, job } = args;
+    let { queue, job, inMemoryJob: existingInMemoryJob } = args;
     const namespace = job?.control?.namespace || DefaultNamespace;
     const jobId = job.id;
+
     try {
       const existingNamespaces = await this.queueJobGetNamespaces({ queue, jobId });
       const includesNamespace = existingNamespaces.includes(namespace);
-      if (namespace !== DefaultNamespace && includesNamespace) {
-        // console.log(
-        //   `${getQueueColorizedString(queue)} ${
-        //     getJobColorizedString(jobId)
-        //   } already exists for namespace: ${namespace}`,
-        // );
-        return this.queueJobGet({ queue, jobId });
-      }
-
-      const control = job?.control || {};
-
-      const definitionS3Key = `${getDefinitionS3Key(jobId)}`;
-
-      if (!definitionCache.has(definitionS3Key)) {
-        await putJsonToS3(
-          definitionS3Key,
-          job.definition,
-        );
-
-        definitionCache.set(definitionS3Key, job.definition);
-      }
 
       const now = Date.now();
+
+      if (!existingInMemoryJob) {
+        existingInMemoryJob = await this.queueJobGet({ queue, jobId });
+      }
+
+      if (existingInMemoryJob) {
+        const tentativeEnqueudJob = setJobStateQueued(existingInMemoryJob, { time: now });
+        const mostCorrectJob = resolveMostCorrectJob(existingInMemoryJob, tentativeEnqueudJob);
+        if (mostCorrectJob === existingInMemoryJob) {
+          // no change, but update the namespace
+          this.queueJobAddNamespace({
+            queue,
+            jobId,
+            namespace,
+          });
+          const namespaces = await this.queueJobGetNamespaces({ queue, jobId });
+          mostCorrectJob.namespaces = namespaces;
+          return mostCorrectJob;
+        }
+      }
+      // ok here means that the job *can* be set to Queued
+      // but before that, we need to check if the job is finished
+
+      const existsingFinishedJob = await this.getFinishedJob(jobId);
+
+      if (existsingFinishedJob) {
+        const tentativeEnqueudJob = setJobStateQueued(existsingFinishedJob, { time: now });
+        const mostCorrectJob = resolveMostCorrectJob(existsingFinishedJob, tentativeEnqueudJob);
+        if (mostCorrectJob === existsingFinishedJob) {
+          // add namespaces, queue, and return
+          // no change, but update the namespace
+          this.queueJobAddNamespace({
+            queue,
+            jobId,
+            namespace,
+          });
+          const namespaces = await this.queueJobGetNamespaces({ queue, jobId });
+          mostCorrectJob.namespaces = namespaces;
+          return mostCorrectJob;
+        }
+      }
+
+      // ok, no finished, or existing job, or we can overwrite
 
       const inMemoryJob: InMemoryDockerJob = {
         queuedTime: now,
@@ -195,7 +214,18 @@ export class DB {
         tags: job.definition?.tags,
       };
 
-      if (existingNamespaces.length === 0) {
+      const control = job?.control || {};
+      const definitionS3Key = formatDefinitionS3Key(jobId);
+
+      if (!existsingFinishedJob && !definitionCache.has(definitionS3Key)) {
+        await putJsonToS3(
+          definitionS3Key,
+          job.definition,
+        );
+        definitionCache.set(definitionS3Key, job.definition);
+      }
+
+      if (existingNamespaces.length === 0 && !existsingFinishedJob) {
         await this.kv
           .atomic()
           .set(["job", jobId], definitionS3Key, { expireIn: JobDataCacheDurationMilliseconds })
@@ -304,7 +334,7 @@ export class DB {
         prefix: ["job-queue-namespace", jobId, queue],
       }, { consistency: "strong" });
       for await (const entry of entries) {
-        if (entry.value === null || entry.versionstamp === null) {
+        if (!entry.value || entry.versionstamp === null) {
           continue;
         }
         result.push(entry.key[3] as string);
@@ -339,7 +369,8 @@ export class DB {
   }
 
   async getJobFinishedResults(jobId: string): Promise<StateChangeValueFinished | undefined> {
-    const results: StateChangeValueFinished | undefined = await getJsonFromS3(getResultsS3Key(jobId));
+    const resultsS3Key = formatResultsS3Key(jobId);
+    const results: StateChangeValueFinished | undefined = await getJsonFromS3(resultsS3Key);
     return results;
   }
 
@@ -348,15 +379,12 @@ export class DB {
     results: StateChangeValueFinished;
   }) {
     const { jobId, results } = args;
-    const key = getResultsS3Key(jobId);
+    const key = formatResultsS3Key(jobId);
     await putJsonToS3(key, results);
   }
 
-  async deleteJobFinishedResults(args: {
-    jobId: string;
-  }) {
-    const { jobId } = args;
-    const key = getResultsS3Key(jobId);
+  async deleteJobFinishedResults(jobId: string) {
+    const key = formatResultsS3Key(jobId);
     await deleteFromS3(key);
   }
 
@@ -374,7 +402,10 @@ export class DB {
     jobId: string;
     job: InMemoryDockerJob;
   }): Promise<{ updatedInMemoryJob?: InMemoryDockerJob; subsequentStateChange?: StateChange | undefined }> {
-    let { change, jobId, queue, job } = args;
+    const { change, jobId, queue, job: existingJob } = args;
+
+    // validate we can apply the change
+    let mostCorrectJob = resolveMostCorrectJob(existingJob, setJobStateFinished(existingJob, { finished: change }));
 
     // get all job-queues-namespaces for this job and update all the histories
     // ["job-queue-namespace", jobId, queue, namespace]
@@ -385,63 +416,19 @@ export class DB {
       case DockerJobFinishedReason.Success:
       case DockerJobFinishedReason.Error:
       case DockerJobFinishedReason.TimedOut: {
-        // first make sure we cannot override the existing state
-        switch (job.state) {
-          // we are already finished, that is (almost?) never allowed
-          case DockerJobState.Finished: {
-            switch (job.finishedReason) {
-              // conflicting: success overrides error and timeout
-              case DockerJobFinishedReason.Success:
-                if (
-                  change.reason === DockerJobFinishedReason.Error || change.reason === DockerJobFinishedReason.TimedOut
-                ) {
-                  return {};
-                }
-                break;
-              case DockerJobFinishedReason.Error:
-              case DockerJobFinishedReason.TimedOut: {
-                return {};
-              }
-              // this case is not persisted, it goes straight to queued
-              // but we have here to cover all bases
-              case DockerJobFinishedReason.WorkerLost:
-              // these other cases are allowed to be processed
-              // since they can be simply removing the namespace (user)
-              case DockerJobFinishedReason.JobReplacedByClient:
-              case DockerJobFinishedReason.Deleted:
-              case DockerJobFinishedReason.Cancelled:
-              default: {
-                break;
-              }
-            }
-            break;
-          }
-          default: {
-            break;
-          }
-        }
-
-        // persist the results to s3 before updating the job state
-        // We are definitely finished, no mucking around here.
-        // this job finished in a way that is the same for all
-        // queue+namespaces, so we can persist the results to s3
-        await this.persistJobFinishedResults({ // because they might be big
-          jobId,
-          results: change,
-        });
-
-        // if we are already finished, no change
-        if (job.state === DockerJobState.Finished) {
+        // no change, we are already up to date
+        if (mostCorrectJob === existingJob) {
           return {};
         }
-        // all other states are allowed to be finished
-        job = setJobStateFinished(job, {
-          finished: change,
-        });
+
+        // this stores both the big and small
+        // job now has .finished removed because it's stored in s3
+        mostCorrectJob = await this.setFinishedJob(jobId, mostCorrectJob);
 
         // NB: we store the finished state separate and pull it out when needed
         // because it's a large object, and we don't want to store it in deno kv
-        delete job.finished; // this is added back by the clients or REST calls
+        // we don't need to do this, it's handled in setFinishedJob
+        // delete job.finished; // this is added back by the clients or REST calls
 
         // get all queues this job is on
         const allQueues: Set<string> = new Set();
@@ -455,16 +442,20 @@ export class DB {
 
         // update all the queues this job is on
         for await (const oneOfAllQueues of allQueues) {
-          await this.kv.set(["queue", oneOfAllQueues, jobId], job, {
+          await this.kv.set(["queue", oneOfAllQueues, jobId], mostCorrectJob, {
             expireIn: JobDataCacheDurationMilliseconds,
           });
         }
-        return { updatedInMemoryJob: job };
+        return { updatedInMemoryJob: mostCorrectJob };
       }
 
       // this job set back into queued state
       // RUNNING -> QUEUED
       case DockerJobFinishedReason.WorkerLost: {
+        // no change, we are already up to date
+        if (mostCorrectJob === existingJob) {
+          return {};
+        }
         // get all queues this job is on
         const allQueues: Set<string> = new Set();
         const jobQueueNamespaces = this.kv.list<boolean>({
@@ -475,11 +466,11 @@ export class DB {
           allQueues.add(queueEntry);
         }
 
-        job = setJobStateQueued(job, { time: change.time });
+        mostCorrectJob = setJobStateQueued(mostCorrectJob, { time: change.time });
 
         // update all the queues this job is on
         for await (const oneOfAllQueues of allQueues) {
-          await this.kv.set(["queue", oneOfAllQueues, jobId], job, {
+          await this.kv.set(["queue", oneOfAllQueues, jobId], mostCorrectJob, {
             expireIn: JobDataCacheDurationMilliseconds,
           });
           // don't await this, it's not critical
@@ -490,100 +481,57 @@ export class DB {
           // });
         }
 
-        return { updatedInMemoryJob: job };
+        return { updatedInMemoryJob: mostCorrectJob };
       }
       case DockerJobFinishedReason.Deleted: {
-        switch (job.state) {
-          case DockerJobState.Queued: // not allowed: job must be finished before deletion
-          case DockerJobState.Running: // not allowed: job must be finished before deletion
-            return {};
-          case DockerJobState.Removed: // noop, placeholder
-            return {};
-          case DockerJobState.Finished: {
-            switch (job.finishedReason) {
-              case DockerJobFinishedReason.Deleted:
-                // noop
-                return {};
-              case DockerJobFinishedReason.Success:
-              case DockerJobFinishedReason.Cancelled:
-              case DockerJobFinishedReason.JobReplacedByClient:
-              case DockerJobFinishedReason.Error:
-              case DockerJobFinishedReason.TimedOut: {
-                const namespaceChange = change.namespace || DefaultNamespace;
-                let currentNamespaces = await this.queueJobGetNamespaces({ queue, jobId });
+        // remove namespaces, then actually check if you can delete the job
+        const namespaceChange = change.namespace || DefaultNamespace;
+        let currentNamespaces = await this.queueJobGetNamespaces({ queue, jobId });
 
-                // special handling of the wildcard (all) namespace, only used for cancelling
-                if (change.namespace === "*") {
-                  // remove all namespaces
-                  for (const namespaceToRemove of currentNamespaces) {
-                    await this.queueJobRemoveNamespace({
-                      queue,
-                      jobId,
-                      namespace: namespaceToRemove,
-                    });
-                  }
-                  // jobs always stay in the default namespace
-                } else if (currentNamespaces.includes(namespaceChange)) {
-                  await this.queueJobRemoveNamespace({
-                    queue,
-                    jobId,
-                    namespace: namespaceChange,
-                  });
-                }
-                currentNamespaces = await this.queueJobGetNamespaces({ queue, jobId });
-                // now if there are no namespaces left, we can actually delete the job
-                job = {
-                  ...job,
-                  namespaces: currentNamespaces,
-                };
-                if (currentNamespaces.length === 0) {
-                  // delete the job
-                  job = setJobStateFinished(job, {
-                    finished: change,
-                  });
-                  await this.deleteJobFinishedResults({ jobId });
-                  await this.deleteJobHistory({ queue, jobId });
-                  await this.kv.delete(["queue", queue, jobId]);
-                } else {
-                  // other namespaces have a hold on this job, so we just update the namespaces
-                  await this.kv.set(["queue", queue, jobId], job, {
-                    expireIn: JobDataCacheDurationMilliseconds,
-                  });
-                }
-
-                return { updatedInMemoryJob: job };
-              }
-              default:
-                console.error(
-                  `💥💥💥 ERROR: job ${jobId} is in an invalid state: change.reason=${change.reason}, finishedReason: ${job.finishedReason}, state: ${job.state}`,
-                );
-                return {};
-            }
+        // special handling of the wildcard (all) namespace, only used for cancelling
+        if (change.namespace === "*") {
+          // remove all namespaces
+          for (const namespaceToRemove of currentNamespaces) {
+            await this.queueJobRemoveNamespace({
+              queue,
+              jobId,
+              namespace: namespaceToRemove,
+            });
           }
+          // jobs always stay in the default namespace
+        } else if (currentNamespaces.includes(namespaceChange)) {
+          await this.queueJobRemoveNamespace({
+            queue,
+            jobId,
+            namespace: namespaceChange,
+          });
         }
-        console.error(
-          `💥💥💥 ERROR: job ${jobId} is in an invalid state: change.reason=${change.reason}, finishedReason: ${job.finishedReason}, state: ${job.state}`,
-        );
-
-        return {};
+        currentNamespaces = await this.queueJobGetNamespaces({ queue, jobId });
+        mostCorrectJob = {
+          ...mostCorrectJob,
+          namespaces: currentNamespaces,
+        };
+        // now if there are no namespaces left, we can actually delete the job
+        if (currentNamespaces.length === 0) {
+          console.log(`💥💥💥 deleting job ${jobId} from db`);
+          await this.deleteFinishedJob(jobId);
+          // await this.deleteJobFinishedResults(jobId);
+          await this.deleteJobHistory({ queue, jobId });
+          await this.kv.delete(["queue", queue, jobId]);
+          return { updatedInMemoryJob: mostCorrectJob };
+        } else {
+          // other namespaces have a hold on this job, so we just update the namespaces
+          const jobWithUpdatedNamespaces = { ...existingJob, namespaces: currentNamespaces };
+          await this.kv.set(["queue", queue, jobId], jobWithUpdatedNamespaces, {
+            expireIn: JobDataCacheDurationMilliseconds,
+          });
+          return { updatedInMemoryJob: jobWithUpdatedNamespaces };
+        }
       }
       // these reasons: delete this version of the job by queue+namespace
       // RUNNING -> REMOVED for some and FINISHED for others
       case DockerJobFinishedReason.JobReplacedByClient: // ? JobReplacedByClient === Cancelled everywhere?
       case DockerJobFinishedReason.Cancelled: {
-        switch (job.state) {
-          case DockerJobState.Removed: {
-            // noop, placeholder
-            return { updatedInMemoryJob: job };
-          }
-          case DockerJobState.Finished: {
-            // noop,
-            return { updatedInMemoryJob: job };
-          }
-          default:
-            break; // Queued || Running we are good to cancel
-        }
-
         const namespaceChange = change.namespace || DefaultNamespace;
         let currentNamespaces = await this.queueJobGetNamespaces({ queue, jobId });
 
@@ -605,31 +553,30 @@ export class DB {
           });
         }
         currentNamespaces = await this.queueJobGetNamespaces({ queue, jobId });
+        mostCorrectJob.namespaces = currentNamespaces;
+        existingJob.namespaces = currentNamespaces;
         // now if there are no namespaces left, we can actually delete the job
-        job = {
-          ...job,
-          namespaces: currentNamespaces,
-        };
         if (currentNamespaces.length === 0) {
-          // cancel the job
-          job = setJobStateFinished(job, {
-            finished: change,
-          });
           // this.appendToJobHistory({
           //   queue,
           //   jobId,
           //   value: change,
           // });
-        }
-        await this.kv.set(["queue", queue, jobId], job, {
-          expireIn: JobDataCacheDurationMilliseconds,
-        });
+          await this.kv.set(["queue", queue, jobId], mostCorrectJob, {
+            expireIn: JobDataCacheDurationMilliseconds,
+          });
 
-        return { updatedInMemoryJob: job };
+          return { updatedInMemoryJob: mostCorrectJob };
+        } else {
+          await this.kv.set(["queue", queue, jobId], existingJob, {
+            expireIn: JobDataCacheDurationMilliseconds,
+          });
+          return { updatedInMemoryJob: existingJob };
+        }
       }
       default:
-        console.log(`💥💥💥 Unknown finished reason: ${change.reason}`);
-        return { updatedInMemoryJob: job };
+        console.log(`💥💥💥 Unknown finished reason, no change: ${change.reason}`);
+        return { updatedInMemoryJob: existingJob };
     }
   }
 
@@ -646,12 +593,6 @@ export class DB {
     const entries = this.kv.list<boolean>({
       prefix: ["job-queue-namespace", jobId],
     });
-
-    // const runningStateChange: StateChangeValueRunning = {
-    //   type: DockerJobState.Running,
-    //   time,
-    //   worker,
-    // };
 
     const queueDone = new Set<string>();
 
@@ -687,6 +628,31 @@ export class DB {
       //   value: runningStateChange,
       // });
     }
+  }
+
+  async getFinishedJob(jobId: string): Promise<InMemoryDockerJob | null> {
+    const entry = await this.kv.get<InMemoryDockerJob>(["job-finished", jobId]);
+    return entry.value;
+  }
+
+  async setFinishedJob(jobId: string, value: InMemoryDockerJob): Promise<InMemoryDockerJob> {
+    if (value.finished) {
+      await this.persistJobFinishedResults({ jobId, results: value.finished });
+    }
+    // the local job doesn't store the much bigger results
+    if (value.finished) {
+      value = { ...value };
+      delete value.finished;
+    }
+    await this.kv.set(["job-finished", jobId], value, {
+      expireIn: JobDataCacheDurationMilliseconds,
+    });
+    return value;
+  }
+
+  async deleteFinishedJob(jobId: string): Promise<void> {
+    await this.kv.delete(["job-finished", jobId]);
+    await this.deleteJobFinishedResults(jobId);
   }
 
   async getJobHistory(config: {

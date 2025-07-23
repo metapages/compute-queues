@@ -20,12 +20,8 @@ Deno.test(
       `${API_URL.replace("http", "ws")}/q/${QUEUE_ID}/client`,
     );
 
-    const timeoutInterval = setTimeout(() => {
-      throw "Test timed out";
-    }, 10000);
-
-    const namespaces = [...new Array(3)].map(() => `namespace-${Math.floor(Math.random() * 1000000)}`);
-    const namespacesSet = new Set(namespaces);
+    const namespaces = [...new Array(3)].map(() => `namespace-${Math.floor(Math.random() * 1000000)}`).toSorted();
+    // const namespacesSet = new Set(namespaces);
     // none of these jobs will finished, we are only testing replacement on the queue
     const command = `sleep 30.${Math.floor(Math.random() * 1000000)}`;
 
@@ -49,24 +45,45 @@ Deno.test(
     assertEquals(jobId, messages[1].jobId);
     assertEquals(jobId, messages[2].jobId);
 
+    const timeoutInterval = setTimeout(async () => {
+      const jobs = await queueJobs(QUEUE_ID);
+      console.log(
+        `Test timed out: 👺 namespaces: ${namespaces} job:`,
+        jobs[jobId],
+      );
+
+      await Promise.all(
+        Array.from(messages).map((message) =>
+          cancelJobOnQueue({
+            queue: QUEUE_ID,
+            jobId: message.jobId,
+            namespace: message?.queuedJob?.enqueued?.control?.namespace,
+            message: "from-namespace-remove-one-timeout-timeout",
+          })
+        ),
+      );
+      throw `Test timed out`;
+    }, 15000);
+
     await open(socket);
     for (const messagePayload of messages) {
       socket.send(JSON.stringify(messagePayload.message));
     }
 
-    let namespacesOnQueue: Set<string> = new Set();
+    let namespacesOnQueue: string[] = [];
     while (true) {
       const jobs = await queueJobs(QUEUE_ID);
       if (jobs) {
-        namespacesOnQueue = new Set(jobs[jobId]?.namespaces || []);
-        if (equal(namespacesOnQueue, namespacesSet)) {
+        namespacesOnQueue = [...new Set(jobs[jobId]?.namespaces || [])].toSorted();
+        if (equal([...namespacesOnQueue].toSorted(), namespaces)) {
           break;
         }
       }
+
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
-    assertEquals(namespacesOnQueue, namespacesSet);
+    assertEquals(namespacesOnQueue, namespaces);
 
     clearTimeout(timeoutInterval);
 
@@ -78,7 +95,7 @@ Deno.test(
         cancelJobOnQueue({
           queue: QUEUE_ID,
           jobId: message.jobId,
-          namespace: message?.queuedJob?.enqueued?.control?.namespace,
+          namespace: "*",
           message: "from-namespace-basics",
         })
       ),

@@ -12,7 +12,7 @@ import {
   type StateChangeValueFinished,
 } from "@metapages/compute-queues-shared";
 
-import { queueJobs } from "./util.ts";
+import { cancelJobOnQueue, queueJobs } from "./util.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -27,6 +27,22 @@ Deno.test(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
 
+    await (async () => {
+      const jobs = await queueJobs(QUEUE_ID);
+      if (jobs) {
+        for (const [jobId, job] of Object.entries(jobs)) {
+          if (job.state !== DockerJobState.Finished) {
+            await cancelJobOnQueue({
+              queue: QUEUE_ID,
+              jobId,
+              namespace: "*",
+              message: "from-functional-basic-finished-job-still-in-queue-test",
+            });
+          }
+        }
+      }
+    })();
+
     const definition = {
       image: "alpine:3.18.5",
       // ensure job is new
@@ -39,7 +55,7 @@ Deno.test(
 
     const timeoutInterval = setTimeout(async () => {
       const jobs = await queueJobs(QUEUE_ID);
-      console.log(`${getJobColorizedString(jobId)} Test timed out: 👺 job: `, jobs[jobId]);
+      console.log(`${getJobColorizedString(jobId)} 👺 test timed out: `, jobs[jobId]);
       throw "Test timed out";
     }, 10000);
 
@@ -54,21 +70,19 @@ Deno.test(
       const jobs = await queueJobs(QUEUE_ID);
 
       const job = jobs[jobId];
-      if (job) {
-        console.log(
-          `${getJobColorizedString(jobId)} waiting for job results: ${
-            job.state === DockerJobState.Finished ? job.finishedReason : job.state
-          }`,
-        );
-      } else {
-        console.log(`${getJobColorizedString(jobId)} waiting for job results: no job found`);
-      }
 
-      // if (jobs[jobId]) {
-      //   console.log(`👺 jobs[jobId]: `, jobs[jobId]);
+      // if (job) {
+      //   console.log(
+      //     `${getJobColorizedString(jobId)} waiting for job results: ${
+      //       job.state === DockerJobState.Finished ? job.finishedReason : job.state
+      //     }`,
+      //   );
+      // } else {
+      //   console.log(`${getJobColorizedString(jobId)} waiting for job results: no job found`);
       // }
+
       // check the job is finished
-      if (jobs[jobId]?.state && jobs[jobId].state === DockerJobState.Finished) {
+      if (job?.state && job.state === DockerJobState.Finished) {
         const { data: finishedState }: { data: StateChangeValueFinished } =
           await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`, { redirect: "follow" }))
             .json();

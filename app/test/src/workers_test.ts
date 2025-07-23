@@ -51,7 +51,6 @@ Deno.test(
     let stateTransitions: Array<{ state: DockerJobState; worker?: string }> = [];
     let finalWorker = "";
 
-    let jobFinished = false;
     socket.onmessage = async (message: MessageEvent) => {
       const messageString = message.data.toString();
       const possibleMessage: WebsocketMessageServerBroadcast = JSON.parse(
@@ -92,12 +91,8 @@ Deno.test(
             worker,
           });
 
-          if (jobFinished) {
-            break;
-          }
           if (jobState.state === DockerJobState.Finished) {
             assertEquals(jobState.finishedReason, DockerJobFinishedReason.Success);
-            jobFinished = true;
 
             const { data: finishedState }: { data: StateChangeValueFinished } =
               await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`))
@@ -115,6 +110,7 @@ Deno.test(
               stateTransitions,
             });
           }
+
           break;
         }
         default:
