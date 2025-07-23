@@ -7,7 +7,7 @@ import {
   dataRefToBuffer,
   type DockerJobDefinitionInputRefs,
   DockerJobState,
-  type StateChangeValueFinished,
+  type InMemoryDockerJob,
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeClientToServer,
   WebsocketMessageTypeServerBroadcast,
@@ -98,9 +98,10 @@ function waitForJobToFinish(
           if (jobState.state === DockerJobState.Finished) {
             jobFinished = true;
 
-            const { data: finishedState }: { data: StateChangeValueFinished } =
+            const { data: jobState }: { data: InMemoryDockerJob } =
               await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`))
                 .json();
+            const finishedState = jobState?.finished;
 
             assertEquals(
               finishedState?.reason,
@@ -113,7 +114,7 @@ function waitForJobToFinish(
             assertEquals(finishedState?.reason, "Success");
             assertEquals(finishedState?.result?.error, undefined);
 
-            const outputs = finishedState.result?.outputs;
+            const outputs = finishedState?.result?.outputs;
             const dataref = outputs?.[referenceFileName];
             assert(
               !!dataref,

@@ -149,7 +149,7 @@ Deno.test(
     //     namespacesOnQueue = jobs[jobId]?.namespaces;
     //     if (equal([...new Set(namespacesOnQueue)].toSorted(), [...namespacesRemainingSet].toSorted())) {
     //       assertEquals(jobs[jobId].finishedReason, DockerJobFinishedReason.Success);
-    //       const { data: finishedState }: { data: StateChangeValueFinished } =
+    //       const { data: finishedState }: { data: InMemoryDockerJob } =
     //         await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`, { redirect: "follow" }))
     //           .json();
     //       assertEquals(finishedState?.result?.StatusCode, 0);
