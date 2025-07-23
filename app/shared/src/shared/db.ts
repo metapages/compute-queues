@@ -644,7 +644,7 @@ export class DB {
 
   async getFinishedJob(jobId: string): Promise<InMemoryDockerJob | null> {
     const entry = await this.kv.get<InMemoryDockerJob>(["job-finished", jobId]);
-    console.log(`🌎 getFinishedJob ${jobId}`, entry.value);
+    // console.log(`🌎 getFinishedJob ${jobId}`, entry.value);
     return entry.value;
   }
 
