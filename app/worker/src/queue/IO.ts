@@ -1,3 +1,4 @@
+import { getConfig } from "/@/config.ts";
 import klaw from "klaw";
 import { emptyDir, ensureDir, exists, existsSync } from "std/fs";
 import { dirname, join } from "std/path";
@@ -14,8 +15,8 @@ import {
   type InputsRefs,
   sanitizeFilename,
 } from "@metapages/compute-queues-shared";
-import { getConfig } from "/@/config.ts";
-import type { Volume } from "/@/queue/DockerJob.ts";
+
+import type { Volume } from "./types.ts";
 
 /**
  * @param job Returns input and output docker volumes to mount into the container

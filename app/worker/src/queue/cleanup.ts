@@ -5,6 +5,7 @@ import type Docker from "dockerode";
 import { getJobColorizedString, getQueueColorizedString } from "@metapages/compute-queues-shared";
 
 import { config } from "../config.ts";
+import { DockerRunPhase, type WorkerJobQueueItem } from "./types.ts";
 import { getDockerFiltersForJob } from "./utils.ts";
 
 export const removeAllDeadContainersFromQueue = async (args: { queue: string; workerId: string }) => {
@@ -100,10 +101,12 @@ export const removeAllJobsFromQueueNotInSet = async (args: { queue: string; work
 };
 
 export const killAndRemove = async (
+  workItem: WorkerJobQueueItem,
   jobId: string,
   container: Docker.Container,
   reason: string,
 ): Promise<unknown> => {
+  workItem.phase = DockerRunPhase.Ended;
   if (!container) {
     console.log(`${getJobColorizedString(jobId)} 🗑️ killAndRemove(${reason}) no container!`);
     return;
