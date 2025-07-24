@@ -11,19 +11,17 @@ import type { Buffer } from "std/node/buffer";
 import { dirname, join } from "std/path";
 
 import {
-  type DockerApiDeviceRequest,
-  type DockerJobImageBuild,
   DockerJobState,
   type DockerRunResult,
   getJobColorizedString,
   getWorkerColorizedString,
   type JobStatusPayload,
-  type WebsocketMessageSenderWorker,
   WebsocketMessageTypeWorkerToServer,
 } from "@metapages/compute-queues-shared";
 
 import { config } from "../config.ts";
 import { killAndRemove } from "./cleanup.ts";
+import { type DockerJobArgs, type DockerJobExecution, DockerRunPhase } from "./types.ts";
 import { getDockerFiltersForJob } from "./utils.ts";
 
 // Minimal interface for interacting with docker jobs:
@@ -39,44 +37,11 @@ import { getDockerFiltersForJob } from "./utils.ts";
 //      - kill switch => Promise<void>
 // just that no more.
 
-export interface Volume {
-  host: string;
-  container: string;
-}
-
-// this goes in
-export interface DockerJobArgs {
-  workerId: string;
-  sender: WebsocketMessageSenderWorker;
-  queue: string;
-  id: string;
-  image?: string;
-  build?: DockerJobImageBuild;
-  command?: string[] | undefined;
-  env?: Record<string, string>;
-  entrypoint?: string[] | undefined;
-  workdir?: string;
-  shmSize?: string;
-  volumes?: Array<Volume>;
-  outputsDir: string;
-  deviceRequests?: DockerApiDeviceRequest[];
-  // always defined, no jobs run forever
-  maxJobDuration: number;
-  isKilled: { value: boolean };
-}
-
-// this comes out
-export interface DockerJobExecution {
-  finish: Promise<DockerRunResult | undefined>;
-  container: Container | undefined;
-  kill: (reason: string) => void | Promise<void>;
-  isKilled: { value: boolean };
-}
-
 export const JobCacheDirectory = "/job-cache";
 
 export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   const {
+    workItem,
     workerId,
     sender,
     id,
@@ -134,7 +99,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         `${getWorkerColorizedString(workerId)} ${getJobColorizedString(id)} 🗑️  kill(${reason}) killing container`,
         dockerExecution.container.id,
       );
-      await killAndRemove(id, dockerExecution.container, reason);
+      await killAndRemove(workItem, id, dockerExecution.container, reason);
     }
   };
 
@@ -256,6 +221,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     if (isKilled.value) {
       return;
     }
+    workItem.phase = DockerRunPhase.Building;
     try {
       createOptions.Image = await ensureDockerImage({
         jobId: id,
@@ -377,6 +343,8 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       return;
     }
 
+    workItem.phase = DockerRunPhase.Running;
+
     if (!existingRunningContainer) {
       // is buffer
       const _: Buffer = await dockerExecution.container!.start();
@@ -453,8 +421,10 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
 
     // remove the container out-of-band (return quickly)
     if (dockerExecution.container) {
-      killAndRemove(id, dockerExecution.container, "DockerJob.finish normally");
+      killAndRemove(workItem, id, dockerExecution.container, "DockerJob.finish normally");
     }
+
+    workItem.phase = DockerRunPhase.UploadOutputs;
 
     return result;
   };

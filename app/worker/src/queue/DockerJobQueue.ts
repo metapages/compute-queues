@@ -1,9 +1,9 @@
-import parseDuration from "parse-duration";
 import { config } from "/@/config.ts";
 import { ensureIsolateNetwork } from "/@/docker/network.ts";
-import { type DockerJobArgs, dockerJobExecute, type DockerJobExecution, type Volume } from "/@/queue/DockerJob.ts";
 import { convertIOToVolumeMounts, getOutputs } from "/@/queue/IO.ts";
 import { convertStringToDockerCommand } from "/@/queue/utils.ts";
+import { ms } from "ms";
+import parseDuration from "parse-duration";
 
 import * as computeQueuesShared from "@metapages/compute-queues-shared";
 import {
@@ -15,29 +15,22 @@ import {
   resolvePreferredWorker,
 } from "@metapages/compute-queues-shared";
 
-import { ms } from "ms";
 import mod from "../../mod.json" with { type: "json" };
 import { ContainerLabel, ContainerLabelQueue, ContainerLabelWorker } from "./constants.ts";
 import { docker } from "./dockerClient.ts";
+import { dockerJobExecute } from "./DockerJob.ts";
 import { getRunningContainerForJob } from "./index.ts";
 import type { JobDefinitionCache } from "./JobDefinitionCache.ts";
+import {
+  type DockerJobArgs,
+  type DockerJobExecution,
+  type DockerJobQueueArgs,
+  DockerRunPhase,
+  type Volume,
+  type WorkerJobQueueItem,
+} from "./types.ts";
 
 const Version: string = mod.version;
-
-export interface DockerJobQueueArgs extends computeQueuesShared.WorkerRegistration {
-  sender: computeQueuesShared.WebsocketMessageSenderWorker;
-  queue: string;
-  jobDefinitions: JobDefinitionCache;
-}
-
-type WorkerJobQueueItem = {
-  time: number;
-  execution: DockerJobExecution | null;
-  definition: computeQueuesShared.DockerJobDefinitionInputRefs;
-  // We might have to send this multiple times, so keep it around
-  runningMessageToServer: computeQueuesShared.WebsocketMessageWorkerToServer;
-  gpuIndices?: number[];
-};
 
 export class DockerJobQueue {
   maxJobDuration: number;
@@ -672,6 +665,7 @@ export class DockerJobQueue {
 
     // add a placeholder on the queue for this job
     this.queue[jobId] = {
+      phase: DockerRunPhase.CopyInputs,
       time: valueRunning.time,
       execution: null,
       definition,
@@ -705,10 +699,12 @@ export class DockerJobQueue {
       let volumes: Volume[];
       let outputsDir: string;
       try {
+        this.queue[jobId].phase = DockerRunPhase.CopyInputs;
         const volumesResult = await convertIOToVolumeMounts(
           { id: jobId, definition },
           config.server,
         );
+        this.queue[jobId].phase = DockerRunPhase.Building;
         volumes = volumesResult.volumes;
         outputsDir = volumesResult.outputsDir;
       } catch (err) {
@@ -757,6 +753,7 @@ export class DockerJobQueue {
       // TODO hook up the durationMax to a timeout
       // TODO add input mounts
       const executionArgs: DockerJobArgs = {
+        workItem: this.queue[jobId],
         workerId: this.workerId,
         sender: this.sender,
         queue: this.queueKey,
@@ -955,7 +952,7 @@ export class DockerJobQueue {
             },
           });
         },
-      ).catch((err) => {
+      ).catch((err: unknown) => {
         console.log(
           `${this.workerIdShort} ${jobString} 💥 errored ${err}`,
           (err as Error)?.stack,
@@ -1041,13 +1038,13 @@ export class DockerJobQueue {
       if ((Date.now() - localJob.time) < 5000) {
         console.log(
           `${this.workerIdShort} ${getJobColorizedString(jobId)} 🚨 Job is too new, skipping check.`,
-          localJob,
         );
         continue;
       }
       // Defensive: only check jobs that are in the apiQueue and marked as running
       const apiJob = this.apiQueue[jobId];
       if (!apiJob || apiJob.state !== DockerJobState.Running) continue;
+      if (localJob.phase !== DockerRunPhase.Running) continue;
       try {
         let container = localJob.execution?.container;
         if (!container) {
