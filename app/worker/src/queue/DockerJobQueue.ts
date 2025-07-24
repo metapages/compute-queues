@@ -265,7 +265,12 @@ export class DockerJobQueue {
       console.log(
         `${getWorkerColorizedString(this.workerId)} JobStateUpdates [isSubset=${message.isSubset}] from server: ${
           Object.keys(message?.state?.jobs || {}).map((jobId) =>
-            getJobColorizedString(jobId) + `(${message.state.jobs[jobId].state})`
+            getJobColorizedString(jobId) +
+            `(server says: ${message.state.jobs[jobId].state}, local says: phase=${
+              this.queue[jobId]?.phase
+            }, executionExists=${!!this.queue[jobId]?.execution}, executionKilled=${
+              this.queue[jobId]?.execution?.isKilled.value ? "KILLED" : "ALIVE"
+            })`
           ).join(", ")
         }`,
       );
