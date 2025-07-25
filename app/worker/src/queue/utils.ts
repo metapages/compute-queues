@@ -1,14 +1,16 @@
 import { parse, type ParseEntry } from "shell-quote";
 
-import { ContainerLabel, ContainerLabelId, ContainerLabelQueue } from "./constants.ts";
+import { ContainerLabel, ContainerLabelId, ContainerLabelQueue, ContainerLabelWorker } from "./constants.ts";
 
 export const getDockerFiltersForJob = (
-  args: { jobId: string; workerId: string; queue?: string; status?: string },
+  args: { jobId?: string; workerId?: string; queue?: string; status?: string },
 ): string => {
   const { jobId, workerId, status, queue } = args;
   const statusFilter = status ? `, "status": ["${status}"]` : "";
   const queueFilter = queue ? `, "${ContainerLabelQueue}=${queue}"` : "";
-  return `{"label": ["${ContainerLabel}=true", "${ContainerLabelId}=${jobId}", "${ContainerLabel}=${workerId}"${queueFilter}]${statusFilter}}`;
+  const workerFilter = workerId ? `, "${ContainerLabelWorker}=${workerId}"` : "";
+  const jobFilter = jobId ? `, "${ContainerLabelId}=${jobId}"` : "";
+  return `{"label": ["${ContainerLabel}=true"${jobFilter}${workerFilter}${queueFilter}]${statusFilter}}`;
 };
 
 const sanitizeForDockerTag = (input: string): string => {

@@ -79,6 +79,7 @@ export const runCommand = new Command()
     config.port = typeof options.port === "number"
       ? options.port
       : (METAPAGE_IO_PORT ? parseInt(METAPAGE_IO_PORT) : 8000);
+
     config.dataDirectory = join(
       options.dataDirectory && typeof (options.dataDirectory) === "string"
         ? options.dataDirectory
@@ -89,9 +90,9 @@ export const runCommand = new Command()
     const METAPAGE_IO_DEBUG = Deno.env.get(`${EnvPrefix}DEBUG`);
     config.debug = !!(typeof (options.debug) === "boolean" ? options.debug : METAPAGE_IO_DEBUG === "true");
 
-    if (config.mode === "local") {
-      Deno.env.set("DENO_KV_URL", join(config.dataDirectory, "kv"));
-    }
+    console.log(`🔥 Setting DENO_KV_URL to ${join(config.dataDirectory, "kv")}`);
+    Deno.env.set("DENO_KV_URL", join(config.dataDirectory, "kv"));
+    console.log(`🔥 now? DENO_KV_URL ${Deno.env.get("DENO_KV_URL")}`);
 
     const METAPAGE_IO_API_ADDRESS = Deno.env.get(`${EnvPrefix}API_ADDRESS`);
     config.server = typeof (options.apiAddress) === "string"
@@ -111,19 +112,27 @@ export const runCommand = new Command()
 
     if (options.id && typeof options.id === "string") {
       config.id = options.id;
+      console.log(`🔥 Worker ID set from command line to ${config.id}`);
     } else {
       const kv = await getKv();
       const existingId: string | null = (await kv.get<string>(["workerId"]))
         ?.value;
       if (existingId) {
         config.id = existingId;
+        console.log(`🔥 Worker ID set from kv to ${config.id}`);
       } else {
         config.id = crypto.randomUUID();
-        kv.set(["workerId"], config.id); // don't need to await
+        console.log(`🔥 Worker ID generated because no id was set: ${config.id}`);
+        await kv.set(["workerId"], config.id); // don't need to await
       }
       // If this is set, we are going to generate it every time
       if (Deno.env.get("METAPAGE_IO_GENERATE_WORKER_ID")) {
         config.id = crypto.randomUUID();
+        console.log(
+          `🔥 Worker ID generated because METAPAGE_IO_GENERATE_WORKER_ID=${
+            Deno.env.get("METAPAGE_IO_GENERATE_WORKER_ID")
+          } is set: ${config.id}`,
+        );
       }
     }
 
@@ -399,6 +408,7 @@ export async function connectToServer(
       rws.reconnect();
     }
   }, ms("10s") as number);
+
   rws.addEventListener("message", (message: MessageEvent) => {
     try {
       const messageString = message.data.toString();
