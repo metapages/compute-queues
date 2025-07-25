@@ -570,11 +570,11 @@ export class DockerJobQueue {
               computeQueuesShared.DockerJobState.Queued
           );
 
-        // if (queuedJobKeys.length > 0) {
-        //   console.log(
-        //     `${this.workerIdShort} sees ${queuedJobKeys.length} queued jobs available to claim`,
-        //   );
-        // }
+        queuedJobKeys.sort((a, b) => {
+          const aQueuedTime = this.apiQueue[a].queuedTime;
+          const bQueuedTime = this.apiQueue[b].queuedTime;
+          return aQueuedTime - bQueuedTime;
+        });
 
         // So this is the core logic of claiming jobs is here, and currently, it's just FIFO
         // Go through the queued jobs and start them if we have capacity
