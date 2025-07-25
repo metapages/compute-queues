@@ -13,6 +13,7 @@ import {
   WebsocketMessageTypeServerBroadcast,
 } from "../../shared/src/mod.ts";
 import { createNewContainerJobMessage, fileToDataref, hashFileOnDisk } from "../../shared/src/shared/jobtools.ts";
+import { closeKv } from "../../shared/src/shared/kv.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -168,6 +169,7 @@ Deno.test("Test upload and download", async () => {
   const downloadResponse = await fetch(downloadUrl);
   const downloadResponseBody = await downloadResponse.text();
   assertEquals(downloadResponseBody, content);
+  closeKv();
 });
 
 Deno.test("Test exists API", async () => {
@@ -193,6 +195,7 @@ Deno.test("Test exists API", async () => {
   const contentDownloaded = await existsResponse2.text();
   assertEquals(existsResponse2.status, 200);
   assertEquals(contentDownloaded, content);
+  closeKv();
 
   try {
     Deno.removeSync(fileName);
@@ -252,6 +255,7 @@ Deno.test(
 
     socket.close();
     await closed(socket);
+    closeKv();
 
     try {
       Deno.removeSync(fileName);
@@ -301,6 +305,7 @@ Deno.test(
     // console.log("Job completed. Closing socket...");
     socket.close();
     await closed(socket);
+    closeKv();
   },
 );
 
@@ -338,4 +343,5 @@ Deno.test("S3 retry logic handles connection errors", async () => {
     // Don't fail the test if S3 is not available, just log the error
     console.log("ℹ️ S3 may not be available in test environment");
   }
+  closeKv();
 });

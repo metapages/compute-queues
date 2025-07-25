@@ -3,6 +3,7 @@ import { assert, assertEquals } from "std/assert";
 import { createNewContainerJobMessage, fetchRobust } from "@metapages/compute-queues-shared";
 
 import { createWebhookServer } from "./webhooks_test.ts";
+import { closeKv } from "../../shared/src/shared/kv.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -85,5 +86,6 @@ Deno.test(
     await webhookCalled;
     await webhookCalled;
     await shutdown();
+    closeKv();
   },
 );

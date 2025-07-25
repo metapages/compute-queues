@@ -13,7 +13,7 @@ export const getKv = async (): Promise<Deno.Kv> => {
       ensureFileSync(kvPath);
     }
 
-    console.log(`🔥 Opening kv at ${kvPath}`);
+    // console.log(`🔥 Opening kv at ${kvPath}`);
     const thiskv = await Deno.openKv(kvPath);
     if (localkv) {
       thiskv.close();
@@ -23,4 +23,11 @@ export const getKv = async (): Promise<Deno.Kv> => {
     // console.log(`🗝️  DenoKv Connected${kvPath ? " [" + kvPath + "]" : ""} ✅`);
   }
   return localkv;
+};
+
+export const closeKv = (): void => {
+  if (localkv) {
+    localkv.close();
+    localkv = undefined;
+  }
 };

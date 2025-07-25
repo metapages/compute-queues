@@ -4,6 +4,7 @@ import { closed, open } from "@korkje/wsi";
 import { createNewContainerJobMessage, DockerJobState, type JobMessagePayload } from "@metapages/compute-queues-shared";
 
 import { API_URL, cancelJobOnQueue, QUEUE_ID, queueJobs, TotalWorkerCpus } from "./util.ts";
+import { closeKv } from "../../shared/src/shared/kv.ts";
 
 Deno.test(
   "submit multiple jobs from the same namespace: previous RUNNING jobs are removed and replaced",
@@ -120,6 +121,7 @@ Deno.test(
 
     socket.close();
     await closed(socket);
+    closeKv();
 
     await Promise.all(
       Array.from(messages).map((message) =>

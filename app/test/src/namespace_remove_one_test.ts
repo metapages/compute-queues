@@ -12,6 +12,7 @@ import {
 } from "@metapages/compute-queues-shared";
 
 import { API_URL, cancelJobOnQueue, QUEUE_ID, queueJobs } from "./util.ts";
+import { closeKv } from "../../shared/src/shared/kv.ts";
 
 Deno.test(
   "submit the same job with different namespaces: then cancel one job+namespace, remaining namespaces are still on the queue",
@@ -165,6 +166,7 @@ Deno.test(
 
     socket.close();
     await closed(socket);
+    closeKv();
 
     await Promise.all(
       Array.from(messages).map((message) =>

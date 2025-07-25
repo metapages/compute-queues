@@ -5,6 +5,7 @@ import {
   type WebsocketMessageWorkerToServer,
   type WorkerRegistration,
 } from "@metapages/compute-queues-shared";
+import { closeKv } from "../../shared/src/shared/kv.ts";
 
 // Mock the DockerJobQueue to test periodic registration
 class MockDockerJobQueue {
@@ -91,8 +92,9 @@ Deno.test(
     // Verify the registration count
     assert(queue.getRegistrationCount() >= 2, `Expected at least 2 registrations, got ${queue.getRegistrationCount()}`);
 
-    console.log(
-      `✅ Periodic registration test passed: ${sentMessages.length} messages sent, ${queue.getRegistrationCount()} registrations`,
-    );
+    // console.log(
+    //   `✅ Periodic registration test passed: ${sentMessages.length} messages sent, ${queue.getRegistrationCount()} registrations`,
+    // );
+    closeKv();
   },
 );

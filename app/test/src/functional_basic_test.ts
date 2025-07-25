@@ -13,6 +13,7 @@ import {
   type WebsocketMessageServerBroadcast,
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
+import { closeKv } from "../../shared/src/shared/kv.ts";
 
 const fetch = fetchRobust;
 
@@ -123,5 +124,6 @@ Deno.test(
 
     socket.close();
     await closed(socket);
+    closeKv();
   },
 );
