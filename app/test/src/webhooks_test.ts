@@ -3,6 +3,7 @@ import { assertEquals } from "std/assert";
 import { closed, open } from "@korkje/wsi";
 
 import { createNewContainerJobMessage, fetchRobust } from "../../shared/src/mod.ts";
+import { closeKv } from "../../shared/src/shared/kv.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -76,6 +77,7 @@ Deno.test("Test our temporary webhook server works", async () => {
   await webhookCalled;
 
   await shutdown();
+  closeKv();
 });
 
 Deno.test(
@@ -145,5 +147,6 @@ Deno.test(
     socket.close();
     await closed(socket);
     await shutdown();
+    closeKv();
   },
 );

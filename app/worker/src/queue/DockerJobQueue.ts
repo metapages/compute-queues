@@ -1,9 +1,9 @@
+import { ms } from "ms";
+import parseDuration from "parse-duration";
 import { config } from "/@/config.ts";
 import { ensureIsolateNetwork } from "/@/docker/network.ts";
 import { convertIOToVolumeMounts, getOutputs } from "/@/queue/IO.ts";
-import { convertStringToDockerCommand } from "/@/queue/utils.ts";
-import { ms } from "ms";
-import parseDuration from "parse-duration";
+import { convertStringToDockerCommand, getDockerFiltersForJob } from "/@/queue/utils.ts";
 
 import * as computeQueuesShared from "@metapages/compute-queues-shared";
 import {
@@ -16,7 +16,7 @@ import {
 } from "@metapages/compute-queues-shared";
 
 import mod from "../../mod.json" with { type: "json" };
-import { ContainerLabel, ContainerLabelQueue, ContainerLabelWorker } from "./constants.ts";
+import { ContainerLabelId, ContainerLabelWorker } from "./constants.ts";
 import { docker } from "./dockerClient.ts";
 import { dockerJobExecute } from "./DockerJob.ts";
 import { getRunningContainerForJob } from "./index.ts";
@@ -55,6 +55,8 @@ export class DockerJobQueue {
   jobDefinitions: JobDefinitionCache;
   private registrationInterval: number | null = null;
   private runningJobHealthInterval: number | null = null;
+  gotFirstCompleteJobState: boolean = false;
+  performedInitialContainerCheckAfterJobState: boolean = false;
 
   constructor(args: DockerJobQueueArgs) {
     const { sender, cpus, gpus, id, maxJobDuration, queue, jobDefinitions } = args;
@@ -70,22 +72,45 @@ export class DockerJobQueue {
     if (!this.queueKey) {
       throw new Error("queueKey is required");
     }
-    this.checkForLocallyRunningJobs();
+    // this.checkForLocallyRunningJobs();
 
     // Start periodic registration
     this.startPeriodicRegistration();
 
     // Start periodic running job health check
     this.startRunningJobHealthInterval();
+
+    // this.killOrphanedJobs();
   }
 
   async checkForLocallyRunningJobs() {
     const runningContainers = await docker.listContainers({
-      filters:
-        `{"label": ["${ContainerLabel}=true", "${ContainerLabelQueue}=${this.queueKey}", "${ContainerLabelWorker}=${this.workerId}"], "status": ["running"]}`,
+      filters: getDockerFiltersForJob({ workerId: this.workerId, status: "running" }),
     });
-    if (runningContainers.length > 0) {
-      console.log(`${this.workerIdShort} 👀 found existing running containers: ${runningContainers.length}`);
+
+    for (const containerData of runningContainers) {
+      const containerId = containerData.Id;
+      try {
+        const container = docker.getContainer(containerId);
+        if (!container) {
+          continue;
+        }
+
+        const containerInfo = await container.inspect();
+
+        const jobId = containerInfo.Config?.Labels?.[ContainerLabelId];
+        if (jobId && !this.queue[jobId]) {
+          console.log(
+            `${this.workerIdShort} 👀 found existing running container for job but not in our internalqueue: ${
+              getJobColorizedString(jobId)
+            }`,
+          );
+          container?.kill();
+        }
+      } catch (err) {
+        /* do nothing */
+        console.error(err);
+      }
     }
   }
 
@@ -278,6 +303,16 @@ export class DockerJobQueue {
     this._updateApiQueue(message);
     this._checkRunningJobs();
     await this._claimJobs();
+
+    if (!message.isSubset) {
+      this.gotFirstCompleteJobState = true;
+    }
+
+    if (this.gotFirstCompleteJobState && !this.performedInitialContainerCheckAfterJobState) {
+      this.performedInitialContainerCheckAfterJobState = true;
+      await this.killOrphanedJobs();
+      await this.checkForLocallyRunningJobs();
+    }
   }
 
   async onUpdateUpdateASubsetOfJobs(
@@ -1088,6 +1123,41 @@ export class DockerJobQueue {
         }
       } catch (err) {
         console.log(`${this.workerIdShort} ${getJobColorizedString(jobId)} 🚨 Error checking container for job:`, err);
+      }
+    }
+  }
+
+  /**
+   * Kills jobs that belong to a different worker.
+   */
+  private async killOrphanedJobs() {
+    console.log(`${this.workerIdShort} 🗑️ killing orphaned jobs`);
+
+    const runningContainers = await docker.listContainers({
+      filters: getDockerFiltersForJob({ status: "running" }),
+    });
+    for (const containerData of runningContainers) {
+      const containerId = containerData.Id;
+      try {
+        const container = docker.getContainer(containerId);
+        if (!container) {
+          continue;
+        }
+
+        const containerInfo = await container.inspect();
+
+        const workerId = containerInfo.Config?.Labels?.[ContainerLabelWorker];
+        if (workerId && !workerId.startsWith("test-worker") && workerId !== this.workerId) {
+          console.log(
+            `🔥🔥🔥 killOrphanedJobs containerInfo from worker ${workerId} jobId=${
+              getJobColorizedString(containerInfo.Config?.Labels?.[ContainerLabelId])
+            }`,
+          );
+          container?.kill();
+        }
+      } catch (err) {
+        /* do nothing */
+        console.error(err);
       }
     }
   }

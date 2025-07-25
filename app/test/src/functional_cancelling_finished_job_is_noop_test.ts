@@ -10,6 +10,7 @@ import {
   WebsocketMessageTypeClientToServer,
   WebsocketMessageTypeServerBroadcast,
 } from "@metapages/compute-queues-shared";
+import { closeKv } from "../../shared/src/shared/kv.ts";
 
 const QUEUE_ID = Deno.env.get("QUEUE_ID") || "local1";
 const API_URL = Deno.env.get("API_URL") ||
@@ -109,5 +110,6 @@ Deno.test(
 
     socket.close();
     await closed(socket);
+    closeKv();
   },
 );

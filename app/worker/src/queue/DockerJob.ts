@@ -262,7 +262,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     }
 
     // Check for existing job container
-    const existingRunningContainer = await getRunningContainerForJob({ jobId: id, workerId });
+    const existingRunningContainer = await getRunningContainerForJob({ jobId: id });
 
     if (isKilled.value) {
       return;
@@ -438,7 +438,7 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
 
 export const getRunningContainerForJob = async (args: {
   jobId: string;
-  workerId: string;
+  workerId?: string;
 }): Promise<Container | undefined> => {
   const runningContainers = await docker.listContainers({
     filters: getDockerFiltersForJob({ ...args, status: "running" }),

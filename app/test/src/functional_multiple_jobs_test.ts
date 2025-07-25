@@ -14,6 +14,7 @@ import {
 } from "@metapages/compute-queues-shared";
 
 import { cancelJobOnQueue } from "./util.ts";
+import { closeKv } from "../../shared/src/shared/kv.ts";
 
 const fetch = fetchRobust;
 
@@ -123,6 +124,7 @@ Deno.test("submit multiple jobs and get expected results", async () => {
 
   socket.close();
   await closed(socket);
+  closeKv();
 
   await Promise.all(
     Array.from(jobIds).map((jobId) =>

@@ -7,8 +7,6 @@ import { getKv } from "/@/shared/kv.ts";
 import type { DockerJobControlConfig } from "/@/shared/types.ts";
 import { getJobColorizedString, getQueueColorizedString } from "/@/shared/util.ts";
 
-const kv = await getKv();
-
 export const callJobWebhook = async (
   queue: string,
   namespace: string,
@@ -81,6 +79,7 @@ export const callJobWebhook = async (
 };
 
 const retryUnsuccessfulWebhooks = async (): Promise<void> => {
+  const kv = await getKv();
   const iter = kv.list<DockerJobControlConfig>({
     prefix: ["submission-hook"],
   });
@@ -115,6 +114,7 @@ export const addJobProcessSubmissionWebhook = async (opts: {
     );
   }
 
+  const kv = await getKv();
   await kv.set(["submission-hook", queue, namespace, jobId], control, {
     expireIn: JobDataCacheDurationMilliseconds,
   });
@@ -127,5 +127,6 @@ const deleteJobProcessSubmissionWebhook = async (
   namespace: string,
   jobId: string,
 ): Promise<void> => {
+  const kv = await getKv();
   await kv.delete(["submission-hook", queue, namespace, jobId]);
 };
