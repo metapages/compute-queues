@@ -4,7 +4,7 @@ app = 'metapage-io-workers-b'
 primary_region = 'ord'
 
 [build]
-  image = 'metapage/metaframe-docker-worker:0.54.17-standalone'
+  image = 'metapage/metaframe-docker-worker:0.54.62-standalone'
 
 [[vm]]
   memory = '4gb'
@@ -14,7 +14,7 @@ primary_region = 'ord'
 [env]
   METAPAGE_IO_WORKER_CPUS = '2'
   METAPAGE_IO_WORKER_RUN_STANDALONE = true
-  # METAPAGE_IO_QUEUE is set as a secret
+  # METAPAGE_IO_WORKER_QUEUE is set as a secret
 
 [[restart]]
   policy = "on-failure"

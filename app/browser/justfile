@@ -28,7 +28,6 @@ blue := "\\e[34m"
 magenta := "\\e[35m"
 grey := "\\e[90m"
 
-# If not in docker, get inside
 _help:
     #!/usr/bin/env bash
     # exit when any command fails

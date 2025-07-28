@@ -10,7 +10,7 @@ export const metricsHandler = async (c: Context) => {
     return c.text("Missing queue");
   }
 
-  const count = await db.queueGetCount(queue);
+  const count = await db.queueGetQueuedOrRunningCount(queue);
 
   try {
     // Simple Prometheus-compatible metric response

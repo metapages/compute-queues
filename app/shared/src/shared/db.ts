@@ -811,13 +811,16 @@ export class DB {
     return results;
   }
 
-  async queueGetCount(queue: string): Promise<number> {
+  async queueGetQueuedOrRunningCount(queue: string): Promise<number> {
     const entries = this.kv.list<InMemoryDockerJob>({
       prefix: ["queue", queue],
     });
     let count = 0;
-    for await (const _ of entries) {
-      count++;
+    for await (const entry of entries) {
+      const job = entry.value as InMemoryDockerJob;
+      if (job.state === DockerJobState.Queued || job.state === DockerJobState.Running) {
+        count++;
+      }
     }
     return count;
   }

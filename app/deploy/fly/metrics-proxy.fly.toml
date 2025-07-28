@@ -8,11 +8,11 @@ primary_region = 'ord'
   METRICS_TARGETS = """
 [
   {
-    "endpoint": "https://container.mtfm.io/[queue_id]/metrics",
+    "endpoint": "https://container.mtfm.io/q/[queue_id]/metrics",
     "app_name": "metapage-io-workers-a"
   },
   {
-    "endpoint": "https://container.mtfm.io/[queue_id]/metrics",
+    "endpoint": "https://container.mtfm.io/q/[queue_id]/metrics",
     "app_name": "metapage-io-workers-b"
   }
 ]
