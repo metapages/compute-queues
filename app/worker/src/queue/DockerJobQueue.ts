@@ -739,11 +739,17 @@ export class DockerJobQueue {
       let volumes: Volume[];
       let outputsDir: string;
       try {
+        if (!this.queue[jobId]) {
+          return;
+        }
         this.queue[jobId].phase = DockerRunPhase.CopyInputs;
         const volumesResult = await convertIOToVolumeMounts(
           { id: jobId, definition },
           config.server,
         );
+        if (!this.queue[jobId]) {
+          return;
+        }
         this.queue[jobId].phase = DockerRunPhase.Building;
         volumes = volumesResult.volumes;
         outputsDir = volumesResult.outputsDir;

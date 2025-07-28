@@ -221,7 +221,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     if (isKilled.value) {
       return;
     }
-    workItem.phase = DockerRunPhase.Building;
+    if (workItem) {
+      workItem.phase = DockerRunPhase.Building;
+    }
     try {
       createOptions.Image = await ensureDockerImage({
         jobId: id,
@@ -424,7 +426,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       killAndRemove(workItem, id, dockerExecution.container, "DockerJob.finish normally");
     }
 
-    workItem.phase = DockerRunPhase.UploadOutputs;
+    if (workItem) {
+      workItem.phase = DockerRunPhase.UploadOutputs;
+    }
 
     return result;
   };

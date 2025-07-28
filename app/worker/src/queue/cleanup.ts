@@ -106,7 +106,9 @@ export const killAndRemove = async (
   container: Docker.Container,
   reason: string,
 ): Promise<unknown> => {
-  workItem.phase = DockerRunPhase.Ended;
+  if (workItem) {
+    workItem.phase = DockerRunPhase.Ended;
+  }
   if (!container) {
     console.log(`${getJobColorizedString(jobId)} 🗑️ killAndRemove(${reason}) no container!`);
     return;
