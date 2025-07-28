@@ -121,7 +121,7 @@ module "worker_vm" {
     image = var.worker_image
     env = [
       {
-        name  = "METAPAGE_IO_GENERATE_WORKER_ID"
+        name  = "METAPAGE_IO_WORKER_GENERATE_WORKER_ID"
         value = true
       },
       {
@@ -133,7 +133,7 @@ module "worker_vm" {
         value = each.value.gpus != null ? each.value.gpus.count : 0
       },
       {
-        name  = "METAPAGE_IO_QUEUE_ID"
+        name  = "METAPAGE_IO_WORKER_QUEUE_ID"
         value = each.value.queue_id
       }
     ]

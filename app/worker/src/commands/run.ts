@@ -32,7 +32,7 @@ import { JobDefinitionCache } from "../queue/JobDefinitionCache.ts";
 
 const VERSION: string = mod.version;
 
-const EnvPrefix = "METAPAGE_IO_";
+const EnvPrefix = "METAPAGE_IO_WORKER_";
 
 export const runCommand = new Command()
   .name("run")
@@ -60,25 +60,31 @@ export const runCommand = new Command()
   )
   .option("--debug [debug:boolean]", "Debug mode", { default: undefined })
   .action(async (options, queue?: string) => {
-    const METAPAGE_IO_CPUS = Deno.env.get(`${EnvPrefix}CPUS`);
-    config.cpus = typeof options.cpus === "number" ? options.cpus : (METAPAGE_IO_CPUS ? parseInt(METAPAGE_IO_CPUS) : 1);
+    const METAPAGE_IO_WORKER_CPUS = Deno.env.get(`${EnvPrefix}CPUS`);
+    config.cpus = typeof options.cpus === "number"
+      ? options.cpus
+      : (METAPAGE_IO_WORKER_CPUS ? parseInt(METAPAGE_IO_WORKER_CPUS) : 1);
 
-    const METAPAGE_IO_GPUS = Deno.env.get(`${EnvPrefix}GPUS`);
-    config.gpus = typeof options.gpus === "number" ? options.gpus : (METAPAGE_IO_GPUS ? parseInt(METAPAGE_IO_GPUS) : 0);
+    const METAPAGE_IO_WORKER_GPUS = Deno.env.get(`${EnvPrefix}GPUS`);
+    config.gpus = typeof options.gpus === "number"
+      ? options.gpus
+      : (METAPAGE_IO_WORKER_GPUS ? parseInt(METAPAGE_IO_WORKER_GPUS) : 0);
 
-    const METAPAGE_IO_MODE = Deno.env.get(`${EnvPrefix}MODE`);
-    config.mode = options.mode === "remote" || options.mode === "local" ? options.mode : (METAPAGE_IO_MODE || "remote");
+    const METAPAGE_IO_WORKER_MODE = Deno.env.get(`${EnvPrefix}MODE`);
+    config.mode = options.mode === "remote" || options.mode === "local"
+      ? options.mode
+      : (METAPAGE_IO_WORKER_MODE || "remote");
 
-    const METAPAGE_IO_QUEUE = Deno.env.get(`${EnvPrefix}QUEUE`);
-    config.queue = config.mode === "local" ? "local" : queue || METAPAGE_IO_QUEUE || "";
-    if (!queue && !METAPAGE_IO_QUEUE && config.mode === "remote") {
+    const METAPAGE_IO_WORKER_QUEUE = Deno.env.get(`${EnvPrefix}QUEUE`);
+    config.queue = config.mode === "local" ? "local" : queue || METAPAGE_IO_WORKER_QUEUE || "";
+    if (!queue && !METAPAGE_IO_WORKER_QUEUE && config.mode === "remote") {
       throw new Error("Remote mode: must supply the queue id");
     }
 
-    const METAPAGE_IO_PORT = Deno.env.get(`${EnvPrefix}PORT`);
+    const METAPAGE_IO_WORKER_PORT = Deno.env.get(`${EnvPrefix}PORT`);
     config.port = typeof options.port === "number"
       ? options.port
-      : (METAPAGE_IO_PORT ? parseInt(METAPAGE_IO_PORT) : 8000);
+      : (METAPAGE_IO_WORKER_PORT ? parseInt(METAPAGE_IO_WORKER_PORT) : 8000);
 
     config.dataDirectory = join(
       options.dataDirectory && typeof (options.dataDirectory) === "string"
@@ -87,27 +93,27 @@ export const runCommand = new Command()
       config.mode,
     );
 
-    const METAPAGE_IO_DEBUG = Deno.env.get(`${EnvPrefix}DEBUG`);
-    config.debug = !!(typeof (options.debug) === "boolean" ? options.debug : METAPAGE_IO_DEBUG === "true");
+    const METAPAGE_IO_WORKER_DEBUG = Deno.env.get(`${EnvPrefix}DEBUG`);
+    config.debug = !!(typeof (options.debug) === "boolean" ? options.debug : METAPAGE_IO_WORKER_DEBUG === "true");
 
     console.log(`🔥 Setting DENO_KV_URL to ${join(config.dataDirectory, "kv")}`);
     Deno.env.set("DENO_KV_URL", join(config.dataDirectory, "kv"));
     console.log(`🔥 now? DENO_KV_URL ${Deno.env.get("DENO_KV_URL")}`);
 
-    const METAPAGE_IO_API_ADDRESS = Deno.env.get(`${EnvPrefix}API_ADDRESS`);
+    const METAPAGE_IO_WORKER_API_ADDRESS = Deno.env.get(`${EnvPrefix}API_ADDRESS`);
     config.server = typeof (options.apiAddress) === "string"
       ? options.apiAddress
-      : (METAPAGE_IO_API_ADDRESS ?? config.server);
+      : (METAPAGE_IO_WORKER_API_ADDRESS ?? config.server);
     if (config.mode === "local") {
       config.server = `http://localhost:${config.port}`;
     }
 
-    const METAPAGE_IO_JOB_MAX_DURATION = Deno.env.get(
+    const METAPAGE_IO_WORKER_JOB_MAX_DURATION = Deno.env.get(
       `${EnvPrefix}JOB_MAX_DURATION`,
     );
     const stringDuration = typeof (options.maxJobDuration) === "string"
       ? options.maxJobDuration
-      : (METAPAGE_IO_JOB_MAX_DURATION || "5m");
+      : (METAPAGE_IO_WORKER_JOB_MAX_DURATION || "5m");
     config.maxJobDuration = parseDuration(stringDuration) as number;
 
     if (options.id && typeof options.id === "string") {
@@ -126,11 +132,11 @@ export const runCommand = new Command()
         await kv.set(["workerId"], config.id); // don't need to await
       }
       // If this is set, we are going to generate it every time
-      if (Deno.env.get("METAPAGE_IO_GENERATE_WORKER_ID")) {
+      if (Deno.env.get("METAPAGE_IO_WORKER_GENERATE_WORKER_ID")) {
         config.id = crypto.randomUUID();
         console.log(
-          `🔥 Worker ID generated because METAPAGE_IO_GENERATE_WORKER_ID=${
-            Deno.env.get("METAPAGE_IO_GENERATE_WORKER_ID")
+          `🔥 Worker ID generated because METAPAGE_IO_WORKER_GENERATE_WORKER_ID=${
+            Deno.env.get("METAPAGE_IO_WORKER_GENERATE_WORKER_ID")
           } is set: ${config.id}`,
         );
       }

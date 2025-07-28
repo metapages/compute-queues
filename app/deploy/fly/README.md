@@ -13,7 +13,7 @@ Fill out details of the worker app TOML files. In particular make sure they have
 For each set of workers, create an empty app and stage a secret containing the unique queue ID. Then, deploy the app.
 ```sh
 fly apps create metapage-io-workers-a
-fly secrets set -a metapage-io-workers-a METAPAGE_IO_QUEUE_ID=[generatedID]
+fly secrets set -a metapage-io-workers-a METAPAGE_IO_WORKER_QUEUE_ID=[generatedID]
 fly deploy -c workers-a.fly.toml --yes --ha=false
 ```
 
