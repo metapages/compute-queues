@@ -1,4 +1,4 @@
-# Project Asman: Public Compute Queues for everyone everywhere all at once
+# Public Compute Queues for everyone everywhere all at once
 
 https://container.mtfm.io
 
