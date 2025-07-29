@@ -588,7 +588,7 @@ export const useStore = create<MainStore>((set, get) => ({
     if (!logs || logs.length === 0) {
       return;
     }
-    const allLogsText = logs.join("\n");
+    const allLogsText = logs.map(log => log[0]).join("\n");
     navigator?.clipboard?.writeText(allLogsText);
   },
 }));
