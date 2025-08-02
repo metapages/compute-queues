@@ -84,7 +84,7 @@ export const JobStatus: React.FC = () => {
     <HStack h={"100%"} gap={5} alignItems="center" justifyContent={"center"}>
       {icon}
       <VStack gap={0.2} alignItems={"flex-start"}>
-        <Text align={"start"} fontWeight={500}>
+        <Text align={"start"} fontWeight={500} noOfLines={1}>
           {text}
         </Text>
         <HStack gap={2}>
