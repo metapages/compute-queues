@@ -798,8 +798,9 @@ export class DockerJobQueue {
 
       // TODO hook up the durationMax to a timeout
       // TODO add input mounts
+      const workItem = this.queue[jobId];
       const executionArgs: DockerJobArgs = {
-        workItem: this.queue[jobId],
+        workItem,
         workerId: this.workerId,
         sender: this.sender,
         queue: this.queueKey,
@@ -930,6 +931,7 @@ export class DockerJobQueue {
           let valueFinished:
             | computeQueuesShared.StateChangeValueFinished
             | undefined;
+
           if (result.isTimedOut) {
             valueFinished = {
               type: DockerJobState.Finished,
@@ -949,7 +951,12 @@ export class DockerJobQueue {
           } else {
             // get outputs
             try {
+              workItem.phase = DockerRunPhase.UploadOutputs;
+
               const outputs = await getOutputs(jobId, this.workerId);
+
+              workItem.phase = DockerRunPhase.Ended;
+
               valueFinished = {
                 type: DockerJobState.Finished,
                 reason: computeQueuesShared.DockerJobFinishedReason.Success,
@@ -958,6 +965,7 @@ export class DockerJobQueue {
                 result: { ...result, outputs },
               };
             } catch (err) {
+              workItem.phase = DockerRunPhase.Ended;
               console.log(
                 `${this.workerIdShort} ${jobString} 💥 failed to upload outputs ${err}`,
               );
@@ -980,6 +988,7 @@ export class DockerJobQueue {
 
           // Delete from our local queue first
           // TODO: cache locally before attempting to send
+          workItem.phase = DockerRunPhase.Ended;
           delete this.queue[jobId];
 
           // console.log(
@@ -999,6 +1008,7 @@ export class DockerJobQueue {
           });
         },
       ).catch((err: unknown) => {
+        workItem.phase = DockerRunPhase.Ended;
         console.log(
           `${this.workerIdShort} ${jobString} 💥 errored ${err}`,
           (err as Error)?.stack,
@@ -1057,6 +1067,9 @@ export class DockerJobQueue {
     if (localJob?.execution) {
       localJob.execution.isKilled.value = true;
     }
+    if (localJob) {
+      localJob.phase = DockerRunPhase.Ended;
+    }
 
     delete this.queue[locallyRunningJobId];
     localJob?.execution?.kill(reason || "killJobAndIgnore()");
@@ -1090,7 +1103,7 @@ export class DockerJobQueue {
       // Defensive: only check jobs that are in the apiQueue and marked as running
       const apiJob = this.apiQueue[jobId];
       if (!apiJob || apiJob.state !== DockerJobState.Running) continue;
-      if (localJob.phase !== DockerRunPhase.Running) continue;
+      if (!(localJob.phase === DockerRunPhase.Running || localJob.phase === DockerRunPhase.UploadOutputs)) continue;
       try {
         let container = localJob.execution?.container;
         if (!container) {
