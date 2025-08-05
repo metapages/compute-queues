@@ -152,7 +152,7 @@ const copyJobToQueueHandler = (c: Context) => {
   return c.json({ message: "The local handler for copyJob is not implemented because there is only one queue: local" });
 };
 
-const getJobHandler = async (c: Context) => {
+const getQueueJobHandler = async (c: Context) => {
   try {
     const jobId: string | undefined = c.req.param("jobId");
     if (!jobId) {
@@ -163,13 +163,17 @@ const getJobHandler = async (c: Context) => {
 
     const jobQueue = await ensureQueue(queue);
 
-    const job = await jobQueue.db.queueJobGet({ queue, jobId });
-    if (!job) {
+    const [definition, results] = await Promise.all([
+      jobQueue.db.getJobDefinition(jobId),
+      jobQueue.db.getJobFinishedResults(jobId),
+    ]);
+
+    if (!definition) {
       c.status(404);
       return c.json({ error: "Job not found" });
     }
 
-    return c.json(job);
+    return c.json({ data: definition ? { definition, results } : null });
   } catch (err) {
     console.error("Error getting job", err);
     return c.text((err as Error).message, 500);
@@ -258,6 +262,34 @@ export const getJobResultsHandler = async (c: Context) => {
 
     const result = await jobQueue.db.getJobFinishedResults(jobId);
     return c.json({ data: result || null });
+  } catch (err) {
+    console.error("Error getting job results:", err);
+    return c.text((err as Error).message, 500);
+  }
+};
+
+export const getJobHandler = async (c: Context) => {
+  try {
+    const jobId: string | undefined = c.req.param("jobId");
+
+    if (!jobId) {
+      c.status(404);
+      return c.json({ error: "No jobId specified" });
+    }
+
+    const jobQueue = await ensureQueue("local");
+
+    const [definition, results] = await Promise.all([
+      jobQueue.db.getJobDefinition(jobId),
+      jobQueue.db.getJobFinishedResults(jobId),
+    ]);
+
+    if (!definition) {
+      c.status(404);
+      return c.json({ error: "Job not found" });
+    }
+
+    return c.json({ data: definition ? { definition, results } : null });
   } catch (err) {
     console.error("Error getting job results:", err);
     return c.text((err as Error).message, 500);
@@ -374,7 +406,7 @@ app.get("/healthz", (c: Context) => c.text("OK"));
 app.get("/f/:key", downloadHandler);
 app.get("/f/:key/exists", existsHandler);
 app.put("/f/:key", uploadHandler);
-app.get("/j/:jobId", getDefinitionHandler);
+app.get("/j/:jobId", getJobHandler);
 app.get("/j/:jobId/definition.json", getDefinitionHandler);
 app.get("/j/:jobId/result.json", getJobResultsHandler);
 app.get("/j/:jobId/results.json", getJobResultsHandler);
@@ -383,7 +415,7 @@ app.post("/q/:queue", submitJobToQueueHandler);
 app.post("/q/:queue/j", submitJobToQueueHandler);
 app.get("/q/:queue/j", getJobsHandler);
 app.get("/q/:queue", getJobsHandler);
-app.get("/q/:queue/j/:jobId", getJobHandler);
+app.get("/q/:queue/j/:jobId", getQueueJobHandler);
 // app.get("/q/:queue/j/:jobId/inputs/:filename", toImplementPlaceholder);
 // app.get("/q/:queue/j/:jobId/outputs/:filename", toImplementPlaceholder);
 // app.get("/q/:queue/j/:jobId/namespaces.json", getJobNamespacesHandler);

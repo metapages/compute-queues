@@ -81,10 +81,10 @@ clusters.
   List jobs in a queue (alias).
 
 - `GET /q/:queue/j/:jobId`\
-  Get details for a specific job.
+  Get definition, results, and queue status for a specific job.
 
 - `GET /j/:jobId`\
-  Get details for a specific job (global lookup).
+  Get definition and results for a specific job (global lookup).
 
 - `GET /j/:jobId/definition.json`\
   Get the job definition.
