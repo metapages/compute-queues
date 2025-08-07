@@ -79,6 +79,9 @@ export const TabConfigureJob: React.FC = () => {
         newJobDefinitionBlob.requirements = {
           gpus: 1,
         };
+      } else {
+        // Clear requirements when GPU is disabled to ensure consistent hash
+        delete newJobDefinitionBlob.requirements;
       }
       newJobDefinitionBlob.shmSize = values.shmSize;
 
