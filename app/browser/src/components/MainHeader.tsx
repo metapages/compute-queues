@@ -95,7 +95,7 @@ export const MainHeader: React.FC = () => {
 
   const rightSectionWidth = isLargerThan400 ? "11rem" : "0rem";
   return (
-    <Flex w={"100%"} h={"headerHeight"} bg={"gray.100"} borderBottom={"1px"}>
+    <Flex w={"100%"} h="55px" bg={"gray.100"} borderBottom={"1px"}>
       <HStack justify={"space-between"} px={2} w={`calc(100% - ${rightSectionWidth})`}>
         <JobStatus />
         {/* <EditInput /> */}
