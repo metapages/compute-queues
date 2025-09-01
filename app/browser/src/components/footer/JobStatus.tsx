@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 
 import { ApiOrigin } from "/@/config";
 import { useQueue } from "/@/hooks/useQueue";
@@ -36,12 +36,6 @@ export const JobStatus: React.FC = () => {
 
   const resultsFinished = job?.finished;
 
-  if (!jobId) {
-    return <></>;
-  }
-
-  if (!resolvedQueue) return <></>;
-
   const { icon, text, exitCode, showExitCodeRed, ...rest } = getJobStateValues(
     jobId,
     job,
@@ -51,7 +45,7 @@ export const JobStatus: React.FC = () => {
   );
   let { desc } = rest;
 
-  const copyJobId = () => {
+  const copyJobId = useCallback(() => {
     // Note: this does not currently work
     // see https://www.chromium.org/Home/chromium-security/deprecating-permissions-in-cross-origin-iframes/
     navigator?.clipboard?.writeText(jobId);
@@ -69,7 +63,7 @@ export const JobStatus: React.FC = () => {
         ),
       });
     }
-  };
+  }, [jobId, toast]);
 
   if (desc && desc.includes(" exec: ")) {
     desc = desc.split(" exec: ")[1];
@@ -77,8 +71,11 @@ export const JobStatus: React.FC = () => {
     desc = "..." + desc?.substring(desc.length - 60);
   }
 
-  // console.log("isMinimalHeader", isMinimalHeader);
-  // console.log("jobId", jobId);
+  if (!jobId) {
+    return <></>;
+  }
+
+  if (!resolvedQueue) return <></>;
 
   return (
     <HStack h={"100%"} gap={5} alignItems="center" justifyContent={"center"}>
@@ -87,27 +84,22 @@ export const JobStatus: React.FC = () => {
         <Text align={"start"} fontWeight={500} noOfLines={1}>
           {text}
         </Text>
-        <HStack gap={2}>
-          {!isMinimalHeader && jobId && (
-            <Link href={`${resolvedQueue === "local" ? "http://localhost:8000" : ApiOrigin}/j/${jobId}`} isExternal>
-              <Text display={{ base: "none", md: "block" }} cursor={"copy"} onClick={copyJobId} fontSize={"0.7rem"}>
-                Job Id: {jobId.slice(0, 5)}
-              </Text>
-            </Link>
-          )}
-          {!isMinimalHeader && exitCode && (
-            <Link>
-              <Text color={showExitCodeRed ? "red" : undefined} fontSize={"0.7rem"}>
-                Exit Code: {exitCode}
-              </Text>
-            </Link>
-          )}
-          {desc && (
-            <Text display={{ base: "none", md: "block" }} fontSize={"0.7rem"}>
-              {desc}
+
+        {!isMinimalHeader && jobId && (
+          <Link href={`${resolvedQueue === "local" ? "http://localhost:8000" : ApiOrigin}/j/${jobId}`} isExternal>
+            <Text cursor={"copy"} onClick={copyJobId} fontSize={"0.7rem"}>
+              Id: {jobId.slice(0, 5)}
             </Text>
-          )}
-        </HStack>
+          </Link>
+        )}
+        {!isMinimalHeader && exitCode && (
+          <Link>
+            <Text color={showExitCodeRed ? "red" : undefined} fontSize={"0.7rem"}>
+              Exit Code: {exitCode}
+            </Text>
+          </Link>
+        )}
+        {desc && <Text fontSize={"0.7rem"}>{desc}</Text>}
       </VStack>
     </HStack>
   );
