@@ -6,9 +6,7 @@ import { docker } from "/@/queue/dockerClient.ts";
 import { DockerBuildError, ensureDockerImage } from "/@/queue/dockerImage.ts";
 import bytes from "bytes";
 import type { Container, ContainerCreateOptions } from "dockerode";
-import { ensureDirSync } from "std/fs";
 import type { Buffer } from "std/node/buffer";
-import { dirname, join } from "std/path";
 
 import {
   DockerJobState,
@@ -53,7 +51,6 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     shmSize,
     entrypoint,
     volumes,
-    outputsDir,
     deviceRequests,
     maxJobDuration,
     isKilled,
@@ -148,6 +145,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   // Connect container to our network
   createOptions.HostConfig!.NetworkMode = DockerNetworkForJobs;
 
+  // this way jobs can notify other resources about how
+  // to access this jobs resources e.g. MCP servers.
+  createOptions.Env!.push("JOB_ID=" + args.id);
   createOptions.Env!.push("JOB_INPUTS=/inputs");
   createOptions.Env!.push("JOB_OUTPUTS=/outputs");
   createOptions.Env!.push(`JOB_CACHE=${JobCacheDirectory}`);
@@ -178,18 +178,8 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     `${DockerJobSharedVolumeName}:${JobCacheDirectory}:Z`,
   );
 
-  let logFileStdout: Deno.FsFile | null = null;
-  let logFileStderr: Deno.FsFile | null = null;
-  const stdoutLogFileName = join(outputsDir, "job", "stdout");
-  stdoutLogFileName && ensureDirSync(dirname(stdoutLogFileName));
-  const stderrLogFileName = join(outputsDir, "job", "stderr");
-  stderrLogFileName && ensureDirSync(dirname(stderrLogFileName));
-
-  const encoder = new TextEncoder();
-
   const grabberOutStream = StreamTools.createTransformStream((s: string) => {
     const log = s.toString();
-    logFileStdout?.write(encoder.encode(log));
     result.logs.push([log, Date.now()]);
     sender({
       type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
@@ -204,7 +194,6 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
 
   const grabberErrStream = StreamTools.createTransformStream((s: string) => {
     const log = s.toString();
-    logFileStderr?.write(encoder.encode(log));
     result.logs.push([log, Date.now(), true]);
     sender({
       type: WebsocketMessageTypeWorkerToServer.JobStatusLogs,
@@ -275,45 +264,6 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
       if (containerInfo.State?.Status === "running") {
         dockerExecution.container = existingRunningContainer;
       }
-    }
-
-    // create the log file, depending on if the container was already running
-    // if it was running, we don't want to overwrite the log file
-    if (!existingRunningContainer) {
-      if (stdoutLogFileName) {
-        try {
-          Deno.removeSync(stdoutLogFileName);
-        } catch (_) {
-          /* do nothing */
-        }
-      }
-      if (stderrLogFileName) {
-        try {
-          Deno.removeSync(stderrLogFileName);
-        } catch (_) {
-          /* do nothing */
-        }
-      }
-    }
-    if (stdoutLogFileName) {
-      ensureDirSync(dirname(stdoutLogFileName));
-      logFileStdout = stdoutLogFileName
-        ? await Deno.open(stdoutLogFileName, {
-          write: true,
-          create: true,
-          append: true,
-        })
-        : null;
-    }
-    if (stderrLogFileName) {
-      ensureDirSync(dirname(stderrLogFileName));
-      logFileStderr = stderrLogFileName
-        ? await Deno.open(stderrLogFileName, {
-          write: true,
-          create: true,
-          append: true,
-        })
-        : null;
     }
 
     if (isKilled.value) {
@@ -417,9 +367,6 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     if (!result.duration && finishTime && startTime) {
       result.duration = finishTime - startTime;
     }
-
-    (logFileStdout as Deno.FsFile | null)?.close();
-    (logFileStderr as Deno.FsFile | null)?.close();
 
     // remove the container out-of-band (return quickly)
     if (dockerExecution.container) {
