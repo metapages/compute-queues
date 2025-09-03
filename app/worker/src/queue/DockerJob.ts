@@ -178,7 +178,6 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     `${DockerJobSharedVolumeName}:${JobCacheDirectory}:Z`,
   );
 
-
   const grabberOutStream = StreamTools.createTransformStream((s: string) => {
     const log = s.toString();
     result.logs.push([log, Date.now()]);
@@ -266,7 +265,6 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
         dockerExecution.container = existingRunningContainer;
       }
     }
-
 
     if (isKilled.value) {
       return;
@@ -369,7 +367,6 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
     if (!result.duration && finishTime && startTime) {
       result.duration = finishTime - startTime;
     }
-
 
     // remove the container out-of-band (return quickly)
     if (dockerExecution.container) {
