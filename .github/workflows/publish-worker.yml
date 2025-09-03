@@ -3,9 +3,9 @@ name: Publish worker binary & container images
 on:
   push:
     branches:
-      - "main"
-    paths:
-      - "app/worker/mod.json"
+      - "fix-deploy"
+    # paths:
+    #   - "app/worker/mod.json"
 
 jobs:
   release-worker-binary:
