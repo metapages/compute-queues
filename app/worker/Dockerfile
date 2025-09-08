@@ -3,8 +3,6 @@
 #################################################################
 FROM denoland/deno:2.3.6 AS worker
 
-ENV DOCKER_VERSION=5:27.1.1-1~debian.12~bookworm
-
 # # https://gist.github.com/squarebracket/e719069522436873bc6f13efb359cac9
 # RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/cert.pem
 RUN apt-get update && apt-get -y install \
@@ -33,7 +31,7 @@ RUN apt-get update && apt-get -y install \
 	tee /etc/apt/sources.list.d/docker.list > /dev/null && \
 	apt-get update && \
 	apt-get --yes install \
-	docker-ce-cli=$DOCKER_VERSION \
+	docker-ce \
 	docker-buildx-plugin && \
 	rm -rf /var/lib/apt/lists/*
 
