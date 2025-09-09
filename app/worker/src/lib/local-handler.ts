@@ -296,6 +296,170 @@ export const getJobHandler = async (c: Context) => {
   }
 };
 
+export const getJobInputsHandler = async (c: Context) => {
+  try {
+    const jobId: string | undefined = c.req.param("jobId");
+    const filename: string | undefined = c.req.param("filename");
+
+    if (!jobId) {
+      c.status(400);
+      return c.text("Missing jobId");
+    }
+
+    if (!filename) {
+      c.status(400);
+      return c.text("Missing filename");
+    }
+
+    const queue: string = c.req.param("queue") || "local";
+    const jobQueue = await ensureQueue(queue);
+
+    // Get the job definition to find the input file SHA
+    const jobDefinition = await jobQueue.db.getJobDefinition(jobId);
+    if (!jobDefinition) {
+      c.status(404);
+      return c.text("Job not found");
+    }
+
+    // Look for the file in inputs
+    const inputs = jobDefinition.inputs;
+    console.log("getJobInputsHandler inputs", inputs);
+    if (!inputs || !inputs[filename]) {
+      c.status(404);
+      return c.text(`Input file '${filename}' not found`);
+    }
+
+    const inputRef = inputs[filename];
+    console.log("getJobInputsHandler inputRef", inputRef);
+
+    // Get the file SHA (hash) which is the storage key
+    // const fileSha = inputRef.hash || inputRef.value;
+    const fileSha = new URL(inputRef.value).pathname.split("/")[2];
+    if (!fileSha) {
+      c.status(404);
+      return c.text(`No file SHA found for input '${filename}'`);
+    }
+
+    // Serve the file directly from local storage
+    const config = getConfig();
+    const filePath = join(config.dataDirectory, "f", fileSha);
+
+    try {
+      // Check if the file exists
+      const fileInfo = await Deno.stat(filePath);
+      if (!fileInfo.isFile) {
+        c.status(404);
+        return c.text("File not found");
+      }
+
+      // Open the file
+      const file = await Deno.open(filePath, { read: true });
+
+      // Set headers
+      c.header("Content-Disposition", `attachment; filename="${filename}"`);
+      c.header("Content-Type", filename.endsWith(".json") ? "application/json" : "application/octet-stream");
+      c.header("Content-Length", fileInfo.size.toString());
+
+      // Create a response with the file's readable stream
+      return c.newResponse(file.readable);
+    } catch (err) {
+      if (err instanceof Deno.errors.NotFound) {
+        c.status(404);
+        return c.text("File not found");
+      }
+      console.error("Error serving input file:", err);
+      return c.text((err as Error).message, 500);
+    }
+  } catch (err) {
+    console.error("Error getting job input file:", err);
+    return c.text((err as Error).message, 500);
+  }
+};
+
+export const getJobOutputsHandler = async (c: Context) => {
+  try {
+    const jobId: string | undefined = c.req.param("jobId");
+    const filename: string | undefined = c.req.param("filename");
+
+    if (!jobId) {
+      c.status(400);
+      return c.text("Missing jobId");
+    }
+
+    if (!filename) {
+      c.status(400);
+      return c.text("Missing filename");
+    }
+
+    const queue: string = c.req.param("queue") || "local";
+    const jobQueue = await ensureQueue(queue);
+
+    // Get the job results to find the output file SHA
+    const jobWithoutMaybeLargeResults = await jobQueue.db.getFinishedJob(jobId);
+    if (!jobWithoutMaybeLargeResults) {
+      c.status(404);
+      return c.text("Job not found");
+    }
+
+    // Get the full results
+    const finishedJobFull = await jobQueue.db.getJobFinishedResults(jobId);
+    if (!finishedJobFull || !finishedJobFull.finished || !finishedJobFull.finished.result) {
+      c.status(404);
+      return c.text("Job results not found");
+    }
+
+    // Look for the file in outputs
+    const outputs = finishedJobFull.finished.result.outputs;
+    if (!outputs || !outputs[filename]) {
+      c.status(404);
+      return c.text(`Output file '${filename}' not found`);
+    }
+
+    const outputRef = outputs[filename];
+
+    // Get the file SHA (hash) which is the storage key
+    const fileSha = outputRef.hash || outputRef.value;
+    if (!fileSha) {
+      c.status(404);
+      return c.text(`No file SHA found for output '${filename}'`);
+    }
+
+    // Serve the file directly from local storage
+    const config = getConfig();
+    const filePath = join(config.dataDirectory, "f", fileSha);
+
+    try {
+      // Check if the file exists
+      const fileInfo = await Deno.stat(filePath);
+      if (!fileInfo.isFile) {
+        c.status(404);
+        return c.text("File not found");
+      }
+
+      // Open the file
+      const file = await Deno.open(filePath, { read: true });
+
+      // Set headers
+      c.header("Content-Disposition", `attachment; filename="${filename}"`);
+      c.header("Content-Type", filename.endsWith(".json") ? "application/json" : "application/octet-stream");
+      c.header("Content-Length", fileInfo.size.toString());
+
+      // Create a response with the file's readable stream
+      return c.newResponse(file.readable);
+    } catch (err) {
+      if (err instanceof Deno.errors.NotFound) {
+        c.status(404);
+        return c.text("File not found");
+      }
+      console.error("Error serving output file:", err);
+      return c.text((err as Error).message, 500);
+    }
+  } catch (err) {
+    console.error("Error getting job output file:", err);
+    return c.text((err as Error).message, 500);
+  }
+};
+
 export const cancelJobHandler = async (c: Context) => {
   try {
     const jobId: string | undefined = c.req.param("jobId");
@@ -410,14 +574,16 @@ app.get("/j/:jobId", getJobHandler);
 app.get("/j/:jobId/definition.json", getDefinitionHandler);
 app.get("/j/:jobId/result.json", getJobResultsHandler);
 app.get("/j/:jobId/results.json", getJobResultsHandler);
+app.get("/j/:jobId/outputs/:filename", getJobOutputsHandler);
+app.get("/j/:jobId/inputs/:filename", getJobInputsHandler);
 app.post("/j/:jobId/copy", copyJobToQueueHandler);
 app.post("/q/:queue", submitJobToQueueHandler);
 app.post("/q/:queue/j", submitJobToQueueHandler);
 app.get("/q/:queue/j", getJobsHandler);
 app.get("/q/:queue", getJobsHandler);
 app.get("/q/:queue/j/:jobId", getQueueJobHandler);
-// app.get("/q/:queue/j/:jobId/inputs/:filename", toImplementPlaceholder);
-// app.get("/q/:queue/j/:jobId/outputs/:filename", toImplementPlaceholder);
+app.get("/q/:queue/j/:jobId/inputs/:filename", getJobInputsHandler);
+app.get("/q/:queue/j/:jobId/outputs/:filename", getJobOutputsHandler);
 // app.get("/q/:queue/j/:jobId/namespaces.json", getJobNamespacesHandler);
 app.get("/q/:queue/j/:jobId/definition.json", getDefinitionHandler);
 app.get("/q/:queue/j/:jobId/result.json", getJobResultsHandler);

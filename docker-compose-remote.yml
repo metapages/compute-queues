@@ -28,7 +28,7 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
       - AWS_REGION=${AWS_REGION:-us-west-2}
-      - AWS_ENDPOINT=${AWS_ENDPOINT-http://minio:9000}
+      - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio:9000}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
@@ -82,7 +82,7 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
       - AWS_REGION=${AWS_REGION:-us-west-2}
-      - AWS_ENDPOINT=${AWS_ENDPOINT-http://minio:9000}
+      - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio:9000}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
@@ -136,7 +136,7 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-minioaccesskey123123}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-minioaccesskey123123}
       - AWS_REGION=${AWS_REGION:-us-west-2}
-      - AWS_ENDPOINT=${AWS_ENDPOINT-http://minio:9000}
+      - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio:9000}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_KV_ACCESS_TOKEN=localdenoaccesstoken
       - DENO_KV_URL=http://denokv:4512
@@ -311,7 +311,7 @@ services:
       - NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-}
       - AWS_ACCESS_KEY_ID=minioaccesskey123123
       - AWS_SECRET_ACCESS_KEY=minioaccesskey123123
-      - AWS_ENDPOINT=http://minio:9000
+      - AWS_ENDPOINT=${AWS_ENDPOINT:-http://minio:9000}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET:-localbucket}
       - DENO_DIR=/deno
       - DENO_INSTALL_ROOT=/deno
@@ -347,6 +347,7 @@ services:
       retries: 5
     environment:
       MINIO_SERVER_URL: https://minio.worker-metaframe.localhost:${APP_PORT:-443}
+      MINIO_BROWSER_REDIRECT_URL: https://minio.worker-metaframe.localhost:${APP_PORT:-443}
       MINIO_REGION: ${AWS_REGION:-us-west-2}
       MINIO_ROOT_PASSWORD: minioaccesskey123123
       MINIO_ROOT_USER: minioaccesskey123123

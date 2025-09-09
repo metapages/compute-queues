@@ -1293,6 +1293,7 @@ export class BaseDockerJobQueue {
 
           return;
         }
+
         const possibleMessage: WebsocketMessageClientToServer = JSON.parse(messageString);
         // console.log(`${this.addressShortString} 🌎 BROWSER message`, possibleMessage);
         switch (possibleMessage.type) {

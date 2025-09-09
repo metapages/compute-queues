@@ -39,12 +39,9 @@ export const getDownloadPresignedUrl = async (key: string): Promise<string> => {
   // ContentType?: string;
   try {
     const command = new GetObjectCommand({ ...bucketParams, Key: key });
-    let url = await getSignedUrlWithRetry(s3Client, command, {
+    const url = await getSignedUrlWithRetry(s3Client, command, {
       expiresIn: OneWeekInSeconds,
     }, 10);
-    if (url.startsWith("http://") && !url.includes("minio")) {
-      url = url.replace("http://", "https://");
-    }
     return url;
   } catch (err) {
     console.error(`Error getDownloadPresignedUrl key:${key}`, err);

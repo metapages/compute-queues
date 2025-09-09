@@ -17,6 +17,8 @@ import { getDefinitionHandler } from "./routes/api/v1/definition.ts";
 import { getJobsHandler } from "./routes/api/v1/jobs.ts";
 import { getJobNamespacesHandler } from "./routes/api/v1/namespaces.ts";
 import { getJobResultHandler } from "./routes/api/v1/result.ts";
+import { getJobInputsHandler } from "./routes/api/v1/jobInputs.ts";
+import { getJobOutputsHandler } from "./routes/api/v1/jobOutputs.ts";
 
 const app = new Hono();
 
@@ -57,6 +59,8 @@ app.put("/f/:key", uploadHandler);
 app.get("/j/:jobId/definition.json", getDefinitionHandler);
 app.get("/j/:jobId/result.json", getJobResultHandler);
 app.get("/j/:jobId/results.json", getJobResultHandler);
+app.get("/j/:jobId/outputs/:filename", getJobOutputsHandler);
+app.get("/j/:jobId/inputs/:filename", getJobInputsHandler);
 app.post("/j/:jobId/copy", copyJobToQueueHandler);
 app.get("/j/:jobId", getJobHandler);
 app.post("/q/:queue", submitJobToQueueHandler);
@@ -64,8 +68,8 @@ app.post("/q/:queue/j", submitJobToQueueHandler);
 app.get("/q/:queue/j", getJobsHandler);
 app.get("/q/:queue", getJobsHandler);
 app.get("/q/:queue/j/:jobId", getQueueJobHandler);
-app.get("/q/:queue/j/:jobId/inputs/:filename", toImplementPlaceholder);
-app.get("/q/:queue/j/:jobId/outputs/:filename", toImplementPlaceholder);
+app.get("/q/:queue/j/:jobId/inputs/:filename", getJobInputsHandler);
+app.get("/q/:queue/j/:jobId/outputs/:filename", getJobOutputsHandler);
 app.get("/q/:queue/j/:jobId/namespaces.json", getJobNamespacesHandler);
 app.get("/q/:queue/j/:jobId/definition.json", getDefinitionHandler);
 app.get("/q/:queue/j/:jobId/result.json", getJobResultHandler);

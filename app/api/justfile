@@ -4,6 +4,7 @@ set shell := ["bash", "-c"]
 set dotenv-load := true
 set export := true
 
+APP_PORT := env_var_or_default("APP_PORT", "443")
 DENO_DEPLOY_TOKEN := env_var_or_default("DENO_DEPLOY_TOKEN", "")
 
 # Make sure to include the just and deployctl paths here
@@ -65,7 +66,7 @@ _serve:
     AWS_ACCESS_KEY_ID=minioaccesskey123123 \
     AWS_SECRET_ACCESS_KEY=minioaccesskey123123 \
     AWS_REGION=us-west-2 \
-    AWS_ENDPOINT=http://minio:9000 \
+    AWS_ENDPOINT=https://minio.worker-metaframe.localhost:{{ APP_PORT }} \
     AWS_S3_BUCKET=localbucket \
     DENO_KV_ACCESS_TOKEN=localdenoaccesstoken \
     DENO_KV_URL=http://denokv:4512 \

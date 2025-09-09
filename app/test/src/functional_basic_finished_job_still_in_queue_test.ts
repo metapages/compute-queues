@@ -28,21 +28,22 @@ Deno.test(
       `${API_URL.replace("http", "ws")}/${QUEUE_ID}/client`,
     );
 
-    await (async () => {
-      const jobs = await queueJobs(QUEUE_ID);
-      if (jobs) {
-        for (const [jobId, job] of Object.entries(jobs)) {
-          if (job.state !== DockerJobState.Finished) {
-            await cancelJobOnQueue({
-              queue: QUEUE_ID,
-              jobId,
-              namespace: "*",
-              message: "from-functional-basic-finished-job-still-in-queue-test",
-            });
-          }
-        }
+    const jobs = await queueJobs(QUEUE_ID);
+    if (jobs) {
+      for (const [jobId, job] of Object.entries(jobs)) {
+        console.log(`cancelling job ${getJobColorizedString(jobId)} 👺 job state: ${job.state}`);
+        // Cancel all jobs, including finished ones, to ensure clean state
+        await cancelJobOnQueue({
+          queue: QUEUE_ID,
+          jobId,
+          namespace: "*",
+          message: "from-functional-basic-finished-job-still-in-queue-test",
+        });
       }
-    })();
+    }
+
+    // Wait a moment for cleanup to process
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const definition = {
       image: "alpine:3.18.5",
@@ -54,47 +55,55 @@ Deno.test(
       definition,
     });
 
-    const timeoutInterval = setTimeout(async () => {
-      const jobs = await queueJobs(QUEUE_ID);
-      console.log(`${getJobColorizedString(jobId)} 👺 test timed out: `, jobs[jobId]);
-      throw "Test timed out";
-    }, 10000);
+    let timeoutOccurred = false;
+    const timeoutInterval = setTimeout(() => {
+      timeoutOccurred = true;
+      console.log(`⏰ ${getJobColorizedString(jobId)} 👺 test timed out: undefined`);
+      throw new Error(`Test timed out after 15 seconds. Job ${jobId} not found or not finished.`);
+    }, 15000);
 
     await open(socket);
 
     // submit all the jobs
-    await open(socket);
     socket.send(JSON.stringify(message));
+
+    let iterationCount = 0;
+    // const startTime = Date.now();
 
     // now wait for it to finish properly
     while (true) {
+      if (timeoutOccurred) {
+        break;
+      }
+
+      iterationCount++;
       const jobs = await queueJobs(QUEUE_ID);
-
       const job = jobs[jobId];
+      // const elapsed = Date.now() - startTime;
 
-      // if (job) {
-      //   console.log(
-      //     `${getJobColorizedString(jobId)} waiting for job results: ${
-      //       job.state === DockerJobState.Finished ? job.finishedReason : job.state
-      //     }`,
-      //   );
-      // } else {
-      //   console.log(`${getJobColorizedString(jobId)} waiting for job results: no job found`);
-      // }
+      // console.log(
+      //   `🔄 Iteration ${iterationCount} (${elapsed}ms elapsed):`,
+      //   `   🔍 Our job ${getJobColorizedString(jobId)}:`,
+      //   job ? `${job.state} (${job.finishedReason || "N/A"})` : "NOT FOUND",
+      // );
 
       // check the job is finished
       if (job?.state && job.state === DockerJobState.Finished) {
-        const { data: finishedState }: { data: InMemoryDockerJob } =
-          await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`, { redirect: "follow" }))
-            .json();
+        try {
+          const { data: finishedState }: { data: InMemoryDockerJob } =
+            await (await fetch(`${API_URL}/q/${QUEUE_ID}/j/${jobId}/result.json`, { redirect: "follow" }))
+              .json();
 
-        assertEquals(
-          jobs[jobId].finishedReason,
-          DockerJobFinishedReason.Success,
-          `Job finishedState not a success? ${JSON.stringify(finishedState)}`,
-        );
-        assertEquals(finishedState?.finished?.result?.StatusCode, 0);
-        break;
+          assertEquals(
+            jobs[jobId].finishedReason,
+            DockerJobFinishedReason.Success,
+            `Job finishedState not a success? ${JSON.stringify(finishedState)}`,
+          );
+          assertEquals(finishedState?.finished?.result?.StatusCode, 0);
+          break;
+        } catch (error) {
+          throw error;
+        }
       }
 
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -104,6 +113,7 @@ Deno.test(
 
     socket.close();
     await closed(socket);
+
     closeKv();
   },
 );

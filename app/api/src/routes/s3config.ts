@@ -23,7 +23,7 @@ const config = {
     secretAccessKey: AWS_SECRET_ACCESS_KEY,
   },
   region: AWS_REGION,
-  endpoint: AWS_ACCESS_KEY_ID?.includes("minio") ? "http://minio:9000" : undefined,
+  endpoint: AWS_ENDPOINT,
   forcePathStyle: AWS_ENDPOINT ? true : undefined,
   signatureVersion: "v4",
 };

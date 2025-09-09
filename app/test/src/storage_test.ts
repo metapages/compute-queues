@@ -116,6 +116,7 @@ function waitForJobToFinish(
             assertEquals(finishedState?.result?.error, undefined);
 
             const outputs = finishedState?.result?.outputs;
+
             const dataref = outputs?.[referenceFileName];
             assert(
               !!dataref,
@@ -123,6 +124,8 @@ function waitForJobToFinish(
             );
 
             // Download file content
+            // handle local mode where the worker is on the docker network
+            // with the test container not the host network
             dataref.value = dataref.value.replace(
               "http://localhost:",
               "http://worker:",
