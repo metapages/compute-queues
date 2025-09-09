@@ -68,7 +68,7 @@ Deno.test(
     socket.send(JSON.stringify(message));
 
     let iterationCount = 0;
-    const startTime = Date.now();
+    // const startTime = Date.now();
 
     // now wait for it to finish properly
     while (true) {
