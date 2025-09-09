@@ -98,8 +98,13 @@ test mode="remote" +args="": _build_shared check (_validate_mode mode)
         done
     }
 
-    export APP_PORT=$(get_free_port)
-    export WORKER_LOCAL_PORT=$(get_free_port)
+    if [ "{{ mode }}" = "local" ]; then
+        export APP_PORT=$(get_free_port)
+        export WORKER_LOCAL_PORT=$(get_free_port)
+    else
+        export APP_PORT=8081
+        export WORKER_LOCAL_PORT=8000
+    fi
     echo -e "Using APP_PORT=${APP_PORT}"
     echo -e "Using WORKER_LOCAL_PORT=${WORKER_LOCAL_PORT}"
 
@@ -122,7 +127,11 @@ test mode="remote" +args="": _build_shared check (_validate_mode mode)
 
     export AWS_SECRET_ACCESS_KEY="minioaccesskey123123"
     export AWS_ACCESS_KEY_ID="minioaccesskey123123"
-    export AWS_ENDPOINT="http://minio:9000"
+    if [ "{{ mode }}" = "local" ]; then
+        export AWS_ENDPOINT="https://minio.worker-metaframe.localhost:{{ APP_PORT }}"
+    else
+        export AWS_ENDPOINT="http://minio:9000"
+    fi
     export AWS_REGION="us-west-2"
     export AWS_S3_BUCKET="localbucket"
     export DENO_BROADCAST_REDIS_URL="redis://localhost:6379"

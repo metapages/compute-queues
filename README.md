@@ -95,6 +95,12 @@ clusters.
 - `GET /j/:jobId/results.json`\
   Get the job result (alias).
 
+- `GET /j/:jobId/inputs/:file`\
+  Get the job input file.
+
+- `GET /j/:jobId/outputs/:file`\
+  Get the job output file.
+
 - `POST /j/:jobId/copy`\
   Copy a job to another queue.
 
@@ -103,6 +109,12 @@ clusters.
 
 - `GET /q/:queue/j/:jobId/result.json`\
   Get the job result (scoped to queue).
+
+- `GET /q/:queue/j/:jobId/inputs/:file`\
+  Get the job input file.
+
+- `GET /q/:queue/j/:jobId/outputs/:file`\
+  Get the job output file.
 
 - `GET /q/:queue/j/:jobId/results.json`\
   Get the job result (scoped to queue).

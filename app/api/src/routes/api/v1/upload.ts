@@ -23,12 +23,9 @@ export const uploadHandler = async (c: Context) => {
 
   const command = new PutObjectCommand({ ...bucketParams, Key: key });
   try {
-    let url = await getSignedUrlWithRetry(s3Client, command, {
+    const url = await getSignedUrlWithRetry(s3Client, command, {
       expiresIn: OneWeekInSeconds,
     }, 10);
-    if (url.startsWith("http://") && !url.includes("minio")) {
-      url = url.replace("http://", "https://");
-    }
     return c.redirect(url);
   } catch (err) {
     console.error("uploadHandler error", err);
