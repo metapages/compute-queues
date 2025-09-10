@@ -2,17 +2,17 @@ import { type DataRef, DataRefType } from "@metapages/compute-queues-shared";
 import { db } from "/@/db/db.ts";
 import { getDownloadPresignedUrl } from "/@/routes/api/v1/download.ts";
 import type { Context } from "hono";
+import mime from "mime";
 
 export const getJobOutputsHandler = async (c: Context) => {
   try {
     const jobId: string | undefined = c.req.param("jobId");
-    const filename: string | undefined = c.req.param("filename");
-
     if (!jobId) {
       c.status(400);
       return c.text("Missing jobId");
     }
 
+    const filename = c.req.path.split("/outputs/").splice(1).join("/inputs/");
     if (!filename) {
       c.status(400);
       return c.text("Missing filename");
@@ -56,8 +56,8 @@ export const getJobOutputsHandler = async (c: Context) => {
           }
           return new Response(bytes, {
             headers: {
-              "Content-Type": "application/octet-stream", // or specific MIME type
-              "Content-Disposition": 'attachment; filename="data.bin"', // optional
+              "Content-Type": mime.getType(filename) || "application/octet-stream",
+              "Content-Disposition": `attachment; filename="${filename.split("/").pop()}"`,
               "Content-Length": bytes.length.toString(),
             },
           });
