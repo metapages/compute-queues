@@ -3,6 +3,7 @@ import { type Context, Hono } from "hono";
 import { serveStatic } from "hono/middleware";
 import { createHandler } from "metapages/worker/routing/handlerDeno";
 import { join } from "std/path";
+import mime from "mime";
 
 import {
   BaseDockerJobQueue,
@@ -299,12 +300,13 @@ export const getJobHandler = async (c: Context) => {
 export const getJobInputsHandler = async (c: Context) => {
   try {
     const jobId: string | undefined = c.req.param("jobId");
-    const filename: string | undefined = c.req.param("filename");
 
     if (!jobId) {
       c.status(400);
       return c.text("Missing jobId");
     }
+
+    const filename = c.req.path.split("/inputs/").splice(1).join("/inputs/");
 
     if (!filename) {
       c.status(400);
@@ -330,7 +332,6 @@ export const getJobInputsHandler = async (c: Context) => {
     }
 
     const inputRef = inputs[filename];
-    console.log("getJobInputsHandler inputRef", inputRef);
 
     // Get the file SHA (hash) which is the storage key
     // const fileSha = inputRef.hash || inputRef.value;
@@ -357,7 +358,7 @@ export const getJobInputsHandler = async (c: Context) => {
 
       // Set headers
       c.header("Content-Disposition", `attachment; filename="${filename}"`);
-      c.header("Content-Type", filename.endsWith(".json") ? "application/json" : "application/octet-stream");
+      c.header("Content-Type", mime.getType(filename) || "application/octet-stream");
       c.header("Content-Length", fileInfo.size.toString());
 
       // Create a response with the file's readable stream
@@ -379,13 +380,13 @@ export const getJobInputsHandler = async (c: Context) => {
 export const getJobOutputsHandler = async (c: Context) => {
   try {
     const jobId: string | undefined = c.req.param("jobId");
-    const filename: string | undefined = c.req.param("filename");
 
     if (!jobId) {
       c.status(400);
       return c.text("Missing jobId");
     }
 
+    const filename = c.req.path.split("/outputs/").splice(1).join("/inputs/");
     if (!filename) {
       c.status(400);
       return c.text("Missing filename");
@@ -441,7 +442,7 @@ export const getJobOutputsHandler = async (c: Context) => {
 
       // Set headers
       c.header("Content-Disposition", `attachment; filename="${filename}"`);
-      c.header("Content-Type", filename.endsWith(".json") ? "application/json" : "application/octet-stream");
+      c.header("Content-Type", mime.getType(filename) || "application/octet-stream");
       c.header("Content-Length", fileInfo.size.toString());
 
       // Create a response with the file's readable stream
@@ -574,8 +575,8 @@ app.get("/j/:jobId", getJobHandler);
 app.get("/j/:jobId/definition.json", getDefinitionHandler);
 app.get("/j/:jobId/result.json", getJobResultsHandler);
 app.get("/j/:jobId/results.json", getJobResultsHandler);
-app.get("/j/:jobId/outputs/:filename", getJobOutputsHandler);
-app.get("/j/:jobId/inputs/:filename", getJobInputsHandler);
+app.get("/j/:jobId/outputs/*", getJobOutputsHandler);
+app.get("/j/:jobId/inputs/*", getJobInputsHandler);
 app.post("/j/:jobId/copy", copyJobToQueueHandler);
 app.post("/q/:queue", submitJobToQueueHandler);
 app.post("/q/:queue/j", submitJobToQueueHandler);

@@ -11,6 +11,11 @@ export const submitJobToQueueHandler = async (c: Context) => {
       return c.json({ error: "No queue specified" });
     }
     const jobToQueue = await c.req.json<EnqueueJob>();
+    console.log("jobToQueue", jobToQueue);
+    if (!jobToQueue) {
+      c.status(400);
+      return c.json({ error: "No job provided" });
+    }
     jobToQueue.control = jobToQueue.control || {};
     jobToQueue.id = jobToQueue.id || (await shaDockerJob(jobToQueue.definition));
 
