@@ -107,6 +107,9 @@ export const runCommand = new Command()
     if (config.mode === "local") {
       config.server = `http://localhost:${config.port}`;
     }
+    if (config.server.endsWith("/")) {
+      config.server = config.server.slice(0, -1);
+    }
 
     const METAPAGE_IO_WORKER_JOB_MAX_DURATION = Deno.env.get(
       `${EnvPrefix}JOB_MAX_DURATION`,
