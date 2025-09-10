@@ -151,6 +151,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   createOptions.Env!.push("JOB_INPUTS=/inputs");
   createOptions.Env!.push("JOB_OUTPUTS=/outputs");
   createOptions.Env!.push(`JOB_CACHE=${JobCacheDirectory}`);
+  createOptions.Env!.push(`JOB_URL_PREFIX=${config?.server}/j/${args.id}`);
+  createOptions.Env!.push(`JOB_OUTPUTS_URL_PREFIX=${config?.server}/j/${args.id}/outputs/`);
+  createOptions.Env!.push(`JOB_INPUTS_URL_PREFIX=${config?.server}/j/${args.id}/inputs/`);
 
   if (deviceRequests) {
     // https://github.com/apocas/dockerode/issues/628
