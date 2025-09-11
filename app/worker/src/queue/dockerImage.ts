@@ -127,7 +127,7 @@ export const ensureDockerImage = async (args: {
       throw new DockerBuildError("Missing image or build configuration");
     }
 
-    const { dockerfile, context, filename, platform, target /*, buildArgs */ } = build;
+    const { dockerfile, context, buildContext, filename, platform, target /*, buildArgs */ } = build;
 
     if (!dockerfile && !context) {
       throw new DockerBuildError(
@@ -174,7 +174,7 @@ export const ensureDockerImage = async (args: {
         args.push(`--platform=${platform}`);
       }
       args.push(`--tag=${image}`);
-      args.push(".");
+      args.push(buildContext || ".");
 
       console.log("args", args);
 
