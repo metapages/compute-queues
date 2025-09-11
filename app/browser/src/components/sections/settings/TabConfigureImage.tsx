@@ -26,6 +26,7 @@ import { TrashSimple } from "@phosphor-icons/react";
 const validationSchema = yup.object({
   buildArgs: yup.string().optional(),
   context: yup.string().optional(),
+  buildContext: yup.string().optional(),
   filename: yup.string().optional(),
   dockerfile: yup.string().optional(),
   image: yup.string(),
@@ -39,6 +40,7 @@ const linkMap = {
   command: "https://docs.docker.com/reference/dockerfile/#cmd",
   dockerfile: "https://docs.docker.com/build/building/packaging/#dockerfile",
   context: "https://docs.docker.com/build/building/context/#git-repositories",
+  buildContext: "https://docs.docker.com/build/building/context/#local-context",
   filename: "https://docs.docker.com/build/building/packaging/#filenames",
   target: "https://docs.docker.com/build/building/multi-stage/#stop-at-a-specific-build-stage",
   buildArgs: "https://docs.docker.com/reference/cli/docker/buildx/build/#build-arg",
@@ -48,12 +50,14 @@ const linkMap = {
 const labelMap = {
   image: "docker image name",
   context: "Git Repo URL",
+  buildContext: "Build Context Path",
   filename: "Dockerfile Name",
   buildArgs: "Build Args",
   platform: "Platform  (--platform)",
 };
 const labelSubMap = {
   buildArgs: "Comma Separated",
+  buildContext: 'Default: "."',
 };
 
 type TabType = "useExisting" | "fromRepo";
@@ -80,7 +84,14 @@ export const TabConfigureImage: React.FC<{
       if (values.image) {
         newJobDefinitionBlob.image = values.image;
         delete newJobDefinitionBlob.build;
-      } else if (!values.buildArgs && !values.context && !values.filename && !values.dockerfile && !values.target) {
+      } else if (
+        !values.buildArgs &&
+        !values.context &&
+        !values.buildContext &&
+        !values.filename &&
+        !values.dockerfile &&
+        !values.target
+      ) {
         delete newJobDefinitionBlob.build;
       } else {
         newJobDefinitionBlob.build = {};
@@ -98,6 +109,10 @@ export const TabConfigureImage: React.FC<{
 
         if (values.context) {
           newJobDefinitionBlob.build.context = values.context;
+        }
+
+        if (values.buildContext) {
+          newJobDefinitionBlob.build.buildContext = values.buildContext;
         }
 
         if (values.platform) {
@@ -156,6 +171,7 @@ export const TabConfigureImage: React.FC<{
     initialValues: {
       buildArgs: jobDefinitionBlob?.build?.buildArgs?.join(","),
       context: jobDefinitionBlob?.build?.context,
+      buildContext: jobDefinitionBlob?.build?.buildContext,
       image: jobDefinitionBlob?.image,
       dockerfile: jobDefinitionBlob?.build?.dockerfile,
       filename: jobDefinitionBlob?.build?.filename,
@@ -179,6 +195,7 @@ export const TabConfigureImage: React.FC<{
     !!jobDefinitionBlob?.build?.dockerfile ||
     !!formik.values.buildArgs ||
     !!formik.values.context ||
+    !!formik.values.buildContext ||
     !!formik.values.filename ||
     !!formik.values.platform ||
     !!formik.values.target;
@@ -233,7 +250,7 @@ export const TabConfigureImage: React.FC<{
             </HStack>
           </Box>
         </FormControl>
-        {["context", "filename", "target", "platform", "buildArgs"].map(key => {
+        {["context", "buildContext", "filename", "target", "platform", "buildArgs"].map(key => {
           const labelJsx: ReactNode = <FormLink href={linkMap[key]} label={labelMap[key] || key} />;
           return (
             <VStack w="100%" key={key}>

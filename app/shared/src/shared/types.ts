@@ -43,6 +43,7 @@ export type InputsBase64String = { [name in string]: string };
 
 export type DockerJobImageBuild = {
   context?: string;
+  buildContext?: string;
   filename?: string;
   target?: string;
   // An actual Dockerfile content
