@@ -142,7 +142,7 @@ export const TabConfigureImage: React.FC<{
           newJobDefinitionBlob.build = {};
         }
         newJobDefinitionBlob.build.dockerfile = content;
-        delete newJobDefinitionBlob.build.filename;
+        // Don't delete filename - it should be preserved when saving custom Dockerfile
         delete newJobDefinitionBlob.image;
       } else {
         delete newJobDefinitionBlob.build.dockerfile;
