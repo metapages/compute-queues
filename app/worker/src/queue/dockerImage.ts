@@ -152,9 +152,12 @@ export const ensureDockerImage = async (args: {
       console.log(
         `👀 ensureDockerImage: ${image} building from user Dockerfile`,
       );
-      await Deno.writeTextFile(`${buildDir}/Dockerfile`, dockerfile);
+      const dockerfilePath = filename ? join(buildDir, filename) : `${buildDir}/Dockerfile`;
+      const dockerFileDir = dirname(dockerfilePath);
+      await ensureDir(dockerFileDir);
+      await Deno.writeTextFile(dockerfilePath, dockerfile);
       console.log(
-        `✅ ensureDockerImage: wrote Dockerfile to ${buildDir}/Dockerfile`,
+        `✅ ensureDockerImage: wrote Dockerfile to ${dockerfilePath}`,
       );
     }
 

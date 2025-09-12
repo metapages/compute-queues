@@ -3,7 +3,9 @@
     "allow": [
       "Bash(find:*)",
       "Bash(just worker:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(just lint)",
+      "Bash(just check)"
     ],
     "deny": [],
     "ask": []
