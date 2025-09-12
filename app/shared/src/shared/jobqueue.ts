@@ -570,6 +570,18 @@ export class BaseDockerJobQueue {
       payload: logs,
     });
     this.broadcastToLocalClients(messageString);
+    
+    // Also broadcast to MCP clients
+    try {
+      // Dynamic import to avoid circular dependencies
+      import("/@/routes/mcp/websocket.ts").then((mcpWs) => {
+        mcpWs.broadcastJobLogsToMCPClients(logs);
+      }).catch((err) => {
+        // MCP module might not be available, ignore silently
+      });
+    } catch (err) {
+      // Ignore if MCP is not available
+    }
   }
 
   async getStatusFromLocalWorkers(): Promise<
@@ -814,6 +826,27 @@ export class BaseDockerJobQueue {
   ): Promise<void> {
     await this.broadcastJobStatesToWebsockets([jobId]);
     this.broadcastJobStatesToChannel([jobId]);
+    
+    // Also broadcast to MCP clients
+    const job = this.state.jobs[jobId];
+    if (job) {
+      try {
+        // Dynamic import to avoid circular dependencies
+        import("/@/routes/mcp/websocket.ts").then((mcpWs) => {
+          mcpWs.broadcastJobStatusToMCPClients(jobId, job.state, {
+            worker: job.worker,
+            finishedReason: job.finishedReason,
+            time: job.time,
+            queuedTime: job.queuedTime,
+            namespaces: job.namespaces,
+          });
+        }).catch((err) => {
+          // MCP module might not be available, ignore silently
+        });
+      } catch (err) {
+        // Ignore if MCP is not available
+      }
+    }
   }
 
   public async stateChangeJobFinished(

@@ -20,6 +20,10 @@ import { getJobResultHandler } from "./routes/api/v1/result.ts";
 import { getJobInputsHandler } from "./routes/api/v1/jobInputs.ts";
 import { getJobOutputsHandler } from "./routes/api/v1/jobOutputs.ts";
 
+// MCP (Model Context Protocol) handlers
+import { handleMCPRequest, handleMCPHealth, handleMCPInfo } from "./routes/mcp/http.ts";
+import { handleMCPWebSocketUpgrade } from "./routes/mcp/websocket.ts";
+
 const app = new Hono();
 
 // app.use(logger((message: string, ...rest: string[]) => {
@@ -91,6 +95,12 @@ app.get("/:queue/metrics", metricsHandler);
 
 app.get("/q/:queue/status", statusHandler);
 app.get("/q/:queue/metrics", metricsHandler);
+
+// MCP (Model Context Protocol) endpoints
+app.post("/mcp", handleMCPRequest);
+app.get("/mcp/ws", handleMCPWebSocketUpgrade);
+app.get("/mcp/health", handleMCPHealth);
+app.get("/mcp/info", handleMCPInfo);
 
 // Serve static assets, and the index.html as the fallback
 app.get("/*", serveStatic({ root: "app/browser/dist" }));

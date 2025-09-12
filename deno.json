@@ -2,6 +2,7 @@
   "workspace": [
     "./app/api",
     "./app/cli",
+    "./app/mcp",
     "./app/shared",
     "./app/test",
     "./app/worker"
@@ -12,6 +13,7 @@
     "@metapages/deno-redis-broadcastchannel": "jsr:@metapages/deno-redis-broadcastchannel@^0.4.0",
     "@metapages/hash-query": "npm:@metapages/hash-query@0.4.8",
     "@metapages/metapage": "npm:@metapages/metapage@1.0.21",
+    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@^1.17.1",
     "@std/crypto": "jsr:@std/crypto@1.0.3",
     "@std/encoding": "jsr:@std/encoding@1.0.3",
     "@std/http": "jsr:@std/http@^1.0.12",
@@ -37,6 +39,7 @@
     "mnemonist": "npm:mnemonist@^0.40.3",
     "ms": "https://deno.land/x/ms@v0.1.0/ms.ts",
     "mutative": "npm:mutative@1.0.11",
+    "nanoid": "npm:nanoid@5.0.9",
     "nanoevents": "npm:nanoevents@9.0.0",
     "object-hash": "npm:object-hash@3.0.0",
     "parse-duration": "npm:parse-duration@^2.1.3",
