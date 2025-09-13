@@ -34,6 +34,7 @@
     "humanize-duration": "npm:humanize-duration@^3.32.1",
     "json-diff": "npm:json-diff@^1.0.6",
     "klaw": "npm:klaw@4.1.0",
+    "lru-cache": "npm:lru-cache@^11.2.1",
     "metapages/worker/routing/handlerDeno": "https://deno.land/x/metapages@v0.0.27/worker/routing/handlerDeno.ts",
     "mime": "npm:mime@^4.0.7",
     "mnemonist": "npm:mnemonist@^0.40.3",

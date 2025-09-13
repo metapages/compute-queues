@@ -1,5 +1,5 @@
-import { userJobQueues } from "/@/shared/jobqueue.ts";
-import type { JobStatusPayload } from "/@/shared/types.ts";
+import { userJobQueues } from "@metapages/compute-queues-shared";
+import type { JobStatusPayload } from "@metapages/compute-queues-shared";
 import type { Context } from "hono";
 
 import { readResource, resources } from "./resources.ts";

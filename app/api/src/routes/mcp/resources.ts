@@ -1,5 +1,5 @@
 import type { Resource } from "./types.ts";
-import { userJobQueues } from "/@/shared/jobqueue.ts";
+import { userJobQueues } from "@metapages/compute-queues-shared";
 
 /**
  * MCP Resources for job queue data

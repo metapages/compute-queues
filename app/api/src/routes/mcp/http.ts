@@ -1,13 +1,23 @@
 import type { Context } from "hono";
 import type { MCPRequest, MCPResponse } from "./types.ts";
-import { handleToolCall, tools } from "./tools.ts";
+import { handleToolCall, tools, setDefaultQueue, getDefaultQueue } from "./tools-simple.ts";
 import { readResource, resources } from "./resources.ts";
 
 /**
- * HTTP MCP Server endpoints
+ * HTTP MCP Server endpoints - Updated with new tools
  */
 
 export async function handleMCPRequest(c: Context): Promise<Response> {
+  // Set proper headers for MCP HTTP transport
+  c.header("Content-Type", "application/json");
+  c.header("Access-Control-Allow-Origin", "*");
+  c.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+  c.header("Access-Control-Allow-Headers", "Content-Type");
+
+  if (c.req.method === "OPTIONS") {
+    return c.body(null, 200);
+  }
+
   try {
     const request = await c.req.json() as MCPRequest;
     const response = await processMCPRequest(request);
@@ -15,6 +25,7 @@ export async function handleMCPRequest(c: Context): Promise<Response> {
   } catch (error) {
     const errorResponse: MCPResponse = {
       jsonrpc: "2.0",
+      id: null, // Add id field for error responses
       error: {
         code: -32700,
         message: "Parse error",
@@ -35,10 +46,15 @@ async function processMCPRequest(request: MCPRequest): Promise<MCPResponse> {
           jsonrpc: "2.0",
           id,
           result: {
+            protocolVersion: "2024-11-05",
             capabilities: {
-              tools: {},
-              resources: {},
-              logging: {},
+              tools: {
+                listChanged: false,
+              },
+              resources: {
+                subscribe: false,
+                listChanged: false,
+              },
             },
             serverInfo: {
               name: "worker-metapage-mcp",
@@ -55,9 +71,13 @@ async function processMCPRequest(request: MCPRequest): Promise<MCPResponse> {
         };
 
       case "tools/call":
+        if (!params || typeof params !== 'object' || !params.name) {
+          throw new Error("Invalid tool call parameters");
+        }
+        
         const toolResult = await handleToolCall({
-          name: params.name,
-          arguments: params.arguments,
+          name: params.name as string,
+          arguments: params.arguments as Record<string, unknown> || {},
         });
         
         return {
@@ -74,7 +94,11 @@ async function processMCPRequest(request: MCPRequest): Promise<MCPResponse> {
         };
 
       case "resources/read":
-        const resourceResult = await readResource(params.uri);
+        if (!params || typeof params !== 'object' || !params.uri) {
+          throw new Error("Invalid resource read parameters");
+        }
+        
+        const resourceResult = await readResource(params.uri as string);
         return {
           jsonrpc: "2.0",
           id,
@@ -103,7 +127,8 @@ export async function handleMCPHealth(c: Context): Promise<Response> {
     status: "healthy",
     server: "worker-metapage-mcp",
     version: "1.0.0",
-    capabilities: ["tools", "resources", "websocket"],
+    capabilities: ["tools", "resources", "iterative-development"],
+    queue: getDefaultQueue(),
     timestamp: new Date().toISOString(),
   });
 }
@@ -114,21 +139,37 @@ export async function handleMCPInfo(c: Context): Promise<Response> {
     server: {
       name: "worker-metapage-mcp",
       version: "1.0.0",
-      description: "MCP server for worker.metapage.io job queue system",
+      description: "MCP server for iterative container development",
+      queue: getDefaultQueue(),
+    },
+    workflow: {
+      description: "Iterative Container Development",
+      steps: [
+        "1. create_job - Create a containerized job with Docker image/Dockerfile and inputs",
+        "2. execute_job - Run the job and get comprehensive results including logs and outputs",
+        "3. inspect_outputs - Analyze outputs, check against expectations, identify issues",
+        "4. modify_job - Create iteration with updated code/config based on inspection",
+        "5. Repeat steps 2-4 until desired results are achieved",
+      ],
+      additionalTools: [
+        "list_iterations - View development history and iteration chains",
+        "get_job_url - Generate shareable URLs containing job definitions and results",
+      ],
     },
     capabilities: {
       tools: {
         count: tools.length,
         names: tools.map(t => t.name),
+        iterativeDevelopment: true,
+        simplifiedInputs: true,
       },
       resources: {
         count: resources.length,
         patterns: resources.map(r => r.uri),
       },
-      realtime: {
-        websocket: true,
-        streaming: true,
-        subscriptions: true,
+      queue: {
+        default: getDefaultQueue(),
+        configurable: true,
       },
     },
     endpoints: {
@@ -136,6 +177,14 @@ export async function handleMCPInfo(c: Context): Promise<Response> {
       websocket: "/mcp/ws",
       health: "/mcp/health",
       info: "/mcp/info",
+      jobUrls: {
+        pattern: "/j/{jobId}",
+        queuePattern: "/q/{queue}/j/{jobId}",
+        definition: "/q/{queue}/j/{jobId}/definition.json",
+        result: "/q/{queue}/j/{jobId}/result.json",
+        inputs: "/q/{queue}/j/{jobId}/inputs/",
+        outputs: "/q/{queue}/j/{jobId}/outputs/",
+      },
     },
     documentation: {
       tools: tools.map(tool => ({

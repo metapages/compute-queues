@@ -8,9 +8,19 @@
       "Bash(just worker:*)",
       "Bash(grep:*)",
       "Bash(just lint)",
-      "Bash(just check)"
+      "Bash(just check)",
+      "Bash(curl:*)",
+      "Bash(cat:*)",
+      "Bash(deno check:*)",
+      "Bash(deno add:*)",
+      "Bash(just dev:*)",
+      "Bash(docker compose:*)",
+      "Bash(just:*)",
+      "Bash(defaults read:*)",
+      "Bash(lsof:*)",
+      "Bash(kill:*)"
     ],
-    "ask": [],
-    "deny": []
+    "deny": [],
+    "ask": []
   }
 }

@@ -3,7 +3,7 @@
  * Used by MCP server and other services to receive job updates directly
  */
 
-import type { JobStatusPayload } from "/@/shared/types.ts";
+import type { JobStatusPayload } from "@metapages/compute-queues-shared";
 
 export interface JobWebSocketClient {
   connect(queueName: string): Promise<void>;

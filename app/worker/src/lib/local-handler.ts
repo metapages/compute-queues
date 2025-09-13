@@ -4,6 +4,7 @@ import { serveStatic } from "hono/middleware";
 import { createHandler } from "metapages/worker/routing/handlerDeno";
 import { join } from "std/path";
 import mime from "mime";
+import { nanoid } from "nanoid";
 
 import {
   BaseDockerJobQueue,
@@ -657,6 +658,476 @@ const ensureQueue = async (queue: string): Promise<BaseDockerJobQueue> => {
   }
   return userJobQueues[queue];
 };
+
+// MCP Types and Handlers
+type MCPRequest = {
+  jsonrpc: "2.0";
+  id: string | number;
+  method: string;
+  params?: Record<string, unknown>;
+};
+
+type MCPResponse = {
+  jsonrpc: "2.0";
+  id: string | number;
+  result?: unknown;
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  };
+};
+
+type MCPTool = {
+  name: string;
+  description: string;
+  inputSchema: {
+    type: "object";
+    properties: Record<string, unknown>;
+    required: string[];
+  };
+};
+
+const mcpTools: MCPTool[] = [
+  {
+    name: "submit_job",
+    description: "Submit a Docker job to a queue for execution. Returns the job ID for tracking.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        queue: {
+          type: "string",
+          description: "The queue name to submit the job to (e.g., 'local1', 'my-queue')"
+        },
+        image: {
+          type: "string", 
+          description: "Docker image to run (e.g., 'python:3.11', 'alpine:latest')"
+        },
+        command: {
+          type: "string",
+          description: "Command to execute in the container",
+          default: "echo 'Hello World'"
+        },
+        inputs: {
+          type: "object",
+          description: "Input files as key-value pairs where key is filename and value is file content",
+          additionalProperties: { type: "string" },
+          default: {}
+        },
+        env: {
+          type: "object", 
+          description: "Environment variables as key-value pairs",
+          additionalProperties: { type: "string" },
+          default: {}
+        },
+        maxDuration: {
+          type: "string",
+          description: "Maximum job duration (e.g., '10m', '1h', '30s')",
+          default: "10m"
+        }
+      },
+      required: ["queue", "image"]
+    }
+  },
+  {
+    name: "get_job_status", 
+    description: "Get the status and details of a job by its ID. Returns job state, progress, and results if completed.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        jobId: {
+          type: "string",
+          description: "The unique job ID to check status for"
+        },
+        includeResult: {
+          type: "boolean", 
+          description: "Whether to include job results if the job is finished",
+          default: true
+        }
+      },
+      required: ["jobId"]
+    }
+  },
+  {
+    name: "list_jobs",
+    description: "List all jobs in a queue with their current status and basic information.", 
+    inputSchema: {
+      type: "object",
+      properties: {
+        queue: {
+          type: "string",
+          description: "The queue name to list jobs from"
+        },
+        limit: {
+          type: "number",
+          description: "Maximum number of jobs to return",
+          default: 50,
+          minimum: 1,
+          maximum: 200
+        }
+      },
+      required: ["queue"]
+    }
+  },
+  {
+    name: "cancel_job",
+    description: "Cancel a running or queued job in a specific queue.",
+    inputSchema: {
+      type: "object", 
+      properties: {
+        queue: {
+          type: "string",
+          description: "The queue name where the job is located"
+        },
+        jobId: {
+          type: "string", 
+          description: "The unique job ID to cancel"
+        }
+      },
+      required: ["queue", "jobId"]
+    }
+  }
+];
+
+const handleMCPSubmitJob = async (args: any): Promise<any> => {
+  try {
+    const { queue, image, command = "echo 'Hello World'", inputs = {}, env = {}, maxDuration = "10m" } = args;
+    
+    const jobId = nanoid();
+    const jobToQueue: EnqueueJob = {
+      id: jobId,
+      definition: {
+        image,
+        command,
+        inputs: inputs as DockerJobDefinitionInputRefs,
+        env,
+        maxDuration 
+      },
+      control: {}
+    };
+
+    const jobQueue = await ensureQueue(queue);
+    await jobQueue.stateChangeJobEnqueue(jobToQueue);
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: true,
+          jobId,
+          queue,
+          message: `Job submitted successfully to queue '${queue}' with ID: ${jobId}`
+        }, null, 2)
+      }]
+    };
+  } catch (error: unknown) {
+    return {
+      content: [{
+        type: "text", 
+        text: JSON.stringify({
+          success: false,
+          error: (error as Error).message,
+          tool: "submit_job"
+        }, null, 2)
+      }],
+      isError: true
+    };
+  }
+};
+
+const handleMCPGetJobStatus = async (args: any): Promise<any> => {
+  try {
+    const { jobId, includeResult = true } = args;
+    
+    // Try to find the job in any queue (since we don't know which queue)
+    let foundJob = null;
+    let foundQueue = "";
+    
+    for (const queueName of Object.keys(userJobQueues)) {
+      const queue = userJobQueues[queueName];
+      const job = await queue.db.queueJobGet({ queue: queueName, jobId });
+      if (job) {
+        foundJob = job;
+        foundQueue = queueName;
+        break;
+      }
+    }
+    
+    if (!foundJob) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            success: false,
+            error: "Job not found",
+            jobId
+          }, null, 2)
+        }],
+        isError: true
+      };
+    }
+
+    let result = null;
+    if (includeResult && foundJob.state === DockerJobState.Finished) {
+      const jobQueue = userJobQueues[foundQueue];
+      result = await jobQueue.db.getJobFinishedResults(jobId);
+    }
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: true,
+          jobId,
+          queue: foundQueue,
+          job: foundJob,
+          result
+        }, null, 2)
+      }]
+    };
+  } catch (error: unknown) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: (error as Error).message,
+          tool: "get_job_status"
+        }, null, 2)
+      }],
+      isError: true
+    };
+  }
+};
+
+const handleMCPListJobs = async (args: any): Promise<any> => {
+  try {
+    const { queue, limit = 50 } = args;
+    
+    const jobQueue = await ensureQueue(queue);
+    const jobs = await jobQueue.db.queueGetJobs(queue);
+    
+    const jobList = Object.entries(jobs)
+      .slice(0, limit)
+      .map(([jobId, job]) => ({
+        jobId,
+        state: job.state,
+        queuedTime: job.queuedTime,
+        image: job.definition?.image,
+        command: job.definition?.command
+      }));
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: true,
+          queue,
+          totalJobs: Object.keys(jobs).length,
+          jobs: jobList
+        }, null, 2)
+      }]
+    };
+  } catch (error: unknown) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: (error as Error).message,
+          queue: args.queue
+        }, null, 2)
+      }],
+      isError: true
+    };
+  }
+};
+
+const handleMCPCancelJob = async (args: any): Promise<any> => {
+  try {
+    const { queue, jobId } = args;
+    
+    const jobQueue = await ensureQueue(queue);
+    const job = await jobQueue.db.queueJobGet({ queue, jobId });
+    
+    if (!job) {
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            success: false,
+            error: "Job not found",
+            jobId,
+            queue
+          }, null, 2)
+        }],
+        isError: true
+      };
+    }
+    
+    if (job.state === DockerJobState.Finished) {
+      return {
+        content: [{
+          type: "text", 
+          text: JSON.stringify({
+            success: true,
+            message: "Job already finished",
+            jobId,
+            queue
+          }, null, 2)
+        }]
+      };
+    }
+
+    const stateChange = {
+      job: jobId,
+      tag: "mcp",
+      state: DockerJobState.Finished,
+      value: {
+        type: DockerJobState.Finished,
+        reason: DockerJobFinishedReason.Cancelled,
+        message: "Job cancelled via MCP",
+        time: Date.now(),
+        namespace: DefaultNamespace
+      }
+    };
+    
+    await jobQueue.stateChange(stateChange);
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: true,
+          jobId,
+          queue,
+          message: "Job cancelled successfully"
+        }, null, 2)
+      }]
+    };
+  } catch (error: unknown) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          success: false,
+          error: (error as Error).message,
+          tool: "cancel_job"
+        }, null, 2)
+      }],
+      isError: true
+    };
+  }
+};
+
+const handleMCPToolCall = async (toolName: string, args: any): Promise<any> => {
+  switch (toolName) {
+    case "submit_job":
+      return await handleMCPSubmitJob(args);
+    case "get_job_status":
+      return await handleMCPGetJobStatus(args);
+    case "list_jobs":
+      return await handleMCPListJobs(args);
+    case "cancel_job":
+      return await handleMCPCancelJob(args);
+    default:
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            success: false,
+            error: `Unknown tool: ${toolName}`
+          }, null, 2)
+        }],
+        isError: true
+      };
+  }
+};
+
+const handleMCPRequest = async (c: Context): Promise<Response> => {
+  try {
+    const request: MCPRequest = await c.req.json();
+    
+    let response: MCPResponse = {
+      jsonrpc: "2.0",
+      id: request.id
+    };
+
+    switch (request.method) {
+      case "tools/list":
+        response.result = { tools: mcpTools };
+        break;
+        
+      case "tools/call":
+        const { name, arguments: args } = request.params as { name: string; arguments: any };
+        response.result = await handleMCPToolCall(name, args);
+        break;
+        
+      default:
+        response.error = {
+          code: -32601,
+          message: `Method not found: ${request.method}`
+        };
+    }
+
+    return c.json(response);
+  } catch (error: unknown) {
+    const response: MCPResponse = {
+      jsonrpc: "2.0", 
+      id: "unknown",
+      error: {
+        code: -32700,
+        message: "Parse error",
+        data: (error as Error).message
+      }
+    };
+    return c.json(response, 400);
+  }
+};
+
+const handleMCPHealth = (c: Context): Response => {
+  return c.json({
+    status: "healthy",
+    server: "worker-metapage-local",
+    version: "1.0.0",
+    capabilities: ["tools"],
+    timestamp: new Date().toISOString()
+  });
+};
+
+const handleMCPInfo = (c: Context): Response => {
+  return c.json({
+    server: {
+      name: "worker-metapage-local",
+      version: "1.0.0", 
+      description: "Local MCP server for worker.metapage.io job queue system"
+    },
+    capabilities: {
+      tools: {
+        count: mcpTools.length,
+        names: mcpTools.map(t => t.name)
+      }
+    },
+    endpoints: {
+      http: "/mcp",
+      health: "/mcp/health", 
+      info: "/mcp/info"
+    },
+    documentation: {
+      tools: mcpTools.map(tool => ({
+        name: tool.name,
+        description: tool.description,
+        required: tool.inputSchema.required,
+        properties: Object.keys(tool.inputSchema.properties)
+      }))
+    }
+  });
+};
+
+// MCP (Model Context Protocol) endpoints
+app.post("/mcp", handleMCPRequest);
+app.get("/mcp/health", handleMCPHealth);
+app.get("/mcp/info", handleMCPInfo);
 
 const handleWebsocket = async (socket: WebSocket, request: Request) => {
   const url = new URL(request.url);
