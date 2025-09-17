@@ -27,6 +27,8 @@ import { useStore } from "../store";
 import { useOptionAllowSetJob } from "./useOptionAllowSetJob";
 import { useQueue } from "./useQueue";
 
+// make sure these are all in
+// app/browser/public/metaframe.json
 const HashParamKeysSystem = new Set([
   "autostart",
   "allowsetjob",
@@ -60,7 +62,7 @@ export const useDockerJobDefinition = () => {
 
   // TODO: unclear if this does anything anymore
   const [debug] = useHashParamBoolean("debug");
-  const [maxJobDuration] = useHashParam("maxjobduration");
+  const [maxJobDuration] = useHashParam("maxJobDuration");
   // we listen to the job parameters embedded in the URL changing
   const [definitionParamsInUrl, setDefinitionParamsInUrl] = useHashParamJson<
     DockerJobDefinitionParamsInUrlHash | undefined

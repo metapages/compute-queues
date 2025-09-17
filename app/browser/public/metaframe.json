@@ -16,5 +16,21 @@
       "type": "json",
       "description": "The result of the job"
     }
-  }
+  },
+  "hashParams": [
+    "allowsetjob",
+    "autostart",
+    "config",
+    "control",
+    "debug",
+    "definition",
+    "ignoreQueueOverride",
+    "inputs",
+    "job",
+    "maxJobDuration",
+    "queue",
+    "queueOverride",
+    "resolverefs",
+    "terminal"
+  ]
 }
