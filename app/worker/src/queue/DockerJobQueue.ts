@@ -132,6 +132,28 @@ export class DockerJobQueue {
     return this.gpuCapacity() > 0;
   }
 
+  /**
+   * Get available GPU device indices for this worker
+   */
+  getAvailableGpuDevices(): number[] {
+    const usedIndices = this.gpuDeviceIndicesUsed();
+    const { deviceIndices } = config.gpuConfig;
+
+    if (deviceIndices.length > 0) {
+      // Use specific device indices specified in config
+      return deviceIndices.filter((index) => !usedIndices.includes(index));
+    } else {
+      // Legacy mode: use sequential allocation (0, 1, 2, ...)
+      const availableDevices: number[] = [];
+      for (let i = 0; i < this.gpus; i++) {
+        if (!usedIndices.includes(i)) {
+          availableDevices.push(i);
+        }
+      }
+      return availableDevices;
+    }
+  }
+
   // getGPUDeviceRequests() :{
   //     Driver:string,
   //     Count: number,
@@ -168,28 +190,24 @@ export class DockerJobQueue {
     if (!this.isGPUCapacity()) {
       throw `getGPUDeviceIndex but no capacity`;
     }
-    const gpuDeviceIndicesUsed: number[] = Object.values(this.queue)
-      .filter((item: WorkerJobQueueItem) => item.gpuIndices)
-      .reduce<number[]>((array, item) => {
-        return item.gpuIndices ? array.concat(item.gpuIndices) : array;
-      }, []);
 
-    gpuDeviceIndicesUsed.sort();
-    // Now get thei first available GPU
-
-    for (let gpuIndex = 0; gpuIndex < this.gpus; gpuIndex++) {
-      if (!gpuDeviceIndicesUsed.includes(gpuIndex)) {
-        return gpuIndex;
-      }
+    const availableDevices = this.getAvailableGpuDevices();
+    if (availableDevices.length === 0) {
+      throw `getGPUDeviceIndex but could not find an available GPU`;
     }
 
-    throw `getGPUDeviceIndex but could not find an available GPU`;
+    // Return the first available GPU device index
+    return availableDevices[0];
   }
 
   status(): computeQueuesShared.WorkerStatusResponse {
     const runningJobsCount = Object.keys(this.queue).length;
+    const availableGpuDevices = this.getAvailableGpuDevices();
+    const usedGpuDevices = this.gpuDeviceIndicesUsed();
     console.log(
-      `${this.workerIdShort} status: ${runningJobsCount} running jobs, ${this.cpus} CPUs, ${this.gpus} GPUs`,
+      `${this.workerIdShort} status: ${runningJobsCount} running jobs, ${this.cpus} CPUs, ${this.gpus} GPUs (available: [${
+        availableGpuDevices.join(",")
+      }], used: [${usedGpuDevices.join(",")}])`,
     );
 
     return {
@@ -723,6 +741,13 @@ export class DockerJobQueue {
         DeviceIDs: [`${deviceIndex}`],
         Capabilities: [["gpu"]],
       }];
+
+      // Log GPU allocation for manual validation
+      console.log(
+        `${this.workerIdShort} ${
+          getJobColorizedString(jobId)
+        } 🎮 GPU allocated: device=${deviceIndex} (from config: ${config.gpuConfig.originalSpec})`,
+      );
     }
 
     this.sender(runningMessageToServer);

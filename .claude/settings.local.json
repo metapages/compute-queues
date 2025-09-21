@@ -5,7 +5,13 @@
       "Bash(just worker:*)",
       "Bash(grep:*)",
       "Bash(just lint)",
-      "Bash(just check)"
+      "Bash(just check)",
+      "Bash(deno check:*)",
+      "Bash(deno run:*)",
+      "Bash(just test:*)",
+      "Bash(echo \"MODE: $MODE\")",
+      "Bash(docker logs:*)",
+      "Bash(deno test:*)"
     ],
     "deny": [],
     "ask": []
