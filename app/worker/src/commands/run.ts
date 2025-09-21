@@ -1,4 +1,4 @@
-import { config } from "/@/config.ts";
+import { config, parseGpuSpec } from "/@/config.ts";
 import { prepGpus, runChecksOnInterval } from "/@/docker/utils.ts";
 import { localHandler } from "/@/lib/local-handler.ts";
 import { processes, waitForDocker } from "/@/processes.ts";
@@ -43,7 +43,7 @@ export const runCommand = new Command()
     "-a, --api-address [api-address:string]",
     "Custom API queue server",
   )
-  .option("-g, --gpus [gpus:number]", "Available GPUs")
+  .option("-g, --gpus [gpus:string]", "Available GPUs - specify number (e.g., '2') or devices (e.g., '\"device=1,3\"')")
   .option("-m, --mode [mode:string]", "Mode [default: remote]", {
     default: "remote",
   })
@@ -66,9 +66,9 @@ export const runCommand = new Command()
       : (METAPAGE_IO_WORKER_CPUS ? parseInt(METAPAGE_IO_WORKER_CPUS) : 1);
 
     const METAPAGE_IO_WORKER_GPUS = Deno.env.get(`${EnvPrefix}GPUS`);
-    config.gpus = typeof options.gpus === "number"
-      ? options.gpus
-      : (METAPAGE_IO_WORKER_GPUS ? parseInt(METAPAGE_IO_WORKER_GPUS) : 0);
+    const gpuSpec = (typeof options.gpus === "string" ? options.gpus : undefined) || METAPAGE_IO_WORKER_GPUS || "0";
+    config.gpuConfig = parseGpuSpec(gpuSpec);
+    config.gpus = config.gpuConfig.totalGpus;
 
     const METAPAGE_IO_WORKER_MODE = Deno.env.get(`${EnvPrefix}MODE`);
     config.mode = options.mode === "remote" || options.mode === "local"
@@ -146,7 +146,7 @@ export const runCommand = new Command()
     }
 
     console.log(
-      `Worker config: [id=%s...] [queue=%s] [mode=%s] [cpus=%s] [gpus=%s] [maxDuration=%s] [dataDirectory=%s] [api=%s] [debug=%s] ${
+      `Worker config: [id=%s...] [queue=%s] [mode=%s] [cpus=%s] [gpus=%s] [gpuSpec=%s] [maxDuration=%s] [dataDirectory=%s] [api=%s] [debug=%s] ${
         config.mode === "local" ? "[port=%s]" : ""
       }`,
       config.id.substring(0, 12),
@@ -154,6 +154,7 @@ export const runCommand = new Command()
       config.mode,
       config.cpus,
       config.gpus,
+      config.gpuConfig.originalSpec,
       stringDuration,
       config.dataDirectory,
       config.server,

@@ -155,6 +155,14 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   createOptions.Env!.push(`JOB_OUTPUTS_URL_PREFIX=${config?.server}/j/${args.id}/outputs/`);
   createOptions.Env!.push(`JOB_INPUTS_URL_PREFIX=${config?.server}/j/${args.id}/inputs/`);
 
+  // Set CUDA_VISIBLE_DEVICES to the allocated GPU index for jobs that use GPUs
+  if (deviceRequests && deviceRequests.length > 0) {
+    const gpuDeviceId = deviceRequests[0].DeviceIDs?.[0];
+    if (gpuDeviceId !== undefined) {
+      createOptions.Env!.push(`CUDA_VISIBLE_DEVICES=${gpuDeviceId}`);
+    }
+  }
+
   if (deviceRequests) {
     // https://github.com/apocas/dockerode/issues/628
     createOptions.HostConfig!.DeviceRequests = deviceRequests;
