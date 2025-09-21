@@ -68,7 +68,15 @@ export const getBuildSha = async (args: {
   pullOptions?: { [key: string]: unknown };
   build?: DockerJobImageBuild;
 }): Promise<string> => {
-  const buildSha = await shaObject(args.build);
+  let build = args.build;
+  if (build) {
+    // credentials are not part of the build sha
+    if (build.context) {
+      build = { ...build };
+      build.context = removeCredentialsFromContext(build.context!);
+    }
+  }
+  const buildSha = await shaObject(build);
   const sha = buildSha.substring(0, 32);
   return sha;
 };
@@ -561,23 +569,38 @@ const parseDockerUrl = (s: string): DockerUrlBlob => {
   return url;
 };
 
+export const removeCredentialsFromContext = (context: string): string => {
+  return context.replace(
+    /https:\/\/(?:([^@]+)@)?github\.com\/(.*)/,
+    "https://github.com/$2",
+  );
+};
+
 const getDownloadLinkFromContext = async (context: string): Promise<string> => {
   // https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
   if (context.endsWith(".tar.gz") || context.endsWith(".zip")) {
     return context;
-  } else if (context.startsWith("https://github.com")) {
+  } else if (context.startsWith("https://") && context.includes("github.com")) {
     // Create a personal access token at https://github.com/settings/tokens/new?scopes=repo
     // const octokit = new Octokit({ auth: `personal-access-token123` });
     const matches = new RegExp(
-      /https:\/\/github.com\/([-\w]{1,39})\/([-\w\.]{1,100})(\/(tree|commit)\/([-\/\w\.\}\{\$]{1,100}))?/,
+      /https:\/\/(?:([^@]+)@)?github\.com\/([-\w]{1,39})\/([-\w.]{1,100})(?:\/(tree|commit)\/([-\/\w.{}$]{1,100}))?/,
     ).exec(context);
     if (!matches) {
       throw new Error(`Invalid GitHub URL: ${context}`);
     }
 
-    const owner = matches[1];
-    const repo = matches[2];
-    const ref = matches[5] || "main";
+    const userPat = matches[1];
+    const owner = matches[2];
+    const repo = matches[3];
+    const ref = matches[6] || "main";
+
+    let pat = userPat?.includes(":") ? userPat.split(":")[1] : userPat;
+    if (pat) {
+      pat = pat + "@";
+    } else {
+      pat = "";
+    }
 
     if (ref?.startsWith("${")) {
       throw new Error(
@@ -586,13 +609,13 @@ const getDownloadLinkFromContext = async (context: string): Promise<string> => {
     }
 
     const possibleArchiveUrls = [
-      `https://github.com/${owner}/${repo.replace(".git", "")}/archive/refs/heads/${ref}.zip`,
-      `https://github.com/${owner}/${repo.replace(".git", "")}/archive/${ref}.zip`,
+      `https://${pat}github.com/${owner}/${repo.replace(".git", "")}/archive/refs/heads/${ref}.zip`,
+      `https://${pat}github.com/${owner}/${repo.replace(".git", "")}/archive/${ref}.zip`,
     ];
     if (ref === "main") {
       // check if the repo has a master branch instead of main
       possibleArchiveUrls.push(
-        `https://github.com/${owner}/${repo.replace(".git", "")}/archive/refs/heads/master.zip`,
+        `https://${pat}github.com/${owner}/${repo.replace(".git", "")}/archive/refs/heads/master.zip`,
       );
     }
 
@@ -635,12 +658,15 @@ const getDownloadLinkFromContext = async (context: string): Promise<string> => {
 };
 
 const getFilePathForDownload = (url: string): string => {
-  if (url.startsWith("https://")) {
-    return `${getDockerImageBuildDownloadDirectory()}/${url.replace("https://", "")}`;
-  } else if (url.startsWith("http://")) {
-    return `${getDockerImageBuildDownloadDirectory()}/${url.replace("http://", "")}`;
+  if (!(url.startsWith("https://") || url.startsWith("http://"))) {
+    throw new Error(`Unsupported download link: ${url}`);
   }
-  throw "Unsupported download link";
+  const urlBlob = new URL(url);
+  urlBlob.password = "";
+  urlBlob.username = "";
+  url = urlBlob.href;
+  const path = url.replace("https://", "").replace("http://", "");
+  return `${getDockerImageBuildDownloadDirectory()}/${path}`;
 };
 
 const downloadContextIntoDirectory = async (args: {
@@ -655,7 +681,7 @@ const downloadContextIntoDirectory = async (args: {
     payload: {
       jobId,
       step: "cloning repo",
-      logs: [[`Downloading context: ${context}`, Date.now()]],
+      logs: [[`Downloading context: ${removeCredentialsFromContext(context)}`, Date.now()]],
     } as JobStatusPayload,
   });
   // Download git repo, unpack, and use as context
@@ -666,7 +692,7 @@ const downloadContextIntoDirectory = async (args: {
   const downloadUrl = await getDownloadLinkFromContext(context);
   const filePathForDownload = getFilePathForDownload(downloadUrl);
 
-  console.log(`downloadContextIntoDirectory downloadUrl=${downloadUrl}`);
+  console.log(`downloadContextIntoDirectory downloadUrl=${removeCredentialsFromContext(downloadUrl)}`);
   console.log(
     `downloadContextIntoDirectory filePathForDownload=${filePathForDownload}`,
   );
@@ -802,7 +828,7 @@ const downloadContextIntoDirectory = async (args: {
         payload: {
           jobId,
           step: "cloning repo",
-          logs: [[`zip uncompressing context: ${context}`, Date.now()]],
+          logs: [[`zip uncompressing context: ${removeCredentialsFromContext(context)}`, Date.now()]],
         } as JobStatusPayload,
       });
       // https://github.com/moncefplastin07/deno-zip/issues/16#issue-2777397629
