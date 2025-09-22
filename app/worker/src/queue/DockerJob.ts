@@ -159,7 +159,9 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   if (deviceRequests && deviceRequests.length > 0) {
     const gpuDeviceId = deviceRequests[0].DeviceIDs?.[0];
     if (gpuDeviceId !== undefined) {
-      createOptions.Env!.push(`CUDA_VISIBLE_DEVICES=${gpuDeviceId}`);
+      // createOptions.Env!.push(`CUDA_VISIBLE_DEVICES=${gpuDeviceId}`);
+      // because internally it's the first GPU device allocated
+      createOptions.Env!.push("CUDA_VISIBLE_DEVICES=0");
     }
   }
 
