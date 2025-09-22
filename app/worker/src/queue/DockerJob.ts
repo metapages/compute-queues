@@ -155,12 +155,15 @@ export const dockerJobExecute = (args: DockerJobArgs): DockerJobExecution => {
   createOptions.Env!.push(`JOB_OUTPUTS_URL_PREFIX=${config?.server}/j/${args.id}/outputs/`);
   createOptions.Env!.push(`JOB_INPUTS_URL_PREFIX=${config?.server}/j/${args.id}/inputs/`);
 
-  // Set CUDA_VISIBLE_DEVICES to the allocated GPU index for jobs that use GPUs
+  // Set CUDA_VISIBLE_DEVICES to 0 because we map assign the GPU index
+  // in the docker config, but CUDA will just see the first and only
+  // GPU device allocated, so index=0, even though it might not
+  // be the first device from the host perspective.
   if (deviceRequests && deviceRequests.length > 0) {
     const gpuDeviceId = deviceRequests[0].DeviceIDs?.[0];
     if (gpuDeviceId !== undefined) {
-      // createOptions.Env!.push(`CUDA_VISIBLE_DEVICES=${gpuDeviceId}`);
-      // because internally it's the first GPU device allocated
+      // 0 because internally it's the first GPU device allocated
+      // even if the host index is different.
       createOptions.Env!.push("CUDA_VISIBLE_DEVICES=0");
     }
   }
